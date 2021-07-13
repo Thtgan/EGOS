@@ -3,8 +3,8 @@ BOOT_SRC = Boot.s Entry.s
 BOOT_BIN = $(BOOT_SRC:.s=.bin)
 BUILD_DIR = ./build
 
-vpath %.s ./kernel/boot/BootStage1
-vpath %.s ./kernel/boot/BootStage2
+vpath %.s ./src/kernel/boot/BootStage1
+vpath %.s ./src/kernel/boot/BootStage2
 
 .PHONY: all clean
 all: buildDir egos.bin
