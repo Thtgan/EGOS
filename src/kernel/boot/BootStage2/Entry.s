@@ -1,13 +1,16 @@
 %include "../Constants.s"
 
 [org EXTRA_PROGRAM_BEGIN_ADDRESS]
-[bits 16]
 
 jmp boot_stage2_entry
 
 %include "Print.s"
 %include "GDT.s"
+%include "Halt.s"
+%include "CPUID.s"
+%include "Paging.s"
 
+[bits 16]
 boot_stage2_entry:
     mov esi, ENTER_STRING
     call printLine
@@ -41,12 +44,19 @@ protected_mode_running:
     mov fs, ax
     mov gs, ax
 
-    mov byte [0xB8000], 'H'
-    mov byte [0xB8002], 'e'
-    mov byte [0xB8004], 'l'
-    mov byte [0xB8006], 'l'
-    mov byte [0xB8008], 'o'
+    call checkCPUID
+    call checkLongMode
+    call setupPaging
+    call enableGDT64
+    
+    jmp gdt_code_seg:long_mode_running
 
-    jmp $
+[bits 64]
+long_mode_running:
+    mov edi, VGA_MEMORY_BUFFER
+    mov rax, 0x1F201F201F201F20
+    mov ecx, 500
+    rep stosq
+    jmp halt64
 
 times 2048-($-$$) db 0

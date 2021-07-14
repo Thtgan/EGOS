@@ -10,6 +10,7 @@
 ;;|     56-63     |      8       | Base 24:31  |
 ;;+---------------+--------------+-------------+
 
+[bits 16]
 gdt_begin:
 gdt_null_desc:
     dd 0x00000000
@@ -38,3 +39,11 @@ gdt_desc:
     
 gdt_code_seg: equ gdt_code_desc - gdt_begin
 gdt_data_seg: equ gdt_data_desc - gdt_begin
+
+[bits 32]
+enableGDT64:
+    mov byte [gdt_code_desc + 6], 10101111b
+    mov byte [gdt_data_desc + 6], 10101111b
+    ret
+
+[bits 16]

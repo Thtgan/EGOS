@@ -4,6 +4,7 @@
 ;;Print a string end with '\0'
 ;;ESI -- Memory address of the string (Use SI before entering protected mode)
 
+[bits 16]
 printString:
     pusha
     mov ah, 0x0E
@@ -75,5 +76,6 @@ _printHex_loop:
 
 hexTable:
     db "0123456789ABCDEF"
+[bits 16]
 
 %endif

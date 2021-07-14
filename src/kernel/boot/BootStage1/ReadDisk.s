@@ -1,6 +1,7 @@
 %ifndef _READ_DISK
 %define _READ_DISK
 
+[bits 16]
 ;;Parameters:
 ;;EAX -- 0:15 of first byte address to read
 ;;EBP -- 16:31 half of first byte address to read
@@ -109,5 +110,7 @@ times 16 db 0
 ;;+---------+------------+------------------------------------------------------------------------+
 diskResultBuffer:
 times 32 db 0
+
+[bits 16]
 
 %endif
