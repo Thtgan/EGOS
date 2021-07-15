@@ -1,22 +1,14 @@
-%include "../Constants.s"
-
-[org EXTRA_PROGRAM_BEGIN_ADDRESS]
+%include "../constants.s"
 
 jmp boot_stage2_entry
 
-%include "Print.s"
 %include "GDT.s"
-%include "Halt.s"
+%include "halt.s"
 %include "CPUID.s"
-%include "Paging.s"
+%include "paging.s"
 
 [bits 16]
 boot_stage2_entry:
-    mov esi, ENTER_STRING
-    call printLine
-    jmp enter_protected_mode
-
-enter_protected_mode:
     call enableA20
     cli
     lgdt [gdt_desc]
@@ -30,9 +22,6 @@ enableA20:
     or al, 2
     out 0x92, al
     ret
-
-ENTER_STRING:
-    db "Bootloader entered", 0
 
 [bits 32]
 protected_mode_running:
@@ -52,11 +41,13 @@ protected_mode_running:
     jmp gdt_code_seg:long_mode_running
 
 [bits 64]
+[extern _kernel_main]
 long_mode_running:
     mov edi, VGA_MEMORY_BUFFER
     mov rax, 0x1F201F201F201F20
     mov ecx, 500
     rep stosq
+    call _kernel_main
     jmp halt64
 
-times 2048-($-$$) db 0
+times 1024-($-$$) db 0

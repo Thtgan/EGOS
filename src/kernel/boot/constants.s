@@ -7,8 +7,10 @@
 
 %define EXTRA_PROGRAM_BEGIN_ADDRESS 0x7E00
 
-%define PML4_BASE_ADDRESS 0x1000
+%define KERNEL_BEGIN_ADDRESS        0x8200
 
-%define VGA_MEMORY_BUFFER 0xB8000
+%define PML4_BASE_ADDRESS           0x1000
+
+%define VGA_MEMORY_BUFFER           0xB8000
 
 %endif

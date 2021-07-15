@@ -1,11 +1,11 @@
-%include "../Constants.s"
+%include "../constants.s"
 
 [org MBR_BEGIN_ADDRESS]
 [bits 16]
 
 jmp boot_stage1_entry
 
-%include "ReadDisk.s"
+%include "readDisk.s"
 
 boot_stage1_entry:
     ;;Basic Initialization
@@ -34,7 +34,18 @@ check_passed:
     mov es, ax
     mov bx, EXTRA_PROGRAM_BEGIN_ADDRESS ;;Read to 0x0000:0x7E00
     mov eax, 512                        ;;Starts from 513th byte
-    mov ecx, 2048                       ;;Read 2048 bytes
+    mov ecx, 1024                       ;;Read 1024 bytes
+
+    call readDisk
+
+    jc errorHalt
+
+    xor eax, eax
+    mov ebp, eax
+    mov es, ax
+    mov bx, KERNEL_BEGIN_ADDRESS        ;;Read to 0x0000:0x8200
+    mov eax, 1536                       ;;Starts from 1537th byte
+    mov ecx, 512                        ;;Read 512 bytes
 
     call readDisk
 

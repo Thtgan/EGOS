@@ -1,7 +1,7 @@
 %ifndef _PAGING
 %define _PAGING
 
-%include "../Constants.s"
+%include "../constants.s"
 
 [bits 32]
 setupPaging:

@@ -4,7 +4,7 @@
 [bits 16]
 ;;Parameters:
 ;;EAX -- 0:15 of first byte address to read
-;;EBP -- 16:31 half of first byte address to read
+;;EBP -- 16:31 of first byte address to read
 ;;ES -- Memory buffer segment
 ;;BX -- Memory buffer offset
 ;;ECX -- Num of byte to read

@@ -1,7 +1,7 @@
 %ifndef _CPUID
 %define _CPUID
 
-%include "Halt.s"
+%include "halt.s"
 
 [bits 32]
 checkCPUID:

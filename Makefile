@@ -1,10 +1,14 @@
 NASM = nasm
-BOOT_SRC = Boot.s Entry.s
-BOOT_BIN = $(BOOT_SRC:.s=.bin)
-BUILD_DIR = ./build
+CC = x86_64-elf-gcc
+CC_OPTION = -ffreestanding -mno-red-zone -m64
+LD = x86_64-elf-ld
 
-vpath %.s ./src/kernel/boot/BootStage1
-vpath %.s ./src/kernel/boot/BootStage2
+BUILD_DIR = ./build
+BUILD_BIN_DIR = $(BUILD_DIR)/bin
+
+vpath %.bin $(BUILD_BIN_DIR)
+vpath %.tmp $(BUILD_BIN_DIR)
+vpath %.o $(BUILD_BIN_DIR)
 
 .PHONY: all clean
 all: buildDir egos.bin
@@ -12,12 +16,23 @@ all: buildDir egos.bin
 clean:
 	rm -rf $(BUILD_DIR)
 
-egos.bin: $(BOOT_BIN)
-	cd $(BUILD_DIR) && cat $(BOOT_BIN) > EGOS.bin
+egos.bin:
+	cd ./src/kernel/boot/BootStage1 && $(NASM) boot.s -f bin -o boot.bin
+	mv ./src/kernel/boot/BootStage1/boot.bin $(BUILD_BIN_DIR)
+
+	cd ./src/kernel/boot/BootStage2 && $(NASM) entry.s -f elf64 -o entry.o
+	mv ./src/kernel/boot/BootStage2/entry.o $(BUILD_BIN_DIR)
+
+	cd ./src/kernel/boot/BootStage2 && $(CC) $(CC_OPTION) -c kernel_main.c -o kernel_main.o
+	mv ./src/kernel/boot/BootStage2/kernel_main.o $(BUILD_BIN_DIR)
+
+#	cd $(BUILD_BIN_DIR) && $(LD) -o kernel.bin -Ttext 0x7E00 entry.o kernel_main.o --oformat binary 
+	cp ./src/kernel/boot/BootStage2/linker.ld $(BUILD_BIN_DIR)
+	cd $(BUILD_BIN_DIR) && $(LD) -T "linker.ld"
+
+	cd $(BUILD_BIN_DIR) && cat boot.bin kernel.bin > EGOS.bin
+	mv $(BUILD_BIN_DIR)/EGOS.bin $(BUILD_DIR)
 
 buildDir:
 	mkdir -p $(BUILD_DIR)
-
-$(BOOT_BIN): %.bin: %.s
-	cd $(dir $<) && $(NASM) $(notdir $<) -f bin -o $(notdir $@)
-	mv $(dir $<)$@ $(BUILD_DIR)
+	mkdir -p $(BUILD_BIN_DIR)

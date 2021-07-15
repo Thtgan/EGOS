@@ -1,6 +1,8 @@
 %ifndef _PRINT
 %define _PRINT
 
+;;Not used temporarily
+
 ;;Print a string end with '\0'
 ;;ESI -- Memory address of the string (Use SI before entering protected mode)
 
