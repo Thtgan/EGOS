@@ -34,7 +34,7 @@ check_passed:
     mov es, ax
     mov bx, EXTRA_PROGRAM_BEGIN_ADDRESS ;;Read to 0x0000:0x7E00
     mov eax, 512                        ;;Starts from 513th byte
-    mov ecx, 1024                       ;;Read 1024 bytes
+    mov ecx, 512                        ;;Read 512 bytes
 
     call readDisk
 
@@ -43,13 +43,11 @@ check_passed:
     xor eax, eax
     mov ebp, eax
     mov es, ax
-    mov bx, KERNEL_BEGIN_ADDRESS        ;;Read to 0x0000:0x8200
-    mov eax, 1536                       ;;Starts from 1537th byte
-    mov ecx, 512                        ;;Read 512 bytes
+    mov bx, KERNEL_BEGIN_ADDRESS        ;;Read to 0x0000:0x8000
+    mov eax, 1024                       ;;Starts from 1025th byte
+    mov ecx, 4096                       ;;Read 4096 bytes
 
     call readDisk
-
-    jc errorHalt
 
     jmp EXTRA_PROGRAM_BEGIN_ADDRESS
 

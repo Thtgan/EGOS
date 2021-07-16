@@ -7,7 +7,7 @@
 
 %define EXTRA_PROGRAM_BEGIN_ADDRESS 0x7E00
 
-%define KERNEL_BEGIN_ADDRESS        0x8200
+%define KERNEL_BEGIN_ADDRESS        0x8000
 
 %define PML4_BASE_ADDRESS           0x1000
 

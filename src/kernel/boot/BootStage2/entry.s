@@ -50,4 +50,4 @@ long_mode_running:
     call _kernel_main
     jmp halt64
 
-times 1024-($-$$) db 0
+times 512-($-$$) db 0

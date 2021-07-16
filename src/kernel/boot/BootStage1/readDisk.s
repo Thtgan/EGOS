@@ -64,8 +64,9 @@ readDisk:
     ;;Beginning of reading
 
     clc
-    mov ah, 0x42
 _readDisk_loop:
+    ;;INT 13h AH=42h will modify the value of EAX must be updated each round
+    mov ah, 0x42
     int 0x13
     jc _readDisk_ret
 
