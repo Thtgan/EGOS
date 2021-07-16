@@ -37,8 +37,8 @@ gdt_desc:
     dw gdt_end - gdt_begin - 1
     dd gdt_begin
     
-gdt_code_seg: equ gdt_code_desc - gdt_begin
-gdt_data_seg: equ gdt_data_desc - gdt_begin
+gdt_code_seg: equ gdt_code_desc - gdt_begin ;;Offest of code segment
+gdt_data_seg: equ gdt_data_desc - gdt_begin ;;Offest of data segment
 
 [bits 32]
 enableGDT64:

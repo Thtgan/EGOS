@@ -11,6 +11,4 @@
 
 %define PML4_BASE_ADDRESS           0x1000
 
-%define VGA_MEMORY_BUFFER           0xB8000
-
 %endif

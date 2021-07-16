@@ -43,10 +43,6 @@ protected_mode_running:
 [bits 64]
 [extern _kernel_main]
 long_mode_running:
-    mov edi, VGA_MEMORY_BUFFER
-    mov rax, 0x1F201F201F201F20
-    mov ecx, 500
-    rep stosq
     call _kernel_main
     jmp halt64
 

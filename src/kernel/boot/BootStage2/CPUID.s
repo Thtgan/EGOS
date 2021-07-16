@@ -4,6 +4,8 @@
 %include "halt.s"
 
 [bits 32]
+
+;;Check CPUID availability
 checkCPUID:
     pushfd
     pushfd
@@ -24,6 +26,7 @@ _check_cpuid_pass:
 
     ret
 
+;; Use CPUID to check if CPU supports long mode
 checkLongMode:
     mov eax, 0x80000000
     cpuid

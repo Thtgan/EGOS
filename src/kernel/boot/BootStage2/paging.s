@@ -4,6 +4,8 @@
 %include "../constants.s"
 
 [bits 32]
+
+;;Enable PAE paging and set up a 4-level page table
 setupPaging:
     mov edi, PML4_BASE_ADDRESS
     mov cr3, edi

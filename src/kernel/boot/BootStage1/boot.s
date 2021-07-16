@@ -29,6 +29,7 @@ check_passed:
     ;;Check passed, meaning program running on a i386+ platform and 32-bit registers are available
     mov esp, STACK_BUTTOM_ADDRESS
 
+    ;;Read next sector's program
     xor eax, eax
     mov ebp, eax
     mov es, ax
@@ -40,6 +41,7 @@ check_passed:
 
     jc errorHalt
 
+    ;;Read kernel, for kernel's size is not determined, so didn't check error
     xor eax, eax
     mov ebp, eax
     mov es, ax
@@ -48,6 +50,8 @@ check_passed:
     mov ecx, 4096                       ;;Read 4096 bytes
 
     call readDisk
+
+    clc
 
     jmp EXTRA_PROGRAM_BEGIN_ADDRESS
 
