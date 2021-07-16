@@ -5,6 +5,8 @@ ENTRY(_kernel_main)
 INPUT (
     entry.o
     kernel_main.o
+    vgaTextMode.o
+    portIO.o
 )
 
 OUTPUT (
