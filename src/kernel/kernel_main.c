@@ -1,17 +1,21 @@
 #include"drivers/vgaTextMode.h"
 
-void write_string(int colour, const char *string)
-{
-    volatile char *video = (volatile char*)0xB8000;
-    while( *string != 0 )
-    {
-        *video++ = *string++;
-        *video++ = colour;
-    }
-}
+const static char* line = "HELLO?\r\nGOODBYE\r\n";
 
 void _kernel_main() {
-    initCursor();
-    write_string(4, "FACE THE SELF, MAKE THE EGOS");
+    initVGA();
+    setVgaCellPattern(VGA_COLOR_WHITE, VGA_COLOR_RED);
+    print(line);
+    printHex8(0xE5);
+    putchar('\n');
+    printHex16(0xE605);
+    putchar('\n');
+    printHex32(114514);
+    putchar('\n');
+    printHex64(1145141919810);
+    putchar('\n');
+    printPtr(line);
+    putchar('\n');
+    putchar(236);
     return;
 }
