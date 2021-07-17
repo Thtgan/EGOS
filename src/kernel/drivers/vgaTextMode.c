@@ -50,7 +50,7 @@ void setVgaCellPattern(uint8_t backgroundColor, uint8_t foregroundColor)
 
 void setDefaultVgaPattern()
 {
-	setVgaCellPattern(VGA_COLOR_BLUE, VGA_COLOR_WHITE);
+	setVgaCellPattern(VGA_COLOR_BLACK, VGA_COLOR_WHITE);
 }
 
 static bool __putcharAtCursor(uint8_t ch)
