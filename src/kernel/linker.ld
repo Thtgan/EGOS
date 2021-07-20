@@ -7,6 +7,8 @@ INPUT (
     kernel_main.o
     vgaTextMode.o
     portIO.o
+    keyboard.o
+    IDT.o
 )
 
 OUTPUT (
@@ -16,19 +18,19 @@ OUTPUT (
 SECTIONS {
     . = 0x7E00;
 
-    .text : ALIGN(0x100) {
+    .text : ALIGN(0x200) {
         *(.text)
     }
 
-    .data : ALIGN(0x100) {
+    .data : ALIGN(0x200) {
         *(.data)
     }
 
-    .rodata : ALIGN(0x100) {
+    .rodata : ALIGN(0x200) {
         *(.rodata)
     }
 
-    .bss : ALIGN(0x100) {
+    .bss : ALIGN(0x200) {
         *(COMMON)
         *(.bss)
     }

@@ -26,18 +26,18 @@
 
 #define __INCLUDE_BIN_TEXT ".text" __INCLUDE_BIN_NEWLINE
 
-#define __INCLUDE_BIN_EXTERN_DEFINITIONS(NAME) \
-        extern const uint8_t NAME[]; \
-        extern const uint32_t MACRO_CONCENTRATE(NAME, _size); \
+#define __INCLUDE_BIN_EXTERN_DEFINITIONS(NAME)                  \
+        extern const uint8_t NAME[];                            \
+        extern const uint32_t MACRO_CONCENTRATE(NAME, _size);   \
 
-#define INCLUDE_BIN(NAME, FILEPATH) \
-    asm(__INCLUDE_BIN_RODATA_SECTION \
-        __INCLUDE_BIN_GLOBAL_LABEL(NAME) \
-        __INCLUDE_BIN_DATA_SYMBOL(NAME) \
-        __INCLUDE_BIN_INCBIN(FILEPATH) \
-        __INCLUDE_BIN_PADDING_BYTE(0x00) \
-        __INCLUDE_BIN_SIZE_SYMBOL(NAME) \
-        __INCLUDE_BIN_SIZE_EVAL_LINE(NAME) \
-        __INCLUDE_BIN_TEXT \
-    ); \
+#define INCLUDE_BIN(NAME, FILEPATH)             \
+    asm volatile(__INCLUDE_BIN_RODATA_SECTION   \
+        __INCLUDE_BIN_GLOBAL_LABEL(NAME)        \
+        __INCLUDE_BIN_DATA_SYMBOL(NAME)         \
+        __INCLUDE_BIN_INCBIN(FILEPATH)          \
+        __INCLUDE_BIN_PADDING_BYTE(0x00)        \
+        __INCLUDE_BIN_SIZE_SYMBOL(NAME)         \
+        __INCLUDE_BIN_SIZE_EVAL_LINE(NAME)      \
+        __INCLUDE_BIN_TEXT                      \
+    );                                          \
     __INCLUDE_BIN_EXTERN_DEFINITIONS(NAME)

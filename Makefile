@@ -1,6 +1,7 @@
 NASM = nasm
 CC = x86_64-elf-gcc
 CC_OPTION = -ffreestanding -mno-red-zone -m64
+CC_OPTION_INTERRUPT_HANDLER = -mgeneral-regs-only
 LD = x86_64-elf-ld
 
 BUILD_DIR = ./build
@@ -31,6 +32,12 @@ egos.bin:
 
 	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) -c portIO.c -o portIO.o
 	mv ./src/kernel/drivers/portIO.o $(BUILD_BIN_DIR)
+
+	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) $(CC_OPTION_INTERRUPT_HANDLER) -c IDT.c -o IDT.o
+	mv ./src/kernel/drivers/IDT.o $(BUILD_BIN_DIR)
+
+	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) $(CC_OPTION_INTERRUPT_HANDLER) -c keyboard.c -o keyboard.o
+	mv ./src/kernel/drivers/keyboard.o $(BUILD_BIN_DIR)
 
 	cp ./src/kernel/linker.ld $(BUILD_BIN_DIR)
 	cd $(BUILD_BIN_DIR) && $(LD) -T "linker.ld"
