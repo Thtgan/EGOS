@@ -1,4 +1,5 @@
-#pragma once
+#if !defined(__INCLUDE_BIN_H)
+#define __INCLUDE_BIN_H
 
 #include<stdint.h>
 #include"macro.h"
@@ -41,3 +42,5 @@
         __INCLUDE_BIN_TEXT                      \
     );                                          \
     __INCLUDE_BIN_EXTERN_DEFINITIONS(NAME)
+
+#endif // __INCLUDE_BIN_H

@@ -1,54 +1,57 @@
-#pragma once
+#if !defined(__PORTIO_H)
+#define __PORTIO_H
 
 #include<stdint.h>
 
 /**
- * Read a byte from a IO port
+ * @brief Read a byte from a IO port
  * 
- * port: Port number
+ * @param port Port number
  * 
- * return: The byte read from the port
-*/
+ * @return uint8_t The byte read from the port
+ */
 uint8_t inb(uint16_t port);
 
 /**
- * Write a byte to a IO port
+ * @brief Write a byte to a IO port
  * 
- * port: Port number
- * value: Value to write
-*/
+ * @param port Port number
+ * @param value Value to write
+ */
 void outb(uint16_t port, uint8_t value);
 
 /**
- * Read a word from a IO port
+ * @brief Read a word from a IO port
  * 
- * port: Port number
+ * @param port Port number
  * 
- * return: The word read from the port
-*/
+ * @return uint16_t The word read from the port
+ */
 uint16_t inw(uint16_t port);
 
 /**
- * Write a word to a IO port
+ * @brief Write a word to a IO port
  * 
- * port: Port number
- * value: Value to write
-*/
+ * @param port Port number
+ * @param value Value to write
+ */
 void outw(uint16_t port, uint16_t value);
 
 /**
- * Read a long from a IO port
+ * @brief Read a long from a IO port
  * 
- * port: Port number
+ * @param port Port number
  * 
- * return: The long read from the port
-*/
+ * @return uint32_t The long read from the port
+ */
 uint32_t inl(uint16_t port);
 
 /**
- * Write a long to a IO port
+ * @brief Write a long to a IO port
  * 
- * port: Port number
- * value: Value to write
-*/
+ * @param port Port number
+ * @param value Value to write
+ */
 void outl(uint16_t port, uint32_t value);
+
+#endif // __PORTIO_H

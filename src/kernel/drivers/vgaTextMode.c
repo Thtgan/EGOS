@@ -9,13 +9,13 @@ void initCursor()
 	setCursorPosition(0, 0);
 }
 
-void enableCursor(uint8_t cursorBegin, uint8_t cursorEnd)
+void enableCursor(uint8_t startScanline, uint8_t endScanline)
 {
     outb(0x03D4, 0x0A);
-	outb(0x03D5, (inb(0x03D5) & 0xC0) | cursorBegin);
+	outb(0x03D5, (inb(0x03D5) & 0xC0) | startScanline);
  
 	outb(0x03D4, 0x0B);
-	outb(0x03D5, (inb(0x03D5) & 0xE0) | cursorEnd);
+	outb(0x03D5, (inb(0x03D5) & 0xE0) | endScanline);
 }
 
 void disableCursor()
@@ -38,6 +38,16 @@ static void __setCursorPosition(uint16_t position)
 	outb(0x03D5, (position >> 8) & 0xFF);
 }
 
+uint16_t getCursorPositionRow()
+{
+	return _cursorPosition / VGA_WIDTH;
+}
+
+uint16_t getCursorPositionCol()
+{
+	return _cursorPosition % VGA_WIDTH;
+}
+
 uint16_t getCursorPosition()
 {
 	return _cursorPosition;
@@ -53,9 +63,8 @@ void setDefaultVgaPattern()
 	setVgaCellPattern(VGA_COLOR_BLACK, VGA_COLOR_WHITE);
 }
 
-static bool __putcharAtCursor(uint8_t ch)
+void putchar(uint8_t ch)
 {
-	bool ret = false;
 	switch (ch)
 	{
 	case '\n':
@@ -64,19 +73,19 @@ static bool __putcharAtCursor(uint8_t ch)
 	case '\r':
 		__setCursorPosition(_cursorPosition / VGA_WIDTH * VGA_WIDTH);
 		break;
-	default:
-		ret = true;
-		VGA_BUFFER_ADDRESS[_cursorPosition] = VGA_CELL_ENTRY(_vgaPattern, ch);
+	case '\t':
+		for (uint8_t i = 0; i < 4; ++i)
+			VGA_BUFFER_ADDRESS[_cursorPosition + i] = VGA_CELL_ENTRY(_vgaPattern, ' ');
+		__setCursorPosition(_cursorPosition + 4);
 		break;
-	}
-	return ret;
-}
-
-void putchar(uint8_t ch)
-{
-	if(__putcharAtCursor(ch))
-	{
+	case '\b':
+		VGA_BUFFER_ADDRESS[_cursorPosition - 1] = VGA_CELL_ENTRY(_vgaPattern, ' ');
+		__setCursorPosition(_cursorPosition - 1);
+		break;
+	default:
+		VGA_BUFFER_ADDRESS[_cursorPosition] = VGA_CELL_ENTRY(_vgaPattern, ch);
 		__setCursorPosition(_cursorPosition + 1);
+		break;
 	}
 }
 

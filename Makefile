@@ -33,11 +33,14 @@ egos.bin:
 	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) -c portIO.c -o portIO.o
 	mv ./src/kernel/drivers/portIO.o $(BUILD_BIN_DIR)
 
-	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) $(CC_OPTION_INTERRUPT_HANDLER) -c IDT.c -o IDT.o
-	mv ./src/kernel/drivers/IDT.o $(BUILD_BIN_DIR)
+	cd ./src/kernel/drivers/interrupt && $(CC) $(CC_OPTION) $(CC_OPTION_INTERRUPT_HANDLER) -c IDT.c -o IDT.o
+	mv ./src/kernel/drivers/interrupt/IDT.o $(BUILD_BIN_DIR)
 
 	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) $(CC_OPTION_INTERRUPT_HANDLER) -c keyboard.c -o keyboard.o
 	mv ./src/kernel/drivers/keyboard.o $(BUILD_BIN_DIR)
+
+	cd ./src/kernel/drivers/interrupt && $(CC) $(CC_OPTION) $(CC_OPTION_INTERRUPT_HANDLER) -c PIC.c -o PIC.o
+	mv ./src/kernel/drivers/interrupt/PIC.o $(BUILD_BIN_DIR)
 
 	cp ./src/kernel/linker.ld $(BUILD_BIN_DIR)
 	cd $(BUILD_BIN_DIR) && $(LD) -T "linker.ld"

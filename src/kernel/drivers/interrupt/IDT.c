@@ -1,7 +1,10 @@
 #include"IDT.h"
-#include"vgaTextMode.h"
-#include"portIO.h"
-#include"keyboard.h"
+#include"../vgaTextMode.h"
+#include"../portIO.h"
+#include"../keyboard.h"
+#include"PIC.h"
+
+#define CODE_SEGMENT 0x08
 
 typedef struct {
     uint16_t    offset0_15;
@@ -29,8 +32,10 @@ void initIDT()
     // uint32_t vector = 0;
     // for(; vector < 32; ++vector)
     //     setIDTEntry(vector, (void*)defaultISR, 0x8E);
-    for(uint32_t vector = 0; vector < 256; ++vector)
+    for (uint16_t vector = 0; vector < 256; ++vector)
         setIDTEntry(vector, &keyboardInterruptHandler, 0x8E);
+
+    remapPIC(0x20, 0x28);
 
     outb(0x21, 0xFD);
     outb(0xA1, 0xFF);
@@ -42,7 +47,7 @@ void setIDTEntry(uint8_t vector, void *isr, uint8_t flags)
     IDTEntry* entry = &_idt[vector];
 
     entry->offset0_15 = (uint16_t)((uint64_t)isr & 0x000000000000FFFF);
-    entry->selector = 0x08;
+    entry->selector = CODE_SEGMENT;
     entry->ist = 0;
     entry->type_attr = flags;
     entry->offset16_31 = (uint16_t)(((uint64_t)isr & 0x00000000FFFF0000) >> 16);
@@ -50,27 +55,27 @@ void setIDTEntry(uint8_t vector, void *isr, uint8_t flags)
     entry->_reserved = 0;
 }
 
-__attribute__((interrupt))
-void defaultISRHandler(InterruptFrame* frame, uint64_t errorCode)
-{
-    setCursorPosition(0, 0);
-    printHex64(errorCode);
-    putchar('\n');
-    printHex64(frame->rip);
-    putchar('\n');
-    printHex64(frame->cs);
-    putchar('\n');
-    printHex64(frame->cpuFlags);
-    putchar('\n');
-    printHex64(frame->stackPtr);
-    putchar('\n');
-    printHex64(frame->stackSegment);
-    putchar('\n');
-    printHex8(inb(0x60));
-    putchar('\n');
-    asm volatile("cli\nhlt\n");
-    EOI();
-}
+// __attribute__((interrupt))
+// void defaultISRHandler(InterruptFrame* frame, uint64_t errorCode)
+// {
+//     setCursorPosition(0, 0);
+//     printHex64(errorCode);
+//     putchar('\n');
+//     printHex64(frame->rip);
+//     putchar('\n');
+//     printHex64(frame->cs);
+//     putchar('\n');
+//     printHex64(frame->cpuFlags);
+//     putchar('\n');
+//     printHex64(frame->stackPtr);
+//     putchar('\n');
+//     printHex64(frame->stackSegment);
+//     putchar('\n');
+//     printHex8(inb(0x60));
+//     putchar('\n');
+//     asm volatile("cli\nhlt\n");
+//     EOI();
+// }
 
 void EOI()
 {

@@ -9,6 +9,7 @@ INPUT (
     portIO.o
     keyboard.o
     IDT.o
+    PIC.o
 )
 
 OUTPUT (
