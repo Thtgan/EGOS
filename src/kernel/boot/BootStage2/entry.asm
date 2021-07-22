@@ -1,11 +1,11 @@
-%include "../constants.s"
+%include "../constants.asm"
 
 jmp boot_stage2_entry
 
-%include "GDT.s"
-%include "halt.s"
-%include "CPUID.s"
-%include "paging.s"
+%include "GDT.asm"
+%include "halt.asm"
+%include "CPUID.asm"
+%include "paging.asm"
 
 [bits 16]
 boot_stage2_entry:

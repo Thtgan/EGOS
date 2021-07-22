@@ -1,7 +1,7 @@
 %ifndef _PAGING
 %define _PAGING
 
-%include "../constants.s"
+%include "../constants.asm"
 
 [bits 32]
 

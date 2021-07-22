@@ -1,11 +1,11 @@
-%include "../constants.s"
+%include "../constants.asm"
 
 [org MBR_BEGIN_ADDRESS]
 [bits 16]
 
 jmp boot_stage1_entry
 
-%include "readDisk.s"
+%include "readDisk.asm"
 
 boot_stage1_entry:
     ;;Basic Initialization
