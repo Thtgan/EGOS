@@ -1,5 +1,6 @@
 #include"basicPrint.h"
-#include"vgaTextMode.h"
+
+#include<drivers/vgaTextMode.h>
 
 #include<stdbool.h>
 

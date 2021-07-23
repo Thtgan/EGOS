@@ -1,8 +1,11 @@
 #include"IDT.h"
-#include"../vgaTextMode.h"
-#include"../portIO.h"
-#include"../keyboard.h"
-#include"PIC.h"
+
+#include<drivers/interrupt/PIC.h>
+#include<drivers/vgaTextMode.h>
+#include<drivers/keyboard.h>
+#include<sys/portIO.h>
+
+#include<stdint.h>
 
 #define CODE_SEGMENT 0x08
 

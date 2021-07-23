@@ -1,4 +1,4 @@
-%include "../constants.asm"
+%include "constants.asm"
 
 [org MBR_BEGIN_ADDRESS]
 [bits 16]

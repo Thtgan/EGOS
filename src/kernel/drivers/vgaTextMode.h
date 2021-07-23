@@ -1,7 +1,7 @@
 #if !defined(__VGA_TEXTMODE_H)
 #define __VGA_TEXTMODE_H
 
-#include"portIO.h"
+#include<sys/portIO.h>
 #include<stdint.h>
 #include<stdbool.h>
 

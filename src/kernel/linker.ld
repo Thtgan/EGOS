@@ -2,7 +2,7 @@ OUTPUT_FORMAT(binary)
 
 ENTRY(_kernel_main)
 
-INPUT (
+/* INPUT (
     entry.o
     kernel_main.o
     vgaTextMode.o
@@ -11,11 +11,11 @@ INPUT (
     basicPrint.o
     IDT.o
     PIC.o
-)
+) */
 
-OUTPUT (
+/* OUTPUT (
     kernel.bin
-)
+) */
 
 SECTIONS {
     . = 0x7E00;

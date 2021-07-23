@@ -1,4 +1,4 @@
-%include "halt.asm"
+%include "entry/halt.asm"
 
 [bits 64]
 

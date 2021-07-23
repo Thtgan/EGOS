@@ -1,5 +1,6 @@
 #include"PIC.h"
-#include"../portIO.h"
+
+#include<sys/portIO.h>
 
 void remapPIC(uint8_t offset1, uint8_t offset2)
 {

@@ -1,7 +1,8 @@
 #include"keyboard.h"
-#include"interrupt/IDT.h"
-#include"vgaTextMode.h"
-#include"basicPrint.h"
+
+#include<drivers/interrupt/IDT.h>
+#include<drivers/basicPrint.h>
+#include<drivers/vgaTextMode.h>
 
 #include<stdint.h>
 #include<stdbool.h>

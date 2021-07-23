@@ -1,7 +1,7 @@
 %ifndef _PAGING
 %define _PAGING
 
-%include "../constants.asm"
+%define PML4_BASE_ADDRESS   0x1000
 
 [bits 32]
 
