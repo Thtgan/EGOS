@@ -1,8 +1,9 @@
 #if !defined(__KEYBOARD_H)
 #define __KEYBOARD_H
 
-#include<stdbool.h>
 #include"interrupt/IDT.h"
+
+#include<stdbool.h>
 
 #define KEY_ESC                     0x01
 #define KEY_NUMBER_1                0x02

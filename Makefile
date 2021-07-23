@@ -30,6 +30,9 @@ egos.bin:
 	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) -c vgaTextMode.c -o vgaTextMode.o
 	mv ./src/kernel/drivers/vgaTextMode.o $(BUILD_BIN_DIR)
 
+	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) -c basicPrint.c -o basicPrint.o
+	mv ./src/kernel/drivers/basicPrint.o $(BUILD_BIN_DIR)
+
 	cd ./src/kernel/drivers && $(CC) $(CC_OPTION) -c portIO.c -o portIO.o
 	mv ./src/kernel/drivers/portIO.o $(BUILD_BIN_DIR)
 

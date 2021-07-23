@@ -1,7 +1,9 @@
 #include"drivers/vgaTextMode.h"
-#include<stdint.h>
-#include"headers/includeBin.h"
+#include"drivers/basicPrint.h"
 #include"drivers/interrupt/IDT.h"
+#include"headers/includeBin.h"
+
+#include<stdint.h>
 
 void _kernel_main() {
     initIDT();

@@ -8,6 +8,7 @@ INPUT (
     vgaTextMode.o
     portIO.o
     keyboard.o
+    basicPrint.o
     IDT.o
     PIC.o
 )

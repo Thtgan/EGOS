@@ -1,8 +1,10 @@
 #include"keyboard.h"
-#include<stdint.h>
-#include<stdbool.h>
 #include"interrupt/IDT.h"
 #include"vgaTextMode.h"
+#include"basicPrint.h"
+
+#include<stdint.h>
+#include<stdbool.h>
 
 #define SCAN_CODE_TRIM(SCANCODE)                (SCANCODE & 0x7F)
 #define SCANCODE_PRESS(SCANCODE)                (SCANCODE & 0x7F)
@@ -158,30 +160,32 @@ void keyboardInterruptHandler(InterruptFrame* frame)
 
     else if (_pressed[key] && (ENTRY_FLAGS(_keyMap[key]) & IS_KEYPAD) != 0)
     {
+        const VGAStatus* vgaStatus = getVGAStatus();
+        int row = vgaStatus->cursorPosition / VGA_WIDTH, col = vgaStatus->cursorPosition % VGA_WIDTH;
         switch (key)
         {
         case KEY_KEYPAD_1:
-            setCursorPosition(getCursorPositionRow(), VGA_WIDTH - 1);
+            setCursorPosition(row, VGA_WIDTH - 1);
             break;
         case KEY_KEYPAD_2:
-            setCursorPosition(getCursorPositionRow() + 1, getCursorPositionCol());
+            setCursorPosition(row + 1, col);
             break;
         case KEY_KEYPAD_3:
             //Not implemented
             break;
         case KEY_KEYPAD_4:
-            setCursorPosition(getCursorPositionRow(), getCursorPositionCol() - 1);
+            setCursorPosition(row, col - 1);
             break;
         case KEY_KEYPAD_5:
             break;
         case KEY_KEYPAD_6:
-            setCursorPosition(getCursorPositionRow(), getCursorPositionCol() + 1);
+            setCursorPosition(row, col + 1);
             break;
         case KEY_KEYPAD_7:
-            setCursorPosition(getCursorPositionRow(), 0);
+            setCursorPosition(row, 0);
             break;
         case KEY_KEYPAD_8:
-            setCursorPosition(getCursorPositionRow() - 1, getCursorPositionCol());
+            setCursorPosition(row - 1, col);
             break;
         case KEY_KEYPAD_9:
             //Not implemented
