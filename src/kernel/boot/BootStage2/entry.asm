@@ -6,6 +6,7 @@ jmp boot_stage2_entry
 %include "halt.asm"
 %include "CPUID.asm"
 %include "paging.asm"
+%include "SSE.asm"
 
 [bits 16]
 boot_stage2_entry:
@@ -43,6 +44,8 @@ protected_mode_running:
 [bits 64]
 [extern _kernel_main]
 long_mode_running:
+    call checkSSE
+    call enableSSE
     call _kernel_main
     jmp halt64
 

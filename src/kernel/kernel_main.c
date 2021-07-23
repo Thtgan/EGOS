@@ -11,8 +11,8 @@ void _kernel_main() {
     setVgaCellPattern(VGA_COLOR_BLACK, VGA_COLOR_RED);
     print(logo);
     setDefaultVgaPattern();
-    printHex32(logo_size);
+    printInt64(logo_size, 16, 4);
     putchar('\n');
-
+    printDouble(-114514.1919810, 7);
     return;
 }
