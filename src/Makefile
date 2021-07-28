@@ -18,7 +18,7 @@ egos.bin:
 	cd kernel && $(MAKE)
 	mv kernel/build/kernel.bin $(BUILD_DIR)
 
-	cd $(BUILD_DIR) && cat boot.bin kernel.bin >> EGOS.bin
+	cd $(BUILD_DIR) && cat boot.bin kernel.bin > EGOS.bin
 
 buildDir:
 	mkdir -p $(BUILD_DIR)

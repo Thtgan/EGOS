@@ -1,7 +1,9 @@
-#include"drivers/vgaTextMode.h"
-#include"drivers/basicPrint.h"
-#include"drivers/interrupt/IDT.h"
-#include"headers/includeBin.h"
+#include<drivers/vgaTextMode.h>
+#include<drivers/basicPrint.h>
+#include<drivers/interrupt/IDT.h>
+#include<lib/includeBin.h>
+#include<lib/bits.h>
+#include<sys/memoryMap.h>
 
 #include<stdint.h>
 
@@ -15,6 +17,19 @@ void _kernel_main() {
     setDefaultVgaPattern();
     printInt64(logo_size, 16, 4);
     putchar('\n');
-    printDouble(-114514.1919810, 7);
+
+    memoryMap* ptr = (memoryMap*)0x5000;
+    for(int i = 0; i < memoryRegionCount; i++)
+    {
+        memoryMap* mm = &ptr[i];
+        printHex64(mm->baseAddress);
+        putchar(' ');
+        printHex64(mm->regionLength);
+        putchar(' ');
+        printHex32(mm->regionType);
+        putchar(' ');
+        printHex32(mm->unused);
+        putchar('\n');
+    }
     return;
 }

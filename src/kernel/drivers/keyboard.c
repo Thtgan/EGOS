@@ -3,32 +3,37 @@
 #include<drivers/interrupt/IDT.h>
 #include<drivers/basicPrint.h>
 #include<drivers/vgaTextMode.h>
+#include<lib/bits.h>
 
 #include<stdint.h>
 #include<stdbool.h>
 
-#define SCAN_CODE_TRIM(SCANCODE)                (SCANCODE & 0x7F)
-#define SCANCODE_PRESS(SCANCODE)                (SCANCODE & 0x7F)
-#define SCANCODE_RELEASE(SCANCODE)              (SCANCODE | 0x80)
+#define SCAN_CODE_TRIM(SCANCODE)                BITS_AND(SCANCODE, 0x7F)
+#define SCANCODE_PRESS(SCANCODE)                BITS_AND(SCANCODE, 0x7F)
+#define SCANCODE_RELEASE(SCANCODE)              BITS_OR(SCANCODE, 0x80)
 
-#define KEYMAP_ENTRY(ASCII, SHIFT_ASCII, FLAGS) (((uint16_t)(FLAGS) << 16) | ((uint8_t)(SHIFT_ASCII) << 8) | (uint8_t)(ASCII))
+#define KEYMAP_ENTRY(ASCII, SHIFT_ASCII, FLAGS) (BITS_LEFT_SHIFT(FLAGS, 16) | BITS_LEFT_SHIFT(SHIFT_ASCII, 8) | ASCII)
 #define ENTRY_ASCII(ENTRY)                      (ENTRY & 0xFF)
 #define ENTRY_ALT_ASCII(ENTRY)                  ((ENTRY >> 8) & 0xFF)
 #define ENTRY_FLAGS(ENTRY)                      ((ENTRY >> 16) & 0xFFFF)
-#define IS_ASCII                                1
-#define HAS_ALT_ASCII                           2
-#define IS_ALPHA                                4
-#define IS_CONTROL                              8
-#define IS_KEYPAD                               16
-#define IS_FUNCTION                             32
-#define IS_CTRL                                 64
-#define IS_SHIFT                                128
-#define IS_ALT                                  256
-#define IS_CAPSLOCK                             512
-#define IS_ENTER                                1024
+#define IS_ASCII                                BITS_FLAG16(0)
+#define HAS_ALT_ASCII                           BITS_FLAG16(1)
+#define IS_ALPHA                                BITS_FLAG16(2)
+#define IS_CONTROL                              BITS_FLAG16(3)
+#define IS_KEYPAD                               BITS_FLAG16(4)
+#define IS_FUNCTION                             BITS_FLAG16(5)
+#define IS_CTRL                                 BITS_FLAG16(6)
+#define IS_SHIFT                                BITS_FLAG16(7)
+#define IS_ALT                                  BITS_FLAG16(8)
+#define IS_CAPSLOCK                             BITS_FLAG16(9)
+#define IS_ENTER                                BITS_FLAG16(10)
 
 static bool _pressed[128];
-static bool _capslock = false;
+
+static KeyboardStatus _keyboardStatus = {
+    false,
+    _pressed
+};
 
 __attribute__((interrupt))
 void keyboardDebugInterruptHandler(InterruptFrame* frame)
@@ -154,7 +159,7 @@ void keyboardInterruptHandler(InterruptFrame* frame)
     _pressed[key] = (SCANCODE_PRESS(scancode) == scancode);
 
     if (!_pressed[KEY_CAPSLOCK] && key == KEY_CAPSLOCK)
-        _capslock ^= true;
+        _keyboardStatus.capslock ^= true;
     
     else if (_pressed[key] && (ENTRY_FLAGS(_keyMap[key]) & IS_ASCII) != 0)
         putchar(__toASCII(key));
@@ -204,17 +209,12 @@ static uint8_t __toASCII(uint8_t key)
     uint8_t ch = ENTRY_ASCII(_keyMap[key]);
     if (((ENTRY_FLAGS(_keyMap[key]) & HAS_ALT_ASCII) != 0) && (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT]))
         ch = ENTRY_ALT_ASCII(_keyMap[key]);
-    if (((ENTRY_FLAGS(_keyMap[key]) & IS_ALPHA) != 0) && _capslock)
+    if (((ENTRY_FLAGS(_keyMap[key]) & IS_ALPHA) != 0) && _keyboardStatus.capslock)
         ch = (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT]) ? ch :  ENTRY_ALT_ASCII(_keyMap[key]);
     return ch;
 }
 
-bool getCapslock()
+const KeyboardStatus* getKeyboardStatus()
 {
-    return _capslock;
-}
-
-bool isPressed(uint8_t key)
-{
-    return _pressed[key];
+    return &_keyboardStatus;
 }

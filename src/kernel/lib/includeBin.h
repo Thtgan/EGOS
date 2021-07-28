@@ -2,7 +2,7 @@
 #define __INCLUDE_BIN_H
 
 #include<stdint.h>
-#include"macro.h"
+#include<lib/macro.h>
 
 #define __INCLUDE_BIN_NEWLINE "\n"
 

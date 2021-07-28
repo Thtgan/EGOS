@@ -47,7 +47,7 @@ check_passed:
     mov es, ax
     mov bx, KERNEL_BEGIN_ADDRESS        ;;Read to 0x0000:0x8000
     mov eax, 1024                       ;;Starts from 1025th byte
-    mov ecx, 16384                      ;;Read 16384 bytes
+    mov ecx, 1 << 20                    ;;Read 1 megabyte
 
     call readDisk
 

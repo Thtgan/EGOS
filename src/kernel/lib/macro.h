@@ -3,6 +3,8 @@
 
 #define MACRO_EVAL(X) X
 
+#define MACRO_EXPRESSION(X) (X)
+
 #define MACRO_STR(X) #X
 
 #define MACRO_CONCENTRATE(X, Y) X ## Y

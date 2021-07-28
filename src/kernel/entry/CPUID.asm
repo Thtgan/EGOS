@@ -3,8 +3,6 @@
 
 %include "entry/halt.asm"
 
-[bits 32]
-
 ;;Check CPUID availability
 checkCPUID:
     pushfd
@@ -44,6 +42,5 @@ _has_long_mode:
     call halt32
 _check_long_mode_pass:
     ret
-[bits 16]
 
 %endif

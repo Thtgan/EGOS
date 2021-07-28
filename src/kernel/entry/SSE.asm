@@ -1,7 +1,5 @@
 %include "entry/halt.asm"
 
-[bits 64]
-
 checkSSE:
     mov eax, 0x01
     cpuid
@@ -21,5 +19,3 @@ enableSSE:
     mov cr4, rax
 
     ret
-
-[bits 16]

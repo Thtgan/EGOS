@@ -12,35 +12,35 @@ const static char* _digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 void print(const char* str)
 {
-	for(int i = 0; str[i] != '\0'; ++i)
+	for(int32_t i = 0; str[i] != '\0'; ++i)
 		putchar(str[i]);
 }
 
 void printHex8(uint8_t val)
 {
 	print(_hexPrefix);
-	for(int i = 1; i >= 0; --i)
+	for(int32_t i = 1; i >= 0; --i)
 		putchar(_digits[(val >> (i << 2)) & 0x0F]);
 }
 
 void printHex16(uint16_t val)
 {
 	print(_hexPrefix);
-	for(int i = 3; i >= 0; --i)
+	for(int32_t i = 3; i >= 0; --i)
 		putchar(_digits[(val >> (i << 2)) & 0x0F]);
 }
 
 void printHex32(uint32_t val)
 {
 	print(_hexPrefix);
-	for(int i = 7; i >= 0; --i)
+	for(int32_t i = 7; i >= 0; --i)
 		putchar(_digits[(val >> (i << 2)) & 0x0F]);
 }
 
 void printHex64(uint64_t val)
 {
 	print(_hexPrefix);
-	for(int i = 15; i >= 0; --i)
+	for(int32_t i = 15; i >= 0; --i)
 		putchar(_digits[(val >> (i << 2)) & 0x0F]);
 }
 
@@ -52,7 +52,7 @@ void printInt64(int64_t val, uint8_t base, uint8_t padding)
 
 	bool neg = false;
 
-	int len = 0;
+	uint8_t len = 0;
 	if (val < 0)
 	{
 		if (base == 10)
@@ -89,7 +89,7 @@ void printUInt64(uint64_t val, uint8_t base, uint8_t padding)
 	_stringBuffer[STRING_BUFFER_SIZE - 1] = '\0';
 
 	char * ptr = &_stringBuffer[STRING_BUFFER_SIZE - 2];
-	int len = 0;
+	uint8_t len = 0;
 	for(; val != 0; val /= base, --ptr, ++len)
 		*ptr = _digits[val % base];
 	

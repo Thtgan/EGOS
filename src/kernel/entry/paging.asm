@@ -3,8 +3,6 @@
 
 %define PML4_BASE_ADDRESS   0x1000
 
-[bits 32]
-
 ;;Enable PAE paging and set up a 4-level page table
 setupPaging:
     mov edi, PML4_BASE_ADDRESS
@@ -44,6 +42,5 @@ _set_entry:
     mov cr0, eax
 
     ret
-[bits 16]
 
 %endif

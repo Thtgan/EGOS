@@ -1,7 +1,7 @@
 #if !defined(__KEYBOARD_H)
 #define __KEYBOARD_H
 
-#include"interrupt/IDT.h"
+#include<drivers/interrupt/IDT.h>
 
 #include<stdbool.h>
 
@@ -91,6 +91,11 @@
 #define KEY_F11                     0x57
 #define KEY_F12                     0x58
 
+typedef struct {
+    bool capslock;
+    bool *pressed;
+} KeyboardStatus;
+
 /**
  * @brief Keyboard debug interrupt handler, print interrupt frame, scancode on the screen
  * 
@@ -106,20 +111,11 @@ void keyboardDebugInterruptHandler(InterruptFrame* frame);
 void keyboardInterruptHandler(InterruptFrame* frame);
 
 /**
- * @brief Get if Capslock in on
+ * @brief get the struct containing keyboard's status
  * 
- * @return bool Capslock is on or not
+ * @return const KeyboardStatus* Keyboard status
  */
-bool getCapslock();
-
-/**
- * @brief Check if the key is pressed
- * 
- * @param key Key to check
- * 
- * @return bool Key is pressed or not
- */
-bool isPressed(uint8_t key);
+const KeyboardStatus* getKeyboardStatus();
 
 /**
  * @brief Read scancode from the port

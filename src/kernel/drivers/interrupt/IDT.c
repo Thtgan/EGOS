@@ -7,7 +7,7 @@
 
 #include<stdint.h>
 
-#define CODE_SEGMENT 0x08
+#define CODE_SEGMENT 0x18
 
 typedef struct {
     uint16_t    offset0_15;
@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
     uint16_t size;
-    uint64_t base;
+    uint32_t base;
 } __attribute__((packed)) IDTDesc;
 
 static IDTEntry _idt[MAX_IDT_ENTRY_LIMIT];
@@ -30,7 +30,7 @@ static IDTDesc _idtDesc;
 void initIDT()
 {
     _idtDesc.size = (uint16_t)sizeof(IDTEntry) * MAX_IDT_ENTRY_LIMIT - 1;
-    _idtDesc.base = (uint64_t)&_idt[0];
+    _idtDesc.base = (uint32_t)(uint64_t)&_idt[0];
 
     // uint32_t vector = 0;
     // for(; vector < 32; ++vector)

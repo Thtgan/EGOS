@@ -1,7 +1,9 @@
 #if !defined(__VGA_TEXTMODE_H)
 #define __VGA_TEXTMODE_H
 
+#include<lib/bits.h>
 #include<sys/portIO.h>
+
 #include<stdint.h>
 #include<stdbool.h>
 
@@ -26,9 +28,9 @@
 #define VGA_COLOR_YELLOW        0xE //Yellow
 #define VGA_COLOR_WHITE         0xF //White
 
-#define VGA_BRIGHT_COLOR(x)                         ((x) | 8)
-#define VGA_COLOR_PATTERN(background, foreground)   ((((background) & 0x0F) << 4) | ((foreground) & 0x0F))
-#define VGA_CELL_ENTRY(pattern, ch)                 (((((uint16_t)pattern) & 0xFF) << 8) | (ch & 0xFF))
+#define VGA_BRIGHT_COLOR(X)                         BITS_OR(X, 8)
+#define VGA_COLOR_PATTERN(BACKGROUND, FOREGROUND)   BITS_OR(BITS_LEFT_SHIFT(BACKGROUND, 4), FOREGROUND)
+#define VGA_CELL_ENTRY(PATTERN, CH)                 BITS_OR(BITS_LEFT_SHIFT(PATTERN, 8), CH)
 
 typedef struct {
     uint8_t vgaPattern;
@@ -93,9 +95,9 @@ void setDefaultVgaPattern();
 /**
  * @brief get the struct containing VGA's status
  * 
- * @return VGAStatus* VGA status
+ * @return const VGAStatus* VGA status
  */
-VGAStatus* getVGAStatus();
+const VGAStatus* getVGAStatus();
 
 /**
  * @brief Print an ASCII character on screen 

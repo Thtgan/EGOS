@@ -3,7 +3,13 @@
 #include<stdint.h>
 #include<stdbool.h>
 
-static VGAStatus _vgaStatus;
+static VGAStatus _vgaStatus = {
+	VGA_COLOR_PATTERN(VGA_COLOR_BLACK, VGA_COLOR_WHITE),
+	true,
+	14,
+	15,
+	0
+};
 
 void initCursor()
 {
@@ -49,7 +55,7 @@ static void __setCursorPosition(uint16_t position)
 	outb(0x03D5, (position >> 8) & 0xFF);
 }
 
-VGAStatus* getVGAStatus()
+const VGAStatus* getVGAStatus()
 {
 	return &_vgaStatus;
 }
