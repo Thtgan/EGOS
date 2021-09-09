@@ -1,6 +1,7 @@
 #include<sys/A20.h>
 
-#include<sys/real.h>
+#include<real/registers.h>
+#include<real/simpleAsmLines.h>
 
 //Reference: https://wiki.osdev.org/A20_Line
 

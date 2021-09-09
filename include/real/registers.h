@@ -69,8 +69,6 @@ struct registerSet {
 
 #define SEG_REG_INLINE_NAME(__REG) MACRO_EVAL(MACRO_CONCENTRATE2(SEG_REG_INLINE_NAME_, __REG))
 
-void initRegs(struct registerSet* regs);
-
 #define __GET_SEGMENT_FUNC_HEADER(__SEGMENT)                    \
 static inline uint16_t MACRO_CONCENTRATE2(get, __SEGMENT) ()    \
 

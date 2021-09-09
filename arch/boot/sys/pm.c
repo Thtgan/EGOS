@@ -1,7 +1,7 @@
 #include<sys/pm.h>
 
+#include<real/simpleAsmLines.h>
 #include<sys/GDT.h>
-#include<sys/real.h>
 #include<types.h>
 
 __attribute__((noreturn, regparm(3))) //TODO Pass arguments with stack will cause some unknown error, considering use C native assembly instead of NASM

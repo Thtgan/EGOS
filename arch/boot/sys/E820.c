@@ -2,8 +2,10 @@
 
 #include<bootKit.h>
 #include<kit/bit.h>
-#include<sys/cpuFlags.h>
-#include<sys/real.h>
+#include<real/cpuFlags.h>
+#include<real/registers.h>
+#include<sys/initRegs.h>
+#include<sys/intInvoke.h>
 
 #define SMAP 0x534D4150
 

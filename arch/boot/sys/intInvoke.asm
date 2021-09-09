@@ -13,7 +13,8 @@ intInvoke:
     push fs
     push gs
 
-    mov esi, dword [esp + 52]
+    lea esi, [esp + 52]
+    mov esi, dword [esi]
     lea esp, [esp - 44]
     mov edi, esp
     mov ecx, 11

@@ -7,7 +7,6 @@
 #include<sys/blowup.h>
 #include<sys/E820.h>
 #include<sys/pm.h>
-#include<sys/real.h>
 
 struct BootInfo {
     struct MemoryMap memoryMap;

@@ -1,4 +1,5 @@
-#include<stdint.h>
+#include<types.h>
+#include<real/simpleAsmLines.h>
 
 void kernel_main() {
     uint8_t* video = (uint8_t*)0xB8000;
@@ -9,5 +10,7 @@ void kernel_main() {
     video[6] = 'l';
     video[8] = 'o';
 
-    while(1);
+    die();
+
+    video[10] = '!';
 }

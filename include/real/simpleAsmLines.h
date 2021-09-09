@@ -1,9 +1,8 @@
-#if !defined(__REAL_H)
-#define __REAL_H
+#if !defined(__SIMPLE_ASM_LINES_H)
+#define __SIMPLE_ASM_LINES_H
 
 #include<kit/macro.h>
-#include<sys/intInvoke.h>
-#include<sys/registers.h>
+#include<real/registers.h>
 #include<types.h>
 
 #define INSTRUCTION_LENGTH_SUFFIX8  b
@@ -165,7 +164,7 @@ static inline void ioWait() {
 static inline uint32_t MACRO_CONCENTRATE2(readCR, __CR)()   \
 
 #define __READ_CR_FUNC_INLINE_ASM(__CR)         \
-"movl %%cr" MACRO_CALL(MACRO_STR, __CR) ", %0"    \
+"movl %%cr" MACRO_CALL(MACRO_STR, __CR) ", %0"  \
 : "=r"(ret)                                     \
 :                                               \
 
@@ -185,7 +184,7 @@ __READ_CR_FUNC(3)
 static inline uint32_t MACRO_CONCENTRATE2(writeCR, __CR)(uint32_t val)  \
 
 #define __WRITE_CR_FUNC_INLINE_ASM(__CR)    \
-"movl %0, %%cr" MACRO_CALL(MACRO_STR, __CR)   \
+"movl %0, %%cr" MACRO_CALL(MACRO_STR, __CR) \
 :                                           \
 : "r"(val)                                  \
 
@@ -200,6 +199,12 @@ __WRITE_CR_FUNC(2)
 __WRITE_CR_FUNC(3)
 
 __attribute__((noreturn))
-void die();
+static inline void die() {
+    asm volatile(
+        "l1: hlt\n\t"
+        "jmp l1\n\t"
+    );
+    while(1);
+}
 
-#endif // __REAL_H
+#endif // __SIMPLE_ASM_LINES_H

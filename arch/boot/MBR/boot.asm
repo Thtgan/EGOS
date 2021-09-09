@@ -8,7 +8,8 @@
 bits 16
 section .bootSector
 
-boot_entry:
+global global_boot_entry
+global_boot_entry:
     jmp real_boot_entry
 
 %include "MBR/readDisk.asm"
@@ -56,6 +57,9 @@ check_passed:
     call __real_readDisk
 
     jc errorHalt
+
+    xor ax, ax
+    mov es, ax
 
     clc
 

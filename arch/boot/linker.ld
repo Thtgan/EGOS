@@ -1,6 +1,6 @@
 OUTPUT_FORMAT(binary)
 
-ENTRY(boot_entry)
+ENTRY(global_boot_entry)
 
 SECTIONS
 {

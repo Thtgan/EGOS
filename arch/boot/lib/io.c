@@ -1,11 +1,14 @@
 #include<lib/io.h>
 
-#include<sys/real.h>
+#include<real/registers.h>
+#include<sys/initRegs.h>
+#include<sys/intInvoke.h>
 
 void biosPutchar(int ch) {
     if (ch == '\n')
         biosPutchar('\r');
     struct registerSet inRegs;
+    initRegs(&inRegs);
     inRegs.al = ch;
     inRegs.ah = 0x0E;
     inRegs.bx = 0x0007;
@@ -14,6 +17,7 @@ void biosPutchar(int ch) {
 
 void biosPrint(const char* str) {
     struct registerSet inRegs;
+    initRegs(&inRegs);
     inRegs.ah = 0x0E;
     inRegs.bx = 0x0007;
     for (; *str != '\0'; ++str) {

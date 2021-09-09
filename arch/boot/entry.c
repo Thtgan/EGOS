@@ -21,16 +21,15 @@ __attribute__((noreturn))
 void entry() {
     const struct BootInfo* roBootInfo = &bootInfo;
 
-    // printf("EGOS start booting...\n");
-    // detectMemory();
+    printf("EGOS start booting...\n");
+    detectMemory();
 
-    // printMemoryAreas();
+    printMemoryAreas();
 
-    // if (enableA20())
-    //     blowup("Enable A20 failed, unable to boot.\n");
-    // else
-    //     printf("A20 line enabled successfully\n");
-    enableA20();
+    if (enableA20())
+        blowup("Enable A20 failed, unable to boot.\n");
+    else
+        printf("A20 line enabled successfully\n");
 
     switchToProtectedMode(KERNEL_BEGIN_ADDR);
 }
