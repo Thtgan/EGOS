@@ -1,6 +1,6 @@
 #include<sys/GDT.h>
 
-#include<real/registers.h>
+#include<sys/realmode.h>
 
 static const struct GDTEntry GDTTable[256] __attribute__((aligned(16))) = {
     [GDT_ENTRY_INDEX_NULL]          = BUILD_GDT_ENTRY(0x00000000, 0x00000, 0x00, 0x00),

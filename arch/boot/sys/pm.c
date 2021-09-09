@@ -1,7 +1,7 @@
 #include<sys/pm.h>
 
-#include<real/simpleAsmLines.h>
 #include<sys/GDT.h>
+#include<sys/realmode.h>
 #include<types.h>
 
 __attribute__((noreturn, regparm(3))) //TODO Pass arguments with stack will cause some unknown error, considering use C native assembly instead of NASM
@@ -14,6 +14,8 @@ void switchToProtectedMode(uint32_t protectedBegin) {
     uint32_t cr0 = readCR0();
     cr0 |= 1;
     writeCR0(cr0);
+
+    cli();
 
     __jumpToProtectedModeCode(SEGMENT_CODE32, SEGMENT_DATA32, protectedBegin);
 }

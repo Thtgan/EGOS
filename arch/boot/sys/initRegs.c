@@ -1,9 +1,7 @@
-#include<sys/initRegs.h>
+#include<sys/realmode.h>
 
 #include<kit/bit.h>
 #include<lib/string.h>
-#include<real/registers.h>
-#include<real/cpuFlags.h>
 
 void initRegs(struct registerSet* regs) {
     memset(regs, 0, sizeof(struct registerSet));

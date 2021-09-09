@@ -3,8 +3,6 @@ bits 16
 global __jumpToProtectedModeCode
 
 __jumpToProtectedModeCode:
-    cli
-
     mov [code_segment], ax
     mov eax, ecx
 

@@ -1,8 +1,6 @@
 #include<lib/io.h>
 
-#include<real/registers.h>
-#include<sys/initRegs.h>
-#include<sys/intInvoke.h>
+#include<sys/realmode.h>
 
 void biosPutchar(int ch) {
     if (ch == '\n')

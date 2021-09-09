@@ -2,7 +2,7 @@
 
 #include<lib/io.h>
 #include<lib/printf.h>
-#include<real/simpleAsmLines.h>
+#include<sys/realmode.h>
 
 __attribute__((noreturn))
 void blowup(const char* format, ...) {

@@ -207,4 +207,12 @@ static inline void die() {
     while(1);
 }
 
+static inline void cli() {
+    asm volatile("cli");
+}
+
+static inline void sli() {
+    asm volatile("sli");
+}
+
 #endif // __SIMPLE_ASM_LINES_H
