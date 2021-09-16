@@ -8,13 +8,13 @@
 bits 16
 section .bootSector
 
-global global_boot_entry
-global_boot_entry:
-    jmp real_boot_entry
+global globalBootEntry
+globalBootEntry:
+    jmp realBootEntry
 
 %include "MBR/readDisk.asm"
 
-real_boot_entry:
+realBootEntry:
     ;;Basic Initialization
     ;;Set necessary registers to 0 and set the stack
     cli         ;;Clear interrupt flag
@@ -31,8 +31,8 @@ real_boot_entry:
     sti         ;;Set interrupt flag
     ;;End of initialization
 
-    jmp check_IO_device
-check_passed:
+    jmp checkIODevice
+checkPassed:
     ;;Check passed, meaning program running on a i386+ platform and 32-bit registers are available
     mov esp, STACK_BUTTOM_ADDRESS
 
@@ -63,12 +63,12 @@ check_passed:
 
     clc
 
-extern entry
-    jmp entry
+extern realModeMain
+    jmp realModeMain
 
 ;;DL contains drive number initially and it should no less than 0x80 and no more than 0x8F
 ;;int 0x13 extension should be checked to overcome BIOS 8GB barrier
-check_IO_device:
+checkIODevice:
     cmp dl, 0x80    ;;Values below 0x80 means booting from floppy disk
     jb errorHalt
     
@@ -84,7 +84,7 @@ check_IO_device:
     cmp bx, 0xAA55
     jnz errorHalt
     ;;If extension not present, jump to halt
-    jmp check_passed
+    jmp checkPassed
 
 ;;Halt for unknown error
 errorHalt:
@@ -92,9 +92,9 @@ errorHalt:
     mov al, '!'
     int 0x10
 
-_errorHalt_halt:
+_errorHaltLoop:
     hlt
-    jmp _errorHalt_halt
+    jmp _errorHaltLoop
 
 times 510-($-$$) db 0
 

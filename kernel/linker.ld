@@ -1,11 +1,15 @@
 OUTPUT_FORMAT(binary)
 
-ENTRY(kernel_main)
+ENTRY(kernelMain)
 
 SECTIONS
 {
-    . = 0x100000;
-    
+    . = 0x10000;
+
+    .kernelMain : {
+        *(.kernelMain)
+    }
+
     .text : {
         *(.text)
     }

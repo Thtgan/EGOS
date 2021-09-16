@@ -1,5 +1,5 @@
-#if !defined(__STRING_H)
-#define __STRING_H
+#if !defined(__KERNEL_STRING_H)
+#define __KERNEL_STRING_H
 
 #include<types.h>
 
@@ -7,4 +7,4 @@ void* memset(void *dest, int ch, size_t count);
 
 size_t strnlen(const char *str, size_t maxlen);
 
-#endif // __STRING_H
+#endif // __KERNEL_STRING_H

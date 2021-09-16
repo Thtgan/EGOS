@@ -1,9 +1,11 @@
-#include<lib/printf.h>
+#include<lib/kPrint.h>
 
 #include<kit/bit.h>
-#include<lib/io.h>
 #include<lib/string.h>
 #include<stdarg.h>
+#include<textmode.h>
+
+#include<real/simpleAsmLines.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   BIT_FLAG8(0)
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  BIT_FLAG8(1)
@@ -13,7 +15,7 @@
 #define __VFPRINTF_FLAGS_SIGNED         BIT_FLAG8(5)
 #define __VFPRINTF_FLAGS_LOWERCASE      BIT_FLAG8(6)
 
-#define __IS_DIGIT(__CH)                  ('0' <= (__CH) && (__CH) <= '9')
+#define __IS_DIGIT(__CH)                ('0' <= (__CH) && (__CH) <= '9')
 
 static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags) {
     static const char digits[17] = "0123456789ABCDEF";
@@ -95,7 +97,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
 }
 
 //Reference: https://www.cplusplus.com/reference/cstdio/printf/
-int vfprintf(char* buffer, const char* format, va_list args)
+int kernelVFprintf(char* buffer, const char* format, va_list args)
 {
     char* writeTo = NULL;
     for (writeTo = buffer; *format != '\0'; ++format) {
@@ -261,17 +263,19 @@ int vfprintf(char* buffer, const char* format, va_list args)
     return writeTo - buffer;
 }
 
-int printf(const char* format, ...) {
+int kernelPrintf(const char* format, ...) {
     char buf[1024];
 
     va_list args;
     va_start(args, format);
 
-    int ret = vfprintf(buf, format, args);
+    int ret = kernelVFprintf(buf, format, args);
 
     va_end(args);
 
-    biosPrint(buf);
+    nop();
+
+    textModePrint(buf); //TODO: Replace this with general print function
 
     return ret;
 }

@@ -215,4 +215,8 @@ static inline void sli() {
     asm volatile("sli");
 }
 
+static inline void nop() {
+    asm volatile("nop");
+}
+
 #endif // __SIMPLE_ASM_LINES_H

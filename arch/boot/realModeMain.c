@@ -1,4 +1,5 @@
 #include<bootKit.h>
+#include<real/simpleAsmLines.h>
 
 #define KERNEL_BEGIN_ADDR   0x10000
 
@@ -18,7 +19,7 @@ void printMemoryAreas() {
 }
 
 __attribute__((noreturn))
-void entry() {
+void realModeMain() {
     const struct BootInfo* roBootInfo = &bootInfo;
 
     printf("EGOS start booting...\n");

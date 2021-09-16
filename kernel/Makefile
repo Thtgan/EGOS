@@ -1,7 +1,8 @@
 CC 							= 	x86_64-elf-gcc
-CC_OPTIONS 					= 	-ffreestanding	\
+CC_OPTIONS 					= 	-nostdlib		\
+								-ffreestanding	\
 								-mno-red-zone	\
-								-m64			\
+								-m32			\
 								-I.	 			\
 								-I..			\
 								-I./include		\
@@ -25,7 +26,7 @@ buildDir:
 	for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
 
 kernel.bin: $(OBJ_FILES_C)
-	$(LD) $(BUILD_OBJ_FILES) -T linker.ld -o $(BUILD_DIR)/$@
+	$(LD) -m elf_i386 $(BUILD_OBJ_FILES) -T linker.ld -o $(BUILD_DIR)/$@
 
 $(OBJ_FILES_C):%.o:%.c
 	$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@

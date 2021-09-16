@@ -1,6 +1,7 @@
 NASM 						= 	nasm
 CC 							= 	x86_64-elf-gcc
-CC_OPTIONS 					= 	-ffreestanding	\
+CC_OPTIONS 					= 	-nostdlib		\
+								-ffreestanding	\
 								-mno-red-zone	\
 								-m16			\
 								-I.	 			\
