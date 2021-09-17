@@ -1,11 +1,9 @@
 #include<lib/kPrint.h>
 
+#include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
 #include<lib/string.h>
 #include<stdarg.h>
-#include<textmode.h>
-
-#include<real/simpleAsmLines.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   BIT_FLAG8(0)
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  BIT_FLAG8(1)
@@ -272,8 +270,6 @@ int kernelPrintf(const char* format, ...) {
     int ret = kernelVFprintf(buf, format, args);
 
     va_end(args);
-
-    nop();
 
     textModePrint(buf); //TODO: Replace this with general print function
 

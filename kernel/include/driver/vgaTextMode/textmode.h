@@ -3,6 +3,18 @@
 
 #include<kit/bit.h>
 
+#define TEXT_MODE_BUFFER_BEGIN              (uint8_t*)0xB8000
+#define TEXT_MODE_WIDTH                     80 
+#define TEXT_MODE_HEIGHT                    25
+#define TEXT_MODE_SIZE                      TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT
+#define TEXT_MODE_BUFFER_END                TEXT_MODE_BUFFER_BEGIN + TEXT_MODE_SIZE * 2
+
+struct TextModeInfo {
+    uint8_t pattern;
+    uint16_t writePosition;
+    uint16_t tabStride;
+};
+
 #define TEXT_MODE_COLOR_BLACK           0
 #define TEXT_MODE_COLOR_BLUE            1
 #define TEXT_MODE_COLOR_GREEN           2
