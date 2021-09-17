@@ -1,5 +1,3 @@
-#include<kit/includeBin.h>
-#include<kit/incbin.h>
 #include<lib/string.h>
 #include<lib/kPrint.h>
 #include<real/simpleAsmLines.h>
