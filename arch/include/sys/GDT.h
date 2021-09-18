@@ -8,8 +8,8 @@
 #define GDT_ENTRY_INDEX_CODE        1
 #define GDT_ENTRY_INDEX_DATA        2
 
-#define SEGMENT_CODE32          GDT_ENTRY_INDEX_CODE * 8
-#define SEGMENT_DATA32          GDT_ENTRY_INDEX_DATA * 8
+#define SEGMENT_CODE32              GDT_ENTRY_INDEX_CODE * 8
+#define SEGMENT_DATA32              GDT_ENTRY_INDEX_DATA * 8
 
 #define GDT_ACCESS                  BIT_FLAG8(0)
 #define GDT_READABLE                BIT_FLAG8(1)
@@ -47,8 +47,8 @@ struct GDTEntry {
 }                                                                                                   \
 
 struct GDTDesc {
-    uint16_t    GDTTableSize;
-    uint32_t    GDTTablePtr;
+    uint16_t    size;
+    uint32_t    tablePtr;
 } __attribute__((packed));
 
 void setupGDT();
