@@ -4,7 +4,7 @@ section .intInvokeText
 global intInvoke
 intInvoke:
     mov al, byte [esp + 4]
-    mov byte [interrupt_no], al
+    mov byte [interrupt_vec], al
 
     pushad
     pushfd
@@ -28,7 +28,7 @@ intInvoke:
     pop gs
 
     db 0xCD
-interrupt_no:
+interrupt_vec:
     db 0
 
     push gs
