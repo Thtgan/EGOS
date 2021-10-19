@@ -9,7 +9,7 @@
 #include<sys/pm.h>
 
 struct BootInfo {
-    struct MemoryMap memoryMap;
+    struct MemoryMap memoryMap; //Memory map of the system
 } __attribute__((packed));
 
 #endif // __BOOT_KIT_H

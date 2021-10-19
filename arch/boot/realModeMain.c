@@ -1,11 +1,13 @@
 #include<bootKit.h>
-#include<real/simpleAsmLines.h>
 
 #define KERNEL_BEGIN_ADDR   0x10000
 
-// ANCHOR[id=arch_boot_entry_c_bootInfo]
-struct BootInfo bootInfo __attribute__((aligned(16)));
+//ANCHOR[id=arch_boot_entry_c_bootInfo]
+struct BootInfo bootInfo __attribute__((aligned(16)));  //Information during the boot
 
+/**
+ * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
+ */
 void printMemoryAreas() {
     const struct BootInfo* roBootInfo = &bootInfo;
 
@@ -18,15 +20,21 @@ void printMemoryAreas() {
         roBootInfo->memoryMap.e820Table[i].type);
 }
 
+
 __attribute__((noreturn))
+/**
+ * @brief The entrance of the real mode code, initialize properties before switch to protected mode
+ * !!(DO NOT CALL THIS FUNCTION)
+ */
 void realModeMain() {
     const struct BootInfo* roBootInfo = &bootInfo;
 
-    printf("EGOS start booting...\n");
+    printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
     detectMemory();
 
     printMemoryAreas();
 
+    //If failed to enable A20, system should not be booted
     if (enableA20())
         blowup("Enable A20 failed, unable to boot.\n");
     else

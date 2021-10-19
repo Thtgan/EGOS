@@ -6,9 +6,14 @@
 
 #define SMAP 0x534D4150
 
-// LINK arch/boot/realModeMain.c#arch_boot_entry_c_bootInfo
+//Defined in LINK arch/boot/realModeMain.c#arch_boot_entry_c_bootInfo
 extern struct BootInfo bootInfo;
 
+/**
+ * @brief Detect memory area with 0x15, EAX = E820
+ * 
+ * @return number of memory areas detected
+ */
 static int __detectE820() {
     struct registerSet regs;
     struct E820Entry buf;
@@ -18,7 +23,7 @@ static int __detectE820() {
 
     int cnt = 0;
     regs.ebx = 0;
-    do {
+    do {    //Loop for scan memory area
         regs.eax = 0xE820;
         regs.ecx = sizeof(struct E820Entry);
         regs.edx = SMAP;

@@ -37,6 +37,7 @@ struct GDTEntry {
     uint8_t     base24_31;
 } __attribute__((packed));
 
+//Macro to construct the GDT entry
 #define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) {                                       \
     (uint16_t)  BIT_CUT(__LIMIT, 0, 16),                                                            \
     (uint16_t)  BIT_CUT(__BASE, 0, 16),                                                             \
@@ -51,6 +52,9 @@ struct GDTDesc {
     uint32_t    tablePtr;
 } __attribute__((packed));
 
+/**
+ * @brief Set up GDT table
+ */
 void setupGDT();
 
 #endif // __GDT_H

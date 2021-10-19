@@ -5,24 +5,36 @@
 #include<lib/string.h>
 #include<stdarg.h>
 
-#define __VFPRINTF_FLAGS_LEFT_JUSTIFY   BIT_FLAG8(0)
-#define __VFPRINTF_FLAGS_EXPLICIT_SIGN  BIT_FLAG8(1)
-#define __VFPRINTF_FLAGS_PADDING_SPACE  BIT_FLAG8(2)
-#define __VFPRINTF_FLAGS_SPECIFIER      BIT_FLAG8(3)
-#define __VFPRINTF_FLAGS_PADDING_ZERO   BIT_FLAG8(4)
-#define __VFPRINTF_FLAGS_SIGNED         BIT_FLAG8(5)
-#define __VFPRINTF_FLAGS_LOWERCASE      BIT_FLAG8(6)
+#define __VFPRINTF_FLAGS_LEFT_JUSTIFY   BIT_FLAG8(0)    //Justify the printed number to the left
+#define __VFPRINTF_FLAGS_EXPLICIT_SIGN  BIT_FLAG8(1)    //Force to print the sign of the number
+#define __VFPRINTF_FLAGS_PADDING_SPACE  BIT_FLAG8(2)    //Use space for padding
+#define __VFPRINTF_FLAGS_SPECIFIER      BIT_FLAG8(3)    //Print the specifier like 0, 0x
+#define __VFPRINTF_FLAGS_PADDING_ZERO   BIT_FLAG8(4)    //Use zero for padding
+#define __VFPRINTF_FLAGS_SIGNED         BIT_FLAG8(5)    //The number to print is signed
+#define __VFPRINTF_FLAGS_LOWERCASE      BIT_FLAG8(6)    //Print alphabetic digit in lowercase
 
 #define __IS_DIGIT(__CH)                  ('0' <= (__CH) && (__CH) <= '9')
 
+/**
+ * @brief Write the number to the buffer with given format
+ * 
+ * @param writeTo The buffer to write to
+ * @param num Number to write
+ * @param base Base of the number
+ * @param width Width of the line writed to buffer, fill the buffer with space to fit the width
+ * @param precision Real length of the writed number, fill the buffer with zero to fit the precision
+ * @param flags Flags to declare the detail while writing the number
+ * @return The pointer to the buffer after the number written
+ */
 static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags) {
-    static const char digits[17] = "0123456789ABCDEF";
+    static const char digits[17] = "0123456789ABCDEF";  //Number of each digit
     char tmp[128];
 
-    if (base < 2 || base > 16)
+    if (base < 2 || base > 16)  //If base not available, return
         return NULL;
 
     char sign = 0;
+    //Determine the sign
     if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED)) {
         if (num >= 0x80000000) {
             --width;
@@ -39,6 +51,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
         }
     }
 
+    //If use the specifier, modify the width
     if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
         if (base == 16)
             width -= 2;
@@ -46,6 +59,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
             width -= 1;
     }
 
+    //Write the number to temp buffer
     char lowercaseBit = BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_LOWERCASE) ? 32 : 0;
     int len = 0;
     if (num == 0)
@@ -59,11 +73,13 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
         precision = len;
     width -= precision;
     
+    //If not left justified or padding zero, pad with space
     if (BIT_TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY | __VFPRINTF_FLAGS_PADDING_ZERO)) {
         for (; width > 0; --width)
             *writeTo++ = ' ';
     }
 
+    //Write the sign and specifier
     if (sign != 0)
         *writeTo++ = sign;
     if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
@@ -77,17 +93,21 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
     }
 
     char padding = BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_ZERO) ? '0' : ' ';
+    //It is impossible to have space between sign/specifier between the number
     if (BIT_TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
         for (; width > 0; --width)
             *writeTo++ = padding;
     }
 
+    //Write the remaining zero
     for (; len < precision; --precision)
         *writeTo++ = '0';
 
+    //Write the number
     while (--len >= 0)
         *writeTo++ = tmp[len];
     
+    //Write the remaining space
     for (; width > 0; --width)
         *writeTo++ = ' ';
 
@@ -98,7 +118,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
 int vfprintf(char* buffer, const char* format, va_list args)
 {
     char* writeTo = NULL;
-    for (writeTo = buffer; *format != '\0'; ++format) {
+    for (writeTo = buffer; *format != '\0'; ++format) { //Scan the string
         if (*format != '%') {
             *writeTo++ = *format;
             continue;
@@ -106,8 +126,8 @@ int vfprintf(char* buffer, const char* format, va_list args)
 
         uint8_t flags = 0;
 
-    loop:
-        switch (*(++format)) {
+    loop: //Goto is awful, but useful
+        switch (*(++format)) { //Set the flags
         case '-':
             BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
             goto loop;
@@ -126,12 +146,12 @@ int vfprintf(char* buffer, const char* format, va_list args)
         }
 
         int width = -1;
-        if (__IS_DIGIT(*format)) {
+        if (__IS_DIGIT(*format)) { //Read the width from format string
             width = 0;
             for(; __IS_DIGIT(*format); ++format)
                 width = width * 10 + (*format) - '0';
         }
-        else if (*format == '*') {
+        else if (*format == '*') { //Read the width from given data
             ++format;
             width = va_arg(args, int);
             if (width < 0)
@@ -144,12 +164,12 @@ int vfprintf(char* buffer, const char* format, va_list args)
         int precision = -1;
         if (*format == '.') {
             ++format;
-            if (__IS_DIGIT(*format)) {
+            if (__IS_DIGIT(*format)) { //Read the precision from the format
                 precision = 0;
                 for(; __IS_DIGIT(*format); ++format)
                     precision = precision * 10 + (*format) - '0';
             }
-            else if (*format == '*') {
+            else if (*format == '*') { //Read the precision from the data
                 ++format;
                 width = va_arg(args, int);
             }
@@ -157,7 +177,7 @@ int vfprintf(char* buffer, const char* format, va_list args)
                 precision = 0;
         }
 
-        int length = -1;
+        int length = -1; //Type of the data
         if (*format == 'h' || *format == 'l')
             length = *format++;
 
@@ -215,7 +235,7 @@ int vfprintf(char* buffer, const char* format, va_list args)
             writeTo = __writeNumber(writeTo, (unsigned long)va_arg(args, void*), 16, width, precision, flags);
             
             continue;
-        case 'n':
+        case 'n': //Length of current string
             if (length == 'l') {
                 long* ptr = va_arg(args, long*);
                 *ptr = writeTo - buffer;
@@ -254,7 +274,7 @@ int vfprintf(char* buffer, const char* format, va_list args)
                 num = (int)num;
         }
 
-        writeTo = __writeNumber(writeTo, num, base, width, precision, flags);
+        writeTo = __writeNumber(writeTo, num, base, width, precision, flags); //Write the number
     }
 
     *writeTo = '\0';
