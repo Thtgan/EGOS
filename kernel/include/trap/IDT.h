@@ -2,6 +2,7 @@
 #define __IDT_H
 
 #include<kit/bit.h>
+#include<real/simpleAsmLines.h>
 #include<types.h>
 
 #define IDT_FLAGS_TYPE_TASK_GATE32      0x5
@@ -14,7 +15,7 @@
 #define IDT_FLAGS_PRIVIEGE_1            BIT_LEFT_SHIFT(1, 5)
 #define IDT_FLAGS_PRIVIEGE_2            BIT_LEFT_SHIFT(2, 5)
 #define IDT_FLAGS_PRIVIEGE_3            BIT_LEFT_SHIFT(3, 5)
-#define IDT_FLAGS_PRESENT               BIT_FLAG8(7);
+#define IDT_FLAGS_PRESENT               BIT_FLAG8(7)
 
 struct IDTEntry {
     uint16_t isr0_15;
@@ -29,8 +30,21 @@ struct IDTDesc {
     uint32_t tablePtr;
 } __attribute__((packed));
 
+struct InterruptFrame {
+    uint32_t ip;
+    uint32_t cs;        //Padded to doubleword
+    uint32_t eflags;
+    uint32_t sp;
+    uint32_t ss;
+} __attribute__((packed));
+
 void initIDT();
 
 void setISR(uint8_t vector, void* isr, uint8_t flags);
+
+static inline void EOI() {
+    outb(0x20, 0x20);
+    outb(0xA0, 0x20);
+}
 
 #endif // __IDT_H

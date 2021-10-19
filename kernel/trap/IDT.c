@@ -1,11 +1,48 @@
 #include<trap/IDT.h>
 
+#include<lib/kPrint.h>
+#include<real/simpleAsmLines.h>
+#include<trap/IDT.h>
+#include<trap/PIC.h>
+
 struct IDTEntry IDTTable[256];
 struct IDTDesc idtDesc;
+
+__attribute__((interrupt, target("general-regs-only")))
+void __defaultISRHalt(struct InterruptFrame* interruptFrame) {
+    cli();
+    die();
+    EOI();
+}
+
+__attribute__((interrupt, target("general-regs-only")))
+void __testPrint(struct InterruptFrame* interruptFrame) {
+    kernelPrintf("Triggered!\n");
+    kernelPrintf("Frame at %#X\n", interruptFrame);
+    kernelPrintf("CS:IP     --  %#X:%#X\n", interruptFrame->cs, interruptFrame->ip);
+    kernelPrintf("SS:SP     --  %#X:%#X\n", interruptFrame->ss, interruptFrame->sp);
+    kernelPrintf("EFLAGS    --  %#X\n", interruptFrame->eflags);
+    kernelPrintf("Scancode: %#X\n", inb(0x60));
+    EOI();
+}
 
 void initIDT() {
     idtDesc.size = (uint16_t)sizeof(IDTTable) - 1;
     idtDesc.tablePtr = (uint32_t)IDTTable;
+
+    for (int vec = 0x0; vec < 256; ++vec) {
+        //TODO: Find out why cannot use uint8_t here
+        setISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    }
+
+    for (int vec = 0x20; vec < 0x30; ++vec) {
+        setISR(vec, __testPrint, 0x8E);
+    }
+
+    remapPIC(0x20, 0x28);
+
+    outb(0x21, 0xFD);
+    outb(0xA1, 0xFF);
 
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }

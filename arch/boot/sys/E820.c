@@ -6,7 +6,7 @@
 
 #define SMAP 0x534D4150
 
-// LINK src/arch/boot/entry.c#arch_boot_entry_c_bootInfo
+// LINK arch/boot/realModeMain.c#arch_boot_entry_c_bootInfo
 extern struct BootInfo bootInfo;
 
 static int __detectE820() {

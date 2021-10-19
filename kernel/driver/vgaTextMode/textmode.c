@@ -57,16 +57,16 @@ void textModePutchar(char ch) {
         if (__POSITION_VALIDATION(next)) {
             __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = '\0';
             __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = 0;
-            textModeInfo.writePosition = next;
         }
+        textModeInfo.writePosition = next;
         break;
     case '\r':
         next = __CR_POSITION(textModeInfo.writePosition);
         if (__POSITION_VALIDATION(next)) {
             __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = '\0';
             __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = 0;
-            textModeInfo.writePosition = next;
         }
+        textModeInfo.writePosition = next;
         break;
     case '\t':
         next = __HT_POSITION(textModeInfo.writePosition, textModeInfo.tabStride);
@@ -75,8 +75,8 @@ void textModePutchar(char ch) {
                 __CHARACTER_BUFFER_ACCESS(i) = ' ';
                 __PATTERN_BUFFER_ACCESS(i) = 0;
             }
-            textModeInfo.writePosition = next;
         }
+        textModeInfo.writePosition = next;
         break;
     case '\b':
         next = __BS_POSITION(textModeInfo.writePosition);
@@ -94,61 +94,25 @@ void textModePutchar(char ch) {
         }
         break;
     }
+
+    if (textModeInfo.writePosition >= TEXT_MODE_SIZE) {
+        textModeInfo.writePosition = TEXT_MODE_SIZE;
+    }
+
+    if (textModeInfo.writePosition < 0) {
+        textModeInfo.writePosition = 0;
+    }
 }
 
 void textModePrintRaw(const char* line) {
     for (; *line != '\0' && __POSITION_VALIDATION(textModeInfo.writePosition); ++line) {
-        __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = *line;
-        __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = textModeInfo.pattern;
-        textModeInfo.writePosition = __NEXT_POSITION(textModeInfo.writePosition);
+        textModePutcharRaw(*line);
     }
 }
 
 void textModePrint(const char* line) {
-    int next = 0;
     for (; *line != '\0' && __POSITION_VALIDATION(textModeInfo.writePosition); ++line) {
-        switch (*line)
-        {
-        case '\n':
-            next = __LF_POSITION(textModeInfo.writePosition);
-            if (next < TEXT_MODE_SIZE) {
-                __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = '\0';
-                __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = 0;
-                textModeInfo.writePosition = next;
-            }
-            break;
-        case '\r':
-            next = __CR_POSITION(textModeInfo.writePosition);
-            if (next < TEXT_MODE_SIZE) {
-                __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = '\0';
-                __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = 0;
-                textModeInfo.writePosition = next;
-            }
-            break;
-        case '\t':
-            next = __HT_POSITION(textModeInfo.writePosition, textModeInfo.tabStride);
-            if (next < TEXT_MODE_SIZE) {
-                for (int i = textModeInfo.writePosition; i < next; ++i) {
-                    __CHARACTER_BUFFER_ACCESS(i) = ' ';
-                    __PATTERN_BUFFER_ACCESS(i) = 0;
-                }
-                textModeInfo.writePosition = next;
-            }
-            break;
-        case '\b':
-            next = __BS_POSITION(textModeInfo.writePosition);
-            if (next >= 0) {
-                __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = '\0';
-                __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = 0;
-                textModeInfo.writePosition = next;
-            }
-            break;
-        default:
-            __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = *line;
-            __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = textModeInfo.pattern;
-            textModeInfo.writePosition = __NEXT_POSITION(textModeInfo.writePosition);
-            break;
-        }
+        textModePutchar(*line);
     }
 }
 

@@ -200,19 +200,19 @@ __WRITE_CR_FUNC(3)
 
 __attribute__((noreturn))
 static inline void die() {
+    hltLabel:
     asm volatile(
-        "l1: hlt\n\t"
-        "jmp l1\n\t"
+        "hlt"
     );
-    while(1);
+    goto hltLabel;
 }
 
 static inline void cli() {
     asm volatile("cli");
 }
 
-static inline void sli() {
-    asm volatile("sli");
+static inline void sti() {
+    asm volatile("sti");
 }
 
 static inline void nop() {
