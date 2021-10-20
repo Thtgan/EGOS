@@ -7,12 +7,12 @@ static uint8_t* const _textModeCharacterBufferBegin = TEXT_MODE_BUFFER_BEGIN;
 static uint8_t* const _textModePatternBufferBegin = _textModeCharacterBufferBegin + 1;
 static struct TextModeInfo textModeInfo;
 
-#define __NEXT_POSITION(__WRITE_POSITION)               (__WRITE_POSITION + 1)
-#define __BS_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION - 1)
-#define __HT_POSITION(__WRITE_POSITION, __TAB_STRIDE)   (__WRITE_POSITION + __TAB_STRIDE)
-#define __LF_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION / TEXT_MODE_WIDTH + 1) * TEXT_MODE_WIDTH
-#define __CR_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION / TEXT_MODE_WIDTH) * TEXT_MODE_WIDTH
-#define __POSITION_VALIDATION(__WRITE_POSITION)         (0 <= (__WRITE_POSITION) && (__WRITE_POSITION) < TEXT_MODE_SIZE)
+#define __NEXT_POSITION(__WRITE_POSITION)               (__WRITE_POSITION + 1)                                              //Move to next position
+#define __BS_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION - 1)                                              //Move to previous position
+#define __HT_POSITION(__WRITE_POSITION, __TAB_STRIDE)   (__WRITE_POSITION + __TAB_STRIDE)                                   //Move to next tab position
+#define __LF_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION / TEXT_MODE_WIDTH + 1) * TEXT_MODE_WIDTH          //Move to the beginning of the next line
+#define __CR_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION / TEXT_MODE_WIDTH) * TEXT_MODE_WIDTH              //Move to the beginning of the current line
+#define __POSITION_VALIDATION(__WRITE_POSITION)         (0 <= (__WRITE_POSITION) && (__WRITE_POSITION) < TEXT_MODE_SIZE)    //Check if current write position is valid
 
 #define __PATTERN_ENTRY(__BACKGROUND_COLOR, __FOREGROUND_COLOR)                 \
     (uint8_t)BIT_OR(__FOREGROUND_COLOR, BIT_LEFT_SHIFT(__BACKGROUND_COLOR, 4))  \
@@ -21,9 +21,9 @@ static struct TextModeInfo textModeInfo;
 #define __PATTERN_BUFFER_ACCESS(__INDEX)    _textModePatternBufferBegin[__INDEX << 1]
 
 void initTextMode() {
-    textModeSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);
-    textModeSetTabStride(4);
-    memset(TEXT_MODE_BUFFER_BEGIN, '\0', TEXT_MODE_BUFFER_END - TEXT_MODE_BUFFER_BEGIN);
+    textModeSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);          //Set pattern to default black background and white foreground
+    textModeSetTabStride(4);                                                                //Set tab stride to 4
+    memset(TEXT_MODE_BUFFER_BEGIN, '\0', TEXT_MODE_BUFFER_END - TEXT_MODE_BUFFER_BEGIN);    //Clear the screen
     textModeInfo.writePosition = 0;
 }
 
@@ -41,7 +41,7 @@ void textModeSetTabStride(uint16_t stride) {
 }
 
 void textModePutcharRaw(char ch) {
-    if (__POSITION_VALIDATION(textModeInfo.writePosition)) {
+    if (__POSITION_VALIDATION(textModeInfo.writePosition)) {    //If write position if valid, write the screen
         __CHARACTER_BUFFER_ACCESS(textModeInfo.writePosition) = ch;
         __PATTERN_BUFFER_ACCESS(textModeInfo.writePosition) = textModeInfo.pattern;
         textModeInfo.writePosition = __NEXT_POSITION(textModeInfo.writePosition);
@@ -52,6 +52,7 @@ void textModePutchar(char ch) {
     int next = 0;
     switch (ch)
     {
+    //The character that control the the write position will work to ensure the screen will not print the sharacter should not print 
     case '\n':
         next = __LF_POSITION(textModeInfo.writePosition);
         if (__POSITION_VALIDATION(next)) {
@@ -95,6 +96,7 @@ void textModePutchar(char ch) {
         break;
     }
 
+    //Align the outranged writing position to proper position for following writing
     if (textModeInfo.writePosition >= TEXT_MODE_SIZE) {
         textModeInfo.writePosition = TEXT_MODE_SIZE;
     }

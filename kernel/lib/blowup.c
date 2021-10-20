@@ -11,7 +11,7 @@ void blowup(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    int ret = kernelVFprintf(buf, format, args);
+    int ret = kVFPrintf(buf, format, args);
 
     va_end(args);
 

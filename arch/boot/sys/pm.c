@@ -23,6 +23,7 @@ void switchToProtectedMode(uint32_t protectedBegin) {
     cr0 |= 1;
     writeCR0(cr0);
 
+    //ANCHOR[id=arch_boot_sys_pm_c_cli]
     cli();//Block all the interrupts
 
     __jumpToProtectedModeCode(SEGMENT_CODE32, SEGMENT_DATA32, protectedBegin);

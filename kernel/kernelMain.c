@@ -8,11 +8,14 @@
 
 __attribute__((section(".kernelMain")))
 void kernelMain() {
-    initTextMode();
+    initTextMode(); //Initialize text mode
 
-    initIDT();
+    initIDT();      //Initialize the interrupt
 
+    //Unlock the interrupt 
+    //Defined in LINK arch/boot/sys/pm.c#arch_boot_sys_pm_c_cli
     sti();
-    kernelPrintf("abcdefg\n");
+    
+    kPrintf("abcdefg\n");
     blowup("blowup %d\n", 114514);
 }

@@ -6,7 +6,7 @@
 
 #define SMAP 0x534D4150
 
-//Defined in LINK arch/boot/realModeMain.c#arch_boot_entry_c_bootInfo
+//Defined in LINK arch/boot/realModeMain.c#arch_boot_realModeMain_c_bootInfo
 extern struct BootInfo bootInfo;
 
 /**

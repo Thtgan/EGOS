@@ -27,7 +27,7 @@
  * @return The pointer to the buffer after the number written
  */
 static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags) {
-    static const char digits[17] = "0123456789ABCDEF";  //Number of each digit
+    static const char digits[17] = "0123456789ABCDEF";  //Character of each digit
     char tmp[128];
 
     if (base < 2 || base > 16)  //If base not available, return

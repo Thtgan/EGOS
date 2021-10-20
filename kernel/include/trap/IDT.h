@@ -17,6 +17,9 @@
 #define IDT_FLAGS_PRIVIEGE_3            BIT_LEFT_SHIFT(3, 5)
 #define IDT_FLAGS_PRESENT               BIT_FLAG8(7)
 
+/**
+ * @brief Entry to describe a interrupt handler
+ */
 struct IDTEntry {
     uint16_t isr0_15;
     uint16_t codeSector;
@@ -30,6 +33,9 @@ struct IDTDesc {
     uint32_t tablePtr;
 } __attribute__((packed));
 
+/**
+ * @brief Before enter the interrupt handler, CPU will push these registers into stack
+ */
 struct InterruptFrame {
     uint32_t ip;
     uint32_t cs;        //Padded to doubleword
@@ -38,13 +44,18 @@ struct InterruptFrame {
     uint32_t ss;
 } __attribute__((packed));
 
+/**
+ * @brief Initialize the IDT
+ */
 void initIDT();
 
+/**
+ * @brief Bind a interrupt service routine for the mapping from PIC
+ * 
+ * @param vector The interrupt vector bind to
+ * @param isr The interrupt service routine to bind
+ * @param flags arrtibutes
+ */
 void setISR(uint8_t vector, void* isr, uint8_t flags);
-
-static inline void EOI() {
-    outb(0x20, 0x20);
-    outb(0xA0, 0x20);
-}
 
 #endif // __IDT_H

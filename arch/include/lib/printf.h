@@ -15,6 +15,7 @@ int printf(const char* format, ...);
 /**
  * @brief Write the string to the buffer with given data
  * 
+ * @param buffer Buffer write to
  * @param format String, including the given data's format
  * @param ... Data to print
  * @return The length of final string writed

@@ -3,7 +3,23 @@
 
 #include<types.h>
 
-int kernelPrintf(const char* format, ...);
-int kernelVFprintf(char* buffer, const char* format, va_list args);
+/**
+ * @brief Print the string on the screen with given data
+ * 
+ * @param format String, including the given data's format
+ * @param ... Data to print
+ * @return The length of final string printed
+ */
+int kPrintf(const char* format, ...);
+
+/**
+ * @brief Write the string to the buffer with given data
+ * 
+ * @param buffer Buffer write to
+ * @param format String, including the given data's format
+ * @param ... Data to print
+ * @return The length of final string writed
+ */
+int kVFPrintf(char* buffer, const char* format, va_list args);
 
 #endif // __KERNEL_PRINT_H

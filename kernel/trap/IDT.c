@@ -17,12 +17,12 @@ void __defaultISRHalt(struct InterruptFrame* interruptFrame) {
 
 __attribute__((interrupt, target("general-regs-only")))
 void __testPrint(struct InterruptFrame* interruptFrame) {
-    kernelPrintf("Triggered!\n");
-    kernelPrintf("Frame at %#X\n", interruptFrame);
-    kernelPrintf("CS:IP     --  %#X:%#X\n", interruptFrame->cs, interruptFrame->ip);
-    kernelPrintf("SS:SP     --  %#X:%#X\n", interruptFrame->ss, interruptFrame->sp);
-    kernelPrintf("EFLAGS    --  %#X\n", interruptFrame->eflags);
-    kernelPrintf("Scancode: %#X\n", inb(0x60));
+    kPrintf("Triggered!\n");
+    kPrintf("Frame at %#X\n", interruptFrame);
+    kPrintf("CS:IP     --  %#X:%#X\n", interruptFrame->cs, interruptFrame->ip);
+    kPrintf("SS:SP     --  %#X:%#X\n", interruptFrame->ss, interruptFrame->sp);
+    kPrintf("EFLAGS    --  %#X\n", interruptFrame->eflags);
+    kPrintf("Scancode: %#X\n", inb(0x60));
     EOI();
 }
 

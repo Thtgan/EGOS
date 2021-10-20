@@ -28,6 +28,9 @@
 #define GDT_SIZE                    BIT_FLAG8(2)
 #define GDT_GRANULARITY             BIT_FLAG8(3)
 
+/**
+ * @brief GDT table entry
+ */
 struct GDTEntry {
     uint16_t    limit0_15;
     uint16_t    base0_15;

@@ -2,7 +2,7 @@
 
 #define KERNEL_BEGIN_ADDR   0x10000
 
-//ANCHOR[id=arch_boot_entry_c_bootInfo]
+//ANCHOR[id=arch_boot_realModeMain_c_bootInfo]
 struct BootInfo bootInfo __attribute__((aligned(16)));  //Information during the boot
 
 /**
