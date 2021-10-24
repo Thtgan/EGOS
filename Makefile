@@ -13,14 +13,14 @@ buildDir:
 	mkdir -p $(BUILD_DIR)
 
 boot.bin:
-	cd arch && $(MAKE)
-	mv ./arch/build/boot.bin $(BUILD_DIR)
+	cd boot && $(MAKE)
+	mv ./boot/build/boot.bin $(BUILD_DIR)
 
 kernel.bin:
 	cd kernel && $(MAKE)
 	mv ./kernel/build/kernel.bin $(BUILD_DIR)
 
 clean:
-	cd arch && $(MAKE) clean
+	cd boot && $(MAKE) clean
 	cd kernel && $(MAKE) clean
 	rm -rf $(BUILD_DIR)

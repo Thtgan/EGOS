@@ -5,8 +5,8 @@ CC_OPTIONS 					= 	-nostdlib		\
 								-mno-red-zone	\
 								-m16			\
 								-I.	 			\
+								-I./include	\
 								-I../include	\
-								-I../../include	\
 								-Os				\
 								-march=i386		\
 

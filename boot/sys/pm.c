@@ -4,13 +4,15 @@
 #include<sys/realmode.h>
 #include<types.h>
 
-__attribute__((noreturn, regparm(3))) //TODO Pass arguments with stack will cause some unknown error, considering use C native assembly instead of NASM
+__attribute__((noreturn, regparm(3))) //TODO Pass arguments througn stack will cause some unknown error, considering use C native assembly instead of NASM
 /**
  * @brief Do necessary initializations and jump to protected mode kernel
  * 
+ * @see arch/boot/sys/jmp2pmCode.asm
+ * 
  * @param codeSegment Code segment
  * @param dataSegment Data segment
- * @param protectedBegin The address where the kernel loaded to
+ * @param protectedBegin The address where the kernel will be loaded to
  */
 extern void __jumpToProtectedModeCode(uint16_t codeSegment, uint16_t dataSegment, uint32_t protectedBegin);
 
@@ -24,7 +26,7 @@ void switchToProtectedMode(uint32_t protectedBegin) {
     writeCR0(cr0);
 
     //ANCHOR[id=arch_boot_sys_pm_c_cli]
-    cli();//Block all the interrupts
+    cli();//Clear interrupt flag
 
     __jumpToProtectedModeCode(SEGMENT_CODE32, SEGMENT_DATA32, protectedBegin);
 }

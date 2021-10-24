@@ -41,14 +41,14 @@ struct GDTEntry {
 } __attribute__((packed));
 
 //Macro to construct the GDT entry
-#define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) {                                       \
-    (uint16_t)  BIT_CUT(__LIMIT, 0, 16),                                                            \
-    (uint16_t)  BIT_CUT(__BASE, 0, 16),                                                             \
-    (uint8_t)   BIT_RIGHT_SHIFT(BIT_CUT(__BASE, 16, 24), 16),                                       \
-    (uint8_t)   __ACCESS,                                                                           \
-    (uint8_t)   BIT_OR(BIT_LEFT_SHIFT(__FLAGS, 4), BIT_RIGHT_SHIFT(BIT_CUT(__LIMIT, 16, 20), 16)),  \
-    (uint8_t)   BIT_RIGHT_SHIFT(BIT_CUT(__BASE, 24, 32), 24),                                       \
-}                                                                                                   \
+#define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) {                               \
+    (uint16_t)  BIT_EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
+    (uint16_t)  BIT_EXTRACT_VAL(__BASE, 32, 0, 16),                                         \
+    (uint8_t)   BIT_EXTRACT_VAL(__BASE, 32, 16, 24),                                        \
+    (uint8_t)   __ACCESS,                                                                   \
+    (uint8_t)   BIT_OR(BIT_LEFT_SHIFT(__FLAGS, 4), BIT_EXTRACT_VAL(__LIMIT, 32, 16, 20)),   \
+    (uint8_t)   BIT_EXTRACT_VAL(__BASE, 32, 24, 32),                                        \
+}                                                                                           \
 
 struct GDTDesc {
     uint16_t    size;

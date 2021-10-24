@@ -19,11 +19,10 @@ protected_entry:
     mov fs, dx
     mov gs, dx
 
-    ;Set general registers to 0
-    xor ebx, ebx
-    xor ecx, ecx
-    xor edx, edx
-    xor esi, esi
-    xor edi, edi
+    xor ebx, ebx    ;;0 --> ebx
+    xor ecx, ecx    ;;0 --> ecx
+    xor edx, edx    ;;0 --> edx
+    xor esi, esi    ;;0 --> esi
+    xor edi, edi    ;;0 --> edi
 
     jmp eax
