@@ -21,7 +21,7 @@ static struct TextModeInfo _tmInfo;
 #define __PATTERN_BUFFER_ACCESS(__INDEX)    _textModePatternBufferBegin[(__INDEX) << 1]
 
 void initTextMode() {
-    tmSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);    //Set pattern to default black background and white foreground
+    tmSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);    //Set color pattern to default black background and white foreground
     tmSetTabStride(4);                                                          //Set tab stride to 4
     tmClearScreen();                                                            //Clear the screen
     tmInitCursor();
@@ -30,7 +30,7 @@ void initTextMode() {
 void tmClearScreen() {
     for (int i = 0; i < TEXT_MODE_SIZE; ++i) {
         __CHARACTER_BUFFER_ACCESS(i) = ' ';
-        __PATTERN_BUFFER_ACCESS(i) = _tmInfo.pattern;
+        __PATTERN_BUFFER_ACCESS(i) = _tmInfo.colorPattern;
     }
 }
 
@@ -44,7 +44,7 @@ void tmTestPrint() {
 }
 
 void tmSetTextModePattern(uint8_t background, uint8_t foreground) {
-    _tmInfo.pattern = __PATTERN_ENTRY(background, foreground);
+    _tmInfo.colorPattern = __PATTERN_ENTRY(background, foreground);
 }
 
 void tmSetTabStride(uint16_t stride) {
@@ -54,7 +54,7 @@ void tmSetTabStride(uint16_t stride) {
 void tmPutcharRaw(char ch) {
     if (__POSITION_VALIDATION(_tmInfo.cursorPosition)) {    //If write position if valid, write the screen
         __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ch;
-        __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.pattern;
+        __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.colorPattern;
         _tmInfo.cursorPosition = __NEXT_POSITION(_tmInfo.cursorPosition);
     }
 }
@@ -85,7 +85,7 @@ void tmPutchar(char ch) {
         if (__POSITION_VALIDATION(next)) {
             for (int i = _tmInfo.cursorPosition; i < next; ++i) {
                 __CHARACTER_BUFFER_ACCESS(i) = ' ';
-                __PATTERN_BUFFER_ACCESS(i) = _tmInfo.pattern;
+                __PATTERN_BUFFER_ACCESS(i) = _tmInfo.colorPattern;
             }
         }
         __tmSetCursorPosition(next);
@@ -95,13 +95,13 @@ void tmPutchar(char ch) {
         if (__POSITION_VALIDATION(next)) {
             __tmSetCursorPosition(next);
             __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ' ';
-            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.pattern;
+            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.colorPattern;
         }
         break;
     default:
         if (__POSITION_VALIDATION(_tmInfo.cursorPosition)) {
             __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ch;
-            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.pattern;
+            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.colorPattern;
             __tmSetCursorPosition(__NEXT_POSITION(_tmInfo.cursorPosition));
         }
         break;
@@ -139,6 +139,10 @@ void tmSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline)
  
 	outb(0x03D4, 0x0B);
 	outb(0x03D5, (inb(0x03D5) & 0xE0) | cursorEndScanline);
+
+    if (!_tmInfo.cursorEnable) {
+        tmDisableCursor();
+    }
 }
 
 void tmEnableCursor()

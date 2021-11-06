@@ -104,10 +104,21 @@ static struct KeyEntry _keyEntries[128] = {
 static bool _pressed[128];
 static bool _capslock;
 
+/**
+ * @brief Read the scancode from keyboard
+ * 
+ * @return Scancode from keyboard
+ */
 static inline uint8_t __readScancode() {
     return inb(0x60);
 }
 
+/**
+ * @brief Convert key to ASCII character, affected by shift and capslock
+ * 
+ * @param key key ID, should has ASCII flag
+ * @return ASCII byte
+ */
 static uint8_t __toASCII(uint8_t key) {
     uint8_t ret = _keyEntries[key].ascii;
 
@@ -199,6 +210,9 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
     EOI();
 }
 
+/**
+ * @brief Initialize the keyboard
+ */
 void keyboardInit() {
     for (int i = 0; i < 128; ++i) {
         _pressed[i] = false;

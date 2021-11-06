@@ -14,7 +14,7 @@
  * @brief Information about the text mode
  */
 struct TextModeInfo {
-    uint8_t pattern;
+    uint8_t colorPattern;
     uint16_t tabStride;
 
     uint16_t cursorPosition;
@@ -52,6 +52,9 @@ struct TextModeInfo {
  */
 void initTextMode();
 
+/**
+ * @brief Clear the screen(Fill screen with space and current color pattern)
+ */
 void tmClearScreen();
 
 const struct TextModeInfo* getTextModeInfo();
@@ -62,7 +65,7 @@ const struct TextModeInfo* getTextModeInfo();
 void tmTestPrint();
 
 /**
- * @brief Set the pattern of the following printed character
+ * @brief Set the color pattern of the following printed character
  * 
  * @param background Background color
  * @param foreground Foreground color
@@ -104,16 +107,42 @@ void tmPrintRaw(const char* line);
  */
 void tmPrint(const char* line);
 
+/**
+ * @brief Initialize the cursor
+ */
 void tmInitCursor();
 
+/**
+ * @brief Set the scanline of cursor
+ * 
+ * @param cursorBeginScanline Beginning of the scanline (0 tart from the top)
+ * @param cursorEndScanline Beginning of the scanline (0 tart from the top)
+ */
 void tmSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline);
 
+/**
+ * @brief Enable the cursor
+ */
 void tmEnableCursor();
 
+/**
+ * @brief Disable the cursor
+ */
 void tmDisableCursor();
 
+/**
+ * @brief Set the position of cursor with row index and column index
+ * 
+ * @param row The row index, start with 0
+ * @param col The column index, start with 0
+ */
 void tmSetCursorPosition(uint8_t row, uint8_t col);
 
+/**
+ * @brief Set the position of cursor wih offset to the beginning
+ * 
+ * @param position The offset to the beginning
+ */
 static void __tmSetCursorPosition(uint16_t position);
 
 #endif // __TECT_MODE_H
