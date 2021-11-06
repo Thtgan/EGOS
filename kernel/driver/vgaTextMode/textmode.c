@@ -3,8 +3,7 @@
 #include<lib/string.h>
 #include<real/simpleAsmLines.h>
 
-static uint8_t* const _textModeCharacterBufferBegin = TEXT_MODE_BUFFER_BEGIN;
-static uint8_t* const _textModePatternBufferBegin = _textModeCharacterBufferBegin + 1;
+static struct TextModeDisplayUnit* const _textModeDisplayUnitPtr = (struct TextModeDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
 static struct TextModeInfo _tmInfo;
 
 #define __NEXT_POSITION(__WRITE_POSITION)               (__WRITE_POSITION + 1)                                              //Move to next position
@@ -17,9 +16,6 @@ static struct TextModeInfo _tmInfo;
 #define __PATTERN_ENTRY(__BACKGROUND_COLOR, __FOREGROUND_COLOR)                 \
     (uint8_t)BIT_OR(__FOREGROUND_COLOR, BIT_LEFT_SHIFT(__BACKGROUND_COLOR, 4))  \
 
-#define __CHARACTER_BUFFER_ACCESS(__INDEX)  _textModeCharacterBufferBegin[(__INDEX) << 1]
-#define __PATTERN_BUFFER_ACCESS(__INDEX)    _textModePatternBufferBegin[(__INDEX) << 1]
-
 void initTextMode() {
     tmSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);    //Set color pattern to default black background and white foreground
     tmSetTabStride(4);                                                          //Set tab stride to 4
@@ -29,8 +25,8 @@ void initTextMode() {
 
 void tmClearScreen() {
     for (int i = 0; i < TEXT_MODE_SIZE; ++i) {
-        __CHARACTER_BUFFER_ACCESS(i) = ' ';
-        __PATTERN_BUFFER_ACCESS(i) = _tmInfo.colorPattern;
+        _textModeDisplayUnitPtr[i].character = ' ';
+        _textModeDisplayUnitPtr[i].colorPattern = _tmInfo.colorPattern;
     }
 }
 
@@ -39,8 +35,9 @@ const struct TextModeInfo* getTextModeInfo() {
 }
 
 void tmTestPrint() {
-    for (uint8_t i = 0; i < 256; ++i)
-        __CHARACTER_BUFFER_ACCESS(i) = i;
+    for (uint8_t i = 0; i < 256; ++i) {
+        _textModeDisplayUnitPtr[i].character = i;
+    }
 }
 
 void tmSetTextModePattern(uint8_t background, uint8_t foreground) {
@@ -53,8 +50,9 @@ void tmSetTabStride(uint16_t stride) {
 
 void tmPutcharRaw(char ch) {
     if (__POSITION_VALIDATION(_tmInfo.cursorPosition)) {    //If write position if valid, write the screen
-        __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ch;
-        __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.colorPattern;
+        _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ch;
+        _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
+
         _tmInfo.cursorPosition = __NEXT_POSITION(_tmInfo.cursorPosition);
     }
 }
@@ -67,16 +65,16 @@ void tmPutchar(char ch) {
     case '\n':
         next = __LF_POSITION(_tmInfo.cursorPosition);
         if (__POSITION_VALIDATION(next)) {
-            __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ' ';
-            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = 0;
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
         }
         __tmSetCursorPosition(next);
         break;
     case '\r':
         next = __CR_POSITION(_tmInfo.cursorPosition);
         if (__POSITION_VALIDATION(next)) {
-            __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ' ';
-            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = 0;
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
         }
         __tmSetCursorPosition(next);
         break;
@@ -84,8 +82,8 @@ void tmPutchar(char ch) {
         next = __HT_POSITION(_tmInfo.cursorPosition, _tmInfo.tabStride);
         if (__POSITION_VALIDATION(next)) {
             for (int i = _tmInfo.cursorPosition; i < next; ++i) {
-                __CHARACTER_BUFFER_ACCESS(i) = ' ';
-                __PATTERN_BUFFER_ACCESS(i) = _tmInfo.colorPattern;
+                _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
+                _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
             }
         }
         __tmSetCursorPosition(next);
@@ -94,14 +92,16 @@ void tmPutchar(char ch) {
         next = __BS_POSITION(_tmInfo.cursorPosition);
         if (__POSITION_VALIDATION(next)) {
             __tmSetCursorPosition(next);
-            __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ' ';
-            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.colorPattern;
+
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
         }
         break;
     default:
         if (__POSITION_VALIDATION(_tmInfo.cursorPosition)) {
-            __CHARACTER_BUFFER_ACCESS(_tmInfo.cursorPosition) = ch;
-            __PATTERN_BUFFER_ACCESS(_tmInfo.cursorPosition) = _tmInfo.colorPattern;
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ch;
+            _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
+            
             __tmSetCursorPosition(__NEXT_POSITION(_tmInfo.cursorPosition));
         }
         break;

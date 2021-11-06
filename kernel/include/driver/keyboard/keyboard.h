@@ -7,7 +7,7 @@ struct KeyEntry
 {
     uint8_t ascii, alt_ascii;
     uint16_t flags;
-} __attribute__((packed));
+};
 
 #define KEY_ESC                     0x01
 #define KEY_NUMBER_1                0x02

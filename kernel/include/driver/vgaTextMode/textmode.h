@@ -4,11 +4,10 @@
 #include<kit/bit.h>
 #include<types.h>
 
-#define TEXT_MODE_BUFFER_BEGIN              (uint8_t*)0xB8000
+#define TEXT_MODE_BUFFER_BEGIN              0xB8000
 #define TEXT_MODE_WIDTH                     80 
 #define TEXT_MODE_HEIGHT                    25
 #define TEXT_MODE_SIZE                      TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT
-#define TEXT_MODE_BUFFER_END                TEXT_MODE_BUFFER_BEGIN + TEXT_MODE_SIZE * 2
 
 /**
  * @brief Information about the text mode
@@ -22,6 +21,11 @@ struct TextModeInfo {
     uint8_t cursorBeginScanline;
     uint8_t cursorEndScanline;
 };
+
+struct TextModeDisplayUnit {
+    uint8_t character, colorPattern;
+} __attribute__((packed));
+
 
 //Bit 7 6 5 4 3 2 1 0
 //    | | | | | | | |
