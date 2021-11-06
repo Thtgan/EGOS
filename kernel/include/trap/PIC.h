@@ -1,6 +1,7 @@
 #if !defined(__PIC_H)
 #define __PIC_H
 
+#include<real/simpleAsmLines.h>
 #include<types.h>
 
 #define PIC1		    0x20        // IO base address for master PIC
@@ -29,13 +30,5 @@
  * @param offset2 vector offset for slave PIC map IRQs(Interrupt Request) to  (offset2 ... offset2 + 7)
  */
 void remapPIC(uint8_t offset1, uint8_t offset2);
-
-/**
- * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler
- */
-static inline void EOI() {
-    outb(PIC1_COMMAND, 0x20);
-    outb(PIC2_COMMAND, 0x20);
-}
 
 #endif // __PIC_H

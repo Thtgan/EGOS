@@ -26,6 +26,12 @@ SECTIONS
         *(.rodata)
     }
 
+    . = ALIGN(32);
+
+    .keyEntries : {
+        *(.keyEntries)
+    }
+
     . = ALIGN(16);
 
     .bss : {

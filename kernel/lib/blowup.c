@@ -15,7 +15,7 @@ void blowup(const char* format, ...) {
 
     va_end(args);
 
-    textModePrint(buf); //TODO: Replace this with general print function
+    tmPrint(buf); //TODO: Replace this with general print function
 
     die();
 }

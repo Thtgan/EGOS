@@ -2,27 +2,15 @@
 
 #include<lib/kPrint.h>
 #include<real/simpleAsmLines.h>
-#include<trap/IDT.h>
+#include<trap/ISR.h>
 #include<trap/PIC.h>
 
 struct IDTEntry IDTTable[256];
 struct IDTDesc idtDesc;
 
-__attribute__((interrupt, target("general-regs-only")))
-void __defaultISRHalt(struct InterruptFrame* interruptFrame) {
+ISR_FUNC_HEADER(__defaultISRHalt) {
     cli();
     die();
-    EOI();
-}
-
-__attribute__((interrupt, target("general-regs-only")))
-void __testPrint(struct InterruptFrame* interruptFrame) {
-    kPrintf("Triggered!\n");
-    kPrintf("Frame at %#X\n", interruptFrame);
-    kPrintf("CS:IP     --  %#X:%#X\n", interruptFrame->cs, interruptFrame->ip);
-    kPrintf("SS:SP     --  %#X:%#X\n", interruptFrame->ss, interruptFrame->sp);
-    kPrintf("EFLAGS    --  %#X\n", interruptFrame->eflags);
-    kPrintf("Scancode: %#X\n", inb(0x60));
     EOI();
 }
 
@@ -35,10 +23,6 @@ void initIDT() {
         setISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     }
 
-    for (int vec = 0x20; vec < 0x30; ++vec) {
-        setISR(vec, __testPrint, 0x8E);
-    }
-
     remapPIC(0x20, 0x28);
 
     outb(0x21, 0xFD);
@@ -49,9 +33,9 @@ void initIDT() {
 
 void setISR(uint8_t vector, void* isr, uint8_t flags) {
     struct IDTEntry* ptr = IDTTable + vector;
-    ptr->isr0_15 = BIT_CUT((uint32_t)isr, 0, 16);
-    ptr->codeSector = 0x08;
+    ptr->isr0_15 = BIT_EXTRACT_VAL((uint32_t)isr, 32, 0, 16);
+    ptr->codeSector = 0x08;                                     //TODO: Try be more maintainable
     ptr->reserved = 0;
     ptr->attributes = flags;
-    ptr->isr16_32 = BIT_RIGHT_SHIFT(BIT_CUT((uint32_t)isr, 16, 32), 16);
+    ptr->isr16_32 = BIT_EXTRACT_VAL((uint32_t)isr, 32, 16, 32);
 }

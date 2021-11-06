@@ -129,19 +129,19 @@ int kVFPrintf(char* buffer, const char* format, va_list args)
     loop: //Goto is awful, but useful
         switch (*(++format)) { //Set the flags
         case '-':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
             goto loop;
         case '+':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN);
             goto loop;
         case ' ':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_PADDING_SPACE);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_SPACE);
             goto loop;
         case '#':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_SPECIFIER);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_SPECIFIER);
             goto loop;
         case '0':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
             goto loop;
         }
 
@@ -157,7 +157,7 @@ int kVFPrintf(char* buffer, const char* format, va_list args)
             if (width < 0)
             {
                 width = -width;
-                BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
+                BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
             }
         }
 
@@ -185,14 +185,14 @@ int kVFPrintf(char* buffer, const char* format, va_list args)
         switch (*format) {
         case 'd':
         case 'i':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_SIGNED);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_SIGNED);
         case 'u':
             break;
         case 'o':
             base = 8;
             break;
         case 'x':
-            BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_LOWERCASE);
+            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LOWERCASE);
         case 'X':
             base = 16;
             break;
@@ -229,7 +229,7 @@ int kVFPrintf(char* buffer, const char* format, va_list args)
         case 'p':
             if (width == -1) {
                 width = sizeof(void*) << 1;
-                BIT_SET_FLAG(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
+                BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
             }
 
             writeTo = __writeNumber(writeTo, (unsigned long)va_arg(args, void*), 16, width, precision, flags);
@@ -291,7 +291,7 @@ int kPrintf(const char* format, ...) {
 
     va_end(args);
 
-    textModePrint(buf); //TODO: Replace this with general print function
+    tmPrint(buf); //TODO: Replace this with general print function
 
     return ret;
 }

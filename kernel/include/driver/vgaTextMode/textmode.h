@@ -2,6 +2,7 @@
 #define __TECT_MODE_H
 
 #include<kit/bit.h>
+#include<types.h>
 
 #define TEXT_MODE_BUFFER_BEGIN              (uint8_t*)0xB8000
 #define TEXT_MODE_WIDTH                     80 
@@ -14,17 +15,21 @@
  */
 struct TextModeInfo {
     uint8_t pattern;
-    uint16_t writePosition;
     uint16_t tabStride;
+
+    uint16_t cursorPosition;
+    bool cursorEnable;
+    uint8_t cursorBeginScanline;
+    uint8_t cursorEndScanline;
 };
 
+//Bit 7 6 5 4 3 2 1 0
+//    | | | | | | | |
+//    | | | | | ^-^-^-- Foreground color
+//    | | | | ^-------- Foreground color bright bit
+//    | ^-^-^---------- Background color
+//    ^---------------- Background color bright bit or enables blinking
 
-//Bit 76543210
-//    ||||||||
-//    |||||^^^- Foreground color
-//    ||||^---- Foreground color bright bit
-//    |^^^----- Background color
-//    ^-------- Background color bright bit or enables blinking
 #define TEXT_MODE_COLOR_BLACK           0
 #define TEXT_MODE_COLOR_BLUE            1
 #define TEXT_MODE_COLOR_GREEN           2
@@ -47,10 +52,14 @@ struct TextModeInfo {
  */
 void initTextMode();
 
+void tmClearScreen();
+
+const struct TextModeInfo* getTextModeInfo();
+
 /**
  * @brief Print all the character on the screen (0-255)
  */
-void textModeTestPrint();
+void tmTestPrint();
 
 /**
  * @brief Set the pattern of the following printed character
@@ -58,41 +67,53 @@ void textModeTestPrint();
  * @param background Background color
  * @param foreground Foreground color
  */
-void textModeSetTextModePattern(uint8_t background, uint8_t foreground);
+void tmSetTextModePattern(uint8_t background, uint8_t foreground);
 
 /**
  * @brief Set the stride of tab key
  * 
  * @param stride Where the tab should align to
  */
-void textModeSetTabStride(uint16_t stride);
+void tmSetTabStride(uint16_t stride);
 
 /**
  * @brief Print the raw character on the screen(\\n, \\r, \\b etc will be printed as character instead of cursor control)
  * 
  * @param ch Character to print
  */
-void textModePutcharRaw(char ch);
+void tmPutcharRaw(char ch);
 
 /**
  * @brief Print the character on the screen
  * 
  * @param ch Character to print
  */
-void textModePutchar(char ch);
+void tmPutchar(char ch);
 
 /**
  * @brief Print the string on the screen, use raw character(\\n, \\r, \\b etc will be printed as character instead of cursor control)
  * 
  * @param line String to print
  */
-void textModePrintRaw(const char* line);
+void tmPrintRaw(const char* line);
 
 /**
  * @brief Print the string on the screen
  * 
  * @param line String to print
  */
-void textModePrint(const char* line);
+void tmPrint(const char* line);
+
+void tmInitCursor();
+
+void tmSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline);
+
+void tmEnableCursor();
+
+void tmDisableCursor();
+
+void tmSetCursorPosition(uint8_t row, uint8_t col);
+
+static void __tmSetCursorPosition(uint16_t position);
 
 #endif // __TECT_MODE_H
