@@ -7,9 +7,6 @@
 #include<sys/blowup.h>
 #include<sys/E820.h>
 #include<sys/pm.h>
-
-struct BootInfo {
-    struct MemoryMap memoryMap; //Memory map of the system
-} __attribute__((packed));
+#include<system/systemInfo.h>
 
 #endif // __BOOT_KIT_H

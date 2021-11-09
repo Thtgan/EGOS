@@ -3,21 +3,23 @@
 #include<bootKit.h>
 #include<kit/bit.h>
 #include<sys/realmode.h>
+#include<system/memoryArea.h>
+#include<system/systemInfo.h>
 
 #define SMAP 0x534D4150
 
-//Defined in LINK arch/boot/realModeMain.c#arch_boot_realModeMain_c_bootInfo
-extern struct BootInfo bootInfo;
+//Memory map to storage memory areas
+struct MemoryMap _memoryMap;
 
 /**
  * @brief Detect memory area with 0x15, EAX = E820
  * 
  * @return number of memory areas detected
  */
-static int __detectE820() {
+static int __detectE820(struct MemoryMap* memoryMap) {
     struct registerSet regs;
-    struct E820Entry buf;
-    struct E820Entry* table = bootInfo.memoryMap.e820Table;
+    struct MemoryAreaEntry buf;
+    struct MemoryAreaEntry* table = memoryMap->memoryAreas;
     
     initRegs(&regs);
 
@@ -25,7 +27,7 @@ static int __detectE820() {
     regs.ebx = 0;
     do {    //Loop for scan memory area
         regs.eax = 0xE820;
-        regs.ecx = sizeof(struct E820Entry);
+        regs.ecx = sizeof(struct MemoryAreaEntry);
         regs.edx = SMAP;
         regs.edi = (uint32_t) &buf;
 
@@ -35,14 +37,15 @@ static int __detectE820() {
             break;
         
         table[cnt++] = buf;
-    } while (regs.ebx != 0 && cnt < E820_ENTRY_NUM);
+    } while (regs.ebx != 0 && cnt < MEMORY_AREA_NUM);
 
-    return bootInfo.memoryMap.e820TableSize = cnt;
+    return memoryMap->size = cnt;
 }
 
-int detectMemory() {
-    int ret = __detectE820();
+int detectMemory(struct SystemInfo* info) {
+    int ret = __detectE820(&_memoryMap);
     if (ret == 0)
         ret = -1;
+    info->memoryMap = &_memoryMap;
     return ret;
 }

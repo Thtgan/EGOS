@@ -8,7 +8,7 @@
 #include<trap/ISR.h>
 #include<real/simpleAsmLines.h>
 
-__attribute__((section("keyEntries")))
+__attribute__((aligned(32)))
 static struct KeyEntry _keyEntries[128] = {
     KEY_ENTRY('\0', '\0',   0),                            //0x00 -- NULL
     KEY_ENTRY('\0', '\0',   0),                            //0x01 -- ESC

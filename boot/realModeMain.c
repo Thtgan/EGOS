@@ -2,24 +2,16 @@
 
 #define KERNEL_BEGIN_ADDR   0x10000
 
-//ANCHOR[id=arch_boot_realModeMain_c_bootInfo]
-struct BootInfo bootInfo __attribute__((aligned(16)));  //Information during the boot
+__attribute__((section("sysInfo")))
+struct SystemInfo systemInfo;   //Information about the system
 
 /**
- * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
+ * @brief Collect information about system hardware, and set the flag of system information
  */
-void printMemoryAreas() {
-    const struct BootInfo* roBootInfo = &bootInfo;
-
-    printf("%d memory areas detected\n", roBootInfo->memoryMap.e820TableSize);
-    printf("| Base Address       | Area Length        | Type |\n");
-    for (int i = 0; i < roBootInfo->memoryMap.e820TableSize; ++i)
-        printf("| %#010lX%08lX | %#010lX%08lX | %#04X |\n", 
-        (unsigned long)(roBootInfo->memoryMap.e820Table[i].base >> 32), (unsigned long)(roBootInfo->memoryMap.e820Table[i].base), 
-        (unsigned long)(roBootInfo->memoryMap.e820Table[i].size >> 32), (unsigned long)(roBootInfo->memoryMap.e820Table[i].size),
-        roBootInfo->memoryMap.e820Table[i].type);
+void collectSystemInfo() {
+    detectMemory(&systemInfo);
+    systemInfo.flag = SYSTEM_INFO_FLAG;
 }
-
 
 __attribute__((noreturn))
 /**
@@ -27,12 +19,7 @@ __attribute__((noreturn))
  * !!(DO NOT CALL THIS FUNCTION)
  */
 void realModeMain() {
-    const struct BootInfo* roBootInfo = &bootInfo;
-
-    printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
-    detectMemory();
-
-    printMemoryAreas();
+    collectSystemInfo();
 
     //If failed to enable A20, system should not be booted
     if (enableA20())

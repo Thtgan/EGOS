@@ -8,7 +8,6 @@ SECTIONS
     .bootSector : {
         *(.bootSector)
     }
-    . = 0x7E00;
 
     .intInvokeText : {
         *(.intInvokeText)
@@ -20,8 +19,13 @@ SECTIONS
         *(.text)
     }
 
-    . = ALIGN(16);
+    . = 0xA000;
+    .sysInfo : {
+        *(.sysInfo)
+    }
 
+    . = ALIGN(16);
+    
     .data : {
         *(.data)
     }

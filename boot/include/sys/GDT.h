@@ -41,6 +41,7 @@ struct GDTEntry {
 } __attribute__((packed));
 
 //Macro to construct the GDT entry
+//Reference: https://wiki.osdev.org/Global_Descriptor_Table
 #define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) {                               \
     (uint16_t)  BIT_EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
     (uint16_t)  BIT_EXTRACT_VAL(__BASE, 32, 0, 16),                                         \
