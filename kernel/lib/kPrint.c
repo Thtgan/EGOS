@@ -3,7 +3,7 @@
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
 #include<lib/string.h>
-#include<stdarg.h>
+#include<types.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   BIT_FLAG8(0)
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  BIT_FLAG8(1)

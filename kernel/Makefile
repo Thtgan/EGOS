@@ -1,5 +1,6 @@
 CC 							= 	x86_64-elf-gcc
 CC_OPTIONS 					= 	-nostdlib		\
+								-nostdinc		\
 								-ffreestanding	\
 								-mno-red-zone	\
 								-m32			\
