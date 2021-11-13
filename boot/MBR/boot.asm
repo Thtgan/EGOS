@@ -51,7 +51,7 @@ checkPassed:
     mov ax, 0x1000
     mov es, ax
     mov bx, 0x0000                      ;;Read to 0x1000:0x0000 (0x10000)
-    mov eax, 128                         ;;Start from 129th sector (65537th byte)
+    mov eax, 128                        ;;Start from 129th sector (65537th byte)
     mov ecx, 0x10000                    ;;65536 bytes
 
     call __real_readDisk
