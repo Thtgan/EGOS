@@ -1,6 +1,6 @@
 #include<trap/IDT.h>
 
-#include<lib/kPrint.h>
+#include<lib/printf.h>
 #include<real/simpleAsmLines.h>
 #include<trap/ISR.h>
 #include<trap/PIC.h>

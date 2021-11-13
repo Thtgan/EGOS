@@ -2,7 +2,7 @@
 
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
-#include<lib/kPrint.h>
+#include<lib/printf.h>
 #include<types.h>
 #include<trap/IDT.h>
 #include<trap/ISR.h>

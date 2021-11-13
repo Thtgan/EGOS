@@ -1,7 +1,7 @@
 #include<lib/blowup.h>
 
 #include<driver/vgaTextMode/textmode.h>
-#include<lib/kPrint.h>
+#include<lib/printf.h>
 #include<real/simpleAsmLines.h>
 
 __attribute__((noreturn))
@@ -11,7 +11,7 @@ void blowup(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    int ret = kVFPrintf(buf, format, args);
+    int ret = vfPrintf(buf, format, args);
 
     va_end(args);
 

@@ -1,8 +1,8 @@
 #include<driver/keyboard/keyboard.h>
 #include<driver/vgaTextMode/textmode.h>
-#include<lib/string.h>
-#include<lib/kPrint.h>
 #include<lib/blowup.h>
+#include<lib/printf.h>
+#include<lib/string.h>
 #include<real/simpleAsmLines.h>
 #include<system/systemInfo.h>
 #include<trap/IDT.h>
@@ -16,10 +16,10 @@ struct SystemInfo* systemInfo = (struct SystemInfo*) SYSTEM_INFO_ADDRESS;
 void printMemoryAreas() {
     const struct SystemInfo* sysInfo = systemInfo;
 
-    kPrintf("%d memory areas detected\n", sysInfo->memoryMap->size);
-    kPrintf("| Base Address       | Area Length        | Type |\n");
+    printf("%d memory areas detected\n", sysInfo->memoryMap->size);
+    printf("| Base Address       | Area Length        | Type |\n");
     for (int i = 0; i < sysInfo->memoryMap->size; ++i)
-        kPrintf("| %#010lX%08lX | %#010lX%08lX | %#04X |\n", 
+        printf("| %#010lX%08lX | %#010lX%08lX | %#04X |\n", 
         (unsigned long)(sysInfo->memoryMap->memoryAreas[i].base >> 32), (unsigned long)(sysInfo->memoryMap->memoryAreas[i].base), 
         (unsigned long)(sysInfo->memoryMap->memoryAreas[i].size >> 32), (unsigned long)(sysInfo->memoryMap->memoryAreas[i].size),
         sysInfo->memoryMap->memoryAreas[i].type);
@@ -36,9 +36,9 @@ void kernelMain() {
     initTextMode(); //Initialize text mode
     keyboardInit();
 
-    kPrintf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
     
-    kPrintf("Moonlight kernel loading...\n");
+    printf("Moonlight kernel loading...\n");
 
     printMemoryAreas();
 

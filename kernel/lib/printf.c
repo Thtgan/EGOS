@@ -1,4 +1,4 @@
-#include<lib/kPrint.h>
+#include<lib/printf.h>
 
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
@@ -115,7 +115,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
 }
 
 //Reference: https://www.cplusplus.com/reference/cstdio/printf/
-int kVFPrintf(char* buffer, const char* format, va_list args)
+int vfPrintf(char* buffer, const char* format, va_list args)
 {
     char* writeTo = NULL;
     for (writeTo = buffer; *format != '\0'; ++format) { //Scan the string
@@ -281,13 +281,13 @@ int kVFPrintf(char* buffer, const char* format, va_list args)
     return writeTo - buffer;
 }
 
-int kPrintf(const char* format, ...) {
+int printf(const char* format, ...) {
     char buf[1024];
 
     va_list args;
     va_start(args, format);
 
-    int ret = kVFPrintf(buf, format, args);
+    int ret = vfPrintf(buf, format, args);
 
     va_end(args);
 

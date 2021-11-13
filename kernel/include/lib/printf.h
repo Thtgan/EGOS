@@ -10,7 +10,7 @@
  * @param ... Data to print
  * @return The length of final string printed
  */
-int kPrintf(const char* format, ...);
+int printf(const char* format, ...);
 
 /**
  * @brief Write the string to the buffer with given data
@@ -20,6 +20,6 @@ int kPrintf(const char* format, ...);
  * @param ... Data to print
  * @return The length of final string writed
  */
-int kVFPrintf(char* buffer, const char* format, va_list args);
+int vfPrintf(char* buffer, const char* format, va_list args);
 
 #endif // __KERNEL_PRINT_H
