@@ -41,4 +41,9 @@ SECTIONS
     .bss : {
         *(.bss)
     }
+
+    .end : {
+        PROVIDE(endOfBooter = .);
+        ASSERT(endOfBooter < 0x10000, "Error: booter too large");
+    }
 }

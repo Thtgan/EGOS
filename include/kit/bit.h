@@ -20,11 +20,11 @@
 #define BIT_LEFT_SHIFT(__X, __Y)                                    (MACRO_EXPRESSION(__X) << MACRO_EXPRESSION(__Y))
 #define BIT_RIGHT_SHIFT(__X, __Y)                                   (MACRO_EXPRESSION(__X) >> MACRO_EXPRESSION(__Y))
 
-#define BIT_FLAG(__FULL_LENGTH, __OFFSET)                           BIT_LEFT_SHIFT(BIT_ONE(__FULL_LENGTH), __OFFSET)
-#define BIT_FLAG8(__OFFSET)                                         BIT_FLAG(8,     __OFFSET)
-#define BIT_FLAG16(__OFFSET)                                        BIT_FLAG(16,    __OFFSET)
-#define BIT_FLAG32(__OFFSET)                                        BIT_FLAG(32,    __OFFSET)
-#define BIT_FLAG64(__OFFSET)                                        BIT_FLAG(64,    __OFFSET)
+#define BIT_FLAG(__FULL_LENGTH, __INDEX)                            BIT_LEFT_SHIFT(BIT_ONE(__FULL_LENGTH),  __INDEX)
+#define BIT_FLAG8(__INDEX)                                          BIT_FLAG(8,     __INDEX)
+#define BIT_FLAG16(__INDEX)                                         BIT_FLAG(16,    __INDEX)
+#define BIT_FLAG32(__INDEX)                                         BIT_FLAG(32,    __INDEX)
+#define BIT_FLAG64(__INDEX)                                         BIT_FLAG(64,    __INDEX)
 
 #define BIT_SET_FLAG(__FLAGS, __FLAG)                               BIT_OR(__FLAGS, __FLAG)
 #define BIT_SET_FLAG_BACK(__FLAGS, __FLAG)                          (__FLAGS = BIT_SET_FLAG(__FLAGS, __FLAG))

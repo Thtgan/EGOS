@@ -3,6 +3,12 @@
 
 #include<types.h>
 
+#define MEMORY_USABLE               1
+#define MEMORY_RESERVED             2
+#define MEMORY_ACPI_RECLAIMABLE     3
+#define MEMORY_ACPI_NVS             4
+#define MEMORY_BAD                  5
+
 struct MemoryAreaEntry {
     uint64_t base;
     uint64_t size;

@@ -3,6 +3,7 @@
 #include<lib/blowup.h>
 #include<lib/printf.h>
 #include<lib/string.h>
+#include<memory/paging.h>
 #include<real/simpleAsmLines.h>
 #include<system/systemInfo.h>
 #include<trap/IDT.h>
@@ -27,13 +28,16 @@ void printMemoryAreas() {
 
 __attribute__((section(".kernelMain")))
 void kernelMain() {
+
+    initTextMode(); //Initialize text mode
+
     initIDT();      //Initialize the interrupt
+    initPaging();   //Initialize the paging
 
     //Set interrupt flag
     //Cleared in LINK arch/boot/sys/pm.c#arch_boot_sys_pm_c_cli
     sti();
 
-    initTextMode(); //Initialize text mode
     keyboardInit();
 
     printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
@@ -42,7 +46,7 @@ void kernelMain() {
 
     printMemoryAreas();
 
-    unsigned int* ptr = (unsigned int*)0x100000;
+    unsigned int* ptr = (unsigned int*)(0x400000 - 4);
     *ptr = 114514;
     blowup("blowup %d\n", *ptr);
 }
