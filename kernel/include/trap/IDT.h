@@ -56,6 +56,6 @@ void initIDT();
  * @param isr The interrupt service routine to bind
  * @param flags arrtibutes
  */
-void setISR(uint8_t vector, void* isr, uint8_t flags);
+void registerISR(uint8_t vector, void* isr, uint8_t flags);
 
 #endif // __IDT_H

@@ -218,5 +218,5 @@ void keyboardInit() {
         _pressed[i] = false;
     }
     _capslock = false;
-    setISR(0x21, __keyboardInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    registerISR(0x21, __keyboardInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
 }

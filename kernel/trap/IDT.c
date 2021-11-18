@@ -20,7 +20,7 @@ void initIDT() {
 
     for (int vec = 0x0; vec < 256; ++vec) {
         //TODO: Find out why cannot use uint8_t here
-        setISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+        registerISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     }
 
     remapPIC(0x20, 0x28);
@@ -31,7 +31,7 @@ void initIDT() {
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }
 
-void setISR(uint8_t vector, void* isr, uint8_t flags) {
+void registerISR(uint8_t vector, void* isr, uint8_t flags) {
     struct IDTEntry* ptr = IDTTable + vector;
     ptr->isr0_15 = BIT_EXTRACT_VAL((uint32_t)isr, 32, 0, 16);
     ptr->codeSector = 0x08;                                     //TODO: Try be more maintainable
