@@ -1,6 +1,8 @@
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<real/simpleAsmLines.h>
+#include<trap/IDT.h>
+#include<trap/ISR.h>
 
 #include<lib/printf.h>
 
@@ -9,6 +11,12 @@ static struct PageDirectory _directory;
 
 __attribute__((aligned(PAGE_SIZE)))
 static struct PageTable _firstTable;
+
+ISR_EXCEPTION_FUNC_HEADER(testInterrupt) {
+    printf("Caught with error code: %#X\n", errorCode);
+    cli();
+    die();
+}
 
 void initPaging() {
     uint32_t baseAddr = 0;
@@ -21,4 +29,8 @@ void initPaging() {
     writeCR3((uint32_t)(&_directory));
     uint32_t cr0 = readCR0();
     writeCR0(cr0 | 0x80000000);
+
+    for (int i = 0; i < 32; ++i) {
+        registerISR(i, testInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    }
 }
