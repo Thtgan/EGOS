@@ -8,6 +8,11 @@
 #include<types.h>
 
 /**
+ * @brief Reserved register set
+ */
+extern struct registerSet registers;
+
+/**
  * @brief Initialize the register set
  * 
  * @param regs register set to initialize

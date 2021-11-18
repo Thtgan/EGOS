@@ -17,27 +17,26 @@ struct MemoryMap _memoryMap;
  * @return number of memory areas detected
  */
 static int __detectE820(struct MemoryMap* memoryMap) {
-    struct registerSet regs;
     struct MemoryAreaEntry buf;
     struct MemoryAreaEntry* table = memoryMap->memoryAreas;
     
-    initRegs(&regs);
+    initRegs(&registers);
 
     int cnt = 0;
-    regs.ebx = 0;
+    registers.ebx = 0;
     do {    //Loop for scan memory area
-        regs.eax = 0xE820;
-        regs.ecx = sizeof(struct MemoryAreaEntry);
-        regs.edx = SMAP;
-        regs.edi = (uint32_t) &buf;
+        registers.eax = 0xE820;
+        registers.ecx = sizeof(struct MemoryAreaEntry);
+        registers.edx = SMAP;
+        registers.edi = (uint32_t) &buf;
 
-        intInvoke(0x15, &regs, &regs);
+        intInvoke(0x15, &registers, &registers);
 
-        if(BIT_TEST_FLAGS(regs.eflags, EFLAGS_CF))
+        if(BIT_TEST_FLAGS(registers.eflags, EFLAGS_CF))
             break;
         
         table[cnt++] = buf;
-    } while (regs.ebx != 0 && cnt < MEMORY_AREA_NUM);
+    } while (registers.ebx != 0 && cnt < MEMORY_AREA_NUM);
 
     return memoryMap->size = cnt;
 }

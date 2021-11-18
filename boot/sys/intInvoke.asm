@@ -64,3 +64,6 @@ recover:
     popad
 
     ret
+
+global registers
+registers: times 44 db 0
