@@ -1,7 +1,7 @@
 #if !defined(__MEMORY_AREA_H)
 #define __MEMORY_AREA_H
 
-#include<types.h>
+#include<stdint.h>
 
 #define MEMORY_USABLE               1
 #define MEMORY_RESERVED             2

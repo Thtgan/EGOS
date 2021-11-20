@@ -4,7 +4,7 @@
 #include<real/simpleAsmLines.h>
 #include<trap/IDT.h>
 #include<trap/PIC.h>
-#include<types.h>
+#include<stdint.h>
 
 /**
  * @brief Header for interrupt service routine function

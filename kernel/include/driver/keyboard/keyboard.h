@@ -95,22 +95,22 @@ struct KeyEntry
 #define KEY_F11                     0x57
 #define KEY_F12                     0x58
 
-#define SCANCODE_TRIM(__SCANCODE)                       BIT_TRIM_VAL_SIMPLE(__SCANCODE, 8, 7)
-#define SCANCODE_PRESS(__SCANCODE)                      BIT_TRIM_VAL_SIMPLE(__SCANCODE, 8, 7)
-#define SCANCODE_RELEASE(__SCANCODE)                    BIT_FILL_VAL(__SCANCODE, 0x80)
+#define SCANCODE_TRIM(__SCANCODE)                       TRIM_VAL_SIMPLE(__SCANCODE, 8, 7)
+#define SCANCODE_PRESS(__SCANCODE)                      TRIM_VAL_SIMPLE(__SCANCODE, 8, 7)
+#define SCANCODE_RELEASE(__SCANCODE)                    FILL_VAL(__SCANCODE, 0x80)
 
 #define KEY_ENTRY(__ASCII, __SHIFT_ASCII, __FLAGS)   (struct KeyEntry) {__ASCII, __SHIFT_ASCII, __FLAGS}
-#define ASCII                                           BIT_FLAG16(0)
-#define ALT_ASCII                                       BIT_FLAG16(1)
-#define ALPHA                                           BIT_FLAG16(2)
-#define CONTROL                                         BIT_FLAG16(3)
-#define KEYPAD                                          BIT_FLAG16(4)
-#define FUNCTION                                        BIT_FLAG16(5)
-#define CTRL                                            BIT_FLAG16(6)
-#define SHIFT                                           BIT_FLAG16(7)
-#define ALT                                             BIT_FLAG16(8)
-#define CAPSLOCK                                        BIT_FLAG16(9)
-#define ENTER                                           BIT_FLAG16(10)
+#define ASCII                                           FLAG16(0)
+#define ALT_ASCII                                       FLAG16(1)
+#define ALPHA                                           FLAG16(2)
+#define CONTROL                                         FLAG16(3)
+#define KEYPAD                                          FLAG16(4)
+#define FUNCTION                                        FLAG16(5)
+#define CTRL                                            FLAG16(6)
+#define SHIFT                                           FLAG16(7)
+#define ALT                                             FLAG16(8)
+#define CAPSLOCK                                        FLAG16(9)
+#define ENTER                                           FLAG16(10)
 
 /**
  * @brief Initialize the keyboard

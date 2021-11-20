@@ -3,7 +3,7 @@
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
 #include<lib/printf.h>
-#include<types.h>
+#include<stdint.h>
 #include<trap/IDT.h>
 #include<trap/ISR.h>
 #include<real/simpleAsmLines.h>
@@ -122,8 +122,8 @@ static inline uint8_t __readScancode() {
 static uint8_t __toASCII(uint8_t key) {
     uint8_t ret = _keyEntries[key].ascii;
 
-    if (BIT_TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALT_ASCII)) {
-        if (BIT_TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALPHA)) {
+    if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALT_ASCII)) {
+        if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALPHA)) {
             ret = (_capslock ^ (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT])) ? _keyEntries[key].alt_ascii : ret;
         }
         else {
@@ -138,16 +138,16 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
     uint8_t scancode = __readScancode();
     uint8_t key = SCANCODE_TRIM(scancode);
 
-    _pressed[key] = BIT_TEST_FLAGS_NONE(scancode, 0x80);
+    _pressed[key] = TEST_FLAGS_NONE(scancode, 0x80);
 
     if (_pressed[KEY_CAPSLOCK] && key == KEY_CAPSLOCK) {
         _capslock ^= true;
     }
     else if (_pressed[key]) {
-        if (BIT_TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ASCII)) {
+        if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ASCII)) {
             tmPutchar(__toASCII(key));
         }
-        else if (BIT_TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
+        else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
             const struct TextModeInfo* tmInfo = getTextModeInfo();
             int row = tmInfo->cursorPosition / TEXT_MODE_WIDTH, col = tmInfo->cursorPosition % TEXT_MODE_WIDTH;
             switch (key)

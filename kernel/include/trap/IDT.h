@@ -3,19 +3,19 @@
 
 #include<kit/bit.h>
 #include<real/simpleAsmLines.h>
-#include<types.h>
+#include<stdint.h>
 
 #define IDT_FLAGS_TYPE_TASK_GATE32      0x5
 #define IDT_FLAGS_TYPE_INTERRUPT_GATE16 0x6
 #define IDT_FLAGS_TYPE_TRAP_GATE16      0x7
 #define IDT_FLAGS_TYPE_INTERRUPT_GATE32 0xE
 #define IDT_FLAGS_TYPE_TRAP_GATE32      0xF
-#define IDT_FLAGS_STORAGE_SEGMENT       BIT_LEFT_SHIFT(4)
-#define IDT_FLAGS_PRIVIEGE_0            BIT_LEFT_SHIFT(0, 5)
-#define IDT_FLAGS_PRIVIEGE_1            BIT_LEFT_SHIFT(1, 5)
-#define IDT_FLAGS_PRIVIEGE_2            BIT_LEFT_SHIFT(2, 5)
-#define IDT_FLAGS_PRIVIEGE_3            BIT_LEFT_SHIFT(3, 5)
-#define IDT_FLAGS_PRESENT               BIT_FLAG8(7)
+#define IDT_FLAGS_STORAGE_SEGMENT       VAL_LEFT_SHIFT(4)
+#define IDT_FLAGS_PRIVIEGE_0            VAL_LEFT_SHIFT(0, 5)
+#define IDT_FLAGS_PRIVIEGE_1            VAL_LEFT_SHIFT(1, 5)
+#define IDT_FLAGS_PRIVIEGE_2            VAL_LEFT_SHIFT(2, 5)
+#define IDT_FLAGS_PRIVIEGE_3            VAL_LEFT_SHIFT(3, 5)
+#define IDT_FLAGS_PRESENT               FLAG8(7)
 
 /**
  * @brief Entry to describe a interrupt handler

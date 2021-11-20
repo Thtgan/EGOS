@@ -2,7 +2,7 @@
 #define __REGISTERS_H
 
 #include<kit/macro.h>
-#include<types.h>
+#include<stdint.h>
 
 struct registerSet {
     union {

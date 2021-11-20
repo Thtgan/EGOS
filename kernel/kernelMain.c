@@ -7,7 +7,6 @@
 #include<real/simpleAsmLines.h>
 #include<system/systemInfo.h>
 #include<trap/IDT.h>
-#include<types.h>
 
 struct SystemInfo* systemInfo = (struct SystemInfo*) SYSTEM_INFO_ADDRESS;
 

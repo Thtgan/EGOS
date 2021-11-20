@@ -3,15 +3,15 @@
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
 #include<lib/string.h>
-#include<types.h>
+#include<stdint.h>
 
-#define __VFPRINTF_FLAGS_LEFT_JUSTIFY   BIT_FLAG8(0)
-#define __VFPRINTF_FLAGS_EXPLICIT_SIGN  BIT_FLAG8(1)
-#define __VFPRINTF_FLAGS_PADDING_SPACE  BIT_FLAG8(2)
-#define __VFPRINTF_FLAGS_SPECIFIER      BIT_FLAG8(3)
-#define __VFPRINTF_FLAGS_PADDING_ZERO   BIT_FLAG8(4)
-#define __VFPRINTF_FLAGS_SIGNED         BIT_FLAG8(5)
-#define __VFPRINTF_FLAGS_LOWERCASE      BIT_FLAG8(6)
+#define __VFPRINTF_FLAGS_LEFT_JUSTIFY   FLAG8(0)
+#define __VFPRINTF_FLAGS_EXPLICIT_SIGN  FLAG8(1)
+#define __VFPRINTF_FLAGS_PADDING_SPACE  FLAG8(2)
+#define __VFPRINTF_FLAGS_SPECIFIER      FLAG8(3)
+#define __VFPRINTF_FLAGS_PADDING_ZERO   FLAG8(4)
+#define __VFPRINTF_FLAGS_SIGNED         FLAG8(5)
+#define __VFPRINTF_FLAGS_LOWERCASE      FLAG8(6)
 
 #define __IS_DIGIT(__CH)                ('0' <= (__CH) && (__CH) <= '9')
 
@@ -35,24 +35,24 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
 
     char sign = 0;
     //Determine the sign
-    if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED)) {
+    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED)) {
         if (num >= 0x80000000) {
             --width;
             sign = '-';
             num = -num;
         }
-        else if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN)) {
+        else if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN)) {
             --width;
             sign = '+';
         }
-        else if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_SPACE)) {
+        else if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_SPACE)) {
             --width;
             sign = ' ';
         }
     }
 
     //If use the specifier, modify the width
-    if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
+    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
         if (base == 16)
             width -= 2;
         else if (base == 8)
@@ -60,7 +60,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
     }
 
     //Write the number to temp buffer
-    char lowercaseBit = BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_LOWERCASE) ? 32 : 0;
+    char lowercaseBit = TEST_FLAGS(flags, __VFPRINTF_FLAGS_LOWERCASE) ? 32 : 0;
     int len = 0;
     if (num == 0)
         tmp[len++] = '0';
@@ -74,7 +74,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
     width -= precision;
 
     //If not left justified or padding zero, pad with space
-    if (BIT_TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY | __VFPRINTF_FLAGS_PADDING_ZERO)) {
+    if (TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY | __VFPRINTF_FLAGS_PADDING_ZERO)) {
         for (; width > 0; --width)
             *writeTo++ = ' ';
     }
@@ -82,7 +82,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
     //Write the sign and specifier
     if (sign != 0)
         *writeTo++ = sign;
-    if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
+    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
         if (base == 8)
             *writeTo++ = '0';
         else if (base == 16)
@@ -92,9 +92,9 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
         }
     }
 
-    char padding = BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_ZERO) ? '0' : ' ';
+    char padding = TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_ZERO) ? '0' : ' ';
     //It is impossible to have space between sign/specifier between the number
-    if (BIT_TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
+    if (TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
         for (; width > 0; --width)
             *writeTo++ = padding;
     }
@@ -129,19 +129,19 @@ int vfPrintf(char* buffer, const char* format, va_list args)
     loop: //Goto is awful, but useful
         switch (*(++format)) { //Set the flags
         case '-':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
             goto loop;
         case '+':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN);
             goto loop;
         case ' ':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_SPACE);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_SPACE);
             goto loop;
         case '#':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_SPECIFIER);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_SPECIFIER);
             goto loop;
         case '0':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
             goto loop;
         }
 
@@ -157,7 +157,7 @@ int vfPrintf(char* buffer, const char* format, va_list args)
             if (width < 0)
             {
                 width = -width;
-                BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
+                SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY);
             }
         }
 
@@ -185,19 +185,19 @@ int vfPrintf(char* buffer, const char* format, va_list args)
         switch (*format) {
         case 'd':
         case 'i':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_SIGNED);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_SIGNED);
         case 'u':
             break;
         case 'o':
             base = 8;
             break;
         case 'x':
-            BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LOWERCASE);
+            SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_LOWERCASE);
         case 'X':
             base = 16;
             break;
         case 'c':
-            if (width > 0 && !BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
+            if (width > 0 && !TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
                 while (--width)
                     *writeTo++ = ' ';
             }
@@ -213,7 +213,7 @@ int vfPrintf(char* buffer, const char* format, va_list args)
             const char* str = va_arg(args, char*);
             int len = strnlen(str, precision);
 
-            if (width > 0 && !BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
+            if (width > 0 && !TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
                 while (len <= --width)
                     *writeTo++ = ' ';
             }
@@ -229,7 +229,7 @@ int vfPrintf(char* buffer, const char* format, va_list args)
         case 'p':
             if (width == -1) {
                 width = sizeof(void*) << 1;
-                BIT_SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
+                SET_FLAG_BACK(flags, __VFPRINTF_FLAGS_PADDING_ZERO);
             }
 
             writeTo = __writeNumber(writeTo, (unsigned long)va_arg(args, void*), 16, width, precision, flags);
@@ -260,17 +260,17 @@ int vfPrintf(char* buffer, const char* format, va_list args)
         unsigned long num = 0;
         if (length == 'l') {
             num = (unsigned long)va_arg(args, unsigned long);
-            if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED))
+            if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED))
                 num = (long)num;
         }
         else if (length == 'h') {
             num = (unsigned short)va_arg(args, unsigned int);
-            if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED))
+            if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED))
                 num = (short)num;
         }
         else {
             num = (unsigned int)va_arg(args, unsigned int);
-            if (BIT_TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED))
+            if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED))
                 num = (int)num;
         }
 

@@ -2,7 +2,8 @@
 #define __TECT_MODE_H
 
 #include<kit/bit.h>
-#include<types.h>
+#include<stdbool.h>
+#include<stdint.h>
 
 #define TEXT_MODE_BUFFER_BEGIN              0xB8000
 #define TEXT_MODE_WIDTH                     80 

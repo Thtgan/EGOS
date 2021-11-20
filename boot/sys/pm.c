@@ -2,7 +2,7 @@
 
 #include<sys/GDT.h>
 #include<sys/realmode.h>
-#include<types.h>
+#include<stdint.h>
 
 __attribute__((noreturn, regparm(3))) //TODO Pass arguments througn stack will cause some unknown error, considering use C native assembly instead of NASM
 /**

@@ -1,7 +1,7 @@
 #if !defined(__KERNEL_STRING_H)
 #define __KERNEL_STRING_H
 
-#include<types.h>
+#include<stddef.h>
 
 /**
  * @brief Set byte in a range of memory

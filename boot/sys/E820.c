@@ -32,7 +32,7 @@ static int __detectE820(struct MemoryMap* memoryMap) {
 
         intInvoke(0x15, &registers, &registers);
 
-        if(BIT_TEST_FLAGS(registers.eflags, EFLAGS_CF))
+        if(TEST_FLAGS(registers.eflags, EFLAGS_CF))
             break;
         
         table[cnt++] = buf;

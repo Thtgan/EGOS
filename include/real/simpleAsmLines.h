@@ -1,9 +1,10 @@
 #if !defined(__SIMPLE_ASM_LINES_H)
 #define __SIMPLE_ASM_LINES_H
 
+#include<kit/bit.h>
 #include<kit/macro.h>
 #include<real/registers.h>
-#include<types.h>
+#include<stdint.h>
 
 #define INSTRUCTION_LENGTH_SUFFIX8  b
 #define INSTRUCTION_LENGTH_SUFFIX16 w

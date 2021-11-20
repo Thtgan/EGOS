@@ -5,7 +5,7 @@
 #include<real/registers.h>
 #include<real/simpleAsmLines.h>
 
-#include<types.h>
+#include<stdint.h>
 
 /**
  * @brief Reserved register set

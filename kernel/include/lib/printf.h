@@ -1,7 +1,7 @@
 #if !defined(__KERNEL_PRINT_H)
 #define __KERNEL_PRINT_H
 
-#include<types.h>
+#include<stdarg.h>
 
 /**
  * @brief Print the string on the screen with given data

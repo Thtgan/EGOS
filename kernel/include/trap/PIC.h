@@ -2,7 +2,7 @@
 #define __PIC_H
 
 #include<real/simpleAsmLines.h>
-#include<types.h>
+#include<stdint.h>
 
 #define PIC1		    0x20        // IO base address for master PIC
 #define PIC2		    0xA0        // IO base address for slave PIC

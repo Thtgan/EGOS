@@ -14,7 +14,7 @@ static struct TextModeInfo _tmInfo;
 #define __POSITION_VALIDATION(__WRITE_POSITION)         (0 <= (__WRITE_POSITION) && (__WRITE_POSITION) < TEXT_MODE_SIZE)    //Check if current write position is valid
 
 #define __PATTERN_ENTRY(__BACKGROUND_COLOR, __FOREGROUND_COLOR)                 \
-    (uint8_t)BIT_OR(__FOREGROUND_COLOR, BIT_LEFT_SHIFT(__BACKGROUND_COLOR, 4))  \
+    (uint8_t)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))  \
 
 void initTextMode() {
     tmSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);    //Set color pattern to default black background and white foreground

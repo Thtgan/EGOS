@@ -1,5 +1,6 @@
 #include<lib/io.h>
 
+#include<stddef.h>
 #include<sys/realmode.h>
 
 void biosPutchar(int ch) {

@@ -2,59 +2,68 @@
 #define __BIT_MACRO_H
 
 #include<kit/macro.h>
-#include<types.h>
+#include<stdint.h>
 
-#define BIT_ONE(__LENGTH)                                           (UINT(__LENGTH))1
-#define BIT_FULL_MASK(__LENGTH)                                     (UINT(__LENGTH))-1
+#define PTR(__LENGTH)                                               MACRO_EVAL(MACRO_CONCENTRATE2(PTR, __LENGTH))
 
-#define BIT_LOGIC_EQUAL(__X, __Y)                                   (MACRO_EXPRESSION(__X) == MACRO_EXPRESSION(__Y))
-#define BIT_LOGIC_NOT_EQUAL(__X, __Y)                               (MACRO_EXPRESSION(__X) != MACRO_EXPRESSION(__Y))
-#define BIT_LOGIC_AND(__X, __Y)                                     (MACRO_EXPRESSION(__X) && MACRO_EXPRESSION(__Y))
-#define BIT_LOGIC_OR(__X, __Y)                                      (MACRO_EXPRESSION(__X) || MACRO_EXPRESSION(__Y))
-#define BIT_LOGIC_NOT(__X)                                          (!MACRO_EXPRESSION(__X))
+#define PTR8(__PTR)                                                 (*((uint8_t*)(__PTR)))
+#define PTR16(__PTR)                                                (*((uint16_t*)(__PTR)))
+#define PTR32(__PTR)                                                (*((uint32_t*)(__PTR)))
+#define PTR64(__PTR)                                                (*((uint64_t*)(__PTR)))
 
-#define BIT_AND(__X, __Y)                                           (MACRO_EXPRESSION(__X) & MACRO_EXPRESSION(__Y))
-#define BIT_OR(__X, __Y)                                            (MACRO_EXPRESSION(__X) | MACRO_EXPRESSION(__Y))
-#define BIT_NOT(__X)                                                (~MACRO_EXPRESSION(__X))
-#define BIT_XOR(__X, __Y)                                           (MACRO_EXPRESSION(__X) ^ MACRO_EXPRESSION(__Y))
-#define BIT_LEFT_SHIFT(__X, __Y)                                    (MACRO_EXPRESSION(__X) << MACRO_EXPRESSION(__Y))
-#define BIT_RIGHT_SHIFT(__X, __Y)                                   (MACRO_EXPRESSION(__X) >> MACRO_EXPRESSION(__Y))
+#define UINT(__LENGTH)                                              MACRO_EVAL(MACRO_CONCENTRATE3(uint, __LENGTH, _t))
 
-#define BIT_FLAG(__FULL_LENGTH, __INDEX)                            BIT_LEFT_SHIFT(BIT_ONE(__FULL_LENGTH),  __INDEX)
-#define BIT_FLAG8(__INDEX)                                          BIT_FLAG(8,     __INDEX)
-#define BIT_FLAG16(__INDEX)                                         BIT_FLAG(16,    __INDEX)
-#define BIT_FLAG32(__INDEX)                                         BIT_FLAG(32,    __INDEX)
-#define BIT_FLAG64(__INDEX)                                         BIT_FLAG(64,    __INDEX)
+#define ONE(__LENGTH)                                               (UINT(__LENGTH))1
+#define FULL_MASK(__LENGTH)                                         (UINT(__LENGTH))-1
 
-#define BIT_SET_FLAG(__FLAGS, __FLAG)                               BIT_OR(__FLAGS, __FLAG)
-#define BIT_SET_FLAG_BACK(__FLAGS, __FLAG)                          (__FLAGS = BIT_SET_FLAG(__FLAGS, __FLAG))
+#define LOGIC_EQUAL(__X, __Y)                                       (MACRO_EXPRESSION(__X) == MACRO_EXPRESSION(__Y))
+#define LOGIC_NOT_EQUAL(__X, __Y)                                   (MACRO_EXPRESSION(__X) != MACRO_EXPRESSION(__Y))
+#define LOGIC_AND(__X, __Y)                                         (MACRO_EXPRESSION(__X) && MACRO_EXPRESSION(__Y))
+#define LOGIC_OR(__X, __Y)                                          (MACRO_EXPRESSION(__X) || MACRO_EXPRESSION(__Y))
+#define LOGIC_NOT(__X)                                              (!MACRO_EXPRESSION(__X))
 
-#define BIT_CLEAR_FLAG(__FLAGS, __FLAG)                             BIT_AND(__FLAGS, BIT_NOT(__FLAG))
-#define BIT_CLEAR_FLAG_BACK(__FLAGS, __FLAG)                        (__FLAGS = BIT_CLEAR_FLAG(__FLAGS, __FLAG))
+#define VAL_AND(__X, __Y)                                           (MACRO_EXPRESSION(__X) & MACRO_EXPRESSION(__Y))
+#define VAL_OR(__X, __Y)                                            (MACRO_EXPRESSION(__X) | MACRO_EXPRESSION(__Y))
+#define VAL_NOT(__X)                                                (~MACRO_EXPRESSION(__X))
+#define VAL_XOR(__X, __Y)                                           (MACRO_EXPRESSION(__X) ^ MACRO_EXPRESSION(__Y))
+#define VAL_LEFT_SHIFT(__X, __Y)                                    (MACRO_EXPRESSION(__X) << MACRO_EXPRESSION(__Y))
+#define VAL_RIGHT_SHIFT(__X, __Y)                                   (MACRO_EXPRESSION(__X) >> MACRO_EXPRESSION(__Y))
 
-#define BIT_REVERSE_FLAG(__FLAGS, __FLAG)                           BIT_XOR(__FLAGS, __FLAG)
-#define BIT_REVERSE_FLAG_BACK(__FLAGS, __FLAG)                      (__FLAGS = BIT_REVERSE_FLAG(__FLAGS, __FLAG))
+#define FLAG(__FULL_LENGTH, __INDEX)                                VAL_LEFT_SHIFT(ONE(__FULL_LENGTH),  __INDEX)
+#define FLAG8(__INDEX)                                              FLAG(8,     __INDEX)
+#define FLAG16(__INDEX)                                             FLAG(16,    __INDEX)
+#define FLAG32(__INDEX)                                             FLAG(32,    __INDEX)
+#define FLAG64(__INDEX)                                             FLAG(64,    __INDEX)
 
-#define BIT_TEST_FLAGS(__FLAGS, __FLAG)                             BIT_LOGIC_EQUAL(BIT_AND(__FLAGS, __FLAG), __FLAG)
-#define BIT_TEST_FLAGS_NONE(__FLAGS, __FLAG)                        BIT_LOGIC_EQUAL(BIT_AND(__FLAGS, __FLAG), 0)
-#define BIT_TEST_FLAGS_FAIL(__FLAGS, __FLAG)                        BIT_LOGIC_NOT_EQUAL(BIT_AND(__FLAGS, __FLAG), __FLAG)
-#define BIT_TEST_FLAGS_CONTAIN(__FLAGS, __FLAG)                     BIT_LOGIC_NOT_EQUAL(BIT_AND(__FLAGS, __FLAG), 0)
+#define SET_FLAG(__FLAGS, __FLAG)                                   VAL_OR(__FLAGS, __FLAG)
+#define SET_FLAG_BACK(__FLAGS, __FLAG)                              (__FLAGS = SET_FLAG(__FLAGS, __FLAG))
 
-#define BIT_MASK_SIMPLE(__FULL_LENGTH, __LENGTH)                    BIT_RIGHT_SHIFT(BIT_FULL_MASK(__FULL_LENGTH), (__FULL_LENGTH) - (__LENGTH))
-#define BIT_MASK_RANGE(__FULL_LENGTH, __BEGIN, __END)               BIT_LEFT_SHIFT(BIT_MASK_SIMPLE(__FULL_LENGTH, (__END) - (__BEGIN)), __BEGIN)
+#define CLEAR_FLAG(__FLAGS, __FLAG)                                 VAL_AND(__FLAGS, VAL_NOT(__FLAG))
+#define CLEAR_FLAG_BACK(__FLAGS, __FLAG)                            (__FLAGS = CLEAR_FLAG(__FLAGS, __FLAG))
 
-#define BIT_TRIM_VAL(__VAL, __MASK)                                 BIT_AND(__VAL, __MASK)
-#define BIT_TRIM_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)         BIT_TRIM_VAL(__VAL, BIT_MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
-#define BIT_TRIM_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)    BIT_TRIM_VAL(__VAL, BIT_MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+#define REVERSE_FLAG(__FLAGS, __FLAG)                               VAL_XOR(__FLAGS, __FLAG)
+#define REVERSE_FLAG_BACK(__FLAGS, __FLAG)                          (__FLAGS = REVERSE_FLAG(__FLAGS, __FLAG))
 
-#define BIT_FILL_VAL(__VAL, __MASK)                                 BIT_OR(__VAL, __MASK)
-#define BIT_FILL_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)         BIT_FILL_VAL(__VAL, BIT_MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
-#define BIT_FILL_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)    BIT_FILL_VAL(__VAL, BIT_MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+#define TEST_FLAGS(__FLAGS, __FLAG)                                 LOGIC_EQUAL(VAL_AND(__FLAGS, __FLAG), __FLAG)
+#define TEST_FLAGS_NONE(__FLAGS, __FLAG)                            LOGIC_EQUAL(VAL_AND(__FLAGS, __FLAG), 0)
+#define TEST_FLAGS_FAIL(__FLAGS, __FLAG)                            LOGIC_NOT_EQUAL(VAL_AND(__FLAGS, __FLAG), __FLAG)
+#define TEST_FLAGS_CONTAIN(__FLAGS, __FLAG)                         LOGIC_NOT_EQUAL(VAL_AND(__FLAGS, __FLAG), 0)
 
-#define BIT_FLIP_VAL(__VAL, __MASK)                                 BIT_XOR(__VAL, __MASK)
-#define BIT_FLIP_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)         BIT_FLIP_VAL(__VAL, BIT_MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
-#define BIT_FLIP_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)    BIT_FLIP_VAL(__VAL, BIT_MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+#define MASK_SIMPLE(__FULL_LENGTH, __LENGTH)                        VAL_RIGHT_SHIFT(FULL_MASK(__FULL_LENGTH), (__FULL_LENGTH) - (__LENGTH))
+#define MASK_RANGE(__FULL_LENGTH, __BEGIN, __END)                   VAL_LEFT_SHIFT(MASK_SIMPLE(__FULL_LENGTH, (__END) - (__BEGIN)), __BEGIN)
 
-#define BIT_EXTRACT_VAL(__VAL, __FULL_LENGTH, __BEGIN, __END)       BIT_TRIM_VAL(BIT_RIGHT_SHIFT(__VAL, __BEGIN), BIT_MASK_SIMPLE(__FULL_LENGTH, (__END - __BEGIN)))
+#define TRIM_VAL(__VAL, __MASK)                                     VAL_AND(__VAL, __MASK)
+#define TRIM_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)             TRIM_VAL(__VAL, MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
+#define TRIM_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)        TRIM_VAL(__VAL, MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+
+#define FILL_VAL(__VAL, __MASK)                                     VAL_OR(__VAL, __MASK)
+#define FILL_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)             FILL_VAL(__VAL, MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
+#define FILL_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)        FILL_VAL(__VAL, MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+
+#define FLIP_VAL(__VAL, __MASK)                                     VAL_XOR(__VAL, __MASK)
+#define FLIP_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)             FLIP_VAL(__VAL, MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
+#define FLIP_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)        FLIP_VAL(__VAL, MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+
+#define EXTRACT_VAL(__VAL, __FULL_LENGTH, __BEGIN, __END)           TRIM_VAL(VAL_RIGHT_SHIFT(__VAL, __BEGIN), MASK_SIMPLE(__FULL_LENGTH, (__END - __BEGIN)))
 
 #endif // __BIT_MACRO_H
