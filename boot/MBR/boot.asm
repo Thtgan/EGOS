@@ -1,8 +1,12 @@
-%define MBR_BEGIN_ADDRESS           0x7C00
+%define MBR_BEGIN               0x7C00
+%define MBR_END                 0x7E00
 ;;Stack grows downwords, it won't corrupt the MBR
-%define STACK_BUTTOM_ADDRESS        MBR_BEGIN_ADDRESS
+%define KERNEL_STACK_BOTTOM     MBR_BEGIN
 
-%define EXTRA_PROGRAM_BEGIN_ADDRESS 0x7E00
+%define REAL_MODE_CODE_BEGIN    MBR_END
+
+%define KERNEL_PHYSICAL_BEGIN   0x10000
+%define KERNEL_PHYSICAL_END     0x100000
 
 ;;org MBR_BEGIN_ADDRESS
 bits 16
@@ -10,11 +14,6 @@ section .bootSector
 
 global globalBootEntry
 globalBootEntry:
-    jmp realBootEntry
-
-%include "MBR/readDisk.asm"
-
-realBootEntry:
     ;;Basic Initialization
     ;;Set necessary registers to 0 and set the stack
     cli         ;;Clear interrupt flag
@@ -26,7 +25,7 @@ realBootEntry:
     mov es, bx  ;;0 --> es
     mov ss, bx  ;;0 --> ss
 
-    mov sp, STACK_BUTTOM_ADDRESS    ;;0x0000:0x7C00 --> ss::sp
+    mov sp, KERNEL_STACK_BOTTOM ;;0x0000:0x7C00 --> ss::sp
 
     sti         ;;Set interrupt flag
     ;;End of initialization
@@ -34,14 +33,14 @@ realBootEntry:
     jmp checkIODevice
 checkPassed:
     ;;Check passed, meaning program running on a i386+ platform and 32-bit registers are available
-    mov esp, STACK_BUTTOM_ADDRESS
+    mov esp, KERNEL_STACK_BOTTOM
 
     ;;Read boot program
     mov ax, 0x0000
     mov es, ax
-    mov bx, EXTRA_PROGRAM_BEGIN_ADDRESS ;;Read to 0x0000:0x7E00 (0x7E00)
-    mov eax, 1                          ;;Start from second sector (513th byte)
-    mov ecx, 0x8200                     ;;0x7E00 + 0x8200 = 0x10000
+    mov bx, REAL_MODE_CODE_BEGIN                ;;Read to 0x0000:0x7E00 (0x7E00)
+    mov eax, 1                                  ;;Start from second sector (513th byte)
+    mov ecx, KERNEL_PHYSICAL_BEGIN - MBR_END    ;;0x7E00 + 0x8200 = 0x10000 (Kernel physical begin)
 
     call __real_readDisk
 
@@ -50,9 +49,9 @@ checkPassed:
     ;;Read kernel program
     mov ax, 0x1000
     mov es, ax
-    mov bx, 0x0000                      ;;Read to 0x1000:0x0000 (0x10000)
-    mov eax, 128                        ;;Start from 129th sector (65537th byte)
-    mov ecx, 0x10000                    ;;65536 bytes
+    mov bx, 0x0000                                          ;;Read to 0x1000:0x0000 (0x10000)
+    mov eax, 128                                            ;;Start from 129th sector (65537th byte)
+    mov ecx, KERNEL_PHYSICAL_END - KERNEL_PHYSICAL_BEGIN    ;;1MB - 64KB
 
     call __real_readDisk
 
@@ -95,6 +94,8 @@ errorHalt:
 _errorHaltLoop:
     hlt
     jmp _errorHaltLoop
+
+%include "MBR/readDisk.asm"
 
 times 510-($-$$) db 0
 

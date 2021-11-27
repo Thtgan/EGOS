@@ -1,8 +1,11 @@
-#include<memory/memory.h>
-#include<memory/paging.h>
+#include<memory/paging/paging.h>
+
+#include<interrupt/IDT.h>
+#include<interrupt/ISR.h>
+#include<kit/bit.h>
+#include<memory/mManage.h>
+#include<real/flags/cr0.h>
 #include<real/simpleAsmLines.h>
-#include<trap/IDT.h>
-#include<trap/ISR.h>
 
 #include<lib/printf.h>
 
@@ -14,6 +17,8 @@ static struct PageTable _firstTable;
 
 ISR_EXCEPTION_FUNC_HEADER(testInterrupt) {
     printf("Caught with error code: %#X\n", errorCode);
+    uint32_t cr2 = readCR2();
+    printf("CR2: %#X\n", cr2);
     cli();
     die();
 }
@@ -27,10 +32,14 @@ void initPaging() {
     _directory.directoryEntries[0] = PAGE_DIRECTORY_ENTRY(&_firstTable, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT | PAGE_DIRECTORY_ENTRY_FLAG_RW);
 
     writeCR3((uint32_t)(&_directory));
-    uint32_t cr0 = readCR0();
-    writeCR0(cr0 | 0x80000000);
 
-    for (int i = 0; i < 32; ++i) {
-        registerISR(i, testInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
-    }
+    registerISR(14, testInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+}
+
+void enablePaging() {
+    writeCR0(SET_FLAG(readCR0(), CR0_PG));
+}
+
+void disablePaging() {
+    writeCR0(CLEAR_FLAG(readCR0(), CR0_PG));
 }

@@ -1,12 +1,14 @@
 #include<driver/keyboard/keyboard.h>
 #include<driver/vgaTextMode/textmode.h>
+#include<interrupt/IDT.h>
+#include<lib/algorithms.h>
 #include<lib/blowup.h>
 #include<lib/printf.h>
 #include<lib/string.h>
-#include<memory/paging.h>
 #include<real/simpleAsmLines.h>
 #include<system/systemInfo.h>
-#include<trap/IDT.h>
+
+#include<memory/paging/pagePool.h>
 
 struct SystemInfo* systemInfo = (struct SystemInfo*) SYSTEM_INFO_ADDRESS;
 
@@ -25,13 +27,15 @@ void printMemoryAreas() {
         sysInfo->memoryMap->memoryAreas[i].type);
 }
 
+PagePool p;
+
 __attribute__((section(".kernelMain")))
 void kernelMain() {
 
     initTextMode(); //Initialize text mode
 
     initIDT();      //Initialize the interrupt
-    initPaging();   //Initialize the paging
+    //initPaging();   //Initialize the paging
 
     //Set interrupt flag
     //Cleared in LINK arch/boot/sys/pm.c#arch_boot_sys_pm_c_cli
@@ -45,7 +49,30 @@ void kernelMain() {
 
     printMemoryAreas();
 
-    unsigned int* ptr = (unsigned int*)(0x400000 - 4);
-    *ptr = 114514;
-    blowup("blowup %d\n", *ptr);
+    initPagePool(&p, (void*)systemInfo->memoryMap->memoryAreas[3].base, (size_t)systemInfo->memoryMap->memoryAreas[3].size >> 12);
+
+    void* page1 = allocatePages(&p, 15);
+    void* page2 = allocatePages(&p, 26);
+    void* page3 = allocatePages(&p, 13);
+
+    PageNode* node = p.freePageNodeList.nextNode;
+
+    Bitmap* b = &p.pageUseMap;
+
+    releasePages(&p, page3, 13);
+    printf("%#X\n\n", b->size);
+
+    node = p.freePageNodeList.nextNode;
+    printf("%#p\n", node->base);
+    printf("%#X\n", node->length);
+    printf("%#p\n", node->nextNode);
+    printf("%#p %#p\n\n", node->prevNode, &p.freePageNodeList);
+
+    releasePages(&p, page2, 26);
+    printf("%#X\n\n", b->size);
+
+    releasePages(&p, page1, 15);
+    printf("%#X\n\n", b->size);
+
+    blowup("blowup");
 }

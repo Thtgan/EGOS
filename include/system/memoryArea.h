@@ -16,7 +16,7 @@ struct MemoryAreaEntry {
     uint32_t extendedAttributes;
 } __attribute__((packed));
 
-#define MEMORY_AREA_NUM 256
+#define MEMORY_AREA_NUM 16
 
 struct MemoryMap {
     struct MemoryAreaEntry memoryAreas[MEMORY_AREA_NUM];

@@ -1,11 +1,11 @@
 #include<driver/keyboard/keyboard.h>
 
 #include<driver/vgaTextMode/textmode.h>
+#include<interrupt/IDT.h>
+#include<interrupt/ISR.h>
 #include<kit/bit.h>
 #include<lib/printf.h>
 #include<stdint.h>
-#include<trap/IDT.h>
-#include<trap/ISR.h>
 #include<real/simpleAsmLines.h>
 
 __attribute__((aligned(32)))

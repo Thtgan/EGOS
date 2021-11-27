@@ -1,7 +1,7 @@
 #if !defined(__REAL_MODE_H)
 #define __REAL_MODE_H
 
-#include<real/cpuFlags.h>
+#include<real/flags/eflags.h>
 #include<real/registers.h>
 #include<real/simpleAsmLines.h>
 

@@ -1,9 +1,9 @@
 #if !defined(__ISR_H)
 #define __ISR_H
 
+#include<interrupt/IDT.h>
+#include<interrupt/PIC.h>
 #include<real/simpleAsmLines.h>
-#include<trap/IDT.h>
-#include<trap/PIC.h>
 #include<stdint.h>
 
 /**

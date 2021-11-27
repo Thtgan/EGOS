@@ -1,4 +1,4 @@
-#include<trap/PIC.h>
+#include<interrupt/PIC.h>
 
 #include<real/simpleAsmLines.h>
 

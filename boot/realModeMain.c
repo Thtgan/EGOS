@@ -1,6 +1,5 @@
 #include<bootKit.h>
-
-#define KERNEL_BEGIN_ADDR   0x10000
+#include<system/address.h>
 
 __attribute__((section("sysInfo")))
 struct SystemInfo systemInfo;   //Information about the system
@@ -27,5 +26,5 @@ void realModeMain() {
     else
         printf("A20 line enabled successfully\n");
 
-    switchToProtectedMode(KERNEL_BEGIN_ADDR);
+    switchToProtectedMode(KERNEL_PHYSICAL_BEGIN);
 }

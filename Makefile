@@ -3,10 +3,13 @@ BUILD_DIR = ./build
 .PHONY: all clean
 
 all: buildDir EGOS.bin
+	@echo BUILD SUCCESS
 
 EGOS.bin: boot.bin kernel.bin
-	dd if=$(BUILD_DIR)/boot.bin of=$(BUILD_DIR)/boot.bin bs=1 count=1 seek=65535
-	dd if=$(BUILD_DIR)/kernel.bin of=$(BUILD_DIR)/kernel.bin bs=1 count=1 seek=65535
+#Fill to 64KB
+	dd if=$(BUILD_DIR)/boot.bin of=$(BUILD_DIR)/boot.bin bs=1 count=1 seek=65535	
+#Fill to 1MB - 64KB	
+	dd if=$(BUILD_DIR)/kernel.bin of=$(BUILD_DIR)/kernel.bin bs=1 count=1 seek=983039
 	cd $(BUILD_DIR) && cat boot.bin kernel.bin > EGOS.bin
 
 buildDir:

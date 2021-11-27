@@ -1,9 +1,9 @@
-#include<trap/IDT.h>
+#include<interrupt/IDT.h>
 
+#include<interrupt/ISR.h>
+#include<interrupt/PIC.h>
 #include<lib/printf.h>
 #include<real/simpleAsmLines.h>
-#include<trap/ISR.h>
-#include<trap/PIC.h>
 
 struct IDTEntry IDTTable[256];
 struct IDTDesc idtDesc;

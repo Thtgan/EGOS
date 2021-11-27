@@ -67,9 +67,16 @@ _readDisk_loop:
 
     ;;Set next memory offset and sector index
     add word [si + 0x04], bp
+
+    jnc _no_carry
+    adc word [si + 0x06], 1000
+    ;;add may set CF, must be cleared
+    clc
+_no_carry:
+
     inc dword [si + 0x08]
     adc dword [si + 0x0C], 0
-    ;;int may set CF, must be cleared
+    ;;inc may set CF, must be cleared
     clc
 
     loop _readDisk_loop
