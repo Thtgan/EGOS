@@ -3,6 +3,7 @@
 
 #include<lib/bitmap.h>
 #include<memory/paging/pageNode.h>
+#include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>
 
@@ -46,6 +47,7 @@ struct PagePool {
     void* freePageBase;         //Beginning pointer of the allocatable pages, should be after the bitmap area
     size_t freePageSize;
     size_t bitmapPageSize;
+    bool valid;
 };
 
 typedef struct PagePool PagePool;

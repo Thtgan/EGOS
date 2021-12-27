@@ -2,6 +2,7 @@
 
 #include<lib/bitmap.h>
 #include<memory/paging/paging.h>
+#include<stdbool.h>
 #include<stddef.h>
 
 #include<lib/printf.h>
@@ -19,6 +20,8 @@ void initPagePool(PagePool* p, void* areaBegin, size_t areaPageSize) {
     p->freePageSize = allocatablePageSize;
     p->bitmapPageSize = bitmapPageSize;
     initPageNodeList(&p->freePageNodeList, p->freePageBase, p->freePageSize);
+
+    p->valid = true;
 }
 
 void* allocatePage(PagePool* p) {

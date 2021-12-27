@@ -60,7 +60,6 @@ typedef struct PageHead PageNode;
  * 
  * @param nodeBegin     Beginning of a serial of cntinued pages
  * @param nodeLength    Length of continued pages (In number of pages)
- * @param isHead        Is this node a head? if so, base will be set to NULL
  */
 PageNode* initPageNode(void* nodeBegin, size_t nodeLength);
 

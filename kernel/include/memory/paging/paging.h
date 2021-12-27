@@ -2,10 +2,14 @@
 #define __PAGING_H
 
 #include<kit/bit.h>
-#include<memory/mManage.h>
+#include<stddef.h>
 #include<stdint.h>
+#include<system/memoryArea.h>
 
 //Reference: https://wiki.osdev.org/Paging
+
+#define PAGE_SIZE_BIT   12
+#define PAGE_SIZE       (1 << PAGE_SIZE_BIT)
 
 /**
  * @brief Page table's entry
@@ -23,6 +27,8 @@ typedef uint32_t PageTableEntry;
 #define PAGE_TABLE_ENTRY(__FRAME_ADDR, __FLAGS)             \
     TRIM_VAL_RANGE((uint32_t)(__FRAME_ADDR), 32, 12, 32) |  \
     TRIM_VAL_SIMPLE(__FLAGS, 32, 7)                         \
+
+#define FRAME_ADDR_FROM_TABLE_ENTRY(__TABLE_ENTRY)  CLEAR_VAL_SIMPLE(__TABLE_ENTRY, 32, 12)
 
 #define PAGE_TABLE_ENTRY_FLAG_PRESENT   FLAG32(0)
 #define PAGE_TABLE_ENTRY_FLAG_RW        FLAG32(1) //Read and Write
@@ -59,6 +65,8 @@ typedef uint32_t PageDirectoryEntry;
     TRIM_VAL_RANGE((uint32_t)(__TABLE_ADDR), 32, 12, 32) |  \
     TRIM_VAL_SIMPLE(__FLAGS, 32, 6)                         \
 
+#define TABLE_ADDR_FROM_DIRECTORY_ENTRY(__DIRECTORY_ENTRY)  CLEAR_VAL_SIMPLE(__DIRECTORY_ENTRY, 32, 12)
+
 #define PAGE_DIRECTORY_ENTRY_FLAG_PRESENT   FLAG32(0)
 #define PAGE_DIRECTORY_ENTRY_FLAG_RW        FLAG32(1) //Read and Write
 #define PAGE_DIRECTORY_ENTRY_FLAG_USER_MODE FLAG32(2)
@@ -78,9 +86,10 @@ struct PageDirectory {
 };
 
 /**
- * @brief Initialize the paging, but nt enabled yet
+ * @brief Initialize the paging, but not enabled yet
+ * @return The Num of page available
  */
-void initPaging();
+size_t initPaging(const struct MemoryMap* mMap);
 
 /**
  * @brief Enable the paging, before that paging must be initialized, after calling this, system will use virtual address
