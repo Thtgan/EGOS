@@ -13,7 +13,7 @@
 /**
  * @brief Information about the text mode
  */
-struct TextModeInfo {
+typedef struct {
     uint8_t colorPattern;
     uint16_t tabStride;
 
@@ -21,11 +21,11 @@ struct TextModeInfo {
     bool cursorEnable;
     uint8_t cursorBeginScanline;
     uint8_t cursorEndScanline;
-};
+} TextModeInfo;
 
-struct TextModeDisplayUnit {
+typedef struct {
     uint8_t character, colorPattern;
-} __attribute__((packed));
+} __attribute__((packed)) TextModeDisplayUnit;
 
 
 //Bit 7 6 5 4 3 2 1 0
@@ -62,7 +62,7 @@ void initTextMode();
  */
 void tmClearScreen();
 
-const struct TextModeInfo* getTextModeInfo();
+const TextModeInfo* getTextModeInfo();
 
 /**
  * @brief Print all the character on the screen (0-255)

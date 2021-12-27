@@ -31,14 +31,14 @@
 /**
  * @brief GDT table entry
  */
-struct GDTEntry {
+typedef struct {
     uint16_t    limit0_15;
     uint16_t    base0_15;
     uint8_t     base16_23;
     uint8_t     access;
     uint8_t     l_limit16_19_h_flags;
     uint8_t     base24_31;
-} __attribute__((packed));
+} __attribute__((packed)) GDTEntry;
 
 //Macro to construct the GDT entry
 //Reference: https://wiki.osdev.org/Global_Descriptor_Table
@@ -51,10 +51,10 @@ struct GDTEntry {
     (uint8_t)   EXTRACT_VAL(__BASE, 32, 24, 32),                                        \
 }                                                                                           \
 
-struct GDTDesc {
+typedef struct {
     uint16_t    size;
     uint32_t    tablePtr;
-} __attribute__((packed));
+} __attribute__((packed)) GDTDesc;
 
 /**
  * @brief Set up GDT table

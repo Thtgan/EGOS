@@ -6,7 +6,7 @@
 void biosPutchar(int ch) {
     if (ch == '\n')
         biosPutchar('\r');
-    struct registerSet inRegs;
+    RegisterSet inRegs;
     initRegs(&inRegs);
     inRegs.al = ch;
     inRegs.ah = 0x0E;
@@ -15,7 +15,7 @@ void biosPutchar(int ch) {
 }
 
 void biosPrint(const char* str) {
-    struct registerSet inRegs;
+    RegisterSet inRegs;
     initRegs(&inRegs);
     inRegs.ah = 0x0E;
     inRegs.bx = 0x0007;

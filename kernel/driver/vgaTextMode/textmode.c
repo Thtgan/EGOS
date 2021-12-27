@@ -3,8 +3,8 @@
 #include<lib/string.h>
 #include<real/simpleAsmLines.h>
 
-static struct TextModeDisplayUnit* const _textModeDisplayUnitPtr = (struct TextModeDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
-static struct TextModeInfo _tmInfo;
+static TextModeDisplayUnit* const _textModeDisplayUnitPtr = (TextModeDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
+static TextModeInfo _tmInfo;
 
 #define __NEXT_POSITION(__WRITE_POSITION)               (__WRITE_POSITION + 1)                                              //Move to next position
 #define __BS_POSITION(__WRITE_POSITION)                 (__WRITE_POSITION - 1)                                              //Move to previous position
@@ -30,7 +30,7 @@ void tmClearScreen() {
     }
 }
 
-const struct TextModeInfo* getTextModeInfo() {
+const TextModeInfo* getTextModeInfo() {
     return &_tmInfo;
 }
 

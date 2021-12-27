@@ -14,10 +14,10 @@
 #include<system/memoryArea.h>
 
 __attribute__((aligned(PAGE_SIZE)))
-static struct PageDirectory _directory;
+static PageDirectory _directory;
 
 __attribute__((aligned(PAGE_SIZE)))
-static struct PageTable _firstTable;
+static PageTable _firstTable;
 
 size_t poolNum = 0;
 PagePool pools[MEMORY_AREA_NUM];
@@ -29,10 +29,10 @@ ISR_EXCEPTION_FUNC_HEADER(_pageFaultHandler) {
     uint32_t directoryIndex = EXTRACT_VAL(vaddr, 32, 22, 32), tableIndex = EXTRACT_VAL(vaddr, 32, 12, 22);
 
 
-    struct PageTable* tableAddr = NULL;
+    PageTable* tableAddr = NULL;
     if (_directory.directoryEntries[directoryIndex] == 0) {
         for (int i = 0; tableAddr == NULL && i < poolNum; ++i) {
-            tableAddr = (struct PageTable*)allocatePage(&pools[i]);
+            tableAddr = (PageTable*)allocatePage(&pools[i]);
         }
 
         if (tableAddr == NULL) {
@@ -43,7 +43,7 @@ ISR_EXCEPTION_FUNC_HEADER(_pageFaultHandler) {
 
         _directory.directoryEntries[directoryIndex] = PAGE_DIRECTORY_ENTRY(tableAddr, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT | PAGE_DIRECTORY_ENTRY_FLAG_RW);
     } else {
-        tableAddr = (struct PageTable*)TABLE_ADDR_FROM_DIRECTORY_ENTRY(_directory.directoryEntries[directoryIndex]);
+        tableAddr = (PageTable*)TABLE_ADDR_FROM_DIRECTORY_ENTRY(_directory.directoryEntries[directoryIndex]);
     }
 
     void* frameAddr = NULL;
@@ -76,7 +76,7 @@ void initBasicPage() {
 
 //ANCHOR Somehow the program will blowup if compiler used default xmm0 to calculate 64-bit value
 //Maybe long mode is needed
-size_t initPaging(const struct MemoryMap* mMap) {
+size_t initPaging(const MemoryMap* mMap) {
     size_t ret = 0;
 
     for (int i = 0; i < MEMORY_AREA_NUM; ++i) {
@@ -84,7 +84,7 @@ size_t initPaging(const struct MemoryMap* mMap) {
     }
 
     for (int i = 0; i < mMap->size; ++i) {
-        const struct MemoryAreaEntry* e = &mMap->memoryAreas[i];
+        const MemoryAreaEntry* e = &mMap->memoryAreas[i];
 
         if (e->type != MEMORY_USABLE || (uint32_t)e->base + (uint32_t)e->size <= FREE_PAGE_BEGIN) {
             continue;

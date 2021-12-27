@@ -9,18 +9,18 @@
 #define MEMORY_ACPI_NVS             4
 #define MEMORY_BAD                  5
 
-struct MemoryAreaEntry {
+typedef struct {
     uint64_t base;
     uint64_t size;
     uint32_t type;
     uint32_t extendedAttributes;
-} __attribute__((packed));
+} __attribute__((packed)) MemoryAreaEntry;
 
 #define MEMORY_AREA_NUM 16
 
-struct MemoryMap {
-    struct MemoryAreaEntry memoryAreas[MEMORY_AREA_NUM];
+typedef struct {
+    MemoryAreaEntry memoryAreas[MEMORY_AREA_NUM];
     uint8_t size;
-} __attribute__((packed));
+} __attribute__((packed)) MemoryMap;
 
 #endif // __MEMORY_AREA_H

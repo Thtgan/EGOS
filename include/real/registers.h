@@ -4,7 +4,7 @@
 #include<kit/macro.h>
 #include<stdint.h>
 
-struct registerSet {
+typedef struct {
     union {
         struct {
             uint32_t edi;
@@ -60,7 +60,7 @@ struct registerSet {
             uint8_t gs0_7, gs8_15;
         } __attribute__((packed));
     };
-};
+} RegisterSet;
 
 #define SEG_REG_INLINE_NAME_DS  ds
 #define SEG_REG_INLINE_NAME_ES  es

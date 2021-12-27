@@ -45,9 +45,9 @@ typedef uint32_t PageTableEntry;
  * 
  * Should be aligned to the size of a page to ensure the table fit a whole physical page
  */
-struct PageTable {
+typedef struct {
     PageTableEntry tableEntries[PAGE_TABLE_SIZE];
-};
+} PageTable;
 
 /**
  * @brief Page directory's entry
@@ -81,15 +81,15 @@ typedef uint32_t PageDirectoryEntry;
  * 
  * Should be aligned to the size of a page to ensure the directory fit a whole physical page
  */
-struct PageDirectory {
+typedef struct {
     PageDirectoryEntry directoryEntries[PAGE_DIRECTORY_SIZE];
-};
+} PageDirectory;
 
 /**
  * @brief Initialize the paging, but not enabled yet
  * @return The Num of page available
  */
-size_t initPaging(const struct MemoryMap* mMap);
+size_t initPaging(const MemoryMap* mMap);
 
 /**
  * @brief Enable the paging, before that paging must be initialized, after calling this, system will use virtual address

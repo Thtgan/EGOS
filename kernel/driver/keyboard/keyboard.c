@@ -9,7 +9,7 @@
 #include<real/simpleAsmLines.h>
 
 __attribute__((aligned(32)))
-static struct KeyEntry _keyEntries[128] = {
+static KeyEntry _keyEntries[128] = {
     KEY_ENTRY('\0', '\0',   0),                            //0x00 -- NULL
     KEY_ENTRY('\0', '\0',   0),                            //0x01 -- ESC
     KEY_ENTRY('1',  '!',    ASCII | ALT_ASCII),            //0x02 -- 1
@@ -148,7 +148,7 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
             tmPutchar(__toASCII(key));
         }
         else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
-            const struct TextModeInfo* tmInfo = getTextModeInfo();
+            const TextModeInfo* tmInfo = getTextModeInfo();
             int row = tmInfo->cursorPosition / TEXT_MODE_WIDTH, col = tmInfo->cursorPosition % TEXT_MODE_WIDTH;
             switch (key)
             {

@@ -11,6 +11,6 @@
  * 
  * @return num of detected memory area, -1 if no memory area detected
  */
-int detectMemory(struct SystemInfo* info);
+int detectMemory(SystemInfo* info);
 
 #endif // __E820_H

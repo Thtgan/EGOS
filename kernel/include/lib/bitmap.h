@@ -8,13 +8,11 @@
 /**
  * @brief A structure refer to a set of bit
  */
-struct Bitmap {
+typedef struct {
     size_t bitSize; //Total bits contained in map
     size_t size;    //Num of bits set to 1
     uint8_t* bitPtr;
-};
-
-typedef struct Bitmap Bitmap;
+} Bitmap;
 
 /**
  * @brief Initialize the bitmap, once initialized, it should be truncated or extended

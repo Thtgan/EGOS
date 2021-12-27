@@ -7,9 +7,9 @@
 
 #define SYSTEM_INFO_ADDRESS 0xA000
 
-struct SystemInfo {
+typedef struct {
     uint32_t flag;
-    struct MemoryMap* memoryMap; //Memory map of the system
-} __attribute__((packed));
+    MemoryMap* memoryMap; //Memory map of the system
+} __attribute__((packed)) SystemInfo;
 
 #endif // __SYSTEM_INFO_H

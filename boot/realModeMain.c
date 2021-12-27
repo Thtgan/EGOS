@@ -2,7 +2,7 @@
 #include<system/address.h>
 
 __attribute__((section("sysInfo")))
-struct SystemInfo systemInfo;   //Information about the system
+SystemInfo systemInfo;   //Information about the system
 
 /**
  * @brief Collect information about system hardware, and set the flag of system information

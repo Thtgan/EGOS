@@ -20,29 +20,29 @@
 /**
  * @brief Entry to describe a interrupt handler
  */
-struct IDTEntry {
+typedef struct {
     uint16_t isr0_15;
     uint16_t codeSector;
     uint8_t reserved;
     uint8_t attributes;
     uint16_t isr16_32;
-} __attribute__((packed));
+} __attribute__((packed)) IDTEntry;
 
-struct IDTDesc {
+typedef struct {
     uint16_t size;
     uint32_t tablePtr;
-} __attribute__((packed));
+} __attribute__((packed)) IDTDesc;
 
 /**
  * @brief Before enter the interrupt handler, CPU will push these registers into stack
  */
-struct InterruptFrame {
+typedef struct {
     uint32_t ip;
     uint32_t cs;        //Padded to doubleword
     uint32_t eflags;
     uint32_t sp;
     uint32_t ss;
-} __attribute__((packed));
+} __attribute__((packed)) InterruptFrame;
 
 /**
  * @brief Initialize the IDT

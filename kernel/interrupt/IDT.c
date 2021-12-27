@@ -5,8 +5,8 @@
 #include<lib/printf.h>
 #include<real/simpleAsmLines.h>
 
-struct IDTEntry IDTTable[256];
-struct IDTDesc idtDesc;
+IDTEntry IDTTable[256];
+IDTDesc idtDesc;
 
 ISR_FUNC_HEADER(__defaultISRHalt) {
     cli();
@@ -32,7 +32,7 @@ void initIDT() {
 }
 
 void registerISR(uint8_t vector, void* isr, uint8_t flags) {
-    struct IDTEntry* ptr = IDTTable + vector;
+    IDTEntry* ptr = IDTTable + vector;
     ptr->isr0_15 = EXTRACT_VAL((uint32_t)isr, 32, 0, 16);
     ptr->codeSector = 0x08;                                     //TODO: Try be more maintainable
     ptr->reserved = 0;

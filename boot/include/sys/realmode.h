@@ -10,14 +10,14 @@
 /**
  * @brief Reserved register set
  */
-extern struct registerSet registers;
+extern RegisterSet registers;
 
 /**
  * @brief Initialize the register set
  * 
  * @param regs register set to initialize
  */
-void initRegs(struct registerSet* regs);
+void initRegs(RegisterSet* regs);
 
 /**
  * @brief Call the int in C codes, more maintainable than plain assembly codes
@@ -26,6 +26,6 @@ void initRegs(struct registerSet* regs);
  * @param inputRegs Register set to input
  * @param outputRegs Register set to output
  */
-void intInvoke(uint8_t interrupt, const struct registerSet *inputRegs, struct registerSet *outputRegs);
+void intInvoke(uint8_t interrupt, const RegisterSet *inputRegs, RegisterSet *outputRegs);
 
 #endif // __REAL_MODE_H

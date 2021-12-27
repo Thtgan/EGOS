@@ -9,16 +9,16 @@
 #define SMAP 0x534D4150
 
 //Memory map to storage memory areas
-struct MemoryMap _memoryMap;
+MemoryMap _memoryMap;
 
 /**
  * @brief Detect memory area with 0x15, EAX = E820
  * 
  * @return number of memory areas detected
  */
-static int __detectE820(struct MemoryMap* memoryMap) {
-    struct MemoryAreaEntry buf;
-    struct MemoryAreaEntry* table = memoryMap->memoryAreas;
+static int __detectE820(MemoryMap* memoryMap) {
+    MemoryAreaEntry buf;
+    MemoryAreaEntry* table = memoryMap->memoryAreas;
     
     initRegs(&registers);
 
@@ -26,7 +26,7 @@ static int __detectE820(struct MemoryMap* memoryMap) {
     registers.ebx = 0;
     do {    //Loop for scan memory area
         registers.eax = 0xE820;
-        registers.ecx = sizeof(struct MemoryAreaEntry);
+        registers.ecx = sizeof(MemoryAreaEntry);
         registers.edx = SMAP;
         registers.edi = (uint32_t) &buf;
 
@@ -41,7 +41,7 @@ static int __detectE820(struct MemoryMap* memoryMap) {
     return memoryMap->size = cnt;
 }
 
-int detectMemory(struct SystemInfo* info) {
+int detectMemory(SystemInfo* info) {
     int ret = __detectE820(&_memoryMap);
     if (ret == 0)
         ret = -1;

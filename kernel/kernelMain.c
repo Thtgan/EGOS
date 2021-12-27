@@ -12,18 +12,18 @@
 
 #include<memory/paging/pagePool.h>
 
-const struct SystemInfo* systemInfo = (struct SystemInfo*) SYSTEM_INFO_ADDRESS;
+const SystemInfo* systemInfo = (SystemInfo*) SYSTEM_INFO_ADDRESS;
 
 /**
  * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
  */
 void printMemoryAreas() {
-    const struct MemoryMap* mMap = systemInfo->memoryMap;
+    const MemoryMap* mMap = systemInfo->memoryMap;
 
     printf("%d memory areas detected\n", mMap->size);
     printf("| Base Address | Area Length | Type |\n");
     for (int i = 0; i < mMap->size; ++i) {
-        const struct MemoryAreaEntry* e = &mMap->memoryAreas[i];
+        const MemoryAreaEntry* e = &mMap->memoryAreas[i];
 
         printf("| %#010X   | %#010X  | %#04X |\n", 
         (uint32_t)(e->base), 

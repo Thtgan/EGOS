@@ -41,16 +41,14 @@
  *      |------------+--------------------------------+
  *   PagePool (Stored below 1MB location)
  */
-struct PagePool {
+typedef struct {
     Bitmap pageUseMap;          //Bitmap used to storage the free status of each pages, indicating page is used when bit is set
     PageNode freePageNodeList;  //Linker list formed by allocatable page nodes, with head node
     void* freePageBase;         //Beginning pointer of the allocatable pages, should be after the bitmap area
     size_t freePageSize;
     size_t bitmapPageSize;
     bool valid;
-};
-
-typedef struct PagePool PagePool;
+} PagePool;
 
 /**
  * @brief Initialize the paging pool
