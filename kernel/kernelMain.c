@@ -1,7 +1,6 @@
 #include<driver/keyboard/keyboard.h>
 #include<driver/vgaTextMode/textmode.h>
 #include<interrupt/IDT.h>
-#include<lib/algorithms.h>
 #include<lib/blowup.h>
 #include<lib/printf.h>
 #include<lib/string.h>
@@ -9,8 +8,6 @@
 #include<real/simpleAsmLines.h>
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
-
-#include<memory/paging/pagePool.h>
 
 const SystemInfo* systemInfo = (SystemInfo*) SYSTEM_INFO_ADDRESS;
 

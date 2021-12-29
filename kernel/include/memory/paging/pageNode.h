@@ -128,9 +128,9 @@ void* getPageNodeBase(PageNode* node);
 /**
  * @brief Remove the page node from linked list
  * 
- * @param node Page node to delete
+ * @param node Page node to remove
  */
-void deletePageNode(PageNode* node);
+void removePageNode(PageNode* node);
 
 /**
  * @brief Insert a page node to another node's front

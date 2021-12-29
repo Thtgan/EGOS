@@ -53,7 +53,7 @@ inline void* getPageNodeBase(PageNode* node) {
 //================================================================================
 
 
-void deletePageNode(PageNode* node) {
+void removePageNode(PageNode* node) {
     PageNode* prev = getPrevPageNode(node), * next = getNextPageNode(node);
 
     if (next != NULL) {
@@ -124,11 +124,11 @@ PageNode* cutPageNodeFront(PageNode* node, size_t cutLength) {
         return NULL;
     } 
     else if (cutLength == length) { //cutLength fits node's length
-        deletePageNode(node);
+        removePageNode(node);
         return next;
     }
 
-    deletePageNode(node);
+    removePageNode(node);
 
     void* newNodeBegin = (void*)node + (cutLength << PAGE_SIZE_BIT);
 
@@ -147,7 +147,7 @@ PageNode* cutPageNodeBack(PageNode* node, size_t cutLength) {
         return NULL;
     } 
     else if (cutLength == length) { //cutLength fits node's length
-        deletePageNode(node);
+        removePageNode(node);
         return prev;
     }
 
@@ -161,7 +161,7 @@ PageNode* combineNextPageNode(PageNode* node) {
     
     size_t length1 = getPageNodeLength(node), length2 = getPageNodeLength(next);
 
-    deletePageNode(next);
+    removePageNode(next);
     setPageNodeLength(node, length1 + length2);
 
     return node;
@@ -172,7 +172,7 @@ PageNode* combinePrevPageNode(PageNode* node) {
 
     size_t length1 = getPageNodeLength(prev), length2 = getPageNodeLength(node);
 
-    deletePageNode(node);
+    removePageNode(node);
     setPageNodeLength(prev, length1 + length2);
 
     return prev;
