@@ -2,48 +2,27 @@ OUTPUT_FORMAT(binary)
 
 ENTRY(globalBootEntry)
 
-SECTIONS
-{
-    . = 0x7C00;
-    .bootSector : {
-        *(.bootSector)
+SECTIONS {
+    .bootSector 0x7C00 : {
+        ./build/MBR/boot.o(.bootSector)
     }
 
-    .intInvokeText : {
-        *(.intInvokeText)
-    }
-    
-    . = ALIGN(16);
-
-    .text : {
+    .text 0x7E00 : {
+        ./build/sys/intInvoke.o(.intInvokeText)
         *(.text)
     }
-
-    . = 0xA000;
-    .sysInfo : {
-        *(.sysInfo)
-    }
-
-    . = ALIGN(16);
     
-    .data : {
+    .data ALIGN(16) : {
+        ./build/realModeMain.o(.sysInfo)
         *(.data)
     }
 
-    . = ALIGN(16);
-
-    .rodata : {
+    .rodata ALIGN(16) : {
         *(.rodata)
     }
 
-    . = ALIGN(16);
-
-    .bss : {
+    .bss ALIGN(16) : {
         *(.bss)
-    }
-
-    .end : {
-        PROVIDE(endOfBooter = .);
-        ASSERT(endOfBooter < 0x10000, "Error: booter too large");
+        ASSERT(. < 0x10000, "Error: booter too large");
     }
 }

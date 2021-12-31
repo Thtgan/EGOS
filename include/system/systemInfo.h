@@ -5,7 +5,7 @@
 
 #define SYSTEM_INFO_FLAG 0xE605
 
-#define SYSTEM_INFO_ADDRESS 0xA000
+#define SYSTEM_INFO_ADDRESS 0x8A70  //Remember check this if boot is modified
 
 typedef struct {
     uint32_t flag;

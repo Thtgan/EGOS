@@ -1,16 +1,21 @@
-BUILD_DIR = ./build
+LD 							= 	x86_64-elf-ld
 
-.PHONY: all clean
+BUILD_DIR 					= 	./build
 
-all: buildDir EGOS.bin
-	@echo BUILD SUCCESS
+.PHONY: all clean debug
 
-EGOS.bin: boot.bin kernel.bin
+debug: all
+
+all: buildDir EGOS.img
+	@echo BUILD COMPLETE
+
+EGOS.img: boot.bin kernel.bin
 #Fill to 64KB
 	dd if=$(BUILD_DIR)/boot.bin of=$(BUILD_DIR)/boot.bin bs=1 count=1 seek=65535	
 #Fill to 1MB - 64KB	
 	dd if=$(BUILD_DIR)/kernel.bin of=$(BUILD_DIR)/kernel.bin bs=1 count=1 seek=983039
-	cd $(BUILD_DIR) && cat boot.bin kernel.bin > EGOS.bin
+	cd $(BUILD_DIR) && cat boot.bin kernel.bin > EGOS.img
+	
 
 buildDir:
 	mkdir -p $(BUILD_DIR)
