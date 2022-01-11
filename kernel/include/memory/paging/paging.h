@@ -2,6 +2,7 @@
 #define __PAGING_H
 
 #include<kit/bit.h>
+#include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>
 #include<system/memoryArea.h>
@@ -23,12 +24,14 @@
  */
 typedef uint32_t PageTableEntry;
 
+#define EMPTY_PAGE_TABLE_ENTRY 0
+
 //Build a page table entry
 #define PAGE_TABLE_ENTRY(__FRAME_ADDR, __FLAGS)             \
     TRIM_VAL_RANGE((uint32_t)(__FRAME_ADDR), 32, 12, 32) |  \
     TRIM_VAL_SIMPLE(__FLAGS, 32, 7)                         \
 
-#define FRAME_ADDR_FROM_TABLE_ENTRY(__TABLE_ENTRY)  CLEAR_VAL_SIMPLE(__TABLE_ENTRY, 32, 12)
+#define FRAME_ADDR_FROM_TABLE_ENTRY(__TABLE_ENTRY)  ((void*)CLEAR_VAL_SIMPLE(__TABLE_ENTRY, 32, 12))
 
 #define PAGE_TABLE_ENTRY_FLAG_PRESENT   FLAG32(0)
 #define PAGE_TABLE_ENTRY_FLAG_RW        FLAG32(1) //Read and Write
@@ -60,12 +63,14 @@ typedef struct {
  */
 typedef uint32_t PageDirectoryEntry;
 
+#define EMPTY_PAGE_DIRECTORY_ENTRY 0
+
 //Build a page directory entry
 #define PAGE_DIRECTORY_ENTRY(__TABLE_ADDR, __FLAGS)         \
     TRIM_VAL_RANGE((uint32_t)(__TABLE_ADDR), 32, 12, 32) |  \
     TRIM_VAL_SIMPLE(__FLAGS, 32, 6)                         \
 
-#define TABLE_ADDR_FROM_DIRECTORY_ENTRY(__DIRECTORY_ENTRY)  CLEAR_VAL_SIMPLE(__DIRECTORY_ENTRY, 32, 12)
+#define TABLE_ADDR_FROM_DIRECTORY_ENTRY(__DIRECTORY_ENTRY)  ((PageTable*)CLEAR_VAL_SIMPLE(__DIRECTORY_ENTRY, 32, 12))
 
 #define PAGE_DIRECTORY_ENTRY_FLAG_PRESENT   FLAG32(0)
 #define PAGE_DIRECTORY_ENTRY_FLAG_RW        FLAG32(1) //Read and Write
@@ -100,5 +105,13 @@ void enablePaging();
  * @brief Disable the paging, after calling this, system will use physical address
  */
 void disablePaging();
+
+void* allocatePage();
+
+void* allocatePages(size_t n);
+
+void releasePage(void* vAddr);
+
+void releasePages(void* vAddr, size_t n);
 
 #endif // __PAGING_H

@@ -1,5 +1,5 @@
 export HOST_IP=$(awk '{for (i=1; i < NF; i++) if ($i == "nameserver") print $(i+1)}' /etc/resolv.conf)
-echo "Host IP:${HOST_IP}"
+echo "Host IP: ${HOST_IP}"
 
 export http_proxy="http://${HOST_IP}:1080"
 export https_proxy="http://${HOST_IP}:1080"

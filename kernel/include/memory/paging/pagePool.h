@@ -2,6 +2,7 @@
 #define __PAGING_POOL_H
 
 #include<lib/bitmap.h>
+#include<lib/linkedList.h>
 #include<memory/paging/pageNode.h>
 #include<stdbool.h>
 #include<stddef.h>
@@ -42,9 +43,9 @@
  *   PagePool (Stored below 1MB location)
  */
 typedef struct {
-    Bitmap pageUseMap;          //Bitmap used to storage the free status of each pages, indicating page is used when bit is set
-    PageNode freePageNodeList;  //Linker list formed by allocatable page nodes, with head node
-    void* freePageBase;         //Beginning pointer of the allocatable pages, should be after the bitmap area
+    Bitmap pageUseMap;              //Bitmap used to storage the free status of each pages, indicating page is used when bit is set
+    PageNodeList freePageNodeList;  //Linker list formed by allocatable page nodes, with head node
+    void* freePageBase;             //Beginning pointer of the allocatable pages, should be after the bitmap area
     size_t freePageSize;
     size_t bitmapPageSize;
     bool valid;
@@ -66,7 +67,7 @@ void initPagePool(PagePool* p, void* areaBegin, size_t areaPageSize);
  * @param p Pool
  * @return void* The beginning of the page, NULL if no more pages available;
  */
-void* allocatePage(PagePool* p);
+void* poolAllocatePage(PagePool* p);
 
 /**
  * @brief Return a serial of unused continued pages from pool, and set them to used
@@ -75,7 +76,7 @@ void* allocatePage(PagePool* p);
  * @param n The num of pages to allocate
  * @return void* The beginning of the pages, NULL if no satisified pages available;
  */
-void* allocatePages(PagePool* p, size_t n);
+void* poolAllocatePages(PagePool* p, size_t n);
 
 /**
  * @brief Release the page back to pool, and set it to unused
@@ -83,7 +84,7 @@ void* allocatePages(PagePool* p, size_t n);
  * @param p Pool
  * @param pageBegin The beginning of the page to release
  */
-void releasePage(PagePool* p, void* pageBegin);
+void poolReleasePage(PagePool* p, void* pageBegin);
 
 /**
  * @brief Release a serial of continued pages back to pool, and set them to unused
@@ -92,6 +93,8 @@ void releasePage(PagePool* p, void* pageBegin);
  * @param pageBegin The beginning of pages
  * @param n The num of continued pages to release
  */
-void releasePages(PagePool* p, void* pagesBegin, size_t n);
+void poolReleasePages(PagePool* p, void* pagesBegin, size_t n);
+
+bool isPageBelongToPool(PagePool* p, void* pageBegin);
 
 #endif // __PAGING_POOL_H

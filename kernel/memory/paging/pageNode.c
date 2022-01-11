@@ -1,5 +1,6 @@
 #include<memory/paging/pageNode.h>
 
+#include<lib/linkedList.h>
 #include<memory/paging/paging.h>
 #include<stddef.h>
 
@@ -8,33 +9,34 @@ PageNode* initPageNode(void* nodeBegin, size_t nodeLength) {
 
     node->base = nodeBegin;
     node->length = nodeLength;
-    node->nextNode = node->prevNode = NULL;
+
+    initLinkedListNode(&node->node);
 
     return node;
 }
 
-PageNode* initPageNodeList(PageNode* listHead, void* nodeBegin, size_t nodeLength) {
-    listHead->base = NULL;
-    listHead->length = 0;
-    
+PageNode* initPageNodeList(LinkedList* listHead, void* nodeBegin, size_t nodeLength) {
     PageNode* firstNode = initPageNode(nodeBegin, nodeLength);
-    insertPageNodeBack(listHead, firstNode);
+    initLinkedList(listHead);
+    linkedListInsertBack(listHead, &firstNode->node);
+
+    return firstNode;
 }
 
 inline PageNode* getNextPageNode(PageNode* node) {
-    return node->nextNode;
+    return hostPointer(node->node.next, PageNode, node);
 }
 
 inline void setNextPageNode(PageNode* node, PageNode* nextNode) {
-    node->nextNode = nextNode;
+    node->node.next = &nextNode->node;
 }
 
 inline PageNode* getPrevPageNode(PageNode* node) {
-    return node->prevNode;
+    return hostPointer(node->node.prev, PageNode, node);
 }
 
 inline void setPrevPageNode(PageNode* node, PageNode* prevNode) {
-    node->prevNode = prevNode;
+    node->node.prev = &prevNode->node;
 }
 
 inline size_t getPageNodeLength(PageNode* node) {
@@ -53,39 +55,16 @@ inline void* getPageNodeBase(PageNode* node) {
 //================================================================================
 
 
-void removePageNode(PageNode* node) {
-    PageNode* prev = getPrevPageNode(node), * next = getNextPageNode(node);
-
-    if (next != NULL) {
-        setPrevPageNode(next, prev);
-    }
-    if (prev != NULL) {
-        setNextPageNode(prev, next);
-    }
+inline void removePageNode(PageNode* node) {
+    linkedListDelete(&node->node);
 }
 
-void insertPageNodeFront(PageNode* node, PageNode* newNode) {
-    PageNode* prev = node->prevNode;
-    if (prev != NULL) {
-        setNextPageNode(prev, newNode);
-    }
-
-    setPrevPageNode(newNode, prev);
-    setNextPageNode(newNode, node);
-
-    setPrevPageNode(node, newNode);
+inline void insertPageNodeFront(PageNode* node, PageNode* newNode) {
+    linkedListInsertFront(&node->node, &newNode->node);
 }
 
-void insertPageNodeBack(PageNode* node, PageNode* newNode) {
-    PageNode* next = node->nextNode;
-    if (next != NULL) {
-        setPrevPageNode(next, newNode);
-    }
-
-    setPrevPageNode(newNode, node);
-    setNextPageNode(newNode, next);
-
-    setNextPageNode(node, newNode);
+inline void insertPageNodeBack(PageNode* node, PageNode* newNode) {
+    linkedListInsertBack(&node->node, &newNode->node);
 }
 
 
@@ -104,14 +83,13 @@ PageNode* splitPageNode(PageNode* node, size_t splitLength) {
     size_t length = getPageNodeLength(node);
     void* newNodeBegin = (void*)node + (splitLength << PAGE_SIZE_BIT);
 
+    removePageNode(node);
+
     PageNode* ret = initPageNode(newNodeBegin, length - splitLength);
     PageNode* ptr = initPageNode((void*)node, splitLength);
 
-    setNextPageNode(ret, next);
-    setPrevPageNode(ret, ptr);
-
-    setNextPageNode(ptr, ret);
-    setPrevPageNode(ptr, prev);
+    insertPageNodeBack(prev, ptr);
+    insertPageNodeBack(ptr, ret);
 
     return ret;
 }
@@ -120,7 +98,7 @@ PageNode* cutPageNodeFront(PageNode* node, size_t cutLength) {
     size_t length = getPageNodeLength(node);
     PageNode* prev = getPrevPageNode(node), * next = getNextPageNode(node);
 
-    if (cutLength > length) { //Impossible to cut
+    if (cutLength > length) {       //Impossible to cut
         return NULL;
     } 
     else if (cutLength == length) { //cutLength fits node's length
@@ -134,7 +112,7 @@ PageNode* cutPageNodeFront(PageNode* node, size_t cutLength) {
 
     PageNode* ret = initPageNode(newNodeBegin, length - cutLength);
 
-    insertPageNodeBack(prev, ret);//Previous node must exists
+    insertPageNodeBack(prev, ret);  //Previous node must exists
 
     return ret;
 }
@@ -143,7 +121,7 @@ PageNode* cutPageNodeBack(PageNode* node, size_t cutLength) {
     size_t length = getPageNodeLength(node);
     PageNode* prev = getPrevPageNode(node), * next = getNextPageNode(node);
 
-    if (cutLength > length) { //Impossible to cut
+    if (cutLength > length) {       //Impossible to cut
         return NULL;
     } 
     else if (cutLength == length) { //cutLength fits node's length
@@ -182,45 +160,52 @@ PageNode* combinePrevPageNode(PageNode* node) {
 //================================================================================
 
 
-PageNode* firstFitFindPages(PageNode* list, size_t size) {
-    PageNode* node = list;
-    while (node != NULL && getPageNodeBase(node) == NULL) { //Find first non-head node
-        node = getNextPageNode(node);
+PageNode* firstFitFindPages(LinkedList* list, size_t size) {
+    if (isListEmpty(list)) {
+        return NULL;
     }
 
-    for (; !(node == NULL || getPageNodeLength(node) >= size); node = getNextPageNode(node));
+    LinkedListNode* node = list->next;
 
-    return node;
+    for (; !(node == list || getPageNodeLength(hostPointer(node, PageNode, node)) >= size); node = linkedListGetNext(node));
+
+    return hostPointer(node, PageNode, node);
 }
 
-PageNode* bestFitFindPages(PageNode* list, size_t size) {
-    PageNode* node = list;
-    while (node != NULL && getPageNodeBase(node) == NULL) { //Find first non-head node
-        node = getNextPageNode(node);
+PageNode* bestFitFindPages(LinkedList* list, size_t size) {
+    if (isListEmpty(list)) {
+        return NULL;
     }
-    PageNode* ret = NULL;
+
+    LinkedListNode* node = list->next, * ret = NULL;
+    size_t bestLen = 0;
     
-    for (; node != NULL; node = getNextPageNode(node)) {
-        if (getPageNodeLength(node) >= size && (ret == NULL || getPageNodeLength(node) < getPageNodeLength(ret))) {
+    for (; node != list; node = linkedListGetNext(node)) {
+        size_t len = getPageNodeLength(hostPointer(node, PageNode, node));
+        if (len >= size && (ret == NULL || len < bestLen)) {
             ret = node;
+            bestLen = len;
         }
     }
 
-    return ret;
+    return hostPointer(node, PageNode, node);
 }
 
-PageNode* worstFitFindPages(PageNode* list, size_t size) {
-    PageNode* node = list;
-    while (node != NULL && getPageNodeBase(node) == NULL) { //Find first non-head node
-        node = getNextPageNode(node);
+PageNode* worstFitFindPages(LinkedList* list, size_t size) {
+    if (isListEmpty(list)) {
+        return NULL;
     }
-    PageNode* ret = node;
+
+    LinkedListNode* node = list->next, * ret = NULL;
+    size_t worstLen = 0;
     
-    for (; node != NULL; node = getNextPageNode(node)) {
-        if (getPageNodeLength(node) > getPageNodeLength(ret)) {
+    for (; node != list; node = linkedListGetNext(node)) {
+        size_t len = getPageNodeLength(hostPointer(node, PageNode, node));
+        if (len > worstLen) {
             ret = node;
+            worstLen = len;
         }
     }
 
-    return getPageNodeLength(ret) >= size ? ret : NULL;
+    return worstLen >= size ? hostPointer(ret, PageNode, node) : NULL;
 }

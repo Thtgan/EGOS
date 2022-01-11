@@ -5,10 +5,8 @@
 #include<stdbool.h>
 #include<stddef.h>
 
-#include<lib/printf.h>
-
-#define PAGE_BITMAP_CONTAIN    (PAGE_SIZE * 8)  //How many bits a page could contain
-#define BITMAP_PAGE_SIZE_ROUNDUP(__AREA_PAGE_SIZE)   ((__AREA_PAGE_SIZE) / (PAGE_BITMAP_CONTAIN + 1)) + ((__AREA_PAGE_SIZE) % (PAGE_BITMAP_CONTAIN + 1) != 0)
+#define PAGE_BITMAP_CONTAIN                         (PAGE_SIZE * 8)  //How many bits a page could contain
+#define BITMAP_PAGE_SIZE_ROUNDUP(__AREA_PAGE_SIZE)  ((__AREA_PAGE_SIZE) / (PAGE_BITMAP_CONTAIN + 1)) + ((__AREA_PAGE_SIZE) % (PAGE_BITMAP_CONTAIN + 1) != 0)
 
 void initPagePool(PagePool* p, void* areaBegin, size_t areaPageSize) {
     size_t bitmapPageSize = BITMAP_PAGE_SIZE_ROUNDUP(areaPageSize);
@@ -24,11 +22,11 @@ void initPagePool(PagePool* p, void* areaBegin, size_t areaPageSize) {
     p->valid = true;
 }
 
-void* allocatePage(PagePool* p) {
-    return allocatePages(p, 1);
+void* poolAllocatePage(PagePool* p) {
+    return poolAllocatePages(p, 1);
 }
 
-void* allocatePages(PagePool* p, size_t n) {
+void* poolAllocatePages(PagePool* p, size_t n) {
     PageNode* node = firstFitFindPages(&p->freePageNodeList, n);
 
     void* ret = getPageNodeBase(node);
@@ -40,8 +38,8 @@ void* allocatePages(PagePool* p, size_t n) {
     return ret;
 }
 
-void releasePage(PagePool* p, void* pageBegin) {
-    releasePages(p, pageBegin, 1);
+void poolReleasePage(PagePool* p, void* pageBegin) {
+    poolReleasePages(p, pageBegin, 1);
 }
 
 /**
@@ -51,17 +49,13 @@ void releasePage(PagePool* p, void* pageBegin) {
  * @param node Page node contiains pages to collect
  * @param pageUseMap Bitmap used to record use status of pages
  */
-void __collectPages(PagePool* p, PageNode* node) {
-    PageNode* position = &p->freePageNodeList;
-
-    while (position != NULL && getPageNodeBase(position) == NULL) { //Find first non-head node
-        position = getNextPageNode(position);
-    }
+static void __collectPages(PagePool* p, PageNode* node) {
+    PageNodeList* list = &p->freePageNodeList;
+    PageNode* position = hostPointer(list->next, PageNode, node);
     
     if (getPageNodeBase(node) < getPageNodeBase(position)) { //If node to collect has the lowest base
         insertPageNodeFront(position, node);
-    }
-    else {
+    } else {
         //Find a node whose base is higher than the node to collect (Theoreticlly, equal is impossible)
         while (true) {
             PageNode* next = getNextPageNode(position);
@@ -89,7 +83,7 @@ void __collectPages(PagePool* p, PageNode* node) {
     }
 }
 
-void releasePages(PagePool* p, void* pagesBegin, size_t n) {
+void poolReleasePages(PagePool* p, void* pagesBegin, size_t n) {
     PageNode* newNode = initPageNode(pagesBegin, n);
     __collectPages(p, newNode);
 

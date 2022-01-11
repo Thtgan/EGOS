@@ -1,6 +1,7 @@
 #if !defined(__PAGING_NODE_H)
 #define __PAGING_NODE_H
 
+#include<lib/linkedList.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>
@@ -46,14 +47,13 @@
 /**
  * @brief This struct is used at the beginning of the continued pages to form a node.
  */
-struct PageHead {
-    struct PageHead* nextNode;
-    struct PageHead* prevNode;
+typedef struct {
+    LinkedListNode node;
     void* base;
     size_t length;          //Length of the page node(in size of num of pages)
-};
+} PageNode;
 
-typedef struct PageHead PageNode;
+typedef LinkedList PageNodeList;
 
 /**
  * @brief Initialize a page node
@@ -63,7 +63,7 @@ typedef struct PageHead PageNode;
  */
 PageNode* initPageNode(void* nodeBegin, size_t nodeLength);
 
-PageNode* initPageNodeList(PageNode* listHead, void* nodeBegin, size_t nodeLength);
+PageNode* initPageNodeList(LinkedList* listHead, void* nodeBegin, size_t nodeLength);
 
 /**
  * @brief Get node's next page node
@@ -241,7 +241,7 @@ PageNode* combinePrevPageNode(PageNode* node);
  * @param size Size wanted
  * @return PageNode* Page node contains enough pages, NULL if there is no such page
  */
-PageNode* firstFitFindPages(PageNode* list, size_t size);
+PageNode* firstFitFindPages(LinkedList* list, size_t size);
 
 /**
  * @brief Find a node whose length is equal or greater than size, use best fit
@@ -250,7 +250,7 @@ PageNode* firstFitFindPages(PageNode* list, size_t size);
  * @param size Size wanted
  * @return PageNode* Page node contains enough pages, NULL if there is no such page
  */
-PageNode* bestFitFindPages(PageNode* list, size_t size);
+PageNode* bestFitFindPages(LinkedList* list, size_t size);
 
 /**
  * @brief Find a node whose length is equal or greater than size, use best fit
@@ -259,6 +259,6 @@ PageNode* bestFitFindPages(PageNode* list, size_t size);
  * @param size Size wanted
  * @return PageNode* Page node contains enough pages, NULL if there is no such page
  */
-PageNode* worstFitFindPages(PageNode* list, size_t size);
+PageNode* worstFitFindPages(LinkedList* list, size_t size);
 
 #endif // __PAGING_NODE_H

@@ -4,10 +4,13 @@
 #include<lib/blowup.h>
 #include<lib/printf.h>
 #include<lib/string.h>
+#include<memory/malloc.h>
 #include<memory/memory.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
+
+#include<memory/paging/paging.h>
 
 const SystemInfo* systemInfo = (SystemInfo*) SYSTEM_INFO_ADDRESS;
 
@@ -51,18 +54,6 @@ void kernelMain() {
     printf("%u pages available\n", pageNum);
 
     keyboardInit();
-
-    uint8_t* ptr1 = (uint8_t*) 0x400000;
-    *ptr1 = 1;
-    printf("%d\n", *ptr1);
-
-    uint8_t* ptr2 = (uint8_t*) 0x400FFF;
-    *ptr2 = 1;
-    printf("%d\n", *ptr2);
-
-    uint8_t* ptr3 = (uint8_t*) 0x401000;
-    *ptr3 = 1;
-    printf("%d\n", *ptr3);
 
     blowup("blowup");
 }

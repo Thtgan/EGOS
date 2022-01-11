@@ -17,5 +17,6 @@ void blowup(const char* format, ...) {
 
     tmPrint(buf); //TODO: Replace this with general print function
 
+    cli();
     die();
 }
