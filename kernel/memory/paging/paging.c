@@ -60,7 +60,7 @@ static bool __buildVPAddrMapping(void* vAddr, void* pAddr) {
             return false;
         }
 
-        memset(tableAddr, 0x00, PAGE_SIZE); //No one knows what is inside a allocated page
+        memset(tableAddr, 0, PAGE_SIZE); //No one knows what is inside a allocated page
 
         _directory.directoryEntries[directoryIndex] = PAGE_DIRECTORY_ENTRY(tableAddr, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT | PAGE_DIRECTORY_ENTRY_FLAG_RW);
     } else {
@@ -152,8 +152,8 @@ size_t initPaging(const MemoryMap* mMap) {
 
     registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
 
-    memset(&_directory, 0x00, sizeof(_directory));
-    memset(_pageCounters, 0x00, sizeof(_pageCounters));
+    memset(&_directory, 0, sizeof(_directory));
+    memset(_pageCounters, 0, sizeof(_pageCounters));
     initBasicPage();
 
     writeCR3((uint32_t)(&_directory));

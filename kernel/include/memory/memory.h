@@ -19,7 +19,15 @@ size_t initMemory(const MemoryMap* mMap);
  * @param ptr Area begin
  * @param b Byte used to fill
  * @param n Length of area
+ * 
+ * @return ptr
  */
-void memset(void* ptr, uint8_t b, size_t n);
+void* memset(void* ptr, int b, size_t n);
+
+int memcmp(const void* ptr1, const void* ptr2, size_t n);
+
+void* memchr(const void* ptr, int val, size_t n);
+
+void* memmove(void* des, const void* src, size_t n);
 
 #endif // __MEMORY_H
