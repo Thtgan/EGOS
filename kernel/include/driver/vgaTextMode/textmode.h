@@ -75,28 +75,28 @@ void tmTestPrint();
  * @param background Background color
  * @param foreground Foreground color
  */
-void tmSetTextModePattern(uint8_t background, uint8_t foreground);
+void tmSetTextModePattern(const uint8_t background, const uint8_t foreground);
 
 /**
  * @brief Set the stride of tab key
  * 
  * @param stride Where the tab should align to
  */
-void tmSetTabStride(uint16_t stride);
+void tmSetTabStride(const uint16_t stride);
 
 /**
  * @brief Print the raw character on the screen(\\n, \\r, \\b etc will be printed as character instead of cursor control)
  * 
  * @param ch Character to print
  */
-void tmPutcharRaw(char ch);
+void tmPutcharRaw(const char ch);
 
 /**
  * @brief Print the character on the screen
  * 
  * @param ch Character to print
  */
-void tmPutchar(char ch);
+void tmPutchar(const char ch);
 
 /**
  * @brief Print the string on the screen, use raw character(\\n, \\r, \\b etc will be printed as character instead of cursor control)
@@ -123,7 +123,7 @@ void tmInitCursor();
  * @param cursorBeginScanline Beginning of the scanline (0 tart from the top)
  * @param cursorEndScanline Beginning of the scanline (0 tart from the top)
  */
-void tmSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline);
+void tmSetCursorScanline(const uint8_t cursorBeginScanline, const uint8_t cursorEndScanline);
 
 /**
  * @brief Enable the cursor
@@ -141,13 +141,6 @@ void tmDisableCursor();
  * @param row The row index, start with 0
  * @param col The column index, start with 0
  */
-void tmSetCursorPosition(uint8_t row, uint8_t col);
-
-/**
- * @brief Set the position of cursor wih offset to the beginning
- * 
- * @param position The offset to the beginning
- */
-static void __tmSetCursorPosition(uint16_t position);
+void tmSetCursorPosition(const uint8_t row, const uint8_t col);
 
 #endif // __TECT_MODE_H

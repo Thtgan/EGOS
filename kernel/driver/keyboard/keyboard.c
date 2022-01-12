@@ -109,9 +109,7 @@ static bool _capslock;
  * 
  * @return Scancode from keyboard
  */
-static inline uint8_t __readScancode() {
-    return inb(0x60);
-}
+static inline uint8_t __readScancode();
 
 /**
  * @brief Convert key to ASCII character, affected by shift and capslock
@@ -119,24 +117,11 @@ static inline uint8_t __readScancode() {
  * @param key key ID, should has ASCII flag
  * @return ASCII byte
  */
-static uint8_t __toASCII(uint8_t key) {
-    uint8_t ret = _keyEntries[key].ascii;
-
-    if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALT_ASCII)) {
-        if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALPHA)) {
-            ret = (_capslock ^ (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT])) ? _keyEntries[key].alt_ascii : ret;
-        }
-        else {
-            ret = (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT]) ? _keyEntries[key].alt_ascii : ret;
-        }
-    }
-
-    return ret;
-}
+static uint8_t __toASCII(const uint8_t key);
 
 ISR_FUNC_HEADER(__keyboardInterrupt) {
-    uint8_t scancode = __readScancode();
-    uint8_t key = SCANCODE_TRIM(scancode);
+    const uint8_t scancode = __readScancode();
+    const uint8_t key = SCANCODE_TRIM(scancode);
 
     _pressed[key] = TEST_FLAGS_NONE(scancode, 0x80);
 
@@ -219,4 +204,23 @@ void keyboardInit() {
     }
     _capslock = false;
     registerISR(0x21, __keyboardInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+}
+
+static inline uint8_t __readScancode() {
+    return inb(0x60);
+}
+
+static uint8_t __toASCII(const uint8_t key) {
+    uint8_t ret = _keyEntries[key].ascii;
+
+    if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALT_ASCII)) {
+        if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALPHA)) {
+            ret = (_capslock ^ (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT])) ? _keyEntries[key].alt_ascii : ret;
+        }
+        else {
+            ret = (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT]) ? _keyEntries[key].alt_ascii : ret;
+        }
+    }
+
+    return ret;
 }

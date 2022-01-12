@@ -16,6 +16,13 @@ static TextModeInfo _tmInfo;
 #define __PATTERN_ENTRY(__BACKGROUND_COLOR, __FOREGROUND_COLOR)                 \
     (uint8_t)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))  \
 
+/**
+ * @brief Set the position of cursor wih offset to the beginning
+ * 
+ * @param position The offset to the beginning
+ */
+static void __tmSetCursorPosition(const uint16_t position);
+
 void initTextMode() {
     tmSetTextModePattern(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);    //Set color pattern to default black background and white foreground
     tmSetTabStride(4);                                                          //Set tab stride to 4
@@ -40,15 +47,15 @@ void tmTestPrint() {
     }
 }
 
-void tmSetTextModePattern(uint8_t background, uint8_t foreground) {
+void tmSetTextModePattern(const uint8_t background, const uint8_t foreground) {
     _tmInfo.colorPattern = __PATTERN_ENTRY(background, foreground);
 }
 
-void tmSetTabStride(uint16_t stride) {
+void tmSetTabStride(const uint16_t stride) {
     _tmInfo.tabStride = stride;
 }
 
-void tmPutcharRaw(char ch) {
+void tmPutcharRaw(const char ch) {
     if (__POSITION_VALIDATION(_tmInfo.cursorPosition)) {    //If write position if valid, write the screen
         _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ch;
         _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
@@ -57,41 +64,41 @@ void tmPutcharRaw(char ch) {
     }
 }
 
-void tmPutchar(char ch) {
-    int next = 0;
+void tmPutchar(const char ch) {
+    int nextCursorPosition = 0;
     switch (ch)
     {
     //The character that control the the write position will work to ensure the screen will not print the sharacter should not print 
     case '\n':
-        next = __LF_POSITION(_tmInfo.cursorPosition);
-        if (__POSITION_VALIDATION(next)) {
+        nextCursorPosition = __LF_POSITION(_tmInfo.cursorPosition);
+        if (__POSITION_VALIDATION(nextCursorPosition)) {
             _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
             _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
         }
-        __tmSetCursorPosition(next);
+        __tmSetCursorPosition(nextCursorPosition);
         break;
     case '\r':
-        next = __CR_POSITION(_tmInfo.cursorPosition);
-        if (__POSITION_VALIDATION(next)) {
+        nextCursorPosition = __CR_POSITION(_tmInfo.cursorPosition);
+        if (__POSITION_VALIDATION(nextCursorPosition)) {
             _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
             _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
         }
-        __tmSetCursorPosition(next);
+        __tmSetCursorPosition(nextCursorPosition);
         break;
     case '\t':
-        next = __HT_POSITION(_tmInfo.cursorPosition, _tmInfo.tabStride);
-        if (__POSITION_VALIDATION(next)) {
-            for (int i = _tmInfo.cursorPosition; i < next; ++i) {
+        nextCursorPosition = __HT_POSITION(_tmInfo.cursorPosition, _tmInfo.tabStride);
+        if (__POSITION_VALIDATION(nextCursorPosition)) {
+            for (int i = _tmInfo.cursorPosition; i < nextCursorPosition; ++i) {
                 _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
                 _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
             }
         }
-        __tmSetCursorPosition(next);
+        __tmSetCursorPosition(nextCursorPosition);
         break;
     case '\b':
-        next = __BS_POSITION(_tmInfo.cursorPosition);
-        if (__POSITION_VALIDATION(next)) {
-            __tmSetCursorPosition(next);
+        nextCursorPosition = __BS_POSITION(_tmInfo.cursorPosition);
+        if (__POSITION_VALIDATION(nextCursorPosition)) {
+            __tmSetCursorPosition(nextCursorPosition);
 
             _textModeDisplayUnitPtr[_tmInfo.cursorPosition].character = ' ';
             _textModeDisplayUnitPtr[_tmInfo.cursorPosition].colorPattern = _tmInfo.colorPattern;
@@ -106,8 +113,6 @@ void tmPutchar(char ch) {
         }
         break;
     }
-
-    
 }
 
 void tmPrintRaw(const char* line) {
@@ -129,7 +134,7 @@ void tmInitCursor()
 	tmSetCursorPosition(0, 0);
 }
 
-void tmSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline)
+void tmSetCursorScanline(const uint8_t cursorBeginScanline, const uint8_t cursorEndScanline)
 {
 	_tmInfo.cursorBeginScanline = cursorBeginScanline;
 	_tmInfo.cursorEndScanline = cursorEndScanline;
@@ -162,24 +167,25 @@ void tmDisableCursor()
 	outb(0x03D5, 0x20);
 }
 
-void tmSetCursorPosition(uint8_t row, uint8_t col)
+void tmSetCursorPosition(const uint8_t row, const uint8_t col)
 {
 	__tmSetCursorPosition(row * TEXT_MODE_WIDTH + col);
 }
 
-static void __tmSetCursorPosition(uint16_t position)
+static void __tmSetCursorPosition(const uint16_t position)
 {
+    uint16_t pos = position;
     //Align the outranged writing position to proper position for following writing
-    if (position >= TEXT_MODE_SIZE) {
-        position = TEXT_MODE_SIZE;
+    if (pos >= TEXT_MODE_SIZE) {
+        pos = TEXT_MODE_SIZE;
     }
 
-    if (position < 0) {
-        position = 0;
+    if (pos < 0) {
+        pos = 0;
     }
-	_tmInfo.cursorPosition = position;
+	_tmInfo.cursorPosition = pos;
 	outb(0x03D4, 0x0F);
-	outb(0x03D5, position & 0xFF);
+	outb(0x03D5, pos & 0xFF);
 	outb(0x03D4, 0x0E);
-	outb(0x03D5, (position >> 8) & 0xFF);
+	outb(0x03D5, (pos >> 8) & 0xFF);
 }

@@ -7,22 +7,22 @@
 IDTEntry IDTTable[256];
 IDTDesc idtDesc;
 
-ISR_FUNC_HEADER(__defaultISRHalt) {
+ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     cli();
     die();
     EOI();
 }
 
 void initIDT() {
-    idtDesc.size = (uint16_t)sizeof(IDTTable) - 1;
+    idtDesc.size = (uint16_t)sizeof(IDTTable) - 1;  //Initialize the IDT desc
     idtDesc.tablePtr = (uint32_t)IDTTable;
 
-    for (int vec = 0x0; vec < 256; ++vec) {
+    for (int vec = 0x0; vec < 256; ++vec) { //Fill IDT wil default interrupt handler
         //TODO: Find out why cannot use uint8_t here
         registerISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     }
 
-    remapPIC(0x20, 0x28);
+    remapPIC(0x20, 0x28); //Remap PIC interrupt 0-16 to 32-47
 
     outb(0x21, 0xFD);
     outb(0xA1, 0xFF);

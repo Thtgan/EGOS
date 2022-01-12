@@ -46,9 +46,8 @@ typedef struct {
     Bitmap pageUseMap;              //Bitmap used to storage the free status of each pages, indicating page is used when bit is set
     PageNodeList freePageNodeList;  //Linker list formed by allocatable page nodes, with head node
     void* freePageBase;             //Beginning pointer of the allocatable pages, should be after the bitmap area
-    size_t freePageSize;
-    size_t bitmapPageSize;
-    bool valid;
+    size_t freePageSize;            //How many free pages this pool has
+    size_t bitmapPageSize;          //How many pages this pool's bitmap takes up
 } PagePool;
 
 /**
@@ -95,6 +94,13 @@ void poolReleasePage(PagePool* p, void* pageBegin);
  */
 void poolReleasePages(PagePool* p, void* pagesBegin, size_t n);
 
+/**
+ * @brief Check is this page allocated by this pool
+ * 
+ * @param p pool
+ * @param pageBegin Page begin
+ * @return bool Is the page allocated by the pool
+ */
 bool isPageBelongToPool(PagePool* p, void* pageBegin);
 
 #endif // __PAGING_POOL_H

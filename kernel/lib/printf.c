@@ -26,93 +26,7 @@
  * @param flags Flags to declare the detail while writing the number
  * @return The pointer to the buffer after the number written
  */
-static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags) {
-    static const char digits[17] = "0123456789ABCDEF";  //Character of each digit
-    char tmp[128];
-
-    if (base < 2 || base > 16)  //If base not available, return
-        return NULL;
-
-    char sign = 0;
-    //Determine the sign
-    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED)) {
-        if (num >= 0x80000000) {
-            --width;
-            sign = '-';
-            num = -num;
-        }
-        else if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN)) {
-            --width;
-            sign = '+';
-        }
-        else if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_SPACE)) {
-            --width;
-            sign = ' ';
-        }
-    }
-
-    //If use the specifier, modify the width
-    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
-        if (base == 16)
-            width -= 2;
-        else if (base == 8)
-            width -= 1;
-    }
-
-    //Write the number to temp buffer
-    char lowercaseBit = TEST_FLAGS(flags, __VFPRINTF_FLAGS_LOWERCASE) ? 32 : 0;
-    int len = 0;
-    if (num == 0)
-        tmp[len++] = '0';
-    else {
-        for (; num != 0; num /= base, ++len)
-            tmp[len] = digits[num % base] | lowercaseBit;
-    }
-
-    if (len > precision)
-        precision = len;
-    width -= precision;
-
-    //If not left justified or padding zero, pad with space
-    if (TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY | __VFPRINTF_FLAGS_PADDING_ZERO)) {
-        for (; width > 0; --width)
-            *writeTo++ = ' ';
-    }
-
-    //Write the sign and specifier
-    if (sign != 0)
-        *writeTo++ = sign;
-    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
-        if (base == 8)
-            *writeTo++ = '0';
-        else if (base == 16)
-        {
-            *writeTo++ = '0';
-            *writeTo++ = 'X' | lowercaseBit;
-        }
-    }
-
-    char padding = TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_ZERO) ? '0' : ' ';
-    //It is impossible to have space between sign/specifier between the number
-    if (TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
-        for (; width > 0; --width)
-            *writeTo++ = padding;
-    }
-
-    //Write the remaining zero
-    for (; len < precision; --precision)
-        *writeTo++ = '0';
-
-    //Write the number
-    while (--len >= 0)
-        *writeTo++ = tmp[len];
-
-    //Write the remaining space
-    for (; width > 0; --width)
-        *writeTo++ = ' ';
-
-    return writeTo;
-}
+static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags);
 
 //Reference: https://www.cplusplus.com/reference/cstdio/printf/
 int vfPrintf(char* buffer, const char* format, va_list args)
@@ -294,4 +208,92 @@ int printf(const char* format, ...) {
     tmPrint(buf); //TODO: Replace this with general print function
 
     return ret;
+}
+
+static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags) {
+    static const char digits[17] = "0123456789ABCDEF";  //Character of each digit
+    char tmp[128];
+
+    if (base < 2 || base > 16)  //If base not available, return
+        return NULL;
+
+    char sign = 0;
+    //Determine the sign
+    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SIGNED)) {
+        if (num >= 0x80000000) {
+            --width;
+            sign = '-';
+            num = -num;
+        }
+        else if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_EXPLICIT_SIGN)) {
+            --width;
+            sign = '+';
+        }
+        else if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_SPACE)) {
+            --width;
+            sign = ' ';
+        }
+    }
+
+    //If use the specifier, modify the width
+    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
+        if (base == 16)
+            width -= 2;
+        else if (base == 8)
+            width -= 1;
+    }
+
+    //Write the number to temp buffer
+    char lowercaseBit = TEST_FLAGS(flags, __VFPRINTF_FLAGS_LOWERCASE) ? 32 : 0;
+    int len = 0;
+    if (num == 0)
+        tmp[len++] = '0';
+    else {
+        for (; num != 0; num /= base, ++len)
+            tmp[len] = digits[num % base] | lowercaseBit;
+    }
+
+    if (len > precision)
+        precision = len;
+    width -= precision;
+
+    //If not left justified or padding zero, pad with space
+    if (TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY | __VFPRINTF_FLAGS_PADDING_ZERO)) {
+        for (; width > 0; --width)
+            *writeTo++ = ' ';
+    }
+
+    //Write the sign and specifier
+    if (sign != 0)
+        *writeTo++ = sign;
+    if (TEST_FLAGS(flags, __VFPRINTF_FLAGS_SPECIFIER)) {
+        if (base == 8)
+            *writeTo++ = '0';
+        else if (base == 16)
+        {
+            *writeTo++ = '0';
+            *writeTo++ = 'X' | lowercaseBit;
+        }
+    }
+
+    char padding = TEST_FLAGS(flags, __VFPRINTF_FLAGS_PADDING_ZERO) ? '0' : ' ';
+    //It is impossible to have space between sign/specifier between the number
+    if (TEST_FLAGS_NONE(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
+        for (; width > 0; --width)
+            *writeTo++ = padding;
+    }
+
+    //Write the remaining zero
+    for (; len < precision; --precision)
+        *writeTo++ = '0';
+
+    //Write the number
+    while (--len >= 0)
+        *writeTo++ = tmp[len];
+
+    //Write the remaining space
+    for (; width > 0; --width)
+        *writeTo++ = ' ';
+
+    return writeTo;
 }

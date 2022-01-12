@@ -4,19 +4,19 @@
 #include<memory/paging/paging.h>
 #include<stddef.h>
 
-PageNode* initPageNode(void* nodeBegin, size_t nodeLength) {
-    PageNode* node = (PageNode*)nodeBegin;
+PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength) {
+    PageNode* node = (PageNode*)pageAreaBegin;
 
-    node->base = nodeBegin;
-    node->length = nodeLength;
+    node->base = pageAreaBegin;
+    node->length = pageAreaLength;
 
     initLinkedListNode(&node->node);
 
     return node;
 }
 
-PageNode* initPageNodeList(LinkedList* listHead, void* nodeBegin, size_t nodeLength) {
-    PageNode* firstNode = initPageNode(nodeBegin, nodeLength);
+PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, size_t pageAreaLength) {
+    PageNode* firstNode = initPageNode(pageAreaBegin, pageAreaLength);
     initLinkedList(listHead);
     linkedListInsertBack(listHead, &firstNode->node);
 
@@ -72,7 +72,7 @@ inline void insertPageNodeBack(PageNode* node, PageNode* newNode) {
 
 
 PageNode* splitPageNode(PageNode* node, size_t splitLength) {
-    if (splitLength > node->length) {   //Impossible to split
+    if (splitLength > node->length) {       //Impossible to split
         return NULL;
     }
     else if (splitLength == node->length) { //splitLength fits page's length
@@ -85,7 +85,7 @@ PageNode* splitPageNode(PageNode* node, size_t splitLength) {
 
     removePageNode(node);
 
-    PageNode* ret = initPageNode(newNodeBegin, length - splitLength);
+    PageNode* ret = initPageNode(newNodeBegin, length - splitLength);   //Remove original node, and reform two new nodes
     PageNode* ptr = initPageNode((void*)node, splitLength);
 
     insertPageNodeBack(prev, ptr);
@@ -110,7 +110,7 @@ PageNode* cutPageNodeFront(PageNode* node, size_t cutLength) {
 
     void* newNodeBegin = (void*)node + (cutLength << PAGE_SIZE_BIT);
 
-    PageNode* ret = initPageNode(newNodeBegin, length - cutLength);
+    PageNode* ret = initPageNode(newNodeBegin, length - cutLength); //Remove and form new node
 
     insertPageNodeBack(prev, ret);  //Previous node must exists
 
@@ -129,7 +129,7 @@ PageNode* cutPageNodeBack(PageNode* node, size_t cutLength) {
         return prev;
     }
 
-    setPageNodeLength(node, length - cutLength);
+    setPageNodeLength(node, length - cutLength); //Just form modify the length
 
     return node;
 }
@@ -140,7 +140,7 @@ PageNode* combineNextPageNode(PageNode* node) {
     size_t length1 = getPageNodeLength(node), length2 = getPageNodeLength(next);
 
     removePageNode(next);
-    setPageNodeLength(node, length1 + length2);
+    setPageNodeLength(node, length1 + length2); //Remove second node and extend first node
 
     return node;
 }
@@ -151,7 +151,7 @@ PageNode* combinePrevPageNode(PageNode* node) {
     size_t length1 = getPageNodeLength(prev), length2 = getPageNodeLength(node);
 
     removePageNode(node);
-    setPageNodeLength(prev, length1 + length2);
+    setPageNodeLength(prev, length1 + length2); //Remove second node and extend first node
 
     return prev;
 }

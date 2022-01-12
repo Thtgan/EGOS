@@ -37,11 +37,24 @@ uint64_t umax64(uint64_t a, uint64_t b) {
     return a > b ? a : b;
 }
 
+/**
+ * @brief Merge sort the sub-double linked list
+ * 
+ * @param list Beginning node of the-sub list
+ * @param len Length of the sub-list
+ * @return LinkedListNode* Beginning node of the sorted sub-list
+ */
+static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode));
+
+void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode)) {
+    __linkedListMergeSort(list->next, len, comparator);
+}
+
 static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode)) {
     if (len == 1) {
-        return list;
+        return list; //Just return
     } else if (len == 2) {
-        if (comparator(list, list->next) > 0) {
+        if (comparator(list, list->next) > 0) { //Just swap nodes
             LinkedListNode* prev = list->prev, * node1 = list, * node2 = node1->next, * next = node2->next;
 
             prev->next = next;
@@ -71,11 +84,11 @@ static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, C
     subList1 = __linkedListMergeSort(subList1, len1, comparator);
     subList2 = __linkedListMergeSort(subList2, len2, comparator);
 
-    prev->next = next;
+    prev->next = next; //Sort connect the previous and next node of the sub-list
     next->prev = prev;
 
-    LinkedListNode* tail = prev;
-    while (!(len1 == 0 && len2 == 0)) {
+    LinkedListNode* tail = prev; //The smallest node insert back to
+    while (!(len1 == 0 && len2 == 0)) { //Merge
         if (len1 != 0 && len2 != 0) {
             if (comparator(subList1, subList2) < 0) {
                 LinkedListNode* node = subList1;
@@ -112,15 +125,25 @@ static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, C
     return prev->next;
 }
 
-void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode)) {
-    __linkedListMergeSort(list->next, len, comparator);
+/**
+ * @brief Merge sort the sub-singly linked list
+ * 
+ * @param prev Previouds node of the sub-list's first node
+ * @param list Beginning node the sub-list
+ * @param len Length of the sub-list
+ * @return SinglyLinkedListNode* Beginning node of the sorted sub-list
+ */
+static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
+
+void singlyLinkedListMergeSort(SinglyLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
+    __singlyLinkedListMergeSort(list, list->next, len, comparator);
 }
 
 static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
     if (len == 1) {
-        return list;
+        return list; //Just return
     } else if (len == 2) {
-        if (comparator(list, list->next) > 0) {
+        if (comparator(list, list->next) > 0) { //Just swap nodes
             SinglyLinkedListNode* node1 = list, * node2 = node1->next, * next = node2->next;
 
             prev->next = next;
@@ -150,9 +173,9 @@ static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* p
 
     subList2 = __singlyLinkedListMergeSort(subPrev, subList2, len2, comparator);
 
-    prev->next = next;
+    prev->next = next; //Short connect the previous and next node of the sub-list
 
-    SinglyLinkedListNode* tail = prev;
+    SinglyLinkedListNode* tail = prev; //The smallest node insert back to
     while (!(len1 == 0 && len2 == 0)) {
         if (len1 != 0 && len2 != 0) {
             if (comparator(subList1, subList2) < 0) {
@@ -188,8 +211,4 @@ static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* p
     }
 
     return prev->next;
-}
-
-void singlyLinkedListMergeSort(SinglyLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
-    __singlyLinkedListMergeSort(list, list->next, len, comparator);
 }

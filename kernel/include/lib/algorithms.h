@@ -18,10 +18,25 @@ uint32_t umax32(uint32_t a, uint32_t b);
 int64_t max64(int64_t a, int64_t b);
 uint64_t umax64(uint64_t a, uint64_t b);
 
-#define COMPARATOR_PTR(__X, __T)   int (*__X)(__T* x1, __T* x2)
+//Comparator function for sorting
+#define COMPARATOR_PTR(__X, __T)   int (*__X)(const __T* x1, const __T* x2)
 
+/**
+ * @brief Sort the double linked list using merge sort
+ * 
+ * @param list Double linked list
+ * @param len Length of the list
+ * @param comparator Comparator applied to compare the elements in the list
+ */
 void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode));
 
+/**
+ * @brief Sort the singly linked list using merge sort
+ * 
+ * @param list Singly linked list
+ * @param len Length of the list
+ * @param comparator Comparator applied to compare the elements in the list
+ */
 void singlyLinkedListMergeSort(SinglyLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
 
 #endif // __ALGORITHMS_H

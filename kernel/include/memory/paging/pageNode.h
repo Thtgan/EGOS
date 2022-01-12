@@ -49,21 +49,32 @@
  */
 typedef struct {
     LinkedListNode node;
-    void* base;
+    void* base;             //Base of the page node stands for
     size_t length;          //Length of the page node(in size of num of pages)
 } PageNode;
 
+/**
+ * @brief Header of the page node list, which is actually a page node list node
+ */
 typedef LinkedList PageNodeList;
 
 /**
  * @brief Initialize a page node
  * 
- * @param nodeBegin     Beginning of a serial of cntinued pages
- * @param nodeLength    Length of continued pages (In number of pages)
+ * @param pageAreaBegin Page area begin
+ * @param pageAreaLength Page area length (In number of pages)
  */
-PageNode* initPageNode(void* nodeBegin, size_t nodeLength);
+PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength);
 
-PageNode* initPageNodeList(LinkedList* listHead, void* nodeBegin, size_t nodeLength);
+/**
+ * @brief Initialize the page node list with an initial page area
+ * 
+ * @param listHead Page node list header
+ * @param pageAreaBegin First page area begin
+ * @param pageAreaLength First page area length (In number of pages)
+ * @return PageNode* First page node of the initialized page node list
+ */
+PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, size_t pageAreaLength);
 
 /**
  * @brief Get node's next page node
