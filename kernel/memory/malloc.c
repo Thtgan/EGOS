@@ -1,13 +1,11 @@
 #include<memory/memory.h>
 
 #include<lib/algorithms.h>
-#include<lib/singleLinkedList.h>
+#include<lib/structs/singlyLinkedList.h>
 #include<memory/paging/paging.h>
 
-#include<lib/printf.h>
-
 typedef struct {
-    SingleLinkedList list;
+    SinglyLinkedList list;
     size_t length;
     size_t regionNum;
     size_t freeCnt;
@@ -25,15 +23,15 @@ static __RegionList regionLists[REGION_LIST_NUM];
 
 static void __regionListInit(size_t level) {
     __RegionList* rList = &regionLists[level];
-    initSingleLinkedList(&rList->list);
+    initSinglyLinkedList(&rList->list);
     rList->length = 1 << (level + MIN_REGION_LENGTH_BIT);
     rList->regionNum = 0;
     rList->freeCnt = 0;
 }
 
 static void __addRegionToList(void* regionBegin, size_t level) {
-    SingleLinkedListNode* node = (SingleLinkedListNode*)regionBegin;
-    initSingleLinkedListNode(node);
+    SinglyLinkedListNode* node = (SinglyLinkedListNode*)regionBegin;
+    initSinglyLinkedListNode(node);
 
     __RegionList* rList = &regionLists[level];
     singleLinkedListInsertBack(&rList->list, node);
@@ -52,7 +50,7 @@ static void* __getRegionFromList(size_t level) {
     return ret;
 }
 
-static int __regionCmp(SingleLinkedListNode* node1, SingleLinkedListNode* node2) {
+static int __regionCmp(SinglyLinkedListNode* node1, SinglyLinkedListNode* node2) {
     if (node1 == node2) {
         return 0;
     }
@@ -68,9 +66,9 @@ static void __regionListTidyUp(size_t level) {
             releasePage(pagesBegin);
         }
     } else {
-        singleLinkedListMergeSort(&rList->list, rList->regionNum, __regionCmp);
+        singlyLinkedListMergeSort(&rList->list, rList->regionNum, __regionCmp);
         for (
-            SingleLinkedListNode* prev = &rList->list, * node = prev->next;
+            SinglyLinkedListNode* prev = &rList->list, * node = prev->next;
             node != &rList->list && rList->regionNum >= MIN_NON_PAGE_REGION_KEEP + 2;
             node = prev->next
         ) {    
@@ -103,7 +101,7 @@ static void* __getRegionFromLists(size_t level) {
 
         int split = needMorePage ? PAGE_ALLOCATE_BATCH_SIZE : 2;
 
-        SingleLinkedListNode* last = &rList->list;
+        SinglyLinkedListNode* last = &rList->list;
         size_t regionLength = rList->length;
         for (int i = 0; i < split; ++i) {
             __addRegionToList(newRegionBase + i * regionLength, level);

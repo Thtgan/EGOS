@@ -1,4 +1,4 @@
-#include<lib/linkedList.h>
+#include<lib/structs/linkedList.h>
 
 #include<stdbool.h>
 #include<stddef.h>

@@ -1,7 +1,7 @@
 #include<lib/algorithms.h>
 
-#include<lib/linkedList.h>
-#include<lib/singleLinkedList.h>
+#include<lib/structs/linkedList.h>
+#include<lib/structs/singlyLinkedList.h>
 #include<stdbool.h>
 #include<stdint.h>
 
@@ -116,12 +116,12 @@ void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator
     __linkedListMergeSort(list->next, len, comparator);
 }
 
-static SingleLinkedListNode* __singleLinkedListMergeSort(SingleLinkedListNode* prev, SingleLinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, SingleLinkedListNode)) {
+static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
     if (len == 1) {
         return list;
     } else if (len == 2) {
         if (comparator(list, list->next) > 0) {
-            SingleLinkedListNode* node1 = list, * node2 = node1->next, * next = node2->next;
+            SinglyLinkedListNode* node1 = list, * node2 = node1->next, * next = node2->next;
 
             prev->next = next;
 
@@ -135,9 +135,9 @@ static SingleLinkedListNode* __singleLinkedListMergeSort(SingleLinkedListNode* p
     }
 
     size_t len1 = len >> 1, len2 = len - len1;
-    SingleLinkedListNode* subList1 = list, * subPrev = NULL, * subList2 = NULL, * next = NULL;
+    SinglyLinkedListNode* subList1 = list, * subPrev = NULL, * subList2 = NULL, * next = NULL;
 
-    subPrev = subList1 = __singleLinkedListMergeSort(prev, subList1, len1, comparator);
+    subPrev = subList1 = __singlyLinkedListMergeSort(prev, subList1, len1, comparator);
 
     for (int i = 1; i < len1; ++i) {
         subPrev = subPrev->next;
@@ -148,21 +148,21 @@ static SingleLinkedListNode* __singleLinkedListMergeSort(SingleLinkedListNode* p
         next = next->next;
     }
 
-    subList2 = __singleLinkedListMergeSort(subPrev, subList2, len2, comparator);
+    subList2 = __singlyLinkedListMergeSort(subPrev, subList2, len2, comparator);
 
     prev->next = next;
 
-    SingleLinkedListNode* tail = prev;
+    SinglyLinkedListNode* tail = prev;
     while (!(len1 == 0 && len2 == 0)) {
         if (len1 != 0 && len2 != 0) {
             if (comparator(subList1, subList2) < 0) {
-                SingleLinkedListNode* node = subList1;
+                SinglyLinkedListNode* node = subList1;
                 subList1 = singleLinkedListGetNext(subList1);
                 singleLinkedListInsertBack(tail, node);
                 tail = node;
                 --len1;
             } else {
-                SingleLinkedListNode* node = subList2;
+                SinglyLinkedListNode* node = subList2;
                 subList2 = singleLinkedListGetNext(subList2);
                 singleLinkedListInsertBack(tail, node);
                 tail = node;
@@ -170,7 +170,7 @@ static SingleLinkedListNode* __singleLinkedListMergeSort(SingleLinkedListNode* p
             }
         } else if (len1 != 0) {
             while (len1 != 0) {
-                SingleLinkedListNode* node = subList1;
+                SinglyLinkedListNode* node = subList1;
                 subList1 = singleLinkedListGetNext(subList1);
                 singleLinkedListInsertBack(tail, node);
                 tail = node;
@@ -178,7 +178,7 @@ static SingleLinkedListNode* __singleLinkedListMergeSort(SingleLinkedListNode* p
             }
         } else {
             while (len2 != 0) {
-                SingleLinkedListNode* node = subList2;
+                SinglyLinkedListNode* node = subList2;
                 subList2 = singleLinkedListGetNext(subList2);
                 singleLinkedListInsertBack(tail, node);
                 tail = node;
@@ -190,6 +190,6 @@ static SingleLinkedListNode* __singleLinkedListMergeSort(SingleLinkedListNode* p
     return prev->next;
 }
 
-void singleLinkedListMergeSort(SingleLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SingleLinkedListNode)) {
-    __singleLinkedListMergeSort(list, list->next, len, comparator);
+void singlyLinkedListMergeSort(SinglyLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
+    __singlyLinkedListMergeSort(list, list->next, len, comparator);
 }

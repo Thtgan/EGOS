@@ -1,8 +1,6 @@
-#include<lib/bitmap.h>
+#include<lib/structs/bitmap.h>
 
 #include<kit/bit.h>
-
-#include<lib/printf.h>
 
 void initBitmap(Bitmap* b, size_t bitSize, void* bitPtr) {
     b->bitSize = bitSize;

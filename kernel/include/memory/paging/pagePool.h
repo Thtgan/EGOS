@@ -1,8 +1,8 @@
 #if !defined(__PAGING_POOL_H)
 #define __PAGING_POOL_H
 
-#include<lib/bitmap.h>
-#include<lib/linkedList.h>
+#include<lib/structs/bitmap.h>
+#include<lib/structs/linkedList.h>
 #include<memory/paging/pageNode.h>
 #include<stdbool.h>
 #include<stddef.h>

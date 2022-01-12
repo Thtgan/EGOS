@@ -1,6 +1,6 @@
 #include<memory/paging/pagePool.h>
 
-#include<lib/bitmap.h>
+#include<lib/structs/bitmap.h>
 #include<memory/paging/paging.h>
 #include<stdbool.h>
 #include<stddef.h>
@@ -51,7 +51,7 @@ void poolReleasePage(PagePool* p, void* pageBegin) {
  */
 static void __collectPages(PagePool* p, PageNode* node) {
     PageNodeList* list = &p->freePageNodeList;
-    PageNode* position = hostPointer(list->next, PageNode, node);
+    PageNode* position = HOST_POINTER(list->next, PageNode, node);
     
     if (getPageNodeBase(node) < getPageNodeBase(position)) { //If node to collect has the lowest base
         insertPageNodeFront(position, node);

@@ -2,7 +2,6 @@
 
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
-#include<lib/printf.h>
 #include<real/simpleAsmLines.h>
 
 IDTEntry IDTTable[256];

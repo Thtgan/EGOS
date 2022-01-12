@@ -9,8 +9,8 @@ struct __LinkedListNode {
     struct __LinkedListNode* prev;
 };
 
-#if !defined(hostPointer)
-#define hostPointer(nodePtr, type, member)  ((type*)(((void*)(nodePtr)) - offsetof(type, member)))
+#if !defined(HOST_POINTER)
+#define HOST_POINTER(__NODE_PTR, __TYPE, __MEMBER)  ((__TYPE*)(((void*)(__NODE_PTR)) - offsetof(__TYPE, __MEMBER)))
 #endif
 
 typedef struct __LinkedListNode LinkedListNode;

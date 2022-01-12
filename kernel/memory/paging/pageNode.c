@@ -1,6 +1,6 @@
 #include<memory/paging/pageNode.h>
 
-#include<lib/linkedList.h>
+#include<lib/structs/linkedList.h>
 #include<memory/paging/paging.h>
 #include<stddef.h>
 
@@ -24,7 +24,7 @@ PageNode* initPageNodeList(LinkedList* listHead, void* nodeBegin, size_t nodeLen
 }
 
 inline PageNode* getNextPageNode(PageNode* node) {
-    return hostPointer(node->node.next, PageNode, node);
+    return HOST_POINTER(node->node.next, PageNode, node);
 }
 
 inline void setNextPageNode(PageNode* node, PageNode* nextNode) {
@@ -32,7 +32,7 @@ inline void setNextPageNode(PageNode* node, PageNode* nextNode) {
 }
 
 inline PageNode* getPrevPageNode(PageNode* node) {
-    return hostPointer(node->node.prev, PageNode, node);
+    return HOST_POINTER(node->node.prev, PageNode, node);
 }
 
 inline void setPrevPageNode(PageNode* node, PageNode* prevNode) {
@@ -167,9 +167,9 @@ PageNode* firstFitFindPages(LinkedList* list, size_t size) {
 
     LinkedListNode* node = list->next;
 
-    for (; !(node == list || getPageNodeLength(hostPointer(node, PageNode, node)) >= size); node = linkedListGetNext(node));
+    for (; !(node == list || getPageNodeLength(HOST_POINTER(node, PageNode, node)) >= size); node = linkedListGetNext(node));
 
-    return hostPointer(node, PageNode, node);
+    return HOST_POINTER(node, PageNode, node);
 }
 
 PageNode* bestFitFindPages(LinkedList* list, size_t size) {
@@ -181,14 +181,14 @@ PageNode* bestFitFindPages(LinkedList* list, size_t size) {
     size_t bestLen = 0;
     
     for (; node != list; node = linkedListGetNext(node)) {
-        size_t len = getPageNodeLength(hostPointer(node, PageNode, node));
+        size_t len = getPageNodeLength(HOST_POINTER(node, PageNode, node));
         if (len >= size && (ret == NULL || len < bestLen)) {
             ret = node;
             bestLen = len;
         }
     }
 
-    return hostPointer(node, PageNode, node);
+    return HOST_POINTER(node, PageNode, node);
 }
 
 PageNode* worstFitFindPages(LinkedList* list, size_t size) {
@@ -200,12 +200,12 @@ PageNode* worstFitFindPages(LinkedList* list, size_t size) {
     size_t worstLen = 0;
     
     for (; node != list; node = linkedListGetNext(node)) {
-        size_t len = getPageNodeLength(hostPointer(node, PageNode, node));
+        size_t len = getPageNodeLength(HOST_POINTER(node, PageNode, node));
         if (len > worstLen) {
             ret = node;
             worstLen = len;
         }
     }
 
-    return worstLen >= size ? hostPointer(ret, PageNode, node) : NULL;
+    return worstLen >= size ? HOST_POINTER(ret, PageNode, node) : NULL;
 }
