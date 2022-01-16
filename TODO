@@ -53,7 +53,7 @@ Stage 2:
       ✔ Linked list merge sort @done(22-01-12 20:28)
     ☐ Mathematics
     ☐ Debug
-    ☐ String library
+    ✔ String library @done(22-01-16 20:08)
     ✔ Memory library(memset, memcpy...) @done(22-01-13 01:45)
     ☐ Upgrade performance essential library to implemented by assembly
   File system:
