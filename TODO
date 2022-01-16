@@ -55,6 +55,7 @@ Stage 2:
     ☐ Debug
     ☐ String library
     ✔ Memory library(memset, memcpy...) @done(22-01-13 01:45)
+    ☐ Upgrade performance essential library to implemented by assembly
   File system:
     ☐ Make a text LOGO file, read and print it
   Console:

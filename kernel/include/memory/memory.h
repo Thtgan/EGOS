@@ -14,6 +14,16 @@
 size_t initMemory(const MemoryMap* mMap);
 
 /**
+ * @brief Copy data from source to destination, overlap not handled
+ * 
+ * @param des Copy destination
+ * @param src Copy source
+ * @param n Num of bytes to copy
+ * @return void* des
+ */
+void* memcpy(void* des, const void* src, size_t n);
+
+/**
  * @brief Fill an area of memory with a byte
  * 
  * @param ptr Area begin
@@ -30,7 +40,7 @@ void* memset(void* ptr, int b, size_t n);
  * @param ptr1 Data pointer 1
  * @param ptr2 Data pointer 2
  * @param n Maximum num of bytes to compare
- * @return int -1 if first different byte in ptr1 is smaller than ptr2's 1 if first different byte in ptr1 is greater than ptr2's, 0 if n bytes in both ptrs are the same
+ * @return int -1 if first different byte in ptr1 is smaller than ptr2's, 1 if first different byte in ptr1 is greater than ptr2's, 0 if n bytes in both ptrs are the same
  */
 int memcmp(const void* ptr1, const void* ptr2, size_t n);
 
@@ -45,7 +55,7 @@ int memcmp(const void* ptr1, const void* ptr2, size_t n);
 void* memchr(const void* ptr, int val, size_t n);
 
 /**
- * @brief Copy data from source to  destination
+ * @brief Copy data from source to destination, overlap is handled
  * 
  * @param des Data destination
  * @param src Data source

@@ -14,44 +14,59 @@ size_t initMemory(const MemoryMap* mMap) {
     return availablePages;
 }
 
-void* memset(void* ptr, int b, size_t n) {
-    for (int i = 0; i < n; ++i) {
-        ((uint8_t*)ptr)[i] = b;
+void* memcpy(void* des, const void* src, size_t n) {
+    while(n--) {
+        *((uint8_t*)des) = *((uint8_t*)src);
+        ++src, ++des;
     }
-    return ptr;
+}
+
+void* memset(void* ptr, int b, size_t n) {
+    void* ret = ptr;
+    while (n--) {
+        *((uint8_t*)ptr) = b;
+        ++ptr;
+    }
+    return ret;
 }
 
 int memcmp(const void* ptr1, const void* ptr2, size_t n) {
     int ret = 0;
-    for (int i = 0; i < n; ++i) {
-        if (((uint8_t*)ptr1)[i] != ((uint8_t*)ptr2)[i]) {
-            ret = ((uint8_t*)ptr1)[i] < ((uint8_t*)ptr2)[i] ? -1 : 1;
+    while (n--) {
+        if (*((uint8_t*)ptr1) != *((uint8_t*)ptr2)) {
+            ret = *((uint8_t*)ptr1) < *((uint8_t*)ptr2) ? -1 : 1;
             break;
         }
+        ++ptr1, ++ptr2;
     }
     return ret;
 }
 
 void* memchr(const void* ptr, int val, size_t n) {
     void* ret = NULL;
-    for (int i = 0; i < n; ++i) {
-        if (((uint8_t*)ptr)[i] == val) {
-            ret = &((uint8_t*)ptr)[i];
+    while (n--) {
+        if (*((uint8_t*)ptr) == val) {
+            ret = (void*)ptr;
             break;
         }
+        ++ptr;
     }
     return ret;
 }
 
 void* memmove(void* des, const void* src, size_t n) {
+    void* ret = des;
     if (des < src) {
-        for (int i = 0; i < n; ++i) {
-            ((uint8_t*)des)[i] = ((uint8_t*)src)[i];
+        while (n--) {
+            *((uint8_t*)des) = *((uint8_t*)src);
+            ++src, ++des;
         }
     } else if (des > src) {
-        for (int i = n - 1; i >= 0; --i) {
-            ((uint8_t*)des)[i] = ((uint8_t*)src)[i];
+        src += (n - 1), des += (n - 1);
+        while (n--) {
+            *((uint8_t*)des) = *((uint8_t*)src);
+            --src, --des;
         }
     }
-    return des;
+    return ret;
 }

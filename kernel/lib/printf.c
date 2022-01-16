@@ -2,8 +2,10 @@
 
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
-#include<lib/string.h>
+#include<stddef.h>
 #include<stdint.h>
+
+#include<lib/blowup.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   FLAG8(0)
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  FLAG8(1)
@@ -125,12 +127,14 @@ int vfPrintf(char* buffer, const char* format, va_list args)
             continue;
         case 's':
             const char* str = va_arg(args, char*);
-            int len = strnlen(str, precision);
+            int len = 0;
+            for (; str[len] != '\0' && (size_t)len < precision; ++len);
 
             if (width > 0 && !TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
                 while (len <= --width)
                     *writeTo++ = ' ';
             }
+            
             for (int i = 0; i < len; ++i)
                 *writeTo++ = str[i];
 

@@ -55,17 +55,5 @@ void kernelMain() {
 
     keyboardInit();
 
-    int* ptr1 = malloc(8), * ptr2 = malloc(8);
-    printf("%#X %#X\n", ptr1, ptr2);
-
-    *ptr1 = 1;
-    *ptr2 = -1;
-
-    free(ptr1);
-    free(ptr2);
-
-    ptr1 = malloc(8), ptr2 = malloc(8);
-    printf("%#X %#X\n", ptr1, ptr2);
-
     blowup("blowup");
 }
