@@ -34,7 +34,13 @@ Stage 2:
     VGA text mode driver:
       ✔ Basic text mode operation(Print character, string, cursor control) @done(22-01-12 19:48)
   Kernel I/O:
-    ✔ Printf in kernel stage @done(22-01-12 19:55)
+    ☐ I/O stream
+    ✔ printf function @done(22-01-12 19:55)
+    ☐ scanf function
+    ☐ putchar function
+    ☐ getchar function
+    ☐ puts
+    ☐ gets
   ✔ Access system information from the bootloader @done(22-01-12 19:59)
   Memory management:
     Implement paging:
@@ -42,7 +48,9 @@ Stage 2:
       ✔ Activate pages @done(22-01-12 20:20)
       ✔ Basic page fault handling @done(22-01-12 20:20)
       ☐ Upgrade page allocating and recycling to implementedby RB tree
-    ✔ Memory allocating and recycling @done(22-01-12 20:20)
+    ✔ Memory allocating and recycling(malloc, free) @done(22-01-12 20:20)
+    ☐ calloc
+    ☐ realloc
     ☐ These todos needs long-term tests
   Implement utilization library:
     Data structure:
@@ -56,10 +64,13 @@ Stage 2:
     ✔ String library @done(22-01-16 20:08)
     ✔ Memory library(memset, memcpy...) @done(22-01-13 01:45)
     ☐ Upgrade performance essential library to implemented by assembly
-  File system:
-    ☐ Make a text LOGO file, read and print it
   Console:
     ☐ Make a shell
+  File system:
+    ☐ Make a text LOGO file, read and print it
+  Power control:
+    ☐ Shutdown
+    ☐ Reboot
 Stage 3:
   ☐ Transplant project to UEFI
   ☐ Sperate Bootloader and OS
