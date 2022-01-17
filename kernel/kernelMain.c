@@ -6,11 +6,12 @@
 #include<lib/string.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
+#include<memory/paging/paging.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
 
-#include<memory/paging/paging.h>
+#include<lib/debug.h>
 
 const SystemInfo* systemInfo = (SystemInfo*) SYSTEM_INFO_ADDRESS;
 
@@ -54,6 +55,8 @@ void kernelMain() {
     printf("%u pages available\n", pageNum);
 
     keyboardInit();
+
+    printSeparation();
 
     blowup("blowup");
 }

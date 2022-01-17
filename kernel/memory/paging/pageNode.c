@@ -23,31 +23,31 @@ PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, size_t pag
     return firstNode;
 }
 
-inline PageNode* getNextPageNode(PageNode* node) {
+PageNode* getNextPageNode(PageNode* node) {
     return HOST_POINTER(node->node.next, PageNode, node);
 }
 
-inline void setNextPageNode(PageNode* node, PageNode* nextNode) {
+void setNextPageNode(PageNode* node, PageNode* nextNode) {
     node->node.next = &nextNode->node;
 }
 
-inline PageNode* getPrevPageNode(PageNode* node) {
+PageNode* getPrevPageNode(PageNode* node) {
     return HOST_POINTER(node->node.prev, PageNode, node);
 }
 
-inline void setPrevPageNode(PageNode* node, PageNode* prevNode) {
+void setPrevPageNode(PageNode* node, PageNode* prevNode) {
     node->node.prev = &prevNode->node;
 }
 
-inline size_t getPageNodeLength(PageNode* node) {
+size_t getPageNodeLength(PageNode* node) {
     return node->length;
 }
 
-inline void setPageNodeLength(PageNode* node, size_t length) {
+void setPageNodeLength(PageNode* node, size_t length) {
     node->length = length;
 }
 
-inline void* getPageNodeBase(PageNode* node) {
+void* getPageNodeBase(PageNode* node) {
     return node->base;
 }
 
@@ -55,15 +55,15 @@ inline void* getPageNodeBase(PageNode* node) {
 //================================================================================
 
 
-inline void removePageNode(PageNode* node) {
+void removePageNode(PageNode* node) {
     linkedListDelete(&node->node);
 }
 
-inline void insertPageNodeFront(PageNode* node, PageNode* newNode) {
+void insertPageNodeFront(PageNode* node, PageNode* newNode) {
     linkedListInsertFront(&node->node, &newNode->node);
 }
 
-inline void insertPageNodeBack(PageNode* node, PageNode* newNode) {
+void insertPageNodeBack(PageNode* node, PageNode* newNode) {
     linkedListInsertBack(&node->node, &newNode->node);
 }
 
