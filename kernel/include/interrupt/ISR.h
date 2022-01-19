@@ -8,17 +8,19 @@
 
 /**
  * @brief Header for interrupt service routine function
+ * Note: inline is not working with this header, probably due to the target attributes
+ * TODO: Fix inline not working in interrupt handler
  */
-#define ISR_FUNC_HEADER(__FUNC_IDENTIFIER)                          \
-    __attribute__((interrupt, target("general-regs-only")))         \
-    void __FUNC_IDENTIFIER (InterruptFrame* interruptFrame)  \
+#define ISR_FUNC_HEADER(__FUNC_IDENTIFIER)                  \
+    __attribute__((interrupt, target("general-regs-only"))) \
+    void __FUNC_IDENTIFIER (InterruptFrame* interruptFrame) \
 
 /**
  *@brief Header for interrupt service routine function, this one is for exceptions with interrupt number 0-31, is has a extra error code
  */
-#define ISR_EXCEPTION_FUNC_HEADER(__FUNC_IDENTIFIER)                                    \
-    __attribute__((interrupt, target("general-regs-only")))                             \
-    void __FUNC_IDENTIFIER (InterruptFrame* interruptFrame, uint32_t errorCode)  \
+#define ISR_EXCEPTION_FUNC_HEADER(__FUNC_IDENTIFIER)                            \
+    __attribute__((interrupt, target("general-regs-only")))                     \
+    void __FUNC_IDENTIFIER (InterruptFrame* interruptFrame, uint32_t errorCode) \
 
 /**
  * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler

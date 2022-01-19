@@ -2,6 +2,7 @@
 #include<driver/vgaTextMode/textmode.h>
 #include<interrupt/IDT.h>
 #include<lib/blowup.h>
+#include<lib/debug.h>
 #include<lib/printf.h>
 #include<lib/string.h>
 #include<memory/malloc.h>
@@ -10,8 +11,6 @@
 #include<real/simpleAsmLines.h>
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
-
-#include<lib/debug.h>
 
 const SystemInfo* systemInfo = (SystemInfo*) SYSTEM_INFO_ADDRESS;
 
@@ -56,7 +55,26 @@ void kernelMain() {
 
     keyboardInit();
 
-    printSeparation();
+    void* ptr1 = malloc(1000);
+    void* ptr2 = malloc(1000);
+
+    printPtr(ptr1);
+    printf("\n");
+    printPtr(ptr2);
+    printf("\n");
+
+    free(ptr1);
+    free(ptr2);
+
+    ptr1 = malloc(1000), ptr2 = malloc(1000);
+
+    printPtr(ptr1);
+    printf("\n");
+    printPtr(ptr2);
+    printf("\n");
+
+    free(ptr1);
+    free(ptr2);
 
     blowup("blowup");
 }

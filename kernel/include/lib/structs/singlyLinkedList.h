@@ -27,14 +27,18 @@ typedef struct __SinglyLinkedListNode SinglyLinkedList;
  * 
  * @param list Header of the singly linked list
  */
-void initSinglyLinkedList(SinglyLinkedList* list);
+static inline void initSinglyLinkedList(SinglyLinkedList* list) {
+    list->next = list;
+}
 
 /**
  * @brief Initialize a singly linked list
  * 
  * @param node Node of the singly linked list
  */
-void initSinglyLinkedListNode(SinglyLinkedListNode* node);
+static inline void initSinglyLinkedListNode(SinglyLinkedListNode* node) {
+    node->next = NULL;
+}
 
 /**
  * @brief Check is the singly linked list empty
@@ -42,7 +46,9 @@ void initSinglyLinkedListNode(SinglyLinkedListNode* node);
  * @param list Header of the singly linked list
  * @return bool is the singly linked list empty
  */
-bool isSingleListEmpty(SinglyLinkedList* list);
+static inline bool isSingleListEmpty(SinglyLinkedList* list) {
+    return list->next == list;
+}
 
 /**
  * @brief Get the next node of a singly linked list node
@@ -50,7 +56,9 @@ bool isSingleListEmpty(SinglyLinkedList* list);
  * @param node The singly linked list node, could be list header
  * @return SinglyLinkedListNode* Next node
  */
-SinglyLinkedListNode* singleLinkedListGetNext(SinglyLinkedListNode* node);
+static inline SinglyLinkedListNode* singleLinkedListGetNext(SinglyLinkedListNode* node) {
+    return node->next;
+}
 
 /**
  * @brief Insert a node to the next position of a singly linked list node
@@ -58,13 +66,18 @@ SinglyLinkedListNode* singleLinkedListGetNext(SinglyLinkedListNode* node);
  * @param node New node will be inserted to the next position of this singly linked list node
  * @param newNode New singly linked list to insert
  */
-void singleLinkedListInsertBack(SinglyLinkedList* node, SinglyLinkedListNode* newNode);
+static inline void singleLinkedListInsertBack(SinglyLinkedList* node, SinglyLinkedListNode* newNode) {
+    newNode->next = node->next;
+    node->next = newNode;
+}
 
 /**
  * @brief Remove the next singly linked list node
  * 
  * @param node The node before the node to remove
  */
-void singleLinkedListDeleteNext(SinglyLinkedList* node);
+static inline void singleLinkedListDeleteNext(SinglyLinkedList* node) {
+    node->next = node->next->next;
+}
 
 #endif // __SINGLE_LINKED_LIST_H

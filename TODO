@@ -71,6 +71,7 @@ Stage 2:
   Power control:
     ☐ Shutdown
     ☐ Reboot
+  ☐ Support GCC builtin functions
 Stage 3:
   ☐ Transplant project to UEFI
   ☐ Sperate Bootloader and OS

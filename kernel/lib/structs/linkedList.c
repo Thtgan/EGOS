@@ -1,41 +1,43 @@
 #include<lib/structs/linkedList.h>
 
-#include<stdbool.h>
-#include<stddef.h>
+//Since all implemented transfer to be inline, these codes are deprecated
 
-void initLinkedList(LinkedList* list) {
-    list->prev = list->next = list;
-}
+// #include<stdbool.h>
+// #include<stddef.h>
 
-void initLinkedListNode(LinkedListNode* node) {
-    node->prev = node->next = NULL;
-}
+// void initLinkedList(LinkedList* list) {
+//     list->prev = list->next = list;
+// }
 
-bool isListEmpty(LinkedListNode* list) {
-    return list->next == list;
-}
+// void initLinkedListNode(LinkedListNode* node) {
+//     node->prev = node->next = NULL;
+// }
 
-LinkedListNode* linkedListGetNext(LinkedListNode* node) {
-    return node->next;
-}
+// bool isListEmpty(LinkedListNode* list) {
+//     return list->next == list;
+// }
 
-LinkedListNode* linkedListGetPrev(LinkedListNode* node) {
-    return node->prev;
-}
+// LinkedListNode* linkedListGetNext(LinkedListNode* node) {
+//     return node->next;
+// }
 
-void linkedListInsertBack(LinkedListNode* node, LinkedListNode* newNode) {
-    LinkedListNode* next = node->next;
-    newNode->prev = node, newNode->next = next;
-    node->next = next->prev = newNode;
-}
+// LinkedListNode* linkedListGetPrev(LinkedListNode* node) {
+//     return node->prev;
+// }
 
-void linkedListInsertFront(LinkedListNode* node, LinkedListNode* newNode) {
-    LinkedListNode* prev = node->prev;
-    newNode->prev = prev, newNode->next = node;
-    prev->next = node->prev = newNode;
-}
+// void linkedListInsertBack(LinkedListNode* node, LinkedListNode* newNode) {
+//     LinkedListNode* next = node->next;
+//     newNode->prev = node, newNode->next = next;
+//     node->next = next->prev = newNode;
+// }
 
-void linkedListDelete(LinkedListNode* node) {
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
-}
+// void linkedListInsertFront(LinkedListNode* node, LinkedListNode* newNode) {
+//     LinkedListNode* prev = node->prev;
+//     newNode->prev = prev, newNode->next = node;
+//     prev->next = node->prev = newNode;
+// }
+
+// void linkedListDelete(LinkedListNode* node) {
+//     node->prev->next = node->next;
+//     node->next->prev = node->prev;
+// }

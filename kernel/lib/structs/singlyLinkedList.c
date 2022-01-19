@@ -1,28 +1,28 @@
 #include<lib/structs/singlyLinkedList.h>
 
-#include<stddef.h>
+// #include<stddef.h>
 
-void initSinglyLinkedList(SinglyLinkedList* list) {
-    list->next = list;
-}
+// void initSinglyLinkedList(SinglyLinkedList* list) {
+//     list->next = list;
+// }
 
-void initSinglyLinkedListNode(SinglyLinkedListNode* node) {
-    node->next = NULL;
-}
+// void initSinglyLinkedListNode(SinglyLinkedListNode* node) {
+//     node->next = NULL;
+// }
 
-bool isSingleListEmpty(SinglyLinkedList* list) {
-    return list->next == list;
-}
+// bool isSingleListEmpty(SinglyLinkedList* list) {
+//     return list->next == list;
+// }
 
-SinglyLinkedListNode* singleLinkedListGetNext(SinglyLinkedListNode* node) {
-    return node->next;
-}
+// SinglyLinkedListNode* singleLinkedListGetNext(SinglyLinkedListNode* node) {
+//     return node->next;
+// }
 
-void singleLinkedListInsertBack(SinglyLinkedList* node, SinglyLinkedListNode* newNode) {
-    newNode->next = node->next;
-    node->next = newNode;
-}
+// void singleLinkedListInsertBack(SinglyLinkedList* node, SinglyLinkedListNode* newNode) {
+//     newNode->next = node->next;
+//     node->next = newNode;
+// }
 
-void singleLinkedListDeleteNext(SinglyLinkedList* node) {
-    node->next = node->next->next;
-}
+// void singleLinkedListDeleteNext(SinglyLinkedList* node) {
+//     node->next = node->next->next;
+// }
