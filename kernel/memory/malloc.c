@@ -20,6 +20,7 @@ typedef struct {
 #define REGION_LIST_NUM             (PAGE_SIZE_BIT - MIN_REGION_LENGTH_BIT + 1)
 #define PAGE_ALLOCATE_BATCH_SIZE    4  //Power of 2 is strongly recommended
 #define MIN_NON_PAGE_REGION_KEEP    8
+#define REGION_HEADER_PADDING       16
 #define FREE_BEFORE_TIDY_UP         32
 
 static __RegionList regionLists[REGION_LIST_NUM];
@@ -77,18 +78,20 @@ void initMalloc() {
     }
 }
 
+#define PAGE_SIZE_ROUND_UP(__SIZE) ((((__SIZE) >> PAGE_SIZE_BIT) + (((__SIZE) & (PAGE_SIZE - 1)) != 0)) << PAGE_SIZE_BIT)
+
 void* malloc(size_t n) {
     if (n == 0) {
         return NULL;
     }
 
-    size_t realSize = n + sizeof(size_t), regionLevel = 0;
+    size_t realSize = n + REGION_HEADER_PADDING, regionLevel = 0;  //16 for alignment
 
     void* ret = NULL;
 
     bool isMultiPage = realSize > regionLists[REGION_LIST_NUM - 1].length;
-    if (isMultiPage) {                                                                                      //Required size is greater than maximum region size
-        realSize = ((realSize >> PAGE_SIZE_BIT) + ((realSize & (PAGE_SIZE - 1)) != 0)) << PAGE_SIZE_BIT;    //Round up to size of a page
+    if (isMultiPage) {                              //Required size is greater than maximum region size
+        realSize = PAGE_SIZE_ROUND_UP(realSize);    //Round up to size of a page
         ret = allocatePages(realSize >> PAGE_SIZE_BIT); //Specially allocated
     } else {
         for (; regionLevel < REGION_LIST_NUM; ++regionLevel) {
@@ -103,14 +106,14 @@ void* malloc(size_t n) {
         return NULL;
     }
 
-    size_t* header = ret;                       //A header contains only one stuff, size of the region
-    *header = isMultiPage ? n : regionLevel;    //If size greater than REGION_LIST_NUM, it must be pages
+    size_t* header = ret;                           //A header contains only one stuff, size of the region
+    *header = isMultiPage ? realSize : regionLevel; //If size greater than REGION_LIST_NUM, it must be pages
 
-    return (void*)(header + 1);
+    return ((void*)header) + REGION_HEADER_PADDING;
 }
 
 void free(void* ptr) {
-    ptr -= sizeof(size_t);
+    ptr -= REGION_HEADER_PADDING;
     size_t n = *((size_t*)ptr);
 
     if (n >= REGION_LIST_NUM) { //Release the specially allocated pages
@@ -123,6 +126,39 @@ void free(void* ptr) {
             regionLists[n].freeCnt = 0;                         //Counter roll back to 0
         }
     }
+}
+
+void* calloc(size_t num, size_t size) {
+    if (num == 0 || size == 0) {
+        return NULL;
+    }
+
+    size_t s = num * size;
+    void* ret = malloc(s);
+    memset(ret, 0, s);
+
+    return ret;
+}
+
+//TODO: When region is large enough, recycle exceedded memory and return old address
+void* realloc(void *ptr, size_t newSize) {
+    void* ret = NULL;
+
+    if (newSize != 0) {
+        size_t s = *((size_t*)(ptr - REGION_HEADER_PADDING));
+        if (s < REGION_LIST_NUM) {
+            s = regionLists[s].length - REGION_HEADER_PADDING;
+        }
+
+        s = min32(s, newSize);
+
+        ret = malloc(newSize);
+        memcpy(ret, ptr, s);
+    }
+
+    free(ptr);
+
+    return ret;
 }
 
 static void __regionListInit(size_t level) {

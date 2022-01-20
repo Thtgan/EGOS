@@ -37,6 +37,38 @@ uint64_t umax64(uint64_t a, uint64_t b) {
     return a > b ? a : b;
 }
 
+int8_t min8(int8_t a, int8_t b) {
+    return a < b ? a : b;
+}
+
+uint8_t umin8(uint8_t a, uint8_t b) {
+    return a < b ? a : b;
+}
+
+int16_t min16(int16_t a, int16_t b) {
+    return a < b ? a : b;
+}
+
+uint16_t umin16(uint16_t a, uint16_t b) {
+    return a < b ? a : b;
+}
+
+int32_t min32(int32_t a, int32_t b) {
+    return a < b ? a : b;
+}
+
+uint32_t umin32(uint32_t a, uint32_t b) {
+    return a < b ? a : b;
+}
+
+int64_t min64(int64_t a, int64_t b) {
+    return a < b ? a : b;
+}
+
+uint64_t umin64(uint64_t a, uint64_t b) {
+    return a < b ? a : b;
+}
+
 /**
  * @brief Merge sort the sub-double linked list
  * 

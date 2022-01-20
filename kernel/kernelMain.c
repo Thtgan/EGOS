@@ -32,6 +32,15 @@ void printMemoryAreas() {
     }
 }
 
+void print_storage_info(const int* next, const int* prev, int ints) {
+    if (next) {
+        printf("%s location: %p. Size: %d ints (%ld bytes).\n",
+               (next != prev ? "New" : "Old"), (void*)next, ints, ints * sizeof(int));
+    } else {
+        printf("Allocation failed.\n");
+    }
+}
+
 __attribute__((section(".kernelMain")))
 void kernelMain() {
 
@@ -55,26 +64,34 @@ void kernelMain() {
 
     keyboardInit();
 
-    void* ptr1 = malloc(1000);
-    void* ptr2 = malloc(1000);
+    const int pattern[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    const int pattern_size = sizeof pattern / sizeof(int);
+    int *next = NULL, *prev = NULL;
+ 
+    if ((next = (int*)malloc(pattern_size * sizeof *next))) { // allocates an array
+        memcpy(next, pattern, sizeof pattern); // fills the array
+        print_storage_info(next, prev, pattern_size);
+    } else {
+        blowup("Allocation failed");
+    }
+ 
+    // Reallocate in cycle using the following values as a new storage size.
+    const int realloc_size[] = {10, 12, 512, 32768, 65536, 32768};
+ 
+    for (int i = 0; i != sizeof realloc_size / sizeof(int); ++i) {
+        next = (int*)realloc(prev = next, realloc_size[i] * sizeof(int));
+        if (next != NULL) {
+            print_storage_info(next, prev, realloc_size[i]);
+        } else {  // if realloc failed, the original pointer needs to be freed
+            free(prev);
+            blowup("Allocation failed");
+        }
+    }
+ 
+    free(next); // finally, frees the storage
 
-    printPtr(ptr1);
-    printf("\n");
-    printPtr(ptr2);
-    printf("\n");
-
-    free(ptr1);
-    free(ptr2);
-
-    ptr1 = malloc(1000), ptr2 = malloc(1000);
-
-    printPtr(ptr1);
-    printf("\n");
-    printPtr(ptr2);
-    printf("\n");
-
-    free(ptr1);
-    free(ptr2);
+    next = malloc(32768 * sizeof(int));
+    printf("%#X\n", next);
 
     blowup("blowup");
 }

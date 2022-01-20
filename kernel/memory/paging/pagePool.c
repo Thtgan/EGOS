@@ -58,7 +58,7 @@ void poolReleasePages(PagePool* p, void* pagesBegin, size_t n) {
 }
 
 bool isPageBelongToPool(PagePool* p, void* pageBegin) {
-    p->freePageBase <= pageBegin && pageBegin < p->freePageBase + (p->freePageSize << PAGE_SIZE_BIT);
+    return p->freePageBase <= pageBegin && pageBegin < p->freePageBase + (p->freePageSize << PAGE_SIZE_BIT);
 }
 
 static void __collectPages(PagePool* p, PageNode* node) {
