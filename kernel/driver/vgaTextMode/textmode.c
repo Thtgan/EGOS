@@ -1,6 +1,5 @@
 #include<driver/vgaTextMode/textmode.h>
 
-#include<lib/string.h>
 #include<real/simpleAsmLines.h>
 
 static TextModeDisplayUnit* const _textModeDisplayUnitPtr = (TextModeDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;

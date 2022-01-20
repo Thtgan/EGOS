@@ -1,5 +1,11 @@
-#include<bootKit.h>
+#include<io.h>
+#include<printf.h>
+#include<sys/A20.h>
+#include<sys/blowup.h>
+#include<sys/E820.h>
+#include<sys/pm.h>
 #include<system/address.h>
+#include<system/systemInfo.h>
 
 __attribute__((section("sysInfo")))
 SystemInfo systemInfo;   //Information about the system

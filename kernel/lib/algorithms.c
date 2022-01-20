@@ -1,9 +1,9 @@
-#include<lib/algorithms.h>
+#include<algorithms.h>
 
-#include<lib/structs/linkedList.h>
-#include<lib/structs/singlyLinkedList.h>
 #include<stdbool.h>
 #include<stdint.h>
+#include<structs/linkedList.h>
+#include<structs/singlyLinkedList.h>
 
 int8_t max8(int8_t a, int8_t b) {
     return a > b ? a : b;

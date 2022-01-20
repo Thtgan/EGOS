@@ -1,12 +1,12 @@
 #if !defined(__PAGING_POOL_H)
 #define __PAGING_POOL_H
 
-#include<lib/structs/bitmap.h>
-#include<lib/structs/linkedList.h>
 #include<memory/paging/pageNode.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>
+#include<structs/bitmap.h>
+#include<structs/linkedList.h>
 
 /**
  * @brief Pool of an avaiable memory, managing an area of memory

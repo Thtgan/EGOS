@@ -1,9 +1,9 @@
 #include<memory/paging/pagePool.h>
 
-#include<lib/structs/bitmap.h>
 #include<memory/paging/paging.h>
 #include<stdbool.h>
 #include<stddef.h>
+#include<structs/bitmap.h>
 
 #define PAGE_BITMAP_CONTAIN                         (PAGE_SIZE * 8)  //How many bits a page could contain
 #define BITMAP_PAGE_SIZE_ROUNDUP(__AREA_PAGE_SIZE)  ((__AREA_PAGE_SIZE) / (PAGE_BITMAP_CONTAIN + 1)) + ((__AREA_PAGE_SIZE) % (PAGE_BITMAP_CONTAIN + 1) != 0)

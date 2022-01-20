@@ -1,11 +1,11 @@
 #include<memory/paging/paging.h>
 
+#include<algorithms.h>
+#include<blowup.h>
 #include<interrupt/exceptions.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
-#include<lib/algorithms.h>
-#include<lib/blowup.h>
 #include<memory/memory.h>
 #include<memory/paging/pagePool.h>
 #include<real/flags/cr0.h>

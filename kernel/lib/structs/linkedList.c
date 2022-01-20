@@ -1,4 +1,4 @@
-#include<lib/structs/linkedList.h>
+#include<structs/linkedList.h>
 
 //Since all implemented transfer to be inline, these codes are deprecated
 

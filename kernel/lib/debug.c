@@ -1,7 +1,7 @@
-#include<lib/debug.h>
+#include<debug.h>
 
-#include<lib/printf.h>
 #include<memory/paging/paging.h>
+#include<printf.h>
 
 void printSeparation() {
     printf("----------------------------------------------------------------\n");

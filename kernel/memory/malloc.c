@@ -1,8 +1,8 @@
 #include<memory/memory.h>
 
-#include<lib/algorithms.h>
-#include<lib/structs/singlyLinkedList.h>
+#include<algorithms.h>
 #include<memory/paging/paging.h>
+#include<structs/singlyLinkedList.h>
 
 /**
  * @brief Resiong list contains different length of memory regions

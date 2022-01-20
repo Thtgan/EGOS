@@ -1,10 +1,10 @@
-#include<lib/printf.h>
+#include<printf.h>
 
+#include<io.h>
 #include<kit/bit.h>
-#include<lib/io.h>
-#include<lib/string.h>
 #include<stdarg.h>
 #include<stdint.h>
+#include<string.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   FLAG8(0)    //Justify the printed number to the left
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  FLAG8(1)    //Force to print the sign of the number

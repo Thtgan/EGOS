@@ -1,7 +1,7 @@
-#include<lib/blowup.h>
+#include<blowup.h>
 
 #include<driver/vgaTextMode/textmode.h>
-#include<lib/printf.h>
+#include<printf.h>
 #include<real/simpleAsmLines.h>
 
 __attribute__((noreturn))

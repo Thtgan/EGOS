@@ -1,4 +1,5 @@
-#include<lib/string.h>
+#include<string.h>
+
 #include<stdint.h>
 
 void* memset(void* dest, int ch, size_t count) {

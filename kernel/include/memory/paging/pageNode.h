@@ -1,10 +1,10 @@
 #if !defined(__PAGING_NODE_H)
 #define __PAGING_NODE_H
 
-#include<lib/structs/linkedList.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>
+#include<structs/linkedList.h>
 
 /**
  * A serial of continued node could form a node in convenience to page allocation

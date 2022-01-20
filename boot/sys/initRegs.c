@@ -1,7 +1,7 @@
 #include<sys/realmode.h>
 
 #include<kit/bit.h>
-#include<lib/string.h>
+#include<string.h>
 
 void initRegs(RegisterSet* regs) {
     memset(regs, 0, sizeof(RegisterSet));

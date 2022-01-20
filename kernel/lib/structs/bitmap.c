@@ -1,4 +1,4 @@
-#include<lib/structs/bitmap.h>
+#include<structs/bitmap.h>
 
 #include<kit/bit.h>
 

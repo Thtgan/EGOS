@@ -1,4 +1,4 @@
-#include<lib/structs/singlyLinkedList.h>
+#include<structs/singlyLinkedList.h>
 
 // #include<stddef.h>
 

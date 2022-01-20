@@ -1,15 +1,17 @@
 NASM 						= 	nasm
 CC 							= 	x86_64-elf-gcc
-CC_OPTIONS 					= 	-nostdlib		\
-								-nostdinc		\
-								-ffreestanding	\
-								-mno-red-zone	\
-								-m16			\
-								-I.	 			\
-								-I./include		\
-								-I../include	\
-								-Os				\
-								-march=i386		\
+CC_OPTIONS 					= 	-nostdlib			\
+								-nostdinc			\
+								-ffreestanding		\
+								-mno-red-zone		\
+								-m16				\
+								-I.	 				\
+								-I./include			\
+								-I./include/lib		\
+								-I./include/lib/std	\
+								-I../include		\
+								-Os					\
+								-march=i386			\
 
 LD 							= 	x86_64-elf-ld
 LD_OPTIONS					=	-melf_i386

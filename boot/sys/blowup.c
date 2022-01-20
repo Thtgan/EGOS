@@ -1,7 +1,7 @@
 #include<sys/blowup.h>
 
-#include<lib/io.h>
-#include<lib/printf.h>
+#include<io.h>
+#include<printf.h>
 #include<sys/realmode.h>
 
 __attribute__((noreturn))

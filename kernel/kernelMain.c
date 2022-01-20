@@ -1,14 +1,14 @@
+#include<blowup.h>
+#include<debug.h>
 #include<driver/keyboard/keyboard.h>
 #include<driver/vgaTextMode/textmode.h>
 #include<interrupt/IDT.h>
-#include<lib/blowup.h>
-#include<lib/debug.h>
-#include<lib/printf.h>
-#include<lib/string.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
+#include<printf.h>
 #include<real/simpleAsmLines.h>
+#include<string.h>
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
 

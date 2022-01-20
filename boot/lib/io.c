@@ -1,4 +1,4 @@
-#include<lib/io.h>
+#include<io.h>
 
 #include<stddef.h>
 #include<sys/realmode.h>

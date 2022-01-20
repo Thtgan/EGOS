@@ -1,11 +1,9 @@
-#include<lib/printf.h>
+#include<printf.h>
 
 #include<driver/vgaTextMode/textmode.h>
 #include<kit/bit.h>
 #include<stddef.h>
 #include<stdint.h>
-
-#include<lib/blowup.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   FLAG8(0)
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  FLAG8(1)

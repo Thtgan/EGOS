@@ -1,14 +1,15 @@
 CC 							= 	x86_64-elf-gcc
-CC_OPTIONS 					= 	-nostdlib		\
-								-nostdinc		\
-								-ffreestanding	\
-								-mno-red-zone	\
-								-m32			\
-								-I.	 			\
-								-I..			\
-								-I./include		\
-								-I../include	\
-								-Os				\
+CC_OPTIONS 					= 	-nostdlib			\
+								-nostdinc			\
+								-ffreestanding		\
+								-mno-red-zone		\
+								-m32				\
+								-I.	 				\
+								-I./include			\
+								-I./include/lib		\
+								-I./include/lib/std	\
+								-I../include		\
+								-Os					\
 
 LD 							= 	x86_64-elf-ld
 
