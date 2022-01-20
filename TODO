@@ -49,8 +49,8 @@ Stage 2:
       ✔ Basic page fault handling @done(22-01-12 20:20)
       ☐ Upgrade page allocating and recycling to implementedby RB tree
     ✔ Memory allocating and recycling(malloc, free) @done(22-01-12 20:20)
-    ☐ calloc
-    ☐ realloc
+    ✔ calloc @done(22-01-20 22:27)
+    ✔ realloc @done(22-01-20 22:27)
     ☐ These todos needs long-term tests
   Implement utilization library:
     Data structure:
