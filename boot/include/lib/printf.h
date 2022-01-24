@@ -20,6 +20,6 @@ int printf(const char* format, ...);
  * @param ... Data to print
  * @return The length of final string writed
  */
-int vfprintf(char* buffer, const char* format, va_list args);
+int vprintf(char* buffer, const char* format, va_list args);
 
 #endif // __PRINTF_H

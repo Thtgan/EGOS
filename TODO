@@ -33,13 +33,14 @@ Stage 2:
       ☐ ???
     VGA text mode driver:
       ✔ Basic text mode operation(Print character, string, cursor control) @done(22-01-12 19:48)
+      ☐ Support for scroll down/up
   Kernel I/O:
     ☐ I/O stream
     ✔ printf function @done(22-01-12 19:55)
     ☐ scanf function
-    ☐ putchar function
+    ✔ putchar function @done(22-01-24 13:12)
     ☐ getchar function
-    ☐ puts
+    ✔ puts @done(22-01-24 13:12)
     ☐ gets
   ✔ Access system information from the bootloader @done(22-01-12 19:59)
   Memory management:

@@ -1,7 +1,7 @@
 #if !defined(__STDDEF_H)
 #define __STDDEF_H
 
-typedef __SIZE_TYPE__ size_t;
+typedef long unsigned int size_t;
 
 #define NULL ((void*) 0)
 

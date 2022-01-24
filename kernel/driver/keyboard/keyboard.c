@@ -1,10 +1,9 @@
 #include<driver/keyboard/keyboard.h>
 
-#include<driver/vgaTextMode/textmode.h>
+#include<driver/vga/textmode.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
-#include<printf.h>
 #include<real/simpleAsmLines.h>
 #include<stdint.h>
 
@@ -130,11 +129,10 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
     }
     else if (_pressed[key]) {
         if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ASCII)) {
-            tmPutchar(__toASCII(key));
-        }
-        else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
+            vgaPutchar(__toASCII(key));
+        } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
             const TextModeInfo* tmInfo = getTextModeInfo();
-            int row = tmInfo->cursorPosition / TEXT_MODE_WIDTH, col = tmInfo->cursorPosition % TEXT_MODE_WIDTH;
+            int row = vgaGetCursorRowIndex(), col = vgaGetCursorColIndex();
             switch (key)
             {
             case KEY_KEYPAD_1:
@@ -143,21 +141,16 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
             case KEY_KEYPAD_2:
                 ++row;
                 if (row >= TEXT_MODE_HEIGHT) {
-                    row = TEXT_MODE_HEIGHT - 1;
+                    col = 0;
                 }
                 break;
             case KEY_KEYPAD_3:
-                //Not implemented
+                vgaScrollDown();
                 break;
             case KEY_KEYPAD_4:
                 --col;
                 if (col < 0) {
-                    if (row > 0) {
-                        --row, col = TEXT_MODE_WIDTH - 1;
-                    }
-                    else {
-                        col = 0;
-                    }
+                    --row, col = TEXT_MODE_WIDTH - 1;
                 }
                 break;
             case KEY_KEYPAD_5:
@@ -165,12 +158,7 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
             case KEY_KEYPAD_6:
                 ++col;
                 if (col >= TEXT_MODE_WIDTH) {
-                    if (row < TEXT_MODE_HEIGHT - 1) {
-                        ++row, col = 0;
-                    }
-                    else {
-                        col = TEXT_MODE_WIDTH - 1;
-                    }
+                    ++row, col = 0;
                 }
                 break;
             case KEY_KEYPAD_7:
@@ -178,17 +166,14 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
                 break;
             case KEY_KEYPAD_8:
                 --row;
-                if (row < 0) {
-                    row = 0;
-                }
                 break;
             case KEY_KEYPAD_9:
-                //Not implemented
+                vgaScrollUp();
                 break;
             default:
                 break;
             }
-            tmSetCursorPosition(row, col);
+            vgaSetCursorPosition(row, col);
         }
     }
 

@@ -1,13 +1,13 @@
 #include<blowup.h>
 #include<debug.h>
 #include<driver/keyboard/keyboard.h>
-#include<driver/vgaTextMode/textmode.h>
+#include<driver/vga/textmode.h>
 #include<interrupt/IDT.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
-#include<printf.h>
 #include<real/simpleAsmLines.h>
+#include<stdio.h>
 #include<string.h>
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
@@ -41,10 +41,12 @@ void print_storage_info(const int* next, const int* prev, int ints) {
     }
 }
 
+#define __PATTERN_ENTRY(__BACKGROUND_COLOR, __FOREGROUND_COLOR) (uint8_t)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))
+
 __attribute__((section(".kernelMain")))
 void kernelMain() {
 
-    initTextMode(); //Initialize text mode
+    initVGATextMode(); //Initialize text mode
 
     initIDT();      //Initialize the interrupt
 
@@ -90,8 +92,8 @@ void kernelMain() {
  
     free(next); // finally, frees the storage
 
-    next = malloc(32768 * sizeof(int));
-    printf("%#X\n", next);
+    puts("abcd");
+    printf("efgh\n");
 
-    blowup("blowup");
+    die();
 }

@@ -27,7 +27,6 @@ typedef struct {
     uint8_t character, colorPattern;
 } __attribute__((packed)) TextModeDisplayUnit;
 
-
 //Bit 7 6 5 4 3 2 1 0
 //    | | | | | | | |
 //    | | | | | ^-^-^-- Foreground color
@@ -55,19 +54,19 @@ typedef struct {
 /**
  * @brief Initialize the text mode
  */
-void initTextMode();
+void initVGATextMode();
 
 /**
  * @brief Clear the screen(Fill screen with space and current color pattern)
  */
-void tmClearScreen();
-
-const TextModeInfo* getTextModeInfo();
+void vgaClearScreen();
 
 /**
- * @brief Print all the character on the screen (0-255)
+ * @brief Get text mode info
+ * 
+ * @return const TextModeInfo* Information about VGA text mode
  */
-void tmTestPrint();
+const TextModeInfo* getTextModeInfo();
 
 /**
  * @brief Set the color pattern of the following printed character
@@ -75,47 +74,42 @@ void tmTestPrint();
  * @param background Background color
  * @param foreground Foreground color
  */
-void tmSetTextModePattern(const uint8_t background, const uint8_t foreground);
+void vgaSetPattern(uint8_t background, uint8_t foreground);
 
 /**
  * @brief Set the stride of tab key
  * 
  * @param stride Where the tab should align to
  */
-void tmSetTabStride(const uint16_t stride);
+void vgaSetTabStride(uint16_t stride);
 
 /**
  * @brief Print the raw character on the screen(\\n, \\r, \\b etc will be printed as character instead of cursor control)
  * 
  * @param ch Character to print
  */
-void tmPutcharRaw(const char ch);
+void vgaPutRawChar(char ch);
 
 /**
  * @brief Print the character on the screen
  * 
  * @param ch Character to print
  */
-void tmPutchar(const char ch);
+void vgaPutchar(char ch);
 
 /**
  * @brief Print the string on the screen, use raw character(\\n, \\r, \\b etc will be printed as character instead of cursor control)
  * 
- * @param line String to print
+ * @param str String to print
  */
-void tmPrintRaw(const char* line);
+void vgaPrintStringRawString(const char* str);
 
 /**
  * @brief Print the string on the screen
  * 
- * @param line String to print
+ * @param str String to print
  */
-void tmPrint(const char* line);
-
-/**
- * @brief Initialize the cursor
- */
-void tmInitCursor();
+void vgaPrintString(const char* str);
 
 /**
  * @brief Set the scanline of cursor
@@ -123,17 +117,17 @@ void tmInitCursor();
  * @param cursorBeginScanline Beginning of the scanline (0 tart from the top)
  * @param cursorEndScanline Beginning of the scanline (0 tart from the top)
  */
-void tmSetCursorScanline(const uint8_t cursorBeginScanline, const uint8_t cursorEndScanline);
+void vgaSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline);
 
 /**
  * @brief Enable the cursor
  */
-void tmEnableCursor();
+void vgaEnableCursor();
 
 /**
  * @brief Disable the cursor
  */
-void tmDisableCursor();
+void vgaDisableCursor();
 
 /**
  * @brief Set the position of cursor with row index and column index
@@ -141,6 +135,24 @@ void tmDisableCursor();
  * @param row The row index, start with 0
  * @param col The column index, start with 0
  */
-void tmSetCursorPosition(const uint8_t row, const uint8_t col);
+void vgaSetCursorPosition(int row, int col);
+
+/**
+ * @brief Get the index of row where cursor is located
+ * 
+ * @return uint8_t Index of row where cursor is located
+ */
+uint8_t vgaGetCursorRowIndex();
+
+/**
+ * @brief Get the index of column where cursor is located
+ * 
+ * @return uint8_t Index of column where cursor is located
+ */
+uint8_t vgaGetCursorColIndex();
+
+void vgaScrollDown();
+
+void vgaScrollUp();
 
 #endif // __TECT_MODE_H

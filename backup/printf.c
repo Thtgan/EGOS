@@ -1,6 +1,6 @@
 #include<printf.h>
 
-#include<driver/vgaTextMode/textmode.h>
+#include<driver/vga/textmode.h>
 #include<kit/bit.h>
 #include<stddef.h>
 #include<stdint.h>
@@ -207,7 +207,7 @@ int printf(const char* format, ...) {
 
     va_end(args);
 
-    tmPrint(buf); //TODO: Replace this with general print function
+    vgaPrintString(buf); //TODO: Replace this with general print function
 
     return ret;
 }

@@ -116,7 +116,7 @@ static char* __writeNumber(char* writeTo, unsigned long num, int base, int width
 }
 
 //Reference: https://www.cplusplus.com/reference/cstdio/printf/
-int vfprintf(char* buffer, const char* format, va_list args)
+int vprintf(char* buffer, const char* format, va_list args)
 {
     char* writeTo = NULL;
     for (writeTo = buffer; *format != '\0'; ++format) { //Scan the string
@@ -288,7 +288,7 @@ int printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    int ret = vfprintf(buf, format, args);
+    int ret = vprintf(buf, format, args);
 
     va_end(args);
 
