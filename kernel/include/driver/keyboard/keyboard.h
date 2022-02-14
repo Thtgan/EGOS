@@ -98,7 +98,7 @@ typedef struct {
 #define SCANCODE_PRESS(__SCANCODE)                      TRIM_VAL_SIMPLE(__SCANCODE, 8, 7)
 #define SCANCODE_RELEASE(__SCANCODE)                    FILL_VAL(__SCANCODE, 0x80)
 
-#define KEY_ENTRY(__ASCII, __SHIFT_ASCII, __FLAGS)   (KeyEntry) {__ASCII, __SHIFT_ASCII, __FLAGS}
+#define KEY_ENTRY(__ASCII, __SHIFT_ASCII, __FLAGS)      (KeyEntry) {__ASCII, __SHIFT_ASCII, __FLAGS}
 #define ASCII                                           FLAG16(0)
 #define ALT_ASCII                                       FLAG16(1)
 #define ALPHA                                           FLAG16(2)

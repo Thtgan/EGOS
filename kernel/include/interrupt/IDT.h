@@ -20,17 +20,20 @@
 /**
  * @brief Entry to describe a interrupt handler
  */
+
 typedef struct {
     uint16_t isr0_15;
     uint16_t codeSector;
-    uint8_t reserved;
+    uint8_t reserved1;
     uint8_t attributes;
-    uint16_t isr16_32;
+    uint16_t isr16_31;
+    uint32_t isr32_63;
+    uint32_t reserved2;
 } __attribute__((packed)) IDTEntry;
 
 typedef struct {
     uint16_t size;
-    uint32_t tablePtr;
+    uint64_t tablePtr;
 } __attribute__((packed)) IDTDesc;
 
 /**

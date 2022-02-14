@@ -3,7 +3,7 @@ OUTPUT_FORMAT(binary)
 ENTRY(kernelMain)
 
 SECTIONS {
-    .text 0x10000 : {
+    .text 0x20000 : {
         ./build/kernelMain.o(.kernelMain)
         *(.text)
     }

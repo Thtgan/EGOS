@@ -1,10 +1,10 @@
 #include<printf.h>
 
-#include<io.h>
+#include<biosIO.h>
 #include<kit/bit.h>
 #include<stdarg.h>
+#include<stddef.h>
 #include<stdint.h>
-#include<string.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   FLAG8(0)    //Justify the printed number to the left
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  FLAG8(1)    //Force to print the sign of the number
@@ -212,7 +212,8 @@ int vprintf(char* buffer, const char* format, va_list args)
             continue;
         case 's':
             const char* str = va_arg(args, char*);
-            int len = strnlen(str, precision);
+            int len = 0;
+            for (; str[len] != '\0' && (size_t)len < precision; ++len);
 
             if (width > 0 && !TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
                 while (len <= --width)

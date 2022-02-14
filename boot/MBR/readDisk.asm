@@ -58,6 +58,7 @@ __real_readDisk:
     ;;Beginning of reading
 
     clc
+
 _readDisk_loop:
     ;;INT 13h AH=42h will update the value of EAX must be reset each round
     mov ah, 0x42
@@ -69,7 +70,7 @@ _readDisk_loop:
     add word [si + 0x04], bp
 
     jnc _no_carry
-    adc word [si + 0x06], 1000
+    add word [si + 0x06], 0x1000
     ;;add may set CF, must be cleared
     clc
 _no_carry:

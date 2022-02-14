@@ -1,5 +1,4 @@
 #include<blowup.h>
-#include<debug.h>
 #include<driver/keyboard/keyboard.h>
 #include<driver/vga/textmode.h>
 #include<interrupt/IDT.h>
@@ -12,13 +11,15 @@
 #include<system/memoryArea.h>
 #include<system/systemInfo.h>
 
-const SystemInfo* systemInfo = (SystemInfo*) SYSTEM_INFO_ADDRESS;
+#include<memory/paging/pageNode.h>
+
+const SystemInfo* systemInfo;
 
 /**
  * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
  */
 void printMemoryAreas() {
-    const MemoryMap* mMap = systemInfo->memoryMap;
+    const MemoryMap* mMap = (const MemoryMap*)systemInfo->memoryMap;
 
     printf("%d memory areas detected\n", mMap->size);
     printf("| Base Address | Area Length | Type |\n");
@@ -41,26 +42,25 @@ void print_storage_info(const int* next, const int* prev, int ints) {
     }
 }
 
-#define __PATTERN_ENTRY(__BACKGROUND_COLOR, __FOREGROUND_COLOR) (uint8_t)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))
-
-__attribute__((section(".kernelMain")))
-void kernelMain() {
+__attribute__((section(".kernelMain"), regparm(2)))
+void kernelMain(uint64_t magic, uint64_t sysInfo) {
+    systemInfo = (SystemInfo*)sysInfo;
 
     initVGATextMode(); //Initialize text mode
 
     initIDT();      //Initialize the interrupt
 
     //Set interrupt flag
-    //Cleared in LINK arch/boot/sys/pm.c#arch_boot_sys_pm_c_cli
+    //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
     sti();
 
     printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
     
-    printf("MoonLight kernel loading...\n");
+    printf("MoonLite kernel loading...\n");
 
     printMemoryAreas();
 
-    size_t pageNum = initMemory(systemInfo->memoryMap);
+    size_t pageNum = initMemory(systemInfo);
 
     printf("%u pages available\n", pageNum);
 

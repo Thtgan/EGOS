@@ -1,22 +1,18 @@
-#include<io.h>
+#include<biosIO.h>
 #include<printf.h>
-#include<sys/A20.h>
-#include<sys/blowup.h>
-#include<sys/E820.h>
-#include<sys/pm.h>
-#include<system/address.h>
+#include<A20.h>
+#include<blowup.h>
+#include<E820.h>
+#include<pm.h>
 #include<system/systemInfo.h>
+#include<real/simpleAsmLines.h>
 
-__attribute__((section("sysInfo")))
 SystemInfo systemInfo;   //Information about the system
 
 /**
  * @brief Collect information about system hardware, and set the flag of system information
  */
-void collectSystemInfo() {
-    detectMemory(&systemInfo);
-    systemInfo.flag = SYSTEM_INFO_FLAG;
-}
+static void __collectSystemInfo();
 
 __attribute__((noreturn))
 /**
@@ -24,13 +20,19 @@ __attribute__((noreturn))
  * !!(DO NOT CALL THIS FUNCTION)
  */
 void realModeMain() {
-    collectSystemInfo();
+    __collectSystemInfo();
 
     //If failed to enable A20, system should not be booted
-    if (enableA20())
+    if (enableA20()) {
         blowup("Enable A20 failed, unable to boot.\n");
-    else
+    } else {
         printf("A20 line enabled successfully\n");
+    }
 
-    switchToProtectedMode(KERNEL_PHYSICAL_BEGIN);
+    jumpToKernel(&systemInfo);
+}
+
+static void __collectSystemInfo() {
+    detectMemory(&systemInfo);
+    systemInfo.magic = SYSTEM_INFO_MAGIC;
 }

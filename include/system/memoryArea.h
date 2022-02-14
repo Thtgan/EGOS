@@ -1,6 +1,7 @@
 #if !defined(__MEMORY_AREA_H)
 #define __MEMORY_AREA_H
 
+#include<stddef.h>
 #include<stdint.h>
 
 #define MEMORY_USABLE               1
@@ -20,7 +21,7 @@ typedef struct {
 
 typedef struct {
     MemoryAreaEntry memoryAreas[MEMORY_AREA_NUM];
-    uint8_t size;
-} __attribute__((packed)) MemoryMap;
+    uint32_t size;
+} MemoryMap;
 
 #endif // __MEMORY_AREA_H

@@ -1,0 +1,33 @@
+#include<pm.h>
+
+#include<GDTInit.h>
+#include<realmode.h>
+#include<real/simpleAsmLines.h>
+#include<stdint.h>
+#include<system/GDT.h>
+#include<system/systemInfo.h>
+
+__attribute__((noreturn)) //Use register to pass parameters for better stack operations
+/**
+ * @brief Do necessary initializations and jump to protected mode kernel
+ * 
+ * @see arch/boot/jmp2pmCode.asm
+ * 
+ * @param codeSegment Code segment
+ * @param dataSegment Data segment
+ * @param protectedBegin The address where the kernel will be loaded to
+ */
+extern void jumpToProtectedMode(uint16_t codeSegment, uint16_t dataSegment, uint32_t sysInfo);
+
+__attribute__((noreturn))
+void jumpToKernel(SystemInfo* sysInfo) {
+    sysInfo->gdtDesc = (uint32_t)setupGDT();
+    
+    //Switch to protected mode
+    writeCR0(readCR0() | 1);
+
+    //ANCHOR[id=arch_boot_sys_pm_c_cli]
+    cli();//Clear interrupt flag
+
+    jumpToProtectedMode(SEGMENT_CODE32, SEGMENT_DATA32, (uint32_t)sysInfo);
+}

@@ -14,17 +14,30 @@
 #include<stddef.h>
 #include<system/address.h>
 #include<system/memoryArea.h>
+#include<system/pageTable.h>
+
+#include<stdio.h>
+
+static PML4Table* _PML4Table;
 
 __attribute__((aligned(PAGE_SIZE)))
-static PageDirectory _directory;
-
-static uint16_t _pageCounters[PAGE_DIRECTORY_SIZE]; //How many pages does a page table have
+static PML4Table _fakeRealPML4Table;
 
 __attribute__((aligned(PAGE_SIZE)))
-static PageTable _firstTable;
+static PDPTable _fakeRealPDPTable;
 
 static size_t _poolNum = 0;
 static PagePool _pools[MEMORY_AREA_NUM];
+
+/**
+ * @brief Enable fake real mode, it is actually a huge paging table mapped to same physical address
+ */
+static void __enableFakeRealMode();
+
+/**
+ * @brief Disable fake real mode
+ */
+static void __disableFakeRealMode();
 
 /**
  * @brief Allocate a series of continued pages form the pools
@@ -61,32 +74,25 @@ static bool __buildVPAddrMapping(void* vAddr, void* pAddr);
 static void* __removeVPAddrMapping(void* vAddr);
 
 ISR_EXCEPTION_FUNC_HEADER(__pageFaultHandler) {
-    disablePaging();
+    blowup("Page fault: %#X access not allowed.", (uint32_t)readCR2_64()); //Not allowed since malloc is implemented
 
-    void* vAddr = (void*)readCR2();
-
-    blowup("Page fault: %#X access not allowed.", vAddr); //Not allowed since malloc is implemented
-    
-    enablePaging();
     EOI();
 }
 
-/**
- * @brief Map virtual memory in first page table to real physical memory, up to the FREE_PAGE_BEGIN, to ensure kernel program could continue
- */
-void initBasicPage() {
-    _directory.directoryEntries[0] = PAGE_DIRECTORY_ENTRY(&_firstTable, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT | PAGE_DIRECTORY_ENTRY_FLAG_RW);  //Set up first page table
-    uint16_t limit = FREE_PAGE_BEGIN >> PAGE_SIZE_BIT;
-    for (int i = 0; i < limit; ++i) {
-        _firstTable.tableEntries[i] = PAGE_TABLE_ENTRY(i << PAGE_SIZE_BIT, PAGE_TABLE_ENTRY_FLAG_PRESENT | PAGE_TABLE_ENTRY_FLAG_RW);       //Set up reserved pages
-    }
-    _pageCounters[0] = limit;
-}
+#define __BASE_ROUND_UP(__BASE, __PAGE_SIZE_BIT) CLEAR_VAL_SIMPLE((__BASE + (1 << __PAGE_SIZE_BIT) - 1), 64, __PAGE_SIZE_BIT)
 
 //ANCHOR Somehow the program will blowup if compiler used default xmm0 to calculate 64-bit value
 //Maybe long mode is needed
-size_t initPaging(const MemoryMap* mMap) {
+size_t initPaging(const SystemInfo* sysInfo) {
     size_t ret = 0;
+    MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
+    _PML4Table = (PML4Table*)sysInfo->basePML4;
+    _fakeRealPML4Table.tableEntries[0] = BUILD_PML4_ENTRY(&_fakeRealPDPTable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+    for (uint64_t i = 0; i < PDP_TABLE_SIZE; ++i) {
+        _fakeRealPDPTable.tableEntries[i] = BUILD_PDPT_ENTRY((void*)(i << 30), PDPT_ENTRY_FLAG_PS | PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PRESENT);
+    } //Fake real mode supports 512GB at most (for now), available from now on
+
+    __enableFakeRealMode();
 
     for (int i = 0; i < mMap->size; ++i) {
         const MemoryAreaEntry* e = &mMap->memoryAreas[i];
@@ -95,13 +101,13 @@ size_t initPaging(const MemoryMap* mMap) {
             continue;
         }
 
-        void* realBase = (void*)umax32(e->base, FREE_PAGE_BEGIN);
+        void* realBase = (void*)umax64(e->base, FREE_PAGE_BEGIN);
         size_t realSize = (size_t)e->base + (size_t)e->size - (size_t)realBase; //Area in reserved area ignored
         initPagePool(
             &_pools[_poolNum],
-            (void*)CLEAR_VAL_SIMPLE((uint32_t)realBase, 32, PAGE_SIZE_BIT),
-            (realSize >> PAGE_SIZE_BIT)
-            );
+            (void*)__BASE_ROUND_UP(((uint64_t)realBase), (PAGE_SIZE_BIT)),
+            realSize >> PAGE_SIZE_BIT
+        );
 
         ret += _pools[_poolNum].freePageSize;
         ++_poolNum;
@@ -109,21 +115,9 @@ size_t initPaging(const MemoryMap* mMap) {
 
     registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32); //Register default page fault handler
 
-    memset(&_directory, 0, sizeof(_directory));
-    memset(_pageCounters, 0, sizeof(_pageCounters));
-    initBasicPage();
-
-    writeCR3((uint32_t)(&_directory));
+    __disableFakeRealMode();
 
     return ret;
-}
-
-void enablePaging() {
-    writeCR0(SET_FLAG(readCR0(), CR0_PG));
-}
-
-void disablePaging() {
-    writeCR0(CLEAR_FLAG(readCR0(), CR0_PG));
 }
 
 const char* ALLOCATE_FAILED = "Page Allocate failed";
@@ -133,19 +127,19 @@ void* allocatePage() {
 }
 
 void* allocatePages(size_t n) {
-    disablePaging();
+    __enableFakeRealMode();
 
     void* ret = __allocatePagesFromPools(n);
 
     if (ret != NULL) {
         for (int i = 0; i < n; ++i) {
-            if (!__buildVPAddrMapping(ret + (i << PAGE_SIZE_BIT), ret + (i << PAGE_SIZE_BIT))) {    //Allocat and build mapping between virtual address and physical address
+            if (!__buildVPAddrMapping(ret + (i << PAGE_SIZE_BIT), ret + (i << PAGE_SIZE_BIT))) {    //Allocate and build mapping between virtual address and physical address
                 blowup(ALLOCATE_FAILED);
             }
         }
     }
 
-    enablePaging();
+    __disableFakeRealMode();
 
     return ret;
 }
@@ -157,7 +151,7 @@ void releasePage(void* vAddr) {
 }
 
 void releasePages(void* vAddr, size_t n) {
-    disablePaging();
+    __enableFakeRealMode();
 
     void* pAddr = NULL;
     if ((pAddr = __removeVPAddrMapping(vAddr)) == NULL) {
@@ -174,7 +168,15 @@ void releasePages(void* vAddr, size_t n) {
         blowup(RELEASE_FAILED);
     }
 
-    enablePaging();
+    __disableFakeRealMode();
+}
+
+static void __enableFakeRealMode() {
+    writeCR3_64((uint64_t)&_fakeRealPML4Table);
+}
+
+static void __disableFakeRealMode() {
+    writeCR3_64((uint64_t)_PML4Table);
 }
 
 static void* __allocatePagesFromPools(size_t n) {
@@ -202,27 +204,63 @@ static bool __buildVPAddrMapping(void* vAddr, void* pAddr) {
         return false;
     }
 
-    size_t directoryIndex = EXTRACT_VAL((size_t)vAddr, 32, 22, 32), tableIndex = EXTRACT_VAL((size_t)vAddr, 32, 12, 22);
+    size_t
+        PML4TableIndex      = EXTRACT_VAL((uint64_t)vAddr, 64, 39, 48),
+        PDPTableIndex       = EXTRACT_VAL((uint64_t)vAddr, 64, 30, 39),
+        pageDirectoryIndex  = EXTRACT_VAL((uint64_t)vAddr, 64, 21, 30),
+        pageTableIndex      = EXTRACT_VAL((uint64_t)vAddr, 64, 12, 21);
 
-    PageTable* tableAddr = NULL;
-    if (_directory.directoryEntries[directoryIndex] == EMPTY_PAGE_DIRECTORY_ENTRY) { //If page table not exist, allocate a new page table
-        tableAddr = allocatePage();
+    PDPTable* PDPTableAddr = NULL;
+    if (TEST_FLAGS_FAIL(_PML4Table->tableEntries[PML4TableIndex], PML4_ENTRY_FLAG_PRESENT)) {
+        PDPTableAddr = __allocatePagesFromPools(1);
 
-        if (tableAddr == NULL) {
+        if (PDPTableAddr == NULL) {
             return false;
         }
 
-        memset(tableAddr, 0, PAGE_SIZE); //No one knows what is inside a allocated page
+        memset(PDPTableAddr, 0, PAGE_SIZE);
 
-        _directory.directoryEntries[directoryIndex] = PAGE_DIRECTORY_ENTRY(tableAddr, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT | PAGE_DIRECTORY_ENTRY_FLAG_RW);
+        _PML4Table->tableEntries[PML4TableIndex] = BUILD_PML4_ENTRY(PDPTableAddr, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
     } else {
-        tableAddr = (PageTable*)TABLE_ADDR_FROM_DIRECTORY_ENTRY(_directory.directoryEntries[directoryIndex]);
+        PDPTableAddr = PDPT_ADDR_FROM_PML4_ENTRY(_PML4Table->tableEntries[PML4TableIndex]);
     }
 
-    if (tableAddr->tableEntries[tableIndex] == EMPTY_PAGE_TABLE_ENTRY) {
-        ++_pageCounters[directoryIndex];
+    PageDirectory* pageDirectoryAddr = NULL;
+    if (TEST_FLAGS_FAIL(PDPTableAddr->tableEntries[PDPTableIndex], PDPT_ENTRY_FLAG_PRESENT)) {
+        pageDirectoryAddr = __allocatePagesFromPools(2); //One page for directory, one page for page counters
+
+        if (pageDirectoryAddr == NULL) {
+            return false;
+        }
+
+        memset(pageDirectoryAddr, 0, PAGE_SIZE);
+
+        PDPTableAddr->tableEntries[PDPTableIndex] = BUILD_PDPT_ENTRY(pageDirectoryAddr, PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PRESENT);
+    } else {
+        pageDirectoryAddr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPTableAddr->tableEntries[PDPTableIndex]);
     }
-    tableAddr->tableEntries[tableIndex] = PAGE_TABLE_ENTRY(pAddr, PAGE_TABLE_ENTRY_FLAG_PRESENT | PAGE_TABLE_ENTRY_FLAG_RW);
+
+    PageTable* pageTableAddr = NULL;
+    if (TEST_FLAGS_FAIL(pageDirectoryAddr->tableEntries[pageDirectoryIndex], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
+        pageTableAddr = __allocatePagesFromPools(1);
+
+        if (pageTableAddr == NULL) {
+            return false;
+        }
+
+        memset(pageTableAddr, 0, PAGE_SIZE);
+
+        pageDirectoryAddr->tableEntries[pageDirectoryIndex] = BUILD_PAGE_DIRECTORY_ENTRY(pageTableAddr, PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
+    } else {
+        pageTableAddr = PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryAddr->tableEntries[pageDirectoryIndex]);
+    }
+    
+    if (TEST_FLAGS_FAIL(pageTableAddr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_PRESENT)) {  //This is a new page
+        ++_PML4Table->counters[PML4TableIndex];             //How many pages each PML4 entry related to
+        ++pageDirectoryAddr->counters[pageDirectoryIndex];  //How many pages each directory entry related to
+    }
+
+    pageTableAddr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(pAddr, PAGE_TABLE_ENTRY_FLAG_RW | PAGE_TABLE_ENTRY_FLAG_PRESENT);
 
     return true;
 }
@@ -232,21 +270,49 @@ static void* __removeVPAddrMapping(void* vAddr) {
         return NULL;
     }
 
-    size_t directoryIndex = EXTRACT_VAL((size_t)vAddr, 32, 22, 32), tableIndex = EXTRACT_VAL((size_t)vAddr, 32, 12, 22);
-
-    PageTable* tableAddr = TABLE_ADDR_FROM_DIRECTORY_ENTRY(_directory.directoryEntries[directoryIndex]);
-    if (tableAddr == NULL) {
+    size_t
+        PML4TableIndex      = EXTRACT_VAL((uint64_t)vAddr, 64, 39, 48),
+        PDPTableIndex       = EXTRACT_VAL((uint64_t)vAddr, 64, 30, 39),
+        pageDirectoryIndex  = EXTRACT_VAL((uint64_t)vAddr, 64, 21, 30),
+        pageTableIndex      = EXTRACT_VAL((uint64_t)vAddr, 64, 12, 21);
+    
+    if (TEST_FLAGS_FAIL(_PML4Table->tableEntries[PML4TableIndex], PML4_ENTRY_FLAG_PRESENT)) {
         return NULL;
     }
 
-    void* ret = FRAME_ADDR_FROM_TABLE_ENTRY(tableAddr->tableEntries[tableIndex]);
-    if (tableAddr->tableEntries[tableIndex] != EMPTY_PAGE_TABLE_ENTRY) {
-        if (--_pageCounters[directoryIndex] == 0) { //If page table is empty, release it
-            __releasePagesToPools(tableAddr, 1);
-        }
-    } else {
-        ret = NULL;
+    PDPTable* PDPTableAddr = PDPT_ADDR_FROM_PML4_ENTRY(_PML4Table->tableEntries[PML4TableIndex]);
+    if (TEST_FLAGS_FAIL(PDPTableAddr->tableEntries[PDPTableIndex], PDPT_ENTRY_FLAG_PRESENT)) {
+        return NULL;
     }
-    tableAddr->tableEntries[tableIndex] = EMPTY_PAGE_TABLE_ENTRY;
+
+    PageDirectory* pageDirectoryAddr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPTableAddr->tableEntries[PDPTableIndex]);
+    if (TEST_FLAGS_FAIL(pageDirectoryAddr->tableEntries[pageDirectoryIndex], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
+        return NULL;
+    }
+
+    PageTable* pageTableAddr = PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryAddr->tableEntries[pageDirectoryIndex]);
+
+    void* ret = NULL;
+    if (TEST_FLAGS(pageTableAddr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_PRESENT)) {
+        ret = PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableAddr->tableEntries[pageTableIndex]);
+        CLEAR_FLAG_BACK(pageTableAddr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_PRESENT);
+
+        if (--pageDirectoryAddr->counters[pageDirectoryIndex] == 0) { //The page directory is related to 0 pages
+            __releasePagesToPools(pageTableAddr, 1);            //Release pageTable, frames will be released by other codes
+            SET_FLAG_BACK(pageDirectoryAddr->tableEntries[pageDirectoryIndex], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
+        }
+
+        if (--_PML4Table->counters[PML4TableIndex] == 0) { //The PDP table is related to 0 pages
+            for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
+                if (TEST_FLAGS(PDPTableAddr->tableEntries[i], PDPT_ENTRY_FLAG_PRESENT)) { //Find page directories still present, and release it
+                    PageDirectory* directory = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPTableAddr->tableEntries[i]);
+                    __releasePagesToPools(directory, 2); //Release page directory and its counters
+                }
+            }
+            __releasePagesToPools(PDPTableAddr, 1); //Release PDPTable
+            SET_FLAG_BACK(_PML4Table->tableEntries[PML4TableIndex], PML4_ENTRY_FLAG_PRESENT);
+        }
+    }
+
     return ret;
 }

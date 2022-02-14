@@ -5,8 +5,8 @@
 
 %define REAL_MODE_CODE_BEGIN    MBR_END
 
-%define KERNEL_PHYSICAL_BEGIN   0x10000
-%define KERNEL_PHYSICAL_END     0x100000
+%define KERNEL_PHYSICAL_BEGIN   0x20000
+%define KERNEL_PHYSICAL_END     0x80000
 
 ;;org MBR_BEGIN_ADDRESS
 bits 16
@@ -40,18 +40,18 @@ checkPassed:
     mov es, ax
     mov bx, REAL_MODE_CODE_BEGIN                ;;Read to 0x0000:0x7E00 (0x7E00)
     mov eax, 1                                  ;;Start from second sector (513th byte)
-    mov ecx, KERNEL_PHYSICAL_BEGIN - MBR_END    ;;0x7E00 + 0x8200 = 0x10000 (Kernel physical begin)
+    mov ecx, KERNEL_PHYSICAL_BEGIN - MBR_END    ;;0x7E00 + 0x18200 = 0x20000 (Kernel physical begin)
 
     call __real_readDisk
 
     jc errorHalt
 
     ;;Read kernel program
-    mov ax, 0x1000
+    mov ax, KERNEL_PHYSICAL_BEGIN >> 4
     mov es, ax
-    mov bx, 0x0000                                          ;;Read to 0x1000:0x0000 (0x10000)
-    mov eax, 128                                            ;;Start from 129th sector (65537th byte)
-    mov ecx, KERNEL_PHYSICAL_END - KERNEL_PHYSICAL_BEGIN    ;;1MB - 64KB
+    mov bx, 0x0000                                          ;;Read to 0x2000:0x0000 (0x10000)
+    mov eax, KERNEL_PHYSICAL_BEGIN / 0x200                  ;;Start from 256th sector (131073th byte)
+    mov ecx, KERNEL_PHYSICAL_END - KERNEL_PHYSICAL_BEGIN    ;;1MB - 128KB
 
     call __real_readDisk
 

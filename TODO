@@ -13,8 +13,9 @@ Stage 1:
     ✔ Jump to kernel @done(22-01-12 19:27)
 Stage 2:
   Name the kernel:
-    ✔ MoonLight @done(22-01-12 19:30)
-  ✔ Enter 32-bit mode kernel @done(22-01-12 19:31)
+    ✔ MoonLite @done(22-01-12 19:30)
+    ✔ Enter 32-bit mode kernel @done(22-01-12 19:31)
+    ✔ Entering long mode @done(22-02-14 16:36)
   Basic support library:
     ✔ Macro operation header @done(22-01-12 19:33)
     ✔ Bit operation header @done(22-01-12 19:33)
@@ -22,7 +23,6 @@ Stage 2:
     ☐ Basic CPU information header(s)
     ☐ Alternative C standard headers
     ☐ System information headers
-  ☐ Entering long mode
   Interrupt handling:
     ✔ Implement IDT @done(22-01-12 19:41)
     ✔ Support PIC programming @done(22-01-12 19:41)

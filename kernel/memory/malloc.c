@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<memory/paging/paging.h>
 #include<structs/singlyLinkedList.h>
+#include<system/pageTable.h>
 
 /**
  * @brief Resiong list contains different length of memory regions
@@ -150,7 +151,7 @@ void* realloc(void *ptr, size_t newSize) {
             s = regionLists[s].length - REGION_HEADER_PADDING;
         }
 
-        s = min32(s, newSize);
+        s = min64(s, newSize);
 
         ret = malloc(newSize);
         memcpy(ret, ptr, s);
@@ -194,7 +195,7 @@ static int __regionCmp(const SinglyLinkedListNode* node1, const SinglyLinkedList
     if (node1 == node2) {
         return 0;
     }
-    return (uint32_t)node1 < (uint32_t)node2 ? -1 : 1;
+    return (uint64_t)node1 < (uint64_t)node2 ? -1 : 1;
 }
 
 static void __regionListTidyUp(size_t level) {
@@ -213,7 +214,7 @@ static void __regionListTidyUp(size_t level) {
             node = prev->next
         ) {    
             if (
-                ((uint32_t)node & rList->length) == 0 && 
+                ((uint64_t)node & rList->length) == 0 && 
                 ((void*)node) + rList->length == (void*)node->next
             ) { //Two node may combine and handle to higher level region list
                 singleLinkedListDeleteNext(prev);

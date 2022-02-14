@@ -1,8 +1,9 @@
 #include<memory/paging/pageNode.h>
 
-#include<memory/paging/paging.h>
+//#include<memory/paging/paging.h>
 #include<stddef.h>
 #include<structs/linkedList.h>
+#include<system/pageTable.h>
 
 PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength) {
     PageNode* node = (PageNode*)pageAreaBegin;

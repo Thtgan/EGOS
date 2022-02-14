@@ -3,6 +3,7 @@
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<real/simpleAsmLines.h>
+#include<system/GDT.h>
 
 IDTEntry IDTTable[256];
 IDTDesc idtDesc;
@@ -15,7 +16,7 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
 
 void initIDT() {
     idtDesc.size = (uint16_t)sizeof(IDTTable) - 1;  //Initialize the IDT desc
-    idtDesc.tablePtr = (uint32_t)IDTTable;
+    idtDesc.tablePtr = (uint64_t)IDTTable;
 
     for (int vec = 0x0; vec < 256; ++vec) { //Fill IDT wil default interrupt handler
         //TODO: Find out why cannot use uint8_t here
@@ -32,9 +33,11 @@ void initIDT() {
 
 void registerISR(uint8_t vector, void* isr, uint8_t flags) {
     IDTEntry* ptr = IDTTable + vector;
-    ptr->isr0_15 = EXTRACT_VAL((uint32_t)isr, 32, 0, 16);
-    ptr->codeSector = 0x08;                                     //TODO: Try be more maintainable
-    ptr->reserved = 0;
+    ptr->isr0_15 = EXTRACT_VAL((uint64_t)isr, 64, 0, 16);
+    ptr->codeSector = SEGMENT_CODE32;
+    ptr->reserved1 = 0;
     ptr->attributes = flags;
-    ptr->isr16_32 = EXTRACT_VAL((uint32_t)isr, 32, 16, 32);
+    ptr->isr16_31 = EXTRACT_VAL((uint64_t)isr, 64, 16, 32);
+    ptr->isr32_63 = EXTRACT_VAL((uint64_t)isr, 64, 32, 64);
+    ptr->reserved2 = 0;
 }

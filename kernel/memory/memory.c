@@ -4,12 +4,11 @@
 #include<memory/paging/paging.h>
 #include<stddef.h>
 #include<stdint.h>
+#include<system/systemInfo.h>
 
-size_t initMemory(const MemoryMap* mMap) {
-    size_t availablePages = initPaging(mMap);
+size_t initMemory(const SystemInfo* sysInfo) {
+    size_t availablePages = initPaging(sysInfo);
     initMalloc();
-
-    enablePaging();
 
     return availablePages;
 }

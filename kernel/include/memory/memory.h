@@ -3,15 +3,15 @@
 
 #include<stddef.h>
 #include<stdint.h>
-#include<system/memoryArea.h>
+#include<system/systemInfo.h>
 
 /**
  * @brief Initialize the memory, enable paging and memory allocation
  * 
- * @param mMap Memory map scanned
+ * @param sysInfo System information
  * @return size_t Num of available pages
  */
-size_t initMemory(const MemoryMap* mMap);
+size_t initMemory(const SystemInfo* sysInfo);
 
 /**
  * @brief Copy data from source to destination, overlap not handled

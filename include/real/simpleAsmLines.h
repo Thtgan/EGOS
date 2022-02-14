@@ -16,12 +16,12 @@
 #define MOV(__LENGTH) MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, mov, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __READ_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH)                                      \
-static inline UINT(__LENGTH) MACRO_CONCENTRATE2(readMemory, __LENGTH) (uintptr_t addr)  \
+static inline UINT(__LENGTH) MACRO_CONCENTRATE2(readMemory, __LENGTH) (uintptr_t addr)
 
 #define __READ_MEMORY_FUNC_INLINE_ASM_NO_SEG(__LENGTH)  \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %1, %0"          \
 : "=r"(ret)                                             \
-: "m" (PTR(__LENGTH)(addr))                             \
+: "m" (PTR(__LENGTH)(addr))
 
 #define __READ_MEMORY_FUNC_NO_SEG(__LENGTH)                         \
 __READ_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH) {                        \
@@ -31,19 +31,19 @@ __READ_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH) {                        \
 }
 
 #define __READ_MEMORY_FUNC_HEADER_SEG(__LENGTH, __SEGMENT)                                          \
-static inline UINT(__LENGTH) MACRO_CONCENTRATE3(readMemory, __SEGMENT, __LENGTH) (uintptr_t addr)   \
+static inline UINT(__LENGTH) MACRO_CONCENTRATE3(readMemory, __SEGMENT, __LENGTH) (uintptr_t addr)
 
 #define __READ_MEMORY_FUNC_INLINE_ASM_SEG(__LENGTH, __SEGMENT)                                              \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) ":%1, %0"  \
 : "=r"(ret)                                                                                                 \
-: "m" (PTR(__LENGTH)(addr))                                                                                 \
+: "m" (PTR(__LENGTH)(addr))
 
 #define __READ_MEMORY_FUNC_SEG(__LENGTH, __SEGMENT)                         \
 __READ_MEMORY_FUNC_HEADER_SEG(__LENGTH, __SEGMENT) {                        \
     UINT(__LENGTH) ret;                                                     \
     asm volatile(__READ_MEMORY_FUNC_INLINE_ASM_SEG(__LENGTH, __SEGMENT));   \
     return ret;                                                             \
-}                                                                           \
+}
 
 __READ_MEMORY_FUNC_NO_SEG(8)
 __READ_MEMORY_FUNC_NO_SEG(16)
@@ -71,30 +71,30 @@ __READ_MEMORY_FUNC_SEG(32,  GS)
 __READ_MEMORY_FUNC_SEG(64,  GS)
 
 #define __WRITE_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH)                                                 \
-static inline void MACRO_CONCENTRATE2(writeMemory, __LENGTH) (uintptr_t addr, UINT(__LENGTH) val)   \
+static inline void MACRO_CONCENTRATE2(writeMemory, __LENGTH) (uintptr_t addr, UINT(__LENGTH) val)
 
 #define __WRITE_MEMORY_FUNC_INLINE_ASM_NO_SEG(__LENGTH) \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %1, %0"          \
 : "=m" (PTR(__LENGTH)(addr))                            \
-: "ri" (val)                                            \
+: "ri" (val)
 
 #define __WRITE_MEMORY_FUNC_NO_SEG(__LENGTH)                        \
 __WRITE_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH) {                       \
     asm volatile(__WRITE_MEMORY_FUNC_INLINE_ASM_NO_SEG(__LENGTH));  \
-}                                                                   \
+}
 
 #define __WRITE_MEMORY_FUNC_HEADER_SEG(__LENGTH, __SEGMENT)                                                     \
-static inline void MACRO_CONCENTRATE3(writeMemory, __SEGMENT, __LENGTH) (uintptr_t addr, UINT(__LENGTH) val)    \
+static inline void MACRO_CONCENTRATE3(writeMemory, __SEGMENT, __LENGTH) (uintptr_t addr, UINT(__LENGTH) val)
 
 #define __WRITE_MEMORY_FUNC_INLINE_ASM_SEG(__LENGTH, __SEGMENT)                                             \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %1, %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) ":%0"  \
 : "=m" (PTR(__LENGTH)(addr))                                                                                \
-: "ri" (val)                                                                                                \
+: "ri" (val)
 
 #define __WRITE_MEMORY_FUNC_SEG(__LENGTH, __SEGMENT)                        \
 __WRITE_MEMORY_FUNC_HEADER_SEG(__LENGTH, __SEGMENT) {                       \
     asm volatile(__WRITE_MEMORY_FUNC_INLINE_ASM_SEG(__LENGTH, __SEGMENT));  \
-}                                                                           \
+}
 
 __WRITE_MEMORY_FUNC_NO_SEG(8)
 __WRITE_MEMORY_FUNC_NO_SEG(16)
@@ -121,37 +121,41 @@ __WRITE_MEMORY_FUNC_SEG(16, GS);
 __WRITE_MEMORY_FUNC_SEG(32, GS);
 __WRITE_MEMORY_FUNC_SEG(64, GS);
 
-#define __IN_FUNC_HEADER(__LENGTH)                                                                                      \
-static inline UINT(__LENGTH) MACRO_CALL(MACRO_CONCENTRATE2, in, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)) (uint16_t port)    \
+#define IN(__LENGTH)    MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, in, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
-#define __IN_FUNC_INLINE_ASM(__LENGTH)                                                                      \
-MACRO_CALL(MACRO_STR, MACRO_CALL(MACRO_CONCENTRATE2, in, INSTRUCTION_LENGTH_SUFFIX(__LENGTH))) " %1, %0"    \
-: "=a"(ret)                                                                                                 \
-: "Nd"(port)                                                                                                \
+#define __IN_FUNC_HEADER(__LENGTH)                          \
+static inline UINT(__LENGTH) IN(__LENGTH) (uint16_t port)
+
+#define __IN_FUNC_INLINE_ASM(__LENGTH)          \
+MACRO_CALL(MACRO_STR, IN(__LENGTH)) " %1, %0"   \
+: "=a"(ret)                                     \
+: "Nd"(port)
 
 #define __IN_FUNC(__LENGTH)                         \
 __IN_FUNC_HEADER(__LENGTH) {                        \
     UINT(__LENGTH) ret;                             \
     asm volatile(__IN_FUNC_INLINE_ASM(__LENGTH));   \
     return ret;                                     \
-}                                                   \
+}
 
 __IN_FUNC(8)
 __IN_FUNC(16)
 __IN_FUNC(32)
 
-#define __OUT_FUNC_HEADER(__LENGTH)                                                                                                 \
-static inline void MACRO_CALL(MACRO_CONCENTRATE2, out, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)) (uint16_t port, UINT(__LENGTH) value)   \
+#define OUT(__LENGTH)   MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, out, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
-#define __OUT_FUNC_INLINE_ASM(__LENGTH)                                                                     \
-MACRO_CALL(MACRO_STR, MACRO_CALL(MACRO_CONCENTRATE2, out, INSTRUCTION_LENGTH_SUFFIX(__LENGTH))) " %0, %1"   \
-:                                                                                                           \
-: "a"(value), "Nd"(port)                                                                                    \
+#define __OUT_FUNC_HEADER(__LENGTH)                                     \
+static inline void OUT(__LENGTH) (uint16_t port, UINT(__LENGTH) value)
+
+#define __OUT_FUNC_INLINE_ASM(__LENGTH)         \
+MACRO_CALL(MACRO_STR, OUT(__LENGTH)) " %0, %1"  \
+:                                               \
+: "a"(value), "Nd"(port)
 
 #define __OUT_FUNC(__LENGTH)                        \
 __OUT_FUNC_HEADER(__LENGTH) {                       \
     asm volatile(__OUT_FUNC_INLINE_ASM(__LENGTH));  \
-}                                                   \
+}
 
 __OUT_FUNC(8)
 __OUT_FUNC(16)
@@ -162,62 +166,163 @@ static inline void ioWait() {
 }
 
 #define __READ_CR_FUNC_HEADER(__CR)                         \
-static inline uint32_t MACRO_CONCENTRATE2(readCR, __CR)()   \
+static inline uint32_t MACRO_CONCENTRATE2(readCR, __CR)()
 
 #define __READ_CR_FUNC_INLINE_ASM(__CR)         \
 "movl %%cr" MACRO_CALL(MACRO_STR, __CR) ", %0"  \
 : "=r"(ret)                                     \
-:                                               \
+:
 
 #define __READ_CR_FUNC(__CR)                        \
 __READ_CR_FUNC_HEADER(__CR) {                       \
     uint32_t ret;                                   \
     asm volatile(__READ_CR_FUNC_INLINE_ASM(__CR));  \
     return ret;                                     \
-}                                                   \
+}
 
 __READ_CR_FUNC(0)
 __READ_CR_FUNC(1)
 __READ_CR_FUNC(2)
 __READ_CR_FUNC(3)
+__READ_CR_FUNC(4)
 
-#define __WRITE_CR_FUNC_HEADER(__CR)                                    \
-static inline uint32_t MACRO_CONCENTRATE2(writeCR, __CR)(uint32_t val)  \
+#define __WRITE_CR_FUNC_HEADER(__CR)                                \
+static inline void MACRO_CONCENTRATE2(writeCR, __CR)(uint32_t val)
 
 #define __WRITE_CR_FUNC_INLINE_ASM(__CR)    \
 "movl %0, %%cr" MACRO_CALL(MACRO_STR, __CR) \
 :                                           \
-: "r"(val)                                  \
+: "r"(val)
 
 #define __WRITE_CR_FUNC(__CR)                       \
 __WRITE_CR_FUNC_HEADER(__CR) {                      \
     asm volatile(__WRITE_CR_FUNC_INLINE_ASM(__CR)); \
-}                                                   \
+}
 
 __WRITE_CR_FUNC(0)
 __WRITE_CR_FUNC(1)
 __WRITE_CR_FUNC(2)
 __WRITE_CR_FUNC(3)
+__WRITE_CR_FUNC(4)
+
+#define __READ_CR_FUNC64_HEADER(__CR)                           \
+static inline uint64_t MACRO_CONCENTRATE3(readCR, __CR, _64)()
+
+#define __READ_CR_FUNC64_INLINE_ASM(__CR)       \
+"movq %%cr" MACRO_CALL(MACRO_STR, __CR) ", %0"  \
+: "=r"(ret)                                     \
+:
+
+#define __READ_CR_FUNC64(__CR)                          \
+__READ_CR_FUNC64_HEADER(__CR) {                         \
+    uint64_t ret;                                       \
+    asm volatile(__READ_CR_FUNC64_INLINE_ASM(__CR));    \
+    return ret;                                         \
+}
+
+__READ_CR_FUNC64(0)
+__READ_CR_FUNC64(2)
+__READ_CR_FUNC64(3)
+
+#define __WRITE_CR_FUNC64_HEADER(__CR)                                \
+static inline void MACRO_CONCENTRATE3(writeCR, __CR, _64)(uint64_t val)
+
+#define __WRITE_CR_FUNC64_INLINE_ASM(__CR)  \
+"movq %0, %%cr" MACRO_CALL(MACRO_STR, __CR) \
+:                                           \
+: "r"(val)
+
+#define __WRITE_CR_FUNC64(__CR)                       \
+__WRITE_CR_FUNC64_HEADER(__CR) {                      \
+    asm volatile(__WRITE_CR_FUNC64_INLINE_ASM(__CR)); \
+}
+
+__WRITE_CR_FUNC64(0)
+__WRITE_CR_FUNC64(2)
+__WRITE_CR_FUNC64(3)
+
+#define __ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_HEADER(__INSTRUCTION)    \
+static inline void __INSTRUCTION()
+
+#define __ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_INLINE_ASM(__INSTRUCTION)    MACRO_STR(__INSTRUCTION)
+
+#define __ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(__INSTRUCTION)                          \
+__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_HEADER(__INSTRUCTION) {                         \
+    asm volatile(__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_INLINE_ASM(__INSTRUCTION));    \
+}
 
 __attribute__((noreturn))
 static inline void die() {
     hltLabel:
-    asm volatile(
-        "hlt"
-    );
+    asm volatile("hlt");
     goto hltLabel;
 }
 
-static inline void cli() {
-    asm volatile("cli");
+__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(cli)
+
+__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(sti)
+
+__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(nop)
+
+__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfl);
+__ZERO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfl);
+
+#define PUSH(__LENGTH) MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, push, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
+
+#define __PUSH_FUNC_HEADER(__LENGTH)                    \
+static inline void PUSH(__LENGTH)(UINT(__LENGTH) val)
+
+#define __PUSH_FUNC_INLINE_ASM(__LENGTH)    \
+MACRO_CALL(MACRO_STR, PUSH(__LENGTH)) " %0" \
+:                                           \
+: "r"(val)
+
+#define __PUSH_FUNC(__LENGTH)                       \
+__PUSH_FUNC_HEADER(__LENGTH) {                      \
+    asm volatile(__PUSH_FUNC_INLINE_ASM(__LENGTH)); \
 }
 
-static inline void sti() {
-    asm volatile("sti");
+//NO 8-BIT VERSION, IT WONT WORK
+__PUSH_FUNC(16)
+__PUSH_FUNC(32)
+__PUSH_FUNC(64)
+
+#define POP(__LENGTH) MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, pop, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
+
+#define __POP_FUNC_HEADER(__LENGTH)             \
+static inline UINT(__LENGTH) POP(__LENGTH)()
+
+#define __POP_FUNC_INLINE_ASM(__LENGTH)     \
+MACRO_CALL(MACRO_STR, POP(__LENGTH)) " %0"  \
+: "=r"(ret)                                 \
+:
+
+#define __POP_FUNC(__LENGTH)                        \
+__POP_FUNC_HEADER(__LENGTH) {                       \
+    UINT(__LENGTH) ret;                             \
+    asm volatile(__POP_FUNC_INLINE_ASM(__LENGTH));  \
+    return ret;                                     \
 }
 
-static inline void nop() {
-    asm volatile("nop");
+//NO 8-BIT VERSION, IT WONT WORK
+__POP_FUNC(16)
+__POP_FUNC(32)
+__POP_FUNC(64)
+
+static inline void rdmsr(uint32_t addr, uint32_t* edx, uint32_t* eax) {
+    asm volatile(
+        "rdmsr"
+        : "=d" (*edx), "=a" (*eax)
+        : "c" (addr)
+    );
+}
+
+static inline void wrmsr(uint32_t addr, uint32_t edx, uint32_t eax) {
+    asm volatile (
+        "wrmsr"
+        :
+        : "c" (addr), "d" (edx), "a" (eax)
+    );
 }
 
 #endif // __SIMPLE_ASM_LINES_H
