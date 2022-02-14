@@ -22,14 +22,10 @@ void printMemoryAreas() {
     const MemoryMap* mMap = (const MemoryMap*)systemInfo->memoryMap;
 
     printf("%d memory areas detected\n", mMap->size);
-    printf("| Base Address | Area Length | Type |\n");
+    printf("|     Base Address     |     Area Length     | Type |\n");
     for (int i = 0; i < mMap->size; ++i) {
         const MemoryAreaEntry* e = &mMap->memoryAreas[i];
-
-        printf("| %#010X   | %#010X  | %#04X |\n", 
-        (uint32_t)(e->base), 
-        (uint32_t)(e->size),
-        e->type);
+        printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
 

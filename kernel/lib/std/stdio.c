@@ -68,7 +68,7 @@ static const char* __readLengthModifier(const char* format, LengthModifier* modi
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printInteger(uint32_t num, int base, int width, int precision, uint8_t flags); //TODO: 64-bit not supported yet
+static int __printInteger(uint64_t num, int base, int width, int precision, uint8_t flags); //TODO: 64-bit not supported yet
 
 /**
  * @brief Print the character in format
@@ -192,20 +192,23 @@ int vprintf(const char* format, va_list args) {
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger((uint32_t)va_arg(args, int), base, width, precision, flags);
+                        ret += __printInteger((uint64_t)va_arg(args, int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger((uint32_t)va_arg(args, long), base, width, precision, flags);
+                        ret += __printInteger((uint64_t)va_arg(args, long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger((uint32_t)va_arg(args, long long), base, width, precision, flags);
+                        ret += __printInteger((uint64_t)va_arg(args, long long), base, width, precision, flags);
                         break;
-                    case LENGTH_MODIFIER_J://TODO: Implement intmax_t version here
+                    case LENGTH_MODIFIER_J:
+                        ret += __printInteger((uint64_t)va_arg(args, intmax_t), base, width, precision, flags);
                         break;
-                    case LENGTH_MODIFIER_Z://TODO: Implement signed size_t version here
+                    case LENGTH_MODIFIER_Z:
+                        ret += __printInteger((uint64_t)va_arg(args, size_t), base, width, precision, flags);
                         break;
-                    case LENGTH_MODIFIER_T://TODO: Implement ptrdiff_t version here
+                    case LENGTH_MODIFIER_T:
+                        ret += __printInteger((uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
                         break;
                     default:
                         vgaPutchar('e');
@@ -226,20 +229,23 @@ int vprintf(const char* format, va_list args) {
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger((uint32_t)va_arg(args, unsigned int), base, width, precision, flags);
+                        ret += __printInteger((uint64_t)va_arg(args, unsigned int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger((uint32_t)va_arg(args, unsigned long), base, width, precision, flags);
+                        ret += __printInteger((uint64_t)va_arg(args, unsigned long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger((uint32_t)va_arg(args, unsigned long long), base, width, precision, flags);
+                        ret += __printInteger((uint64_t)va_arg(args, unsigned long long), base, width, precision, flags);
                         break;
-                    case LENGTH_MODIFIER_J://TODO: Implement uintmax_t version here
+                    case LENGTH_MODIFIER_J:
+                        ret += __printInteger((uint64_t)va_arg(args, uintmax_t), base, width, precision, flags);
                         break;
-                    case LENGTH_MODIFIER_Z://TODO: Implement size_t version here
+                    case LENGTH_MODIFIER_Z:
+                        ret += __printInteger((uint64_t)va_arg(args, size_t), base, width, precision, flags);
                         break;
-                    case LENGTH_MODIFIER_T://TODO: Implement unsigned ptrdiff_t version here
+                    case LENGTH_MODIFIER_T:
+                        ret += __printInteger((uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
                         break;
                     default:
                 }
@@ -259,26 +265,29 @@ int vprintf(const char* format, va_list args) {
             case 'n':
                 switch (modifier) {
                     case LENGTH_MODIFIER_HH:
-                        *((char*)va_arg(args, uintptr_t)) = ret;
+                        *((char*)va_arg(args, char*)) = ret;
                         break;
                     case LENGTH_MODIFIER_H:
-                        *((short*)va_arg(args, uintptr_t)) = ret;
+                        *((short*)va_arg(args, short*)) = ret;
                         break;
                     case LENGTH_MODIFIER_NONE:
-                        *((int*)va_arg(args, uintptr_t)) = ret;
+                        *((int*)va_arg(args, int*)) = ret;
                         break;
                     case LENGTH_MODIFIER_L:
-                        *((long*)va_arg(args, uintptr_t)) = ret;
+                        *((long*)va_arg(args, long*)) = ret;
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        *((long long*)va_arg(args, uintptr_t)) = ret;
+                        *((long long*)va_arg(args, long long*)) = ret;
                         break;
-                    case LENGTH_MODIFIER_J://TODO: Implement uintmax_t version here
+                    case LENGTH_MODIFIER_J:
+                        *((uintmax_t*)va_arg(args, uintmax_t*)) = ret;
                         break;
-                    case LENGTH_MODIFIER_Z://TODO: Implement size_t version here
+                    case LENGTH_MODIFIER_Z:
+                        *((size_t*)va_arg(args, size_t*)) = ret;
                         break;
-                    case LENGTH_MODIFIER_T://TODO: Implement unsigned ptrdiff_t version here
+                    case LENGTH_MODIFIER_T:
+                        *((ptrdiff_t*)va_arg(args, uintptr_t*)) = ret;
                         break;
                     default:
                 }
@@ -286,7 +295,7 @@ int vprintf(const char* format, va_list args) {
             case 'p':
                 base = 16;
                 SET_FLAG_BACK(flags, __FLAGS_SPECIFIER);
-                __printInteger((uint64_t)va_arg(args, uintptr_t), base, width, precision, flags);
+                __printInteger((uint64_t)va_arg(args, void*), base, width, precision, flags);
                 break;
             default:
                 vgaPutchar('%');
@@ -403,7 +412,7 @@ static const char* __readLengthModifier(const char* format, LengthModifier* modi
 static const char* _digits = "0123456789ABCDEF";
 static char _tmp[64];   //Number temporary buffer
 
-static int __printInteger(uint32_t num, int base, int width, int precision, uint8_t flags) {
+static int __printInteger(uint64_t num, int base, int width, int precision, uint8_t flags) {
     if (base < 2 || base > 16)  //If base not available, return
         return -1;              //error
 
@@ -420,7 +429,7 @@ static int __printInteger(uint32_t num, int base, int width, int precision, uint
     } else {                                                        //If specifier used(printing hex or oct), sign will not be available
         if (TEST_FLAGS(flags, __FLAGS_SIGNED)) {                    //If not signed (%u), sign will not be available
             sLen = 1;                                               //Default length 1
-            if ((int32_t)num < 0) {                                 //Negative value
+            if ((int64_t)num < 0) {                                 //Negative value
                 sign = '-';                                         //Need minus sign
                 num = -num;                                         //Use absolute value
             } else if (TEST_FLAGS(flags, __FLAGS_EXPLICIT_SIGN)) {  //Need explicit sign
