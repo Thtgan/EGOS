@@ -7,7 +7,7 @@
 #include<real/simpleAsmLines.h>
 #include<stdint.h>
 
-__attribute__((aligned(32)))
+__attribute__((aligned(4)))
 static KeyEntry _keyEntries[128] = {
     KEY_ENTRY('\0', '\0',   0),                            //0x00 -- NULL
     KEY_ENTRY('\0', '\0',   0),                            //0x01 -- ESC
