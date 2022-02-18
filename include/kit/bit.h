@@ -15,6 +15,7 @@
 
 #define ONE(__LENGTH)                                               (UINT(__LENGTH))1
 #define FULL_MASK(__LENGTH)                                         (UINT(__LENGTH))-1
+#define EMPTY_FLAGS                                                 0
 
 #define LOGIC_EQUAL(__X, __Y)                                       (MACRO_EXPRESSION(__X) == MACRO_EXPRESSION(__Y))
 #define LOGIC_NOT_EQUAL(__X, __Y)                                   (MACRO_EXPRESSION(__X) != MACRO_EXPRESSION(__Y))

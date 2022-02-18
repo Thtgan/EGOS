@@ -1,24 +1,34 @@
 #include<interrupt/PIC.h>
 
+#include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 
-void remapPIC(uint8_t offset1, uint8_t offset2)
-{
-    uint8_t a1, a2;
-    a1 = inb(PIC1_DATA);
-    a2 = inb(PIC2_DATA);
+void remapPIC(uint8_t offset1, uint8_t offset2) {
+    uint8_t mask1, mask2;
+    
+    getPICMask(&mask1, &mask2);
 
-    outb(PIC1_COMMAND, ICW1_INIT | ICW1_ICW4);
-    outb(PIC2_COMMAND, ICW1_INIT | ICW1_ICW4);
+    outb(PIC_COMMAND_1, FLAG_ICW1_INIT | FLAG_ICW1_ICW4);
+    outb(PIC_COMMAND_2, FLAG_ICW1_INIT | FLAG_ICW1_ICW4);
 
-    outb(PIC1_DATA, offset1);
-    outb(PIC2_DATA, offset2);
-    outb(PIC1_DATA, 4);
-    outb(PIC2_DATA, 2);
+    outb(PIC_DATA_1, ICW2_VECTOR_BASE(offset1));
+    outb(PIC_DATA_2, ICW2_VECTOR_BASE(offset2));
 
-    outb(PIC1_DATA, ICW4_8086);
-    outb(PIC2_DATA, ICW4_8086);
+    outb(PIC_DATA_1, ICW3_SLAVE_PIC_LINE);
+    outb(PIC_DATA_2, ICW3_SLAVE_PIC_ID);
 
-    outb(PIC1_DATA, a1);
-    outb(PIC2_DATA, a2);
+    outb(PIC_DATA_1, FLAG_ICW4_8086);
+    outb(PIC_DATA_2, FLAG_ICW4_8086);
+
+    setPICMask(mask1, mask2);
+}
+
+void getPICMask(uint8_t* mask1, uint8_t* mask2) {
+    *mask1 = inb(PIC_DATA_1);  //Reverse bits
+    *mask2 = inb(PIC_DATA_2);
+}
+
+void setPICMask(uint8_t mask1, uint8_t mask2) {
+    outb(PIC_DATA_1, mask1);  //Reverse bits
+    outb(PIC_DATA_2, mask2);
 }

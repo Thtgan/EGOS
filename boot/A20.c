@@ -1,6 +1,8 @@
 #include<A20.h>
 
+#include<kit/bit.h>
 #include<realmode.h>
+#include<real/ports/POS.h>
 
 //Reference: https://wiki.osdev.org/A20_Line
 
@@ -35,10 +37,9 @@ static int testA20() {
  * @brief Enable A20 line with PS/2 system control port
  */
 static void enableA20Fast() {
-    uint8_t val = inb(0x92);
-    val |= 0x02;
-    val &= ~0x01;
-    outb(0x92, val);
+    uint8_t val = inb(PS2_SYSTEM_CONTROL_A);
+    SET_FLAG_BACK(val, FLAG_A20_ACTIVE);
+    outb(PS2_SYSTEM_CONTROL_A, val);
 }
 
 int enableA20() {

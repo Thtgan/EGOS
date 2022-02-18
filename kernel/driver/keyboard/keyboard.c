@@ -4,6 +4,7 @@
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
+#include<real/ports/keyboard.h>
 #include<real/simpleAsmLines.h>
 #include<stdint.h>
 
@@ -192,7 +193,7 @@ void keyboardInit() {
 }
 
 static inline uint8_t __readScancode() {
-    return inb(0x60);
+    return inb(KEYBOARD_DATA_INPUT_BUFFER);
 }
 
 static uint8_t __toASCII(const uint8_t key) {

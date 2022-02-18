@@ -2,6 +2,8 @@
 
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
+#include<kit/bit.h>
+#include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 
@@ -18,15 +20,21 @@ void initIDT() {
     idtDesc.size = (uint16_t)sizeof(IDTTable) - 1;  //Initialize the IDT desc
     idtDesc.tablePtr = (uint64_t)IDTTable;
 
-    for (int vec = 0x0; vec < 256; ++vec) { //Fill IDT wil default interrupt handler
+    for (int vec = 0; vec < 256; ++vec) { //Fill IDT wil default interrupt handler
         //TODO: Find out why cannot use uint8_t here
         registerISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     }
 
-    remapPIC(0x20, 0x28); //Remap PIC interrupt 0-16 to 32-47
+    remapPIC(0x20, 0x28); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
 
-    outb(0x21, 0xFD);
-    outb(0xA1, 0xFF);
+    setPICMask(
+        VAL_NOT(
+            FLAG_OCW1_MASK_PIC1_KEYBORD_MOUSE_RTC
+        ),
+        VAL_NOT(
+            EMPTY_FLAGS
+        )
+    );
 
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }

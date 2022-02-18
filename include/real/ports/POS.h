@@ -1,0 +1,16 @@
+#if !defined(__PORTS_POS_H)
+#define __PORTS_POS_H
+
+#include<kit/bit.h>
+
+//POS(Programmable Option Select)
+
+#define PS2_SYSTEM_CONTROL_A        0x0092
+
+#define FLAG_ALTERNATE_CPU_RESET    FLAG8(0)    //Pulse alternate reset pin (System reset or write)
+#define FLAG_A20_ACTIVE             FLAG8(1)
+#define FLAG_CMOS_LOCK              FLAG8(3)    //RTC/CMOS (un)locked
+#define FLAG_WATCHDOG_TIMEOUT       FLAG8(4)    //Wathcdog timeout (not) occured
+#define FLAG_ACTIVITY_LIGHT_ON      FLAG8(6)    //Turn activity light on/off (6-7 bit all 0)
+
+#endif // __PORTS_POS_H

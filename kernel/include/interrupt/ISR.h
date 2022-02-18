@@ -2,7 +2,7 @@
 #define __ISR_H
 
 #include<interrupt/IDT.h>
-#include<interrupt/PIC.h>
+#include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 #include<stdint.h>
 
@@ -26,8 +26,8 @@
  * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler
  */
 static inline void EOI() {
-    outb(PIC1_COMMAND, 0x20);
-    outb(PIC2_COMMAND, 0x20);
+    outb(PIC_COMMAND_1, FLAG_OCW2_EOI_REQUEST);
+    outb(PIC_COMMAND_2, FLAG_OCW2_EOI_REQUEST);
 }
 
 #endif // __ISR_H
