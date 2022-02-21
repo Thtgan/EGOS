@@ -58,7 +58,7 @@ void initPaging(SystemInfo* sysInfo) {
     //Setting up LME
     uint32_t eax, edx;
     rdmsr(MSR_ADDR_EFER, &edx, &eax);
-    SET_FLAG_BACK(eax, MSR_EFER_FLAG_LME);
+    SET_FLAG_BACK(eax, MSR_EFER_LME);
     wrmsr(MSR_ADDR_EFER, edx, eax);
 
     writeCR0(SET_FLAG(readCR0(), CR0_PG));    //Enable paging

@@ -37,9 +37,9 @@ static int testA20() {
  * @brief Enable A20 line with PS/2 system control port
  */
 static void enableA20Fast() {
-    uint8_t val = inb(PS2_SYSTEM_CONTROL_A);
-    SET_FLAG_BACK(val, FLAG_A20_ACTIVE);
-    outb(PS2_SYSTEM_CONTROL_A, val);
+    uint8_t val = inb(POS_PS2_SYSTEM_CONTROL_A);
+    SET_FLAG_BACK(val, POS_A20_ACTIVE);
+    outb(POS_PS2_SYSTEM_CONTROL_A, val);
 }
 
 int enableA20() {

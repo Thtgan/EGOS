@@ -1,6 +1,7 @@
 #if !defined(_PORTS_KEYBOARD_H)
 #define _PORTS_KEYBOARD_H
 
+//Keyboard buffers
 #define KEYBOARD_DATA_INPUT_BUFFER  0x0060
 #define KEYBOARD_DATA_OUTPUT_BUFFER 0x0060
 

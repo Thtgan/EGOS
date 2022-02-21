@@ -8,17 +8,17 @@ void remapPIC(uint8_t offset1, uint8_t offset2) {
     
     getPICMask(&mask1, &mask2);
 
-    outb(PIC_COMMAND_1, FLAG_ICW1_INIT | FLAG_ICW1_ICW4);
-    outb(PIC_COMMAND_2, FLAG_ICW1_INIT | FLAG_ICW1_ICW4);
+    outb(PIC_COMMAND_1, PIC_ICW1_INIT | PIC_ICW1_ICW4);
+    outb(PIC_COMMAND_2, PIC_ICW1_INIT | PIC_ICW1_ICW4);
 
-    outb(PIC_DATA_1, ICW2_VECTOR_BASE(offset1));
-    outb(PIC_DATA_2, ICW2_VECTOR_BASE(offset2));
+    outb(PIC_DATA_1, PIC_ICW2_VECTOR_BASE(offset1));
+    outb(PIC_DATA_2, PIC_ICW2_VECTOR_BASE(offset2));
 
-    outb(PIC_DATA_1, ICW3_SLAVE_PIC_LINE);
-    outb(PIC_DATA_2, ICW3_SLAVE_PIC_ID);
+    outb(PIC_DATA_1, PIC_ICW3_SLAVE_PIC_LINE);
+    outb(PIC_DATA_2, PIC_ICW3_SLAVE_PIC_ID);
 
-    outb(PIC_DATA_1, FLAG_ICW4_8086);
-    outb(PIC_DATA_2, FLAG_ICW4_8086);
+    outb(PIC_DATA_1, PIC_ICW4_8086);
+    outb(PIC_DATA_2, PIC_ICW4_8086);
 
     setPICMask(mask1, mask2);
 }

@@ -26,8 +26,8 @@
  * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler
  */
 static inline void EOI() {
-    outb(PIC_COMMAND_1, FLAG_OCW2_EOI_REQUEST);
-    outb(PIC_COMMAND_2, FLAG_OCW2_EOI_REQUEST);
+    outb(PIC_COMMAND_1, PIC_OCW2_EOI_REQUEST);
+    outb(PIC_COMMAND_2, PIC_OCW2_EOI_REQUEST);
 }
 
 #endif // __ISR_H

@@ -29,7 +29,7 @@ void initIDT() {
 
     setPICMask(
         VAL_NOT(
-            FLAG_OCW1_MASK_PIC1_KEYBORD_MOUSE_RTC
+            PIC_OCW1_MASK_PIC1_KEYBORD_MOUSE_RTC
         ),
         VAL_NOT(
             EMPTY_FLAGS

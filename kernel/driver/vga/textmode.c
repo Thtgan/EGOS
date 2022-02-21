@@ -129,11 +129,11 @@ void vgaSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline
 	_tmInfo.cursorBeginScanline = cursorBeginScanline;
 	_tmInfo.cursorEndScanline = cursorEndScanline;
 
-    outb(CRT_INDEX, INDEX_CURSOR_START);
-	outb(CRT_DATA, (inb(CRT_DATA) & 0xC0) | cursorBeginScanline);
+    outb(CGA_CRT_INDEX, CGA_CURSOR_START);
+	outb(CGA_CRT_DATA, (inb(CGA_CRT_DATA) & 0xC0) | cursorBeginScanline);
  
-	outb(CRT_INDEX, INDEX_CURSOR_END);
-	outb(CRT_DATA, (inb(CRT_DATA) & 0xE0) | cursorEndScanline);
+	outb(CGA_CRT_INDEX, CGA_CURSOR_END);
+	outb(CGA_CRT_DATA, (inb(CGA_CRT_DATA) & 0xE0) | cursorEndScanline);
 
     if (!_tmInfo.cursorEnable) {
         vgaDisableCursor();
@@ -142,17 +142,17 @@ void vgaSetCursorScanline(uint8_t cursorBeginScanline, uint8_t cursorEndScanline
 
 void vgaEnableCursor() {
 	_tmInfo.cursorEnable = true;
-    outb(CRT_INDEX, INDEX_CURSOR_START);
-	outb(CRT_DATA, (inb(CRT_DATA) & 0xC0) | _tmInfo.cursorBeginScanline);
+    outb(CGA_CRT_INDEX, CGA_CURSOR_START);
+	outb(CGA_CRT_DATA, (inb(CGA_CRT_DATA) & 0xC0) | _tmInfo.cursorBeginScanline);
  
-	outb(CRT_INDEX, INDEX_CURSOR_END);
-	outb(CRT_DATA, (inb(CRT_DATA) & 0xE0) | _tmInfo.cursorEndScanline);
+	outb(CGA_CRT_INDEX, CGA_CURSOR_END);
+	outb(CGA_CRT_DATA, (inb(CGA_CRT_DATA) & 0xE0) | _tmInfo.cursorEndScanline);
 }
 
 void vgaDisableCursor() {
 	_tmInfo.cursorEnable = false;
-	outb(CRT_INDEX, INDEX_CURSOR_START);
-	outb(CRT_DATA, 0x20);
+	outb(CGA_CRT_INDEX, CGA_CURSOR_START);
+	outb(CGA_CRT_DATA, 0x20);
 }
 
 void vgaSetCursorPosition(int row, int col) {
@@ -188,10 +188,10 @@ static void __setCursorPosition(int position) {
     //New position guaranteed to be a valid position
 
 	_tmInfo.cursorPosition = pos;
-	outb(CRT_INDEX, INDEX_CURSOR_LOCATION_LOW);
-	outb(CRT_DATA, pos & 0xFF);
-	outb(CRT_INDEX, INDEX_CURSOR_LOCATION_HIGH);
-	outb(CRT_DATA, (pos >> 8) & 0xFF);
+	outb(CGA_CRT_INDEX, CGA_CURSOR_LOCATION_LOW);
+	outb(CGA_CRT_DATA, pos & 0xFF);
+	outb(CGA_CRT_INDEX, CGA_CURSOR_LOCATION_HIGH);
+	outb(CGA_CRT_DATA, (pos >> 8) & 0xFF);
 }
 
 static void __initCursor() {
