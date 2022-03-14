@@ -3,7 +3,7 @@
 #include<kit/bit.h>
 #include<realmode.h>
 #include<stdint.h>
-#include<system/memoryArea.h>
+#include<system/memoryMap.h>
 #include<system/systemInfo.h>
 
 #define SMAP 0x534D4150
@@ -17,22 +17,22 @@ MemoryMap _memoryMap;
  * @return number of memory areas detected
  */
 static int __detectE820(MemoryMap* memoryMap) {
-    MemoryAreaEntry buf;
-    MemoryAreaEntry* table = memoryMap->memoryAreas;
+    MemoryMapEntry buf;
+    MemoryMapEntry* table = memoryMap->memoryMapEntries;
     
     initRegs(&registers);
 
     int cnt = 0;
     registers.ebx = 0;
-    do {    //Loop for scan memory area
+    do {    //Loop for scanning memory area
         registers.eax = 0xE820;
-        registers.ecx = sizeof(MemoryAreaEntry);
+        registers.ecx = sizeof(MemoryMapEntry);
         registers.edx = SMAP;
         registers.edi = (uint32_t) &buf;
 
         intInvoke(0x15, &registers, &registers);
 
-        if(TEST_FLAGS(registers.eflags, EFLAGS_CF))
+        if (TEST_FLAGS(registers.eflags, EFLAGS_CF))
             break;
         
         table[cnt++] = buf;

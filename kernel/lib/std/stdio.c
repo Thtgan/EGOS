@@ -1,7 +1,7 @@
 #include<stdio.h>
 
 #include<algorithms.h>
-#include<driver/vga/textmode.h>
+#include<devices/vga/textmode.h>
 #include<kit/bit.h>
 #include<stdarg.h>
 #include<stddef.h>

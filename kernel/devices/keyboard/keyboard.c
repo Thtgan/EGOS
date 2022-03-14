@@ -1,6 +1,6 @@
-#include<driver/keyboard/keyboard.h>
+#include<devices/keyboard/keyboard.h>
 
-#include<driver/vga/textmode.h>
+#include<devices/vga/textmode.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>

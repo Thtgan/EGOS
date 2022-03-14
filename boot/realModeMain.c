@@ -1,11 +1,11 @@
-#include<biosIO.h>
-#include<printf.h>
 #include<A20.h>
+#include<biosIO.h>
 #include<blowup.h>
 #include<E820.h>
 #include<pm.h>
-#include<system/systemInfo.h>
+#include<printf.h>
 #include<real/simpleAsmLines.h>
+#include<system/systemInfo.h>
 
 SystemInfo systemInfo;   //Information about the system
 
@@ -33,6 +33,6 @@ void realModeMain() {
 }
 
 static void __collectSystemInfo() {
-    detectMemory(&systemInfo);
     systemInfo.magic = SYSTEM_INFO_MAGIC;
+    detectMemory(&systemInfo);
 }

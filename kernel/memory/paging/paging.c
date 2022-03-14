@@ -13,7 +13,7 @@
 #include<stdbool.h>
 #include<stddef.h>
 #include<system/address.h>
-#include<system/memoryArea.h>
+#include<system/memoryMap.h>
 #include<system/pageTable.h>
 
 #include<stdio.h>
@@ -95,9 +95,9 @@ size_t initPaging(const SystemInfo* sysInfo) {
     __enableFakeRealMode();
 
     for (int i = 0; i < mMap->size; ++i) {
-        const MemoryAreaEntry* e = &mMap->memoryAreas[i];
+        const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
 
-        if (e->type != MEMORY_USABLE || (uint32_t)e->base + (uint32_t)e->size <= FREE_PAGE_BEGIN) { //Memory must be usable and higher than reserved area
+        if (e->type != MEMORY_MAP_ENTRY_TYPE_USABLE || (uint32_t)e->base + (uint32_t)e->size <= FREE_PAGE_BEGIN) { //Memory must be usable and higher than reserved area
             continue;
         }
 

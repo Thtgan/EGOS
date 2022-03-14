@@ -1,7 +1,7 @@
 #if !defined(__E820_H)
 #define __E820_H
 
-#include<system/memoryArea.h>
+#include<system/memoryMap.h>
 #include<system/systemInfo.h>
 
 /**

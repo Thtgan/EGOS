@@ -1,4 +1,4 @@
-#include<driver/vga/textmode.h>
+#include<devices/vga/textmode.h>
 
 #include<algorithms.h>
 #include<memory/memory.h>
