@@ -6,7 +6,6 @@ Implement MBR:
 Setup:
   ✔ Scan memory space with E820 @done(22-01-12 19:29)
   ✔ Activate A20 @done(22-01-12 19:30)
-  ☐ Read disk parameters
 ✔ Printf in bootloader stage @done(22-01-12 19:23)
 Enter protected mode:
   ✔ Load GDT @done(22-01-12 19:27)
@@ -29,11 +28,14 @@ Implement basic drivers:
   Keyboard driver:
     ✔ Basic kerboard interrupt handling(ASCII input, cursor control) @done(22-01-12 19:44)
   PIO disk driver (Hard Disk Driver):
+    ☐ Read identify data
     ☐ Read sectors
     ☐ Write Sectors
   VGA text mode driver:
     ✔ Basic text mode operation(Print character, string, cursor control) @done(22-01-12 19:48)
     ☐ Support for scroll down/up
+  Timer driver:
+    ☐ sleep
 Kernel I/O:
   ☐ I/O stream
   ✔ printf function @done(22-01-12 19:55)
@@ -68,7 +70,6 @@ Implement utilization library:
 Console:
   ☐ Make a shell
 File system:
-  ☐ Read disk sectors
   ☐ Make a text LOGO file, read and print it
 Power control:
   ☐ Shutdown
