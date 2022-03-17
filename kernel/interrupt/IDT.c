@@ -5,12 +5,14 @@
 #include<kit/bit.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
+#include<stdio.h>
 #include<system/GDT.h>
 
 IDTEntry IDTTable[256];
 IDTDesc idtDesc;
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
+    printf("Unknown interrupt triggered!\n");
     cli();
     die();
     EOI();
@@ -21,25 +23,26 @@ void initIDT() {
     idtDesc.tablePtr = (uint64_t)IDTTable;
 
     for (int vec = 0; vec < 256; ++vec) { //Fill IDT wil default interrupt handler
-        //TODO: Find out why cannot use uint8_t here
         registerISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     }
 
     remapPIC(0x20, 0x28); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
 
-    setPICMask(
-        VAL_NOT(
-            PIC_OCW1_MASK_PIC1_KEYBORD_MOUSE_RTC
-        ),
-        VAL_NOT(
-            EMPTY_FLAGS
-        )
-    );
-
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }
 
 void registerISR(uint8_t vector, void* isr, uint8_t flags) {
+    uint8_t mask1, mask2;
+    getPICMask(&mask1, &mask2);
+
+    if (vector < 0x28) {
+        CLEAR_FLAG_BACK(mask1, FLAG8(vector - 0x20));
+    } else {
+        CLEAR_FLAG_BACK(mask2, FLAG8(vector - 0x28));
+    }
+
+    setPICMask(mask1, mask2);
+
     IDTEntry* ptr = IDTTable + vector;
     ptr->isr0_15 = EXTRACT_VAL((uint64_t)isr, 64, 0, 16);
     ptr->codeSector = SEGMENT_CODE32;
