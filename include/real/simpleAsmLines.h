@@ -294,8 +294,11 @@ __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(sti)
 
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(nop)
 
-__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfl);
-__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfl);
+__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfl);  //Superisingly, this is not available in 32-bit mode
+__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfl);   //Superisingly, this is not available in 32-bit mode
+
+__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfq);
+__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfq);
 
 #define PUSH(__LENGTH) MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, push, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
@@ -355,6 +358,34 @@ static inline void wrmsr(uint32_t addr, uint32_t edx, uint32_t eax) {
         :
         : "c" (addr), "d" (edx), "a" (eax)
     );
+}
+
+static inline uint32_t readEFlags32() {
+    uint32_t ret;
+
+    pushfl();
+    ret = popl();
+
+    return ret;
+}
+
+static void writeEFlags32(uint32_t eflags) {
+    pushl(eflags);
+    popfl();
+}
+
+static inline uint64_t readEFlags64() {
+    uint64_t ret;
+
+    pushfq();
+    ret = popq();
+
+    return ret;
+}
+
+static void writeEFlags64(uint64_t eflags) {
+    pushq(eflags);
+    popfq();
 }
 
 #endif // __SIMPLE_ASM_LINES_H

@@ -120,14 +120,11 @@
 
 static inline bool checkCPUID() {
     pushfl();
-    pushfl();
-    uint32_t eflags = popl();
+    uint32_t eflags = readEFlags32();
 
-    pushl(eflags ^ EFLAGS_ID);
-    popfl();
+    writeEFlags32(REVERSE_FLAG(eflags, EFLAGS_ID));
 
-    pushfl();
-    eflags ^= popl();
+    eflags ^= readEFlags32();
 
     popfl();
 

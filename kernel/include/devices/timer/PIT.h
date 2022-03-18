@@ -34,11 +34,6 @@ uint8_t readbackConfiguration(uint8_t channel);
  * @param unit Time unit
  * @param time Size of time
  */
-void sleep(TimeUnit unit, uint64_t time);
-
-/**
- * @brief Print current tick
- */
-void printTick();
+void PITsleep(TimeUnit unit, uint64_t time);
 
 #endif // __PIT_H

@@ -83,11 +83,15 @@ static uint64_t __findTickLoop() {
 
 void initPIT() {
     _tick = 0;
+
+    bool interruptEnabled = disableInterrupt();
     registerISR(0x20, __timerHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     configureChannel(0, 3, TICK_FREQUENCY);
+    setInterrupt(interruptEnabled);
 
+    printf("Adjusting timer, please wait... ");
     _loopPerTick = __findTickLoop();
-    printf("A tick takes %llu loops\n", _loopPerTick);
+    printf("done, a tick takes %llu loops\n", _loopPerTick);
 }
 
 void configureChannel(uint8_t channel, uint8_t mode, uint32_t frequency) {
@@ -114,7 +118,7 @@ uint8_t readbackConfiguration(uint8_t channel) {
 
 #define TICK_NANOSECOND (SECOND / TICK_FREQUENCY)
 
-void sleep(TimeUnit unit, uint64_t time) {
+void PITsleep(TimeUnit unit, uint64_t time) {
     uint64_t tick = time * unit / TICK_NANOSECOND, remain = time * unit % TICK_NANOSECOND;
 
     uint64_t targetTick = _tick + tick;
@@ -125,8 +129,4 @@ void sleep(TimeUnit unit, uint64_t time) {
     if (remain > 0) {
         __loopWait(remain * _loopPerTick / TICK_NANOSECOND);
     }
-}
-
-void printTick() {
-    printf("Current Tick: %llu\n", _tick);
 }

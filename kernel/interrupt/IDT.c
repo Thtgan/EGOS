@@ -3,13 +3,23 @@
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
+#include<real/flags/eflags.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 #include<stdio.h>
 #include<system/GDT.h>
 
-IDTEntry IDTTable[256];
-IDTDesc idtDesc;
+IDTentry IDTtable[256];
+IDTdesc idtDesc;
+
+/**
+ * @brief Assign an IDT entry to the 
+ * 
+ * @param vector 
+ * @param isr 
+ * @param attributes 
+ */
+static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     printf("Unknown interrupt triggered!\n");
@@ -19,36 +29,61 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
 }
 
 void initIDT() {
-    idtDesc.size = (uint16_t)sizeof(IDTTable) - 1;  //Initialize the IDT desc
-    idtDesc.tablePtr = (uint64_t)IDTTable;
+    idtDesc.size = (uint16_t)sizeof(IDTtable) - 1;  //Initialize the IDT desc
+    idtDesc.tablePtr = (uint64_t)IDTtable;
 
     for (int vec = 0; vec < 256; ++vec) { //Fill IDT wil default interrupt handler
-        registerISR(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+        __setIDTentry(vec, __defaultISRHalt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     }
 
-    remapPIC(0x20, 0x28); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
+    remapPIC(REMAP_BASE_1, REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
 
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }
 
-void registerISR(uint8_t vector, void* isr, uint8_t flags) {
+void registerISR(uint8_t vector, void* isr, uint8_t attributes) {
     uint8_t mask1, mask2;
     getPICMask(&mask1, &mask2);
 
-    if (vector < 0x28) {
-        CLEAR_FLAG_BACK(mask1, FLAG8(vector - 0x20));
+    if (vector < REMAP_BASE_2) {
+        CLEAR_FLAG_BACK(mask1, FLAG8(vector - REMAP_BASE_1));
     } else {
-        CLEAR_FLAG_BACK(mask2, FLAG8(vector - 0x28));
+        CLEAR_FLAG_BACK(mask2, FLAG8(vector - REMAP_BASE_2));
     }
 
     setPICMask(mask1, mask2);
 
-    IDTEntry* ptr = IDTTable + vector;
-    ptr->isr0_15 = EXTRACT_VAL((uint64_t)isr, 64, 0, 16);
-    ptr->codeSector = SEGMENT_CODE32;
-    ptr->reserved1 = 0;
-    ptr->attributes = flags;
-    ptr->isr16_31 = EXTRACT_VAL((uint64_t)isr, 64, 16, 32);
-    ptr->isr32_63 = EXTRACT_VAL((uint64_t)isr, 64, 32, 64);
-    ptr->reserved2 = 0;
+    __setIDTentry(vector, isr, attributes);
+}
+
+static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes) {
+    IDTtable[vector] = (IDTentry) {
+        EXTRACT_VAL((uint64_t)isr, 64, 0, 16),
+        SEGMENT_CODE32,
+        0,
+        attributes,
+        EXTRACT_VAL((uint64_t)isr, 64, 16, 32),
+        EXTRACT_VAL((uint64_t)isr, 64, 32, 64),
+        0
+    };
+}
+
+bool disableInterrupt() {
+    uint32_t eflags = readEFlags64();
+    cli();
+    return TEST_FLAGS(eflags, EFLAGS_IF);
+}
+
+bool enableInterrupt() {
+    uint32_t eflags = readEFlags64();
+    sti();
+    return TEST_FLAGS(eflags, EFLAGS_IF);
+}
+
+void setInterrupt(bool enable) {
+    if (enable) {
+        sti();
+    } else {
+        cli();
+    }
 }

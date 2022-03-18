@@ -1,8 +1,7 @@
 #include<blowup.h>
-#include<devices/hardDisk/hardDisk.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/vga/textmode.h>
-#include<devices/timer/PIT.h>
+#include<devices/timer/timer.h>
 #include<interrupt/IDT.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
@@ -55,13 +54,15 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     printf("%u pages available\n", pageNum);
 
-    initPIT();
+    nop();
+    initTimer();
+    nop();
 
     keyboardInit();
 
-    printTick();
-    sleep(MILLISECOND, 500);
-    printTick();
+    printf("?");
+    sleep(SECOND, 1);
+    printf("!");
 
     die();
 }
