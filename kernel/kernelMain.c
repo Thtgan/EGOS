@@ -1,4 +1,5 @@
 #include<blowup.h>
+#include<devices/hardDisk/hardDisk.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/vga/textmode.h>
 #include<devices/timer/timer.h>
@@ -54,15 +55,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     printf("%u pages available\n", pageNum);
 
-    nop();
     initTimer();
-    nop();
 
     keyboardInit();
 
-    printf("?");
-    sleep(SECOND, 1);
-    printf("!");
+    initHardDisk();
 
     die();
 }

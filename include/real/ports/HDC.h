@@ -28,7 +28,7 @@
 
 #define HDC_DEVICE_SELECT_BASE                          0b10100000
 #define HDC_HEAD_SELECT_EXTRACT_HEAD(__HEAD_DRIVE)      EXTRACT_VAL(__HEAD_DRIVE, 8, 0, 4)
-#define HDC_DEVICE_SELECT_MASTER                        FLAG8(4)    //Drive 1 (0) selected
+#define HDC_DEVICE_SELECT_SLAVE                         FLAG8(4)    //Drive 1 (0) selected
 
 #define HDC_STATUS_ERROR                                FLAG8(0)
 #define HDC_STATUS_DATA_REQUIRE_SERVICE                 FLAG8(3)

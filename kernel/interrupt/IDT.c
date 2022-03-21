@@ -38,6 +38,8 @@ void initIDT() {
 
     remapPIC(REMAP_BASE_1, REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
 
+    setPICMask(FULL_MASK(8), FULL_MASK(8));
+
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }
 
