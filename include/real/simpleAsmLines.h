@@ -197,6 +197,15 @@ static inline void OUTS(__LENGTH) (uint16_t port, void* addr, size_t n)
 : "d"(port)                                     \
 : "memory"
 
+#define __OUTS_FUNC(__LENGTH)                       \
+__OUTS_FUNC_HEADER(__LENGTH) {                      \
+    asm volatile(__OUTS_FUNC_INLINE_ASM(__LENGTH)); \
+}
+
+__OUTS_FUNC(8)
+__OUTS_FUNC(16)
+__OUTS_FUNC(32)
+
 #define __READ_CR_FUNC_HEADER(__CR)                         \
 static inline uint32_t MACRO_CONCENTRATE2(readCR, __CR)()
 

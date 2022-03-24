@@ -38,7 +38,12 @@ void initIDT() {
 
     remapPIC(REMAP_BASE_1, REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
 
-    setPICMask(FULL_MASK(8), FULL_MASK(8));
+    setPICMask(0b11111011, 0b11111111);
+    //                ^ (DONT set this bit)
+    //           +----+
+    //           |
+    //Mask1's bit 2 MUST be CLEARED otherwise the slave PIC's interrupt WONT be rised
+    //Bloody lesson, I have struggled for why IRQ 14 and 15 cannot be rised for a whole day!
 
     asm volatile ("lidt %0" : : "m" (idtDesc));
 }

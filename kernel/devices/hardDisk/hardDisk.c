@@ -1,11 +1,16 @@
 #include<devices/hardDisk/hardDisk.h>
 
 #include<devices/timer/timer.h>
+#include<interrupt/IDT.h>
+#include<interrupt/ISR.h>
 #include<kit/bit.h>
+#include<lib/blowup.h>
 #include<memory/memory.h>
+#include<memory/malloc.h>
 #include<real/ports/HDC.h>
 #include<real/simpleAsmLines.h>
 #include<stdbool.h>
+#include<stddef.h>
 #include<stdint.h>
 #include<stdio.h>
 #include<system/deviceIdentify.h>
@@ -34,6 +39,7 @@ typedef struct {
 
 struct __Channel {
     uint16_t portBase;
+    bool waitingForInterrupt;
     Disk disks[2];
 };
 
@@ -81,7 +87,7 @@ static uint8_t __selectDevice(const Disk* d);
 static bool __isATAdevice(Disk* d);
 
 /**
- * @brief Read identify data of the device
+ * @brief Read identify data of the device, and check device's availibility
  * 
  * @param d Disk device to read
  * @return uint8_t Finally returned status 
@@ -89,11 +95,45 @@ static bool __isATAdevice(Disk* d);
 static uint8_t __identifyDevice(Disk* d);
 
 /**
- * @brief Reset the channel, this will make the registers load the device's signature
+ * @brief Reset the channel, this will make the registers load the device's signature and fire the controller interrupt
  * 
  * @param c Channel to reset
  */
-static void __resetChannel(Channel* c);
+static void __resetChannel(const Channel* c);
+
+/**
+ * @brief Post command to the device, with notify the channel waiting for the interrupt
+ * 
+ * @param c Channel
+ * @param command Command to post
+ */
+static void __postChannelCommand(Channel* c, uint8_t command);
+
+/**
+ * @brief Select a sector on the disk through the lba
+ * 
+ * @param d Disk contains the sector to select
+ * @param lba LBA of the sector to select
+ */
+static void __selectSector(const Disk* d, LBA28_t lba);
+
+/**
+ * @brief Read sector in selected disk to buffer, located by lba
+ * 
+ * @param d Disk to read
+ * @param lba LBA to the sector
+ * @param buffer Buffer to read data to
+ */
+static void __readSector(Disk* d, LBA28_t lba, void* buffer);
+
+/**
+ * @brief Write sector in selected disk to buffer, located by lba
+ * 
+ * @param d Disk to write
+ * @param lba LBA to the sector
+ * @param buffer Buffer to data to write
+ */
+static void __writeSector(Disk* d, LBA28_t lba, void* buffer);
 
 static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d) {
     const DeviceIdentifyData* params = d->parameters;
@@ -113,7 +153,7 @@ static uint8_t __waitChannel(const Channel* ch, uint8_t waitFlags) {
     uint16_t retry = RETRY_TIME;
     uint8_t status;
     do {
-        status = inb(HDC_STATUS(ch->portBase));
+        status = inb(HDC_ALT_STATUS(ch->portBase));
     } while (TEST_FLAGS_CONTAIN(status, waitFlags) && retry-- != 0);
     return status;
 }
@@ -124,7 +164,7 @@ static uint8_t __selectDevice(const Disk* d) {
     if (!d->isMaster) {
         SET_FLAG_BACK(select, HDC_DEVICE_SELECT_SLAVE);
     }
-    outb(HDC_DEVICE_SELECT(portBase), select);
+    outb(HDC_LBA_24_27_DEVICE_SELECT(portBase), select);
 
     sleep(NANOSECOND, 400);
 
@@ -138,8 +178,8 @@ static bool __isATAdevice(Disk* d) {
     uint16_t portBase = d->channel->portBase;
 
     uint8_t
-        signature1 = inb(HDC_LBA_MID(portBase)),
-        signature2 = inb(HDC_LBA_HIGH(portBase));
+        signature1 = inb(HDC_LBA_8_15(portBase)),
+        signature2 = inb(HDC_LBA_16_23(portBase));
 
     printf("%s signature1: %#02X, signature2: %#02X\n", d->name, signature1, signature2);
     return 
@@ -148,17 +188,17 @@ static bool __isATAdevice(Disk* d) {
 }
 
 static uint8_t __identifyDevice(Disk* d) {
-    __waitChannel(d->channel, HDC_STATUS_BUSY | HDC_STATUS_DATA_REQUIRE_SERVICE);
     __selectDevice(d);
-    __waitChannel(d->channel, HDC_STATUS_BUSY | HDC_STATUS_DATA_REQUIRE_SERVICE);
 
-    uint16_t portBase = d->channel->portBase;
+    Channel* c = d->channel;
 
-    outw(HDC_COMMAND(portBase), HDC_COMMAND_IDENTIFY_DEVICE);
+    __postChannelCommand(c, HDC_COMMAND_IDENTIFY_DEVICE);
 
-    sleep(SECOND, 1);   //TODO: Replace this with semaphore control
+    while (c->waitingForInterrupt) {
+        nop();
+    }   //TODO: Replace this with semaphore implementation
 
-    uint8_t status = __waitChannel(d->channel, HDC_STATUS_BUSY);
+    uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
 
     d->available = false;
     if (
@@ -170,7 +210,7 @@ static uint8_t __identifyDevice(Disk* d) {
 
     d->available = true;
 
-    insw(HDC_DATA(portBase), d->parameters, sizeof(DeviceIdentifyData) / sizeof(uint16_t));
+    insw(HDC_DATA(c->portBase), d->parameters, sizeof(DeviceIdentifyData) / sizeof(uint16_t));
 
     return status;
 }
@@ -183,9 +223,32 @@ const uint16_t _channelPortBases[2] = {
 Channel _channels[2];
 static char* nameTemplate = "hd_";
 
+ISR_FUNC_HEADER(__channel1Handler) {
+    if (_channels[0].waitingForInterrupt) {
+        _channels[0].waitingForInterrupt = false;
+        inb(HDC_STATUS(_channels[0].portBase));
+    } else {
+        blowup("Interrupt not expected!");
+    }
+    EOI();
+}
+
+ISR_FUNC_HEADER(__channel2Handler) {
+    if (_channels[1].waitingForInterrupt) {
+        _channels[1].waitingForInterrupt = false;
+        inb(HDC_STATUS(_channels[1].portBase));
+    } else {
+        blowup("Interrupt not expected!");
+    }
+    EOI();
+}
+
 void initHardDisk() {
+    registerISR(0x2E, __channel1Handler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    registerISR(0x2F, __channel2Handler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     for (int i = 0; i < 2; ++i) {
         _channels[i].portBase = _channelPortBases[i];
+        _channels[i].waitingForInterrupt = true;
 
         __resetChannel(&_channels[i]);
 
@@ -214,12 +277,74 @@ void initHardDisk() {
             printf("%s available sector num: %u\n", d->name, d->parameters->addressableSectorNum);
         }
     }
+
+    void* data = malloc(512);
+    __readSector(&_channels[1].disks[1], 0, data);
+    __writeSector(&_channels[1].disks[0], 0, data);
+
+    printf("%#llX\n", *((uint64_t*)(data)));
+
+    free(data);
 }
 
-static void __resetChannel(Channel* c) {
+static void __resetChannel(const Channel* c) {
     uint16_t portBase = c->portBase;
-
     outb(HDC_CONTROL(portBase), 0);
     outb(HDC_CONTROL(portBase), 4);
     outb(HDC_CONTROL(portBase), 0);
+}
+
+static void __postChannelCommand(Channel* c, uint8_t command) {
+    c->waitingForInterrupt = true;
+    outb(HDC_COMMAND(c->portBase), command);
+}
+
+static void __selectSector(const Disk* d, LBA28_t lba) {
+    __selectDevice(d);
+
+    uint16_t portBase = d->channel->portBase;
+    outb(HDC_LBA_0_7(portBase), EXTRACT_VAL(lba, 32, 0, 8));
+    outb(HDC_LBA_8_15(portBase), EXTRACT_VAL(lba, 32, 8, 16));
+    outb(HDC_LBA_16_23(portBase), EXTRACT_VAL(lba, 32, 16, 24));
+    outb(
+        HDC_LBA_24_27_DEVICE_SELECT(portBase), 
+        HDC_DEVICE_SELECT_BASE                      |
+        HDC_SECTOR_SELECT_LBA                       |
+        (d->isMaster ? 0 : HDC_DEVICE_SELECT_SLAVE) |
+        EXTRACT_VAL(lba, 32, 24, 28)
+    );
+}
+
+static void __readSector(Disk* d, LBA28_t lba, void* buffer) {
+    Channel* c = d->channel;
+
+    __selectSector(d, lba);
+    outb(HDC_SECTOR_COUNT(c->portBase), 1);
+
+    __postChannelCommand(c, HDC_COMMAND_READ_SECTORS);
+
+    while (c->waitingForInterrupt) {
+        nop();
+    }   //TODO: Replace this with semaphore implementation
+
+    uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
+
+    insw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
+}
+
+static void __writeSector(Disk* d, LBA28_t lba, void* buffer) {
+    Channel* c = d->channel;
+
+    __selectSector(d, lba);
+    outb(HDC_SECTOR_COUNT(c->portBase), 1);
+
+    __postChannelCommand(c, HDC_COMMAND_WRITE_SECTORS);
+
+    uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
+
+    outsw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
+
+    while (c->waitingForInterrupt) {
+        nop();
+    }   //TODO: Replace this with semaphore implementation
 }

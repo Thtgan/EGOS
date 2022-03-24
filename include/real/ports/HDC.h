@@ -11,14 +11,10 @@
 #define HDC_DATA(__CHANNEL)                             (__CHANNEL)
 #define HDC_ERROR(__CHANNEL)                            (__CHANNEL + 1)
 #define HDC_SECTOR_COUNT(__CHANNEL)                     (__CHANNEL + 2)
-#define HDC_SECTOR_SELECT(__CHANNEL)                    (__CHANNEL + 3)
-#define HDC_LBA_LOW(__CHANNEL)                          (__CHANNEL + 3)
-#define HDC_CYLINDER_SELECT_LOW(__CHANNEL)              (__CHANNEL + 4)
-#define HDC_LBA_MID(__CHANNEL)                          (__CHANNEL + 4)
-#define HDC_CYLINDER_SELECT_HIGH(__CHANNEL)             (__CHANNEL + 5)
-#define HDC_LBA_HIGH(__CHANNEL)                         (__CHANNEL + 5)
-#define HDC_HEAD_SELECT(__CHANNEL)                      (__CHANNEL + 6)
-#define HDC_DEVICE_SELECT(__CHANNEL)                    (__CHANNEL + 6)
+#define HDC_LBA_0_7(__CHANNEL)                          (__CHANNEL + 3)
+#define HDC_LBA_8_15(__CHANNEL)                         (__CHANNEL + 4)
+#define HDC_LBA_16_23(__CHANNEL)                        (__CHANNEL + 5)
+#define HDC_LBA_24_27_DEVICE_SELECT(__CHANNEL)          (__CHANNEL + 6)
 #define HDC_STATUS(__CHANNEL)                           (__CHANNEL + 7) //Read only
 #define HDC_COMMAND(__CHANNEL)                          (__CHANNEL + 7)
 #define HDC_CONTROL(__CHANNEL)                          (__CHANNEL + 0x206) //What?
@@ -27,6 +23,7 @@
 //No bit definitions for errors, they got different definition for EACH command, it's too much
 
 #define HDC_DEVICE_SELECT_BASE                          0b10100000
+#define HDC_SECTOR_SELECT_LBA                           FLAG8(6)
 #define HDC_HEAD_SELECT_EXTRACT_HEAD(__HEAD_DRIVE)      EXTRACT_VAL(__HEAD_DRIVE, 8, 0, 4)
 #define HDC_DEVICE_SELECT_SLAVE                         FLAG8(4)    //Drive 1 (0) selected
 

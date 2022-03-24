@@ -412,6 +412,7 @@ static const char* __readLengthModifier(const char* format, LengthModifier* modi
 static const char* _digits = "0123456789ABCDEF";
 static char _tmp[64];   //Number temporary buffer
 
+//TODO: BUG: printf("%#02X", 0xAA55) outputs 0XAA55 (should be 0x55)
 static int __printInteger(uint64_t num, int base, int width, int precision, uint8_t flags) {
     if (base < 2 || base > 16)  //If base not available, return
         return -1;              //error
@@ -470,7 +471,7 @@ static int __printInteger(uint64_t num, int base, int width, int precision, uint
     leadingZeroLen = fullLen - digitLen;
     padding = max32(width - sLen - fullLen, 0);
 
-    ret = padding + sLen + padding;
+    ret = padding + sLen + padding; //TODO: Check this code again
 
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
