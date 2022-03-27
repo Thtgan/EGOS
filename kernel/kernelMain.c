@@ -8,6 +8,7 @@
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
 #include<real/simpleAsmLines.h>
+#include<SSE.h>
 #include<stdio.h>
 #include<string.h>
 #include<system/memoryMap.h>
@@ -37,6 +38,12 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
         blowup("Magic not match\n");
     }
 
+    if (!checkSSE()) {
+        blowup("SSE not supported\n");
+    }
+
+    enableSSE();
+
     initVGATextMode(); //Initialize text mode
 
     initIDT();      //Initialize the interrupt
@@ -57,7 +64,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initTimer();
 
-    keyboardInit();
+    initKeyboard();
 
     initHardDisk();
 

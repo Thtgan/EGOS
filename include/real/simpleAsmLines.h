@@ -261,8 +261,10 @@ __READ_CR_FUNC64_HEADER(__CR) {                         \
 }
 
 __READ_CR_FUNC64(0)
+__READ_CR_FUNC64(1)
 __READ_CR_FUNC64(2)
 __READ_CR_FUNC64(3)
+__READ_CR_FUNC64(4)
 
 #define __WRITE_CR_FUNC64_HEADER(__CR)                                \
 static inline void MACRO_CONCENTRATE3(writeCR, __CR, _64)(uint64_t val)
@@ -278,8 +280,10 @@ __WRITE_CR_FUNC64_HEADER(__CR) {                      \
 }
 
 __WRITE_CR_FUNC64(0)
+__WRITE_CR_FUNC64(1)
 __WRITE_CR_FUNC64(2)
 __WRITE_CR_FUNC64(3)
+__WRITE_CR_FUNC64(4)
 
 #define __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_HEADER(__INSTRUCTION) \
 static inline void __INSTRUCTION()

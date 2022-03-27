@@ -184,7 +184,7 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
 /**
  * @brief Initialize the keyboard
  */
-void keyboardInit() {
+void initKeyboard() {
     for (int i = 0; i < 128; ++i) {
         _pressed[i] = false;
     }

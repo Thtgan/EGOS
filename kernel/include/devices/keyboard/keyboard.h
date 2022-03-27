@@ -114,6 +114,6 @@ typedef struct {
 /**
  * @brief Initialize the keyboard
  */
-void keyboardInit();
+void initKeyboard();
 
 #endif // __KEYBOARD_H

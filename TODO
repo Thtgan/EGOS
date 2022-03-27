@@ -49,7 +49,7 @@ Implement basic drivers:
     ☐ Support for scroll down/up
 
   Timer:
-    ☐ PIT implementation
+    ✔ PIT implementation @done(22-03-27 16:36)
     ☐ HPET implementation
 
 Kernel I/O:
@@ -92,6 +92,7 @@ Console:
   ☐ Make a shell
 
 File system:
+  ✔ Hard disk basic operation @done(22-03-27 16:39)
   ☐ Make a text LOGO file, read and print it
   
 Misc:
