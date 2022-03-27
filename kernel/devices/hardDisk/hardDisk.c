@@ -118,22 +118,24 @@ static void __postChannelCommand(Channel* c, uint8_t command);
 static void __selectSector(const Disk* d, LBA28_t lba);
 
 /**
- * @brief Read sector in selected disk to buffer, located by lba
+ * @brief Read continued sector(s) in selected disk to buffer, first sector located by lba
  * 
  * @param d Disk to read
- * @param lba LBA to the sector
+ * @param lba LBA to the first sector
  * @param buffer Buffer to read data to
+ * @param n Num of sectors to read
  */
-static void __readSector(Disk* d, LBA28_t lba, void* buffer);
+static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
 
 /**
- * @brief Write sector in selected disk to buffer, located by lba
+ * @brief Write continued sector(s) in selected disk with data from buffer, first sector located by lba
  * 
  * @param d Disk to write
- * @param lba LBA to the sector
- * @param buffer Buffer to data to write
+ * @param lba LBA to the firstsector
+ * @param buffer Buffer contains data to write
+ * @param Num of sectors to write
  */
-static void __writeSector(Disk* d, LBA28_t lba, void* buffer);
+static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
 
 static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d) {
     const DeviceIdentifyData* params = d->parameters;
@@ -224,11 +226,12 @@ Channel _channels[2];
 static char* nameTemplate = "hd_";
 
 ISR_FUNC_HEADER(__channel1Handler) {
+    printf("123--");
     if (_channels[0].waitingForInterrupt) {
         _channels[0].waitingForInterrupt = false;
         inb(HDC_STATUS(_channels[0].portBase));
     } else {
-        blowup("Interrupt not expected!");
+        blowup("IRQ 14 not expected!");
     }
     EOI();
 }
@@ -238,7 +241,7 @@ ISR_FUNC_HEADER(__channel2Handler) {
         _channels[1].waitingForInterrupt = false;
         inb(HDC_STATUS(_channels[1].portBase));
     } else {
-        blowup("Interrupt not expected!");
+        blowup("IRQ 15 not expected!");
     }
     EOI();
 }
@@ -278,11 +281,13 @@ void initHardDisk() {
         }
     }
 
-    void* data = malloc(512);
-    __readSector(&_channels[1].disks[1], 0, data);
-    __writeSector(&_channels[1].disks[0], 0, data);
+    void* data = malloc(1024);
+    __readSectors(&_channels[0].disks[0], 0, data, 2);
 
     printf("%#llX\n", *((uint64_t*)(data)));
+    printf("%#llX\n", *((uint64_t*)(data + 512)));
+
+    __writeSectors(&_channels[0].disks[1], 0, data, 2);
 
     free(data);
 }
@@ -315,36 +320,45 @@ static void __selectSector(const Disk* d, LBA28_t lba) {
     );
 }
 
-static void __readSector(Disk* d, LBA28_t lba, void* buffer) {
+static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
     Channel* c = d->channel;
 
     __selectSector(d, lba);
-    outb(HDC_SECTOR_COUNT(c->portBase), 1);
+    outb(HDC_SECTOR_COUNT(c->portBase), n);
 
     __postChannelCommand(c, HDC_COMMAND_READ_SECTORS);
 
-    while (c->waitingForInterrupt) {
-        nop();
-    }   //TODO: Replace this with semaphore implementation
+    while (n--) {
+        c->waitingForInterrupt = true;
+        while (c->waitingForInterrupt) {
+            nop();
+        }   //TODO: Replace this with semaphore implementation
 
-    uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
+        uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
 
-    insw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
+        insw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
+        buffer += 512;
+    }
 }
 
-static void __writeSector(Disk* d, LBA28_t lba, void* buffer) {
+static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
     Channel* c = d->channel;
 
     __selectSector(d, lba);
-    outb(HDC_SECTOR_COUNT(c->portBase), 1);
+    outb(HDC_SECTOR_COUNT(c->portBase), n);
 
     __postChannelCommand(c, HDC_COMMAND_WRITE_SECTORS);
 
-    uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
+    while (n--) {
+        c->waitingForInterrupt = true;
+        uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
 
-    outsw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
+        outsw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
 
-    while (c->waitingForInterrupt) {
-        nop();
-    }   //TODO: Replace this with semaphore implementation
+        while (c->waitingForInterrupt) {
+            nop();
+        }   //TODO: Replace this with semaphore implementation
+
+        buffer += 512;
+    }
 }
