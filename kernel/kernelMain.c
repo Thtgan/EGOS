@@ -3,6 +3,7 @@
 #include<devices/keyboard/keyboard.h>
 #include<devices/vga/textmode.h>
 #include<devices/timer/timer.h>
+#include<fs/blockDevice/blockDevice.h>
 #include<interrupt/IDT.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
@@ -66,7 +67,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initKeyboard();
 
+    initBlockDeviceManager();
+
     initHardDisk();
+
+    printBlockDevices();
 
     die();
 }

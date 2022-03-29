@@ -1,9 +1,11 @@
 #include<devices/hardDisk/hardDisk.h>
 
 #include<devices/timer/timer.h>
+#include<fs/blockDevice/blockDevice.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
+#include<kit/macro.h>
 #include<lib/blowup.h>
 #include<memory/memory.h>
 #include<memory/malloc.h>
@@ -13,6 +15,8 @@
 #include<stddef.h>
 #include<stdint.h>
 #include<stdio.h>
+#include<string.h>
+#include<structs/singlyLinkedList.h>
 #include<system/deviceIdentify.h>
 
 __attribute__((aligned(sizeof(DeviceIdentifyData))))
@@ -33,6 +37,7 @@ typedef struct __Channel Channel;
 typedef struct {
     char name[8];
     bool present, available, isMaster, isATA;
+    uint8_t index; //Index of the disk, hda --> 0, hdb --> 1, etc...
     Channel* channel;
     DeviceIdentifyData* parameters; //Data inside is meanful iff available is true
 } Disk;
@@ -76,7 +81,6 @@ static uint8_t __waitChannel(const Channel* ch, uint8_t waitFlags);
  * @param d Device to select
  */
 static uint8_t __selectDevice(const Disk* d);
-
 
 /**
  * @brief Check if the disk is an ATA device via device's signature, better call this after resetting the channel
@@ -136,6 +140,13 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
  * @param Num of sectors to write
  */
 static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
+
+/**
+ * @brief Register the disk as a block device
+ * 
+ * @param d Disk to register
+ */
+static void __registerBlockDeviceDisk(Disk* d);
 
 static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d) {
     const DeviceIdentifyData* params = d->parameters;
@@ -223,10 +234,9 @@ const uint16_t _channelPortBases[2] = {
 };
 
 Channel _channels[2];
-static char* nameTemplate = "hd_";
+static char* _nameTemplate = "hd_";
 
 ISR_FUNC_HEADER(__channel1Handler) {
-    printf("123--");
     if (_channels[0].waitingForInterrupt) {
         _channels[0].waitingForInterrupt = false;
         inb(HDC_STATUS(_channels[0].portBase));
@@ -257,9 +267,10 @@ void initHardDisk() {
 
         for (int j = 0; j < 2; ++j) {
             Disk* d = &_channels[i].disks[j];
+            d->index = (i << 1) + j;
             
-            memcpy(d->name, nameTemplate, sizeof(nameTemplate));
-            d->name[2] = 'a' + (i << 1) + j;
+            memcpy(d->name, _nameTemplate, sizeof(_nameTemplate));
+            d->name[2] = 'a' + d->index;
 
             d->channel = &_channels[i];
             d->isMaster = (j == 0);
@@ -278,18 +289,10 @@ void initHardDisk() {
             }
 
             printf("%s available sector num: %u\n", d->name, d->parameters->addressableSectorNum);
+
+            __registerBlockDeviceDisk(d);   //Register as the block device
         }
     }
-
-    void* data = malloc(1024);
-    __readSectors(&_channels[0].disks[0], 0, data, 2);
-
-    printf("%#llX\n", *((uint64_t*)(data)));
-    printf("%#llX\n", *((uint64_t*)(data + 512)));
-
-    __writeSectors(&_channels[0].disks[1], 0, data, 2);
-
-    free(data);
 }
 
 static void __resetChannel(const Channel* c) {
@@ -361,4 +364,51 @@ static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
 
         buffer += 512;
     }
+}
+
+//Macros for block device registeration
+#define BLOCK_READ_FUNC(__INDEX)                                                        \
+static void MACRO_CONCENTRATE2(__readBlock, __INDEX)(size_t block, void* buffer) {      \
+    __readSectors(&_channels[(__INDEX) >> 1].disks[(__INDEX) & 1], block, buffer, 1);   \
+}
+
+BLOCK_READ_FUNC(0)
+BLOCK_READ_FUNC(1)
+BLOCK_READ_FUNC(2)
+BLOCK_READ_FUNC(3)
+
+void (*_blockReadFunctions[])(size_t, void*) = {
+    __readBlock0, __readBlock1, __readBlock2, __readBlock3
+};
+
+#define BLOCK_WRITE_FUNC(__INDEX)                                                       \
+static void MACRO_CONCENTRATE2(__writeBlock, __INDEX)(size_t block, void* buffer) {     \
+    __writeSectors(&_channels[(__INDEX) >> 1].disks[(__INDEX) & 1], block, buffer, 1);  \
+}
+
+BLOCK_WRITE_FUNC(0)
+BLOCK_WRITE_FUNC(1)
+BLOCK_WRITE_FUNC(2)
+BLOCK_WRITE_FUNC(3)
+
+void (*_blockWriteFunctions[])(size_t, void*) = {
+    __writeBlock0, __writeBlock1, __writeBlock2, __writeBlock3
+};
+
+BlockDevice _diskBlockDevices[4];
+
+static void __registerBlockDeviceDisk(Disk* d) {
+    uint8_t index = d->index;
+    BlockDevice* device = &_diskBlockDevices[index];
+
+    initSinglyLinkedListNode(&device->node); 
+
+    strcpy(device->name, d->name);
+    device->availableBlockNum = d->parameters->addressableSectorNum;
+    device->type = BLOCK_DEVICE_TYPE_DISK;
+
+    device->readBlock = _blockReadFunctions[index];
+    device->writeBlock = _blockWriteFunctions[index];
+    
+    registerBlockDevice(device);
 }
