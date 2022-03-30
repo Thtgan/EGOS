@@ -139,14 +139,14 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
  * @param buffer Buffer contains data to write
  * @param Num of sectors to write
  */
-static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
+static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n);
 
 /**
  * @brief Register the disk as a block device
  * 
  * @param d Disk to register
  */
-static void __registerBlockDeviceDisk(Disk* d);
+static void __registerDiskBlockDevice(Disk* d);
 
 static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d) {
     const DeviceIdentifyData* params = d->parameters;
@@ -290,7 +290,7 @@ void initHardDisk() {
 
             printf("%s available sector num: %u\n", d->name, d->parameters->addressableSectorNum);
 
-            __registerBlockDeviceDisk(d);   //Register as the block device
+            __registerDiskBlockDevice(d);   //Register as the block device
         }
     }
 }
@@ -344,7 +344,7 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
     }
 }
 
-static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
+static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) {
     Channel* c = d->channel;
 
     __selectSector(d, lba);
@@ -366,38 +366,20 @@ static void __writeSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
     }
 }
 
-//Macros for block device registeration
-#define BLOCK_READ_FUNC(__INDEX)                                                        \
-static void MACRO_CONCENTRATE2(__readBlock, __INDEX)(size_t block, void* buffer) {      \
-    __readSectors(&_channels[(__INDEX) >> 1].disks[(__INDEX) & 1], block, buffer, 1);   \
+//Function for block device, so no prototypes
+//Read the block from disk, additional data is actually the disk struct
+static void __readBlock(void* additionalData, size_t block, void* buffer) {
+    __readSectors((Disk*)additionalData, block, buffer, 1);
 }
 
-BLOCK_READ_FUNC(0)
-BLOCK_READ_FUNC(1)
-BLOCK_READ_FUNC(2)
-BLOCK_READ_FUNC(3)
-
-void (*_blockReadFunctions[])(size_t, void*) = {
-    __readBlock0, __readBlock1, __readBlock2, __readBlock3
-};
-
-#define BLOCK_WRITE_FUNC(__INDEX)                                                       \
-static void MACRO_CONCENTRATE2(__writeBlock, __INDEX)(size_t block, void* buffer) {     \
-    __writeSectors(&_channels[(__INDEX) >> 1].disks[(__INDEX) & 1], block, buffer, 1);  \
+//Write the block to disk, additional data is actually the disk struct
+static void __writeBlock(void* additionalData, size_t block, const void* buffer) {
+    __writeSectors((Disk*)additionalData, block, buffer, 1);
 }
-
-BLOCK_WRITE_FUNC(0)
-BLOCK_WRITE_FUNC(1)
-BLOCK_WRITE_FUNC(2)
-BLOCK_WRITE_FUNC(3)
-
-void (*_blockWriteFunctions[])(size_t, void*) = {
-    __writeBlock0, __writeBlock1, __writeBlock2, __writeBlock3
-};
 
 BlockDevice _diskBlockDevices[4];
 
-static void __registerBlockDeviceDisk(Disk* d) {
+static void __registerDiskBlockDevice(Disk* d) {
     uint8_t index = d->index;
     BlockDevice* device = &_diskBlockDevices[index];
 
@@ -406,9 +388,10 @@ static void __registerBlockDeviceDisk(Disk* d) {
     strcpy(device->name, d->name);
     device->availableBlockNum = d->parameters->addressableSectorNum;
     device->type = BLOCK_DEVICE_TYPE_DISK;
+    device->additionalData = d; //Disk block device's additional data is itself
 
-    device->readBlock = _blockReadFunctions[index];
-    device->writeBlock = _blockWriteFunctions[index];
+    device->readBlock = __readBlock;
+    device->writeBlock = __writeBlock;
     
     registerBlockDevice(device);
 }

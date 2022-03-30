@@ -188,8 +188,8 @@ __OUT_FUNC(32)
 
 #define OUTS(__LENGTH)   MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, outs, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
-#define __OUTS_FUNC_HEADER(__LENGTH)                                    \
-static inline void OUTS(__LENGTH) (uint16_t port, void* addr, size_t n)
+#define __OUTS_FUNC_HEADER(__LENGTH)                                            \
+static inline void OUTS(__LENGTH) (uint16_t port, const void* addr, size_t n)
 
 #define __OUTS_FUNC_INLINE_ASM(__LENGTH)        \
 "rep " MACRO_CALL(MACRO_STR, OUTS(__LENGTH))    \

@@ -34,7 +34,7 @@ BlockDevice* getBlockDeviceByName(const char* name) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
 
         if (strcmp(device->name, name) == 0) {
-            return NULL;
+            return device;
         }
     }
     return NULL;

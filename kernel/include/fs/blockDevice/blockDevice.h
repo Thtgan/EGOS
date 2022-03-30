@@ -18,9 +18,13 @@ typedef struct {
     char name[16];
     size_t availableBlockNum;
     BlockDeviceType type;
-
-    void (*readBlock)(size_t block, void* buffer);
-    void (*writeBlock)(size_t block, void* buffer);
+    void* additionalData;   //Something to assist the block device working, can be anything
+    //          ^
+    //          | Yes, pass the additional data manually, cause there is no "this" pointer in C
+    //          +-------------------+
+    //                              |
+    void (*readBlock)(void* additionalData, size_t block, void* buffer);
+    void (*writeBlock)(void* additionalData, size_t block, const void* buffer);
 } BlockDevice;
 
 /**

@@ -4,6 +4,7 @@
 #include<devices/vga/textmode.h>
 #include<devices/timer/timer.h>
 #include<fs/blockDevice/blockDevice.h>
+#include<fs/blockDevice/memoryBlockDevice/memoryBlockDevice.h>
 #include<interrupt/IDT.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
@@ -30,6 +31,9 @@ void printMemoryAreas() {
         printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
+
+char data[512];
+BlockDevice memoryDevice;
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfo) {
@@ -71,7 +75,26 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initHardDisk();
 
+    initMemoryBlockDevice(&memoryDevice, 1u << 20);
+    registerBlockDevice(&memoryDevice);
+
     printBlockDevices();
+
+    BlockDevice* device = getBlockDeviceByName("memory0");
+    printf("%p\n", device->additionalData);
+    device->readBlock(device->additionalData, 0, data);
+
+    printf("%016llX\n", *((uint64_t*)data));
+
+    *((uint64_t*)data) = 1234567890;
+    
+    device->writeBlock(device->additionalData, 0, data);
+
+    memset(data, 0, 512);
+
+    device->readBlock(device->additionalData, 0, data);
+
+    printf("%016llX\n", *((uint64_t*)data));
 
     die();
 }
