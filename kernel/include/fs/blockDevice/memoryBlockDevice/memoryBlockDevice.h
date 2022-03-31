@@ -5,11 +5,19 @@
 #include<stddef.h>
 
 /**
- * @brief Initialize a virtual block device which works on memory
+ * @brief Initialize a virtual block device works on memory
  * 
- * @param device Device to initialize
  * @param size The size of device
+ * 
+ * @return Memory blovk device created, NULL if create failed
  */
-void initMemoryBlockDevice(BlockDevice* device, size_t size);
+BlockDevice* createMemoryBlockDevice(size_t size);
+
+/**
+ * @brief Delete created memory block device
+ * 
+ * @param blockDevice Block device to delete, be sure it is unregistered
+ */
+void deleteMemoryBlockDevice(BlockDevice* blockDevice);
 
 #endif // MEMORY_BLOCK_DEVICE_H

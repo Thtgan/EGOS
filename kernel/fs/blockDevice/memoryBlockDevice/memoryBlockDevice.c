@@ -10,36 +10,38 @@
 static size_t _deviceCnt = 0;
 static char* _nameTemplate = "memory0";
 
-static void __readBlock(void* additionalData, size_t block, void* buffer);
+static void __readBlock(void* additionalData, size_t block, void* buffer, size_t n);
 
-static void __writeBlock(void* additionalData, size_t block, const void* buffer);
+static void __writeBlock(void* additionalData, size_t block, const void* buffer, size_t n);
 
-void initMemoryBlockDevice(BlockDevice* device, size_t size) {
-    void* region = malloc(size);
+BlockDevice* createMemoryBlockDevice(size_t size) {
+    size_t blockSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+
+    void* region = malloc(blockSize * BLOCK_SIZE);
     if (region == NULL) {
-        return;
+        return NULL;
     }
 
     memset(region, 0, size);
 
-    initSinglyLinkedListNode(&device->node);
+    BlockDevice* device = createBlockDevice(_nameTemplate, blockSize, BLOCK_DEVICE_TYPE_RAM);
+    _nameTemplate[6] += _deviceCnt; //TODO: Replace this with sprintf
 
-    device->availableBlockNum = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;   //Round up
-    strcpy(device->name, _nameTemplate);    //TODO: Replace this with sprintf
-    device->name[6] += _deviceCnt;
-    device->type = BLOCK_DEVICE_TYPE_RAM;
     device->additionalData = region;    //RAM block device's additional data is its memory region's begin
-
-    device->readBlock = __readBlock;
-    device->writeBlock = __writeBlock;
+    device->readBlocks = __readBlock;
+    device->writeBlocks = __writeBlock;
 
     ++_deviceCnt;
 }
 
-static void __readBlock(void* additionalData, size_t block, void* buffer) {
-    memcpy(buffer, additionalData + block * BLOCK_SIZE, BLOCK_SIZE);    //Just simple memcpy
+void deleteMemoryBlockDevice(BlockDevice* blockDevice) {
+    free(blockDevice->additionalData);
 }
 
-static void __writeBlock(void* additionalData, size_t block, const void* buffer) {
-    memcpy(additionalData + block * BLOCK_SIZE, buffer, BLOCK_SIZE);    //Just simple memcpy
+static void __readBlock(void* additionalData, block_index_t block, void* buffer, size_t n) {
+    memcpy(buffer, additionalData + block * BLOCK_SIZE, n * BLOCK_SIZE);    //Just simple memcpy
+}
+
+static void __writeBlock(void* additionalData, block_index_t block, const void* buffer, size_t n) {
+    memcpy(additionalData + block * BLOCK_SIZE, buffer, n * BLOCK_SIZE);    //Just simple memcpy
 }

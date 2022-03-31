@@ -383,15 +383,15 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
 //Function for block device, so no prototypes
 //Read the block from disk, additional data is actually the disk struct
 //TODO: According to collected info, lambda is possible in C, replace these with lambda
-static void __readBlock(void* additionalData, size_t block, void* buffer) {
+static void __readBlock(void* additionalData, block_index_t block, void* buffer, size_t n) {
     Disk* d = (Disk*)additionalData;
-    __readSectors(d, d->freeSectorBegin + block, buffer, 1);
+    __readSectors(d, d->freeSectorBegin + block, buffer, n);
 }
 
 //Write the block to disk, additional data is actually the disk struct
-static void __writeBlock(void* additionalData, size_t block, const void* buffer) {
+static void __writeBlock(void* additionalData, block_index_t block, const void* buffer, size_t n) {
     Disk* d = (Disk*)additionalData;
-    __writeSectors(d, d->freeSectorBegin + block, buffer, 1);
+    __writeSectors(d, d->freeSectorBegin + block, buffer, n);
 }
 
 static void __registerDiskBlockDevice(Disk* d) {
@@ -399,8 +399,8 @@ static void __registerDiskBlockDevice(Disk* d) {
 
     device->additionalData = d; //Disk block device's additional data is itself
 
-    device->readBlock = __readBlock;
-    device->writeBlock = __writeBlock;
+    device->readBlocks = __readBlock;
+    device->writeBlocks = __writeBlock;
     
     registerBlockDevice(device);
 }

@@ -33,7 +33,6 @@ void printMemoryAreas() {
 }
 
 char data[512];
-BlockDevice memoryDevice;
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfo) {
@@ -75,14 +74,15 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initHardDisk();
 
-    initMemoryBlockDevice(&memoryDevice, 1u << 20);
-    registerBlockDevice(&memoryDevice);
+    BlockDevice* memoryDevice = createMemoryBlockDevice(1u << 20);
+    registerBlockDevice(memoryDevice);
 
     printBlockDevices();
 
     BlockDevice* device = getBlockDeviceByName("hda");
     printf("%p\n", device->additionalData);
-    device->readBlock(device->additionalData, 0, data);
+    
+    device->readBlocks(device->additionalData, 0, data, 1);
 
     printf("%016llX\n", *((uint64_t*)data));
 
