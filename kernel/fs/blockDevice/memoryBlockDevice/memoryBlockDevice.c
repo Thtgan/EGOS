@@ -24,7 +24,7 @@ void initMemoryBlockDevice(BlockDevice* device, size_t size) {
 
     initSinglyLinkedListNode(&device->node);
 
-    device->availableBlockNum = size / BLOCK_SIZE;
+    device->availableBlockNum = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;   //Round up
     strcpy(device->name, _nameTemplate);    //TODO: Replace this with sprintf
     device->name[6] += _deviceCnt;
     device->type = BLOCK_DEVICE_TYPE_RAM;

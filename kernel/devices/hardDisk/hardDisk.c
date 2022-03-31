@@ -17,7 +17,9 @@
 #include<stdio.h>
 #include<string.h>
 #include<structs/singlyLinkedList.h>
+#include<system/address.h>
 #include<system/deviceIdentify.h>
+#include<system/systemInfo.h>
 
 __attribute__((aligned(sizeof(DeviceIdentifyData))))
 DeviceIdentifyData deviceIdentifies[4];
@@ -36,9 +38,9 @@ typedef struct __Channel Channel;
 
 typedef struct {
     char name[8];
-    bool present, available, isMaster, isATA;
-    uint8_t index; //Index of the disk, hda --> 0, hdb --> 1, etc...
+    bool available, isMaster, isATA, isBoot;
     Channel* channel;
+    LBA28_t freeSectorBegin;
     DeviceIdentifyData* parameters; //Data inside is meanful iff available is true
 } Disk;
 
@@ -148,6 +150,14 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n);
  */
 static void __registerDiskBlockDevice(Disk* d);
 
+/**
+ * @brief Check if the system is booted from this disk, hoping there is no two disk with same signature, call after reading is ready
+ * 
+ * @param d Disk to check
+ * @return If the system is booted from this disk
+ */
+static bool __checkBootDisk(Disk* d);
+
 static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d) {
     const DeviceIdentifyData* params = d->parameters;
     return (((uint32_t)chs->cylinder) * params->headNum + chs->head) * params->sectorNumPerTrack + chs->sector - 1;
@@ -213,7 +223,6 @@ static uint8_t __identifyDevice(Disk* d) {
 
     uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
 
-    d->available = false;
     if (
         TEST_FLAGS_FAIL(status, HDC_STATUS_DATA_REQUIRE_SERVICE)    ||
         TEST_FLAGS(status, HDC_STATUS_ERROR)
@@ -267,12 +276,13 @@ void initHardDisk() {
 
         for (int j = 0; j < 2; ++j) {
             Disk* d = &_channels[i].disks[j];
-            d->index = (i << 1) + j;
             
-            memcpy(d->name, _nameTemplate, sizeof(_nameTemplate));
-            d->name[2] = 'a' + d->index;
+            memcpy(d->name, _nameTemplate, sizeof(_nameTemplate));  //TODO: replace this with sprintf
+            d->name[2] = 'a' + (i << 1) + j;
 
             d->channel = &_channels[i];
+
+            d->available = false;
             d->isMaster = (j == 0);
             d->isATA = __isATAdevice(d);
 
@@ -287,6 +297,10 @@ void initHardDisk() {
                 printf("%s hard disk not available, final status: %#02X.\n", d->name, identifyStatus);
                 continue;
             }
+
+            d->isBoot = __checkBootDisk(d);
+
+            d->freeSectorBegin = d->isBoot ? (BOOT_DISK_FREE_BEGIN / SECTOR_SIZE) : 0;
 
             printf("%s available sector num: %u\n", d->name, d->parameters->addressableSectorNum);
 
@@ -339,8 +353,8 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
 
         uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
 
-        insw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
-        buffer += 512;
+        insw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
+        buffer += SECTOR_SIZE;
     }
 }
 
@@ -356,42 +370,48 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
         c->waitingForInterrupt = true;
         uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
 
-        outsw(HDC_DATA(c->portBase), buffer, 512 / sizeof(uint16_t));
+        outsw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
 
         while (c->waitingForInterrupt) {
             nop();
         }   //TODO: Replace this with semaphore implementation
 
-        buffer += 512;
+        buffer += SECTOR_SIZE;
     }
 }
 
 //Function for block device, so no prototypes
 //Read the block from disk, additional data is actually the disk struct
+//TODO: According to collected info, lambda is possible in C, replace these with lambda
 static void __readBlock(void* additionalData, size_t block, void* buffer) {
-    __readSectors((Disk*)additionalData, block, buffer, 1);
+    Disk* d = (Disk*)additionalData;
+    __readSectors(d, d->freeSectorBegin + block, buffer, 1);
 }
 
 //Write the block to disk, additional data is actually the disk struct
 static void __writeBlock(void* additionalData, size_t block, const void* buffer) {
-    __writeSectors((Disk*)additionalData, block, buffer, 1);
+    Disk* d = (Disk*)additionalData;
+    __writeSectors(d, d->freeSectorBegin + block, buffer, 1);
 }
 
-BlockDevice _diskBlockDevices[4];
-
 static void __registerDiskBlockDevice(Disk* d) {
-    uint8_t index = d->index;
-    BlockDevice* device = &_diskBlockDevices[index];
+    BlockDevice* device = createBlockDevice(d->name, d->parameters->addressableSectorNum - d->freeSectorBegin, BLOCK_DEVICE_TYPE_DISK);
 
-    initSinglyLinkedListNode(&device->node); 
-
-    strcpy(device->name, d->name);
-    device->availableBlockNum = d->parameters->addressableSectorNum;
-    device->type = BLOCK_DEVICE_TYPE_DISK;
     device->additionalData = d; //Disk block device's additional data is itself
 
     device->readBlock = __readBlock;
     device->writeBlock = __writeBlock;
     
     registerBlockDevice(device);
+}
+
+static bool __checkBootDisk(Disk* d) {
+    uint16_t* MBR = malloc(SECTOR_SIZE);    //TODO: Try to replace with a reserved buffer?
+    __readSectors(d, 0, MBR, 1);
+
+    bool ret = (MBR[219] == SYSTEM_INFO_MAGIC) && (MBR[255] == 0xAA55);
+
+    free(MBR);
+
+    return ret;
 }

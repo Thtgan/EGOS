@@ -51,7 +51,7 @@ checkPassed:
     mov es, ax
     mov bx, 0x0000                                          ;;Read to 0x2000:0x0000 (0x10000)
     mov eax, KERNEL_PHYSICAL_BEGIN / 0x200                  ;;Start from 256th sector (131073th byte)
-    mov ecx, KERNEL_PHYSICAL_END - KERNEL_PHYSICAL_BEGIN    ;;1MB - 128KB
+    mov ecx, KERNEL_PHYSICAL_END - KERNEL_PHYSICAL_BEGIN    ;;512KB - 128KB
 
     call __real_readDisk
 
@@ -96,6 +96,10 @@ _errorHaltLoop:
     jmp _errorHaltLoop
 
 %include "MBR/readDisk.asm"
+
+times 438-($-$$) db 0
+
+dw 0xE605   ;;Magic before the extra info
 
 times 510-($-$$) db 0
 

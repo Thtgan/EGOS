@@ -12,9 +12,11 @@ all: buildDir EGOS.img
 EGOS.img: boot.bin kernel.bin
 #Fill to 128KB
 	dd if=$(BUILD_DIR)/boot.bin of=$(BUILD_DIR)/boot.bin bs=1 count=1 seek=131071
-#Fill to 1MB - 128KB	
-	dd if=$(BUILD_DIR)/kernel.bin of=$(BUILD_DIR)/kernel.bin bs=1 count=1 seek=917503
+#Fill to 512KB - 128KB	
+	dd if=$(BUILD_DIR)/kernel.bin of=$(BUILD_DIR)/kernel.bin bs=1 count=1 seek=393215
 	cd $(BUILD_DIR) && cat boot.bin kernel.bin > EGOS.img
+#Fill to 1MB, half for kernel program, half for any operation, like file system
+	dd if=$(BUILD_DIR)/EGOS.img of=$(BUILD_DIR)/EGOS.img bs=1 count=1 seek=1048575
 #Yeah, I tested out, part of the image file might be unavailable for there is limitation to have 63 sectors on one track
 	
 

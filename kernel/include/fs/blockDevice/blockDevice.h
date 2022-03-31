@@ -9,7 +9,8 @@
 
 typedef enum {
     BLOCK_DEVICE_TYPE_RAM,
-    BLOCK_DEVICE_TYPE_DISK
+    BLOCK_DEVICE_TYPE_DISK,
+    BLOCK_DEVICE_TYPE_UNKNOWN
 } BlockDeviceType;
 
 typedef struct {
@@ -18,6 +19,7 @@ typedef struct {
     char name[16];
     size_t availableBlockNum;
     BlockDeviceType type;
+
     void* additionalData;   //Something to assist the block device working, can be anything
     //          ^
     //          | Yes, pass the additional data manually, cause there is no "this" pointer in C
@@ -33,12 +35,37 @@ typedef struct {
 void initBlockDeviceManager();
 
 /**
+ * @brief Create a block device, with basic information set, other information lisk additional information must be set manually
+ * 
+ * @param name Name of the device, not allowed to be duplicated with registered device
+ * @param availableBlockNum Number of block that device contains
+ * @param type Type of the device
+ * @return BlockDevice* Created block device, NULL if device has duplicated name with registered device
+ */
+BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceType type);
+
+/**
+ * @brief Delete created block device, be sure that this device is NOT REGISTERED
+ * 
+ * @param device Block device to delete
+ */
+void deleteBlockDevice(BlockDevice* device);
+
+/**
  * @brief Register the block device, duplicated name not allowed
  * 
- * @param device Device to register
+ * @param device Block device to register
  * @return BlockDevice* If successed, return the registered device, otherwise NULL
  */
 BlockDevice* registerBlockDevice(BlockDevice* device);
+
+/**
+ * @brief Unregister the block device
+ * 
+ * @param name Name of the block device to unregister
+ * @return BlockDevice* If successed, return the unregistered device, otherwise NULL
+ */
+BlockDevice* unregisterBlockDeviceByName(const char* name);
 
 /**
  * @brief Search the block device By name

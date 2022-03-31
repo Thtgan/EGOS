@@ -1,13 +1,41 @@
 #include<fs/blockDevice/blockDevice.h>
 
+#include<memory/malloc.h>
+#include<memory/memory.h>
 #include<stdio.h>
 #include<string.h>
 #include<structs/singlyLinkedList.h>
 
-SinglyLinkedList _blockDeviceList;
+static size_t _registeredBlockDeviceNum;
+static SinglyLinkedList _blockDeviceList;
 
 void initBlockDeviceManager() {
+    _registeredBlockDeviceNum = 0;
     initSinglyLinkedList(&_blockDeviceList);
+}
+
+BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceType type) {
+    for (SinglyLinkedListNode* node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
+        BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
+        if (strcmp(device->name, name) == 0) {  //Duplicated name not allowed
+            return NULL;
+        }
+    }
+
+    BlockDevice* ret = malloc(sizeof(BlockDevice));
+    memset(ret, 0, sizeof(BlockDevice));
+
+    initSinglyLinkedListNode(&ret->node);
+
+    strcpy(ret->name, name);
+    ret->availableBlockNum = availableBlockNum;
+    ret->type = type;
+
+    return ret;
+}
+
+void deleteBlockDevice(BlockDevice* device) {
+    free(device);
 }
 
 BlockDevice* registerBlockDevice(BlockDevice* device) {
@@ -22,7 +50,25 @@ BlockDevice* registerBlockDevice(BlockDevice* device) {
         last = node;
     }
     singleLinkedListInsertBack(last, &device->node);    //Insert to the end of the list
+    ++_registeredBlockDeviceNum;
     return device;
+}
+
+BlockDevice* unregisterBlockDeviceByName(const char* name) {
+    SinglyLinkedListNode* node, * last = &_blockDeviceList;
+    for (node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
+        BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
+
+        if (strcmp(device->name, name) == 0) {      //Name is unique, so can be used to identify device
+            singleLinkedListDeleteNext(last);       //Remove from list
+            --_registeredBlockDeviceNum;
+            return device;
+        }
+
+        last = node;
+    }
+
+    return NULL;
 }
 
 BlockDevice* getBlockDeviceByName(const char* name) {
@@ -55,7 +101,7 @@ BlockDevice* getBlockDeviceByType(BlockDevice* begin, BlockDeviceType type) {
 }
 
 void printBlockDevices() {
-    printf("Block device list:\n");
+    printf("%u dlock device registered:\n", _registeredBlockDeviceNum);
     for (SinglyLinkedListNode* node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
         printf("Name: %s, Capacity: %u\n", device->name, device->availableBlockNum);

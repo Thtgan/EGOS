@@ -80,21 +80,27 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     printBlockDevices();
 
-    BlockDevice* device = getBlockDeviceByName("memory0");
+    BlockDevice* device = getBlockDeviceByName("hda");
     printf("%p\n", device->additionalData);
     device->readBlock(device->additionalData, 0, data);
 
     printf("%016llX\n", *((uint64_t*)data));
 
-    *((uint64_t*)data) = 1234567890;
+    // BlockDevice* device = getBlockDeviceByName("memory0");
+    // printf("%p\n", device->additionalData);
+    // device->readBlock(device->additionalData, 0, data);
+
+    // printf("%016llX\n", *((uint64_t*)data));
+
+    // *((uint64_t*)data) = 1234567890;
     
-    device->writeBlock(device->additionalData, 0, data);
+    // device->writeBlock(device->additionalData, 0, data);
 
-    memset(data, 0, 512);
+    // memset(data, 0, 512);
 
-    device->readBlock(device->additionalData, 0, data);
+    // device->readBlock(device->additionalData, 0, data);
 
-    printf("%016llX\n", *((uint64_t*)data));
+    // printf("%016llX\n", *((uint64_t*)data));
 
     die();
 }

@@ -15,4 +15,6 @@
 
 #define FREE_PAGE_BEGIN         KERNEL_PHYSICAL_END
 
+#define BOOT_DISK_FREE_BEGIN    0x80000 //IO to boot disk start at this address is guaranteed will not affect the kernel
+
 #endif // __ADDRESS_H
