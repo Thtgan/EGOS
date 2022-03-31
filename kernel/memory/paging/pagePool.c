@@ -12,7 +12,6 @@
  * 
  * @param list Page node list, where the pages to collect came from
  * @param node Page node contiains pages to collect
- * @param pageUseMap Bitmap used to record use status of pages
  */
 static void __collectPages(PagePool* p, PageNode* node);
 

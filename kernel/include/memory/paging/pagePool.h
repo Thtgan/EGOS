@@ -5,13 +5,10 @@
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>
-#include<structs/bitmap.h>
 #include<structs/linkedList.h>
 
 /**
  * @brief Pool of an avaiable memory, managing an area of memory
- * 
- * Some of the memory in the area will be used as the bitmap to indicate the status of allocatable pages
  * 
  *                Memory area
  * 
@@ -44,7 +41,7 @@
  */
 typedef struct {
     PageNodeList freePageNodeList;  //Linker list formed by allocatable page nodes, with head node
-    void* freePageBase;             //Beginning pointer of the allocatable pages, should be after the bitmap area
+    void* freePageBase;             //Beginning pointer of the allocatable pages
     size_t freePageSize;            //How many free pages this pool has
 } PagePool;
 
