@@ -18,7 +18,7 @@
 //     return node->next;
 // }
 
-// void singleLinkedListInsertBack(SinglyLinkedList* node, SinglyLinkedListNode* newNode) {
+// void singleLinkedListInsertNext(SinglyLinkedList* node, SinglyLinkedListNode* newNode) {
 //     newNode->next = node->next;
 //     node->next = newNode;
 // }

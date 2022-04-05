@@ -175,7 +175,7 @@ static void __addRegionToList(void* regionBegin, size_t level) {
     initSinglyLinkedListNode(node);
 
     __RegionList* rList = &regionLists[level];
-    singleLinkedListInsertBack(&rList->list, node);
+    singlyLinkedListInsertNext(&rList->list, node);
     ++rList->regionNum;
 }
 
@@ -185,7 +185,7 @@ static void* __getRegionFromList(size_t level) {
     __RegionList* rList = &regionLists[level];
     if (rList->regionNum > 0) {
         ret = (void*)rList->list.next;
-        singleLinkedListDeleteNext(&rList->list);
+        singlyLinkedListDeleteNext(&rList->list);
         --rList->regionNum;
     }
     return ret;
@@ -217,8 +217,8 @@ static void __regionListTidyUp(size_t level) {
                 ((uint64_t)node & rList->length) == 0 && 
                 ((void*)node) + rList->length == (void*)node->next
             ) { //Two node may combine and handle to higher level region list
-                singleLinkedListDeleteNext(prev);
-                singleLinkedListDeleteNext(prev);
+                singlyLinkedListDeleteNext(prev);
+                singlyLinkedListDeleteNext(prev);
                 rList->regionNum -= 2;
 
                 __addRegionToList((void*)node, level + 1);

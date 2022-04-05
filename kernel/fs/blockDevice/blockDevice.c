@@ -15,7 +15,7 @@ void initBlockDeviceManager() {
 }
 
 BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceType type) {
-    for (SinglyLinkedListNode* node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
+    for (SinglyLinkedListNode* node = singlyLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singlyLinkedListGetNext(node)) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
         if (strcmp(device->name, name) == 0) {  //Duplicated name not allowed
             return NULL;
@@ -40,7 +40,7 @@ void deleteBlockDevice(BlockDevice* device) {
 
 BlockDevice* registerBlockDevice(BlockDevice* device) {
     SinglyLinkedListNode* node, * last = &_blockDeviceList;
-    for (node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
+    for (node = singlyLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singlyLinkedListGetNext(node)) {
         char* deviceName = HOST_POINTER(node, BlockDevice, node)->name;
 
         if (strcmp(device->name, deviceName) == 0) {    //Duplicated name not allowed
@@ -49,18 +49,18 @@ BlockDevice* registerBlockDevice(BlockDevice* device) {
 
         last = node;
     }
-    singleLinkedListInsertBack(last, &device->node);    //Insert to the end of the list
+    singlyLinkedListInsertNext(last, &device->node);    //Insert to the end of the list
     ++_registeredBlockDeviceNum;
     return device;
 }
 
 BlockDevice* unregisterBlockDeviceByName(const char* name) {
     SinglyLinkedListNode* node, * last = &_blockDeviceList;
-    for (node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
+    for (node = singlyLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singlyLinkedListGetNext(node)) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
 
         if (strcmp(device->name, name) == 0) {      //Name is unique, so can be used to identify device
-            singleLinkedListDeleteNext(last);       //Remove from list
+            singlyLinkedListDeleteNext(last);       //Remove from list
             --_registeredBlockDeviceNum;
             return device;
         }
@@ -73,9 +73,9 @@ BlockDevice* unregisterBlockDeviceByName(const char* name) {
 
 BlockDevice* getBlockDeviceByName(const char* name) {
     for (
-        SinglyLinkedListNode* node = singleLinkedListGetNext(&_blockDeviceList);
+        SinglyLinkedListNode* node = singlyLinkedListGetNext(&_blockDeviceList);
         node != &_blockDeviceList;
-        node = singleLinkedListGetNext(node)
+        node = singlyLinkedListGetNext(node)
         ) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
 
@@ -87,9 +87,9 @@ BlockDevice* getBlockDeviceByName(const char* name) {
 }
 
 BlockDevice* getBlockDeviceByType(BlockDevice* begin, BlockDeviceType type) {
-    for (SinglyLinkedListNode* node = singleLinkedListGetNext(&_blockDeviceList); 
+    for (SinglyLinkedListNode* node = singlyLinkedListGetNext(&_blockDeviceList); 
         node != NULL && node != &_blockDeviceList; 
-        node = singleLinkedListGetNext(node)
+        node = singlyLinkedListGetNext(node)
         ) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
 
@@ -102,7 +102,7 @@ BlockDevice* getBlockDeviceByType(BlockDevice* begin, BlockDeviceType type) {
 
 void printBlockDevices() {
     printf("%u dlock device registered:\n", _registeredBlockDeviceNum);
-    for (SinglyLinkedListNode* node = singleLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singleLinkedListGetNext(node)) {
+    for (SinglyLinkedListNode* node = singlyLinkedListGetNext(&_blockDeviceList); node != &_blockDeviceList; node = singlyLinkedListGetNext(node)) {
         BlockDevice* device = HOST_POINTER(node, BlockDevice, node);
         printf("Name: %s, Capacity: %u\n", device->name, device->availableBlockNum);
     }

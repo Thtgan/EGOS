@@ -181,8 +181,8 @@ static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* p
             prev->next = next;
 
             //->prev->node1->node2->next-> --> ->prev->node2->node1->next->
-            singleLinkedListInsertBack(prev, node1);
-            singleLinkedListInsertBack(prev, node2);
+            singlyLinkedListInsertNext(prev, node1);
+            singlyLinkedListInsertNext(prev, node2);
 
             list = node2;
         }
@@ -212,30 +212,30 @@ static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* p
         if (len1 != 0 && len2 != 0) {
             if (comparator(subList1, subList2) < 0) {
                 SinglyLinkedListNode* node = subList1;
-                subList1 = singleLinkedListGetNext(subList1);
-                singleLinkedListInsertBack(tail, node);
+                subList1 = singlyLinkedListGetNext(subList1);
+                singlyLinkedListInsertNext(tail, node);
                 tail = node;
                 --len1;
             } else {
                 SinglyLinkedListNode* node = subList2;
-                subList2 = singleLinkedListGetNext(subList2);
-                singleLinkedListInsertBack(tail, node);
+                subList2 = singlyLinkedListGetNext(subList2);
+                singlyLinkedListInsertNext(tail, node);
                 tail = node;
                 --len2;
             }
         } else if (len1 != 0) {
             while (len1 != 0) {
                 SinglyLinkedListNode* node = subList1;
-                subList1 = singleLinkedListGetNext(subList1);
-                singleLinkedListInsertBack(tail, node);
+                subList1 = singlyLinkedListGetNext(subList1);
+                singlyLinkedListInsertNext(tail, node);
                 tail = node;
                 --len1;
             }
         } else {
             while (len2 != 0) {
                 SinglyLinkedListNode* node = subList2;
-                subList2 = singleLinkedListGetNext(subList2);
-                singleLinkedListInsertBack(tail, node);
+                subList2 = singlyLinkedListGetNext(subList2);
+                singlyLinkedListInsertNext(tail, node);
                 tail = node;
                 --len2;
             }
