@@ -93,6 +93,13 @@ Console:
 
 File system:
   ✔ Hard disk basic operation @done(22-03-27 16:39)
+  ✔ Block device abstraction @done(22-04-05 14:37)
+  Pospherus:
+    ✔ Cluster/Block allocator @done(22-04-05 14:38)
+    ☐ Allocator needs further test
+    ☐ iNode
+    ☐ File
+    ☐ Directory
   ☐ Make a text LOGO file, read and print it
   
 Misc:

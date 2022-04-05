@@ -7,7 +7,7 @@
 
 #define BLOCK_SIZE 512
 
-typedef uint64_t block_index_t;
+typedef uint64_t block_index_t; //-1 (0xFFFFFFFFFFFFFFFF) stands for NULL
 
 typedef enum {
     BLOCK_DEVICE_TYPE_RAM,

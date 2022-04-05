@@ -2,7 +2,8 @@
 
 #include<kit/bit.h>
 
-void initBitmap(Bitmap* b, const size_t bitSize, void* bitPtr) {
+//TODO: Make a malloc version?
+void initBitmap(Bitmap* b, size_t bitSize, void* bitPtr) {
     b->bitNum = bitSize;
     b->bitSetNum = 0;
     b->bitPtr = bitPtr;

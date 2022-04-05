@@ -33,6 +33,6 @@ void realModeMain() {
 }
 
 static void __collectSystemInfo() {
-    systemInfo.magic = SYSTEM_INFO_MAGIC;
+    systemInfo.magic = SYSTEM_INFO_MAGIC16;
     detectMemory(&systemInfo);
 }

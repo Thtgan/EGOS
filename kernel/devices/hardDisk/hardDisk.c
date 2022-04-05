@@ -204,7 +204,6 @@ static bool __isATAdevice(Disk* d) {
         signature1 = inb(HDC_LBA_8_15(portBase)),
         signature2 = inb(HDC_LBA_16_23(portBase));
 
-    printf("%s signature1: %#02X, signature2: %#02X\n", d->name, signature1, signature2);
     return 
         (signature1 == 0x00 && signature2 == 0x00) ||
         (signature1 == 0x3C && signature2 == 0xC3);
@@ -293,16 +292,15 @@ void initHardDisk() {
 
             uint8_t identifyStatus = __identifyDevice(d);
 
-            if (!d->available) {
+            if (!d->available) { //TODO: May fail here, might be caused by delay
                 printf("%s hard disk not available, final status: %#02X.\n", d->name, identifyStatus);
                 continue;
             }
 
             d->isBoot = __checkBootDisk(d);
 
-            d->freeSectorBegin = d->isBoot ? (BOOT_DISK_FREE_BEGIN / SECTOR_SIZE) : 0;
-
-            printf("%s available sector num: %u\n", d->name, d->parameters->addressableSectorNum);
+            //d->freeSectorBegin = d->isBoot ? (BOOT_DISK_FREE_BEGIN / SECTOR_SIZE) : 0;
+            d->freeSectorBegin = 0;
 
             __registerDiskBlockDevice(d);   //Register as the block device
         }
@@ -409,7 +407,7 @@ static bool __checkBootDisk(Disk* d) {
     uint16_t* MBR = malloc(SECTOR_SIZE);    //TODO: Try to replace with a reserved buffer?
     __readSectors(d, 0, MBR, 1);
 
-    bool ret = (MBR[219] == SYSTEM_INFO_MAGIC) && (MBR[255] == 0xAA55);
+    bool ret = (MBR[219] == SYSTEM_INFO_MAGIC16) && (MBR[255] == 0xAA55);
 
     free(MBR);
 

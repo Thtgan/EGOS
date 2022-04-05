@@ -1,10 +1,10 @@
 #if !defined(__SYSTEM_INFO_H)
 #define __SYSTEM_INFO_H
 
-#include<system/GDT.h>
-#include<system/memoryMap.h>
+#include<stdint.h>
 
-#define SYSTEM_INFO_MAGIC 0xE605
+#define SYSTEM_INFO_MAGIC16 0xE605
+#define SYSTEM_INFO_MAGIC32 0xE605E605
 
 typedef struct {
     uint16_t magic;

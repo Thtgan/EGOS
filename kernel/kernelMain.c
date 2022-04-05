@@ -34,11 +34,13 @@ void printMemoryAreas() {
 
 char data[512];
 
+#include<fs/phospherus/allocator.h>
+
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfo) {
     systemInfo = (SystemInfo*)sysInfo;
 
-    if (systemInfo->magic != SYSTEM_INFO_MAGIC) {
+    if (systemInfo->magic != SYSTEM_INFO_MAGIC16) {
         blowup("Magic not match\n");
     }
 
@@ -74,33 +76,55 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initHardDisk();
 
-    BlockDevice* memoryDevice = createMemoryBlockDevice(1u << 20);
+    BlockDevice* hda = getBlockDeviceByName("hda");
+    if (hda == NULL) {
+        blowup("Hda not found\n");
+    }
+
+    BlockDevice* memoryDevice = createMemoryBlockDevice(1u << 22); //4MB
+    printf("%#llX\n", memoryDevice->additionalData);
     registerBlockDevice(memoryDevice);
 
     printBlockDevices();
 
-    BlockDevice* device = getBlockDeviceByName("hda");
-    printf("%p\n", device->additionalData);
-    
-    device->readBlocks(device->additionalData, 0, data, 1);
+    deployAllocator(memoryDevice);
 
-    printf("%016llX\n", *((uint64_t*)data));
+    if (!checkBlockDevice(memoryDevice)) {
+        blowup("Deploy failed\n");
+    }
 
-    // BlockDevice* device = getBlockDeviceByName("memory0");
-    // printf("%p\n", device->additionalData);
-    // device->readBlock(device->additionalData, 0, data);
+    Allocator allocator;
+    loadAllocator(&allocator, memoryDevice);
 
-    // printf("%016llX\n", *((uint64_t*)data));
+    block_index_t clusters[16];
+    for (int i = 0; i < 8; ++i) {
+        clusters[i] = allocateCluster(&allocator);
+    }
 
-    // *((uint64_t*)data) = 1234567890;
-    
-    // device->writeBlock(device->additionalData, 0, data);
+    block_index_t blocks[512];
 
-    // memset(data, 0, 512);
+    for (int i = 0; i < 512; ++i) {
+        blocks[i] = allocateFragmentBlock(&allocator);
+    }
 
-    // device->readBlock(device->additionalData, 0, data);
+    for (int i = 0; i < 16; ++i) {
+        hda->readBlocks(hda->additionalData, i, data, 1);
+        memoryDevice->writeBlocks(memoryDevice->additionalData, blocks[i + 250], data, 1);
+    }
 
-    // printf("%016llX\n", *((uint64_t*)data));
+    for (int i = 8; i < 16; ++i) {
+        clusters[i] = allocateCluster(&allocator);
+    }
+
+    for (int i = 511; i >= 0; --i) {
+        releaseFragmentBlock(&allocator, blocks[i]);
+    }
+
+    for (int i = 0; i < 16; ++i) {
+        releaseCluster(&allocator, clusters[i]);
+    }
+
+    printf("died\n");
 
     die();
 }
