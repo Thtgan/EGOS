@@ -3,40 +3,75 @@
 
 #include<fs/blockDevice/blockDevice.h>
 #include<fs/phospherus/blockLinkedList.h>
+#include<stdbool.h>
+#include<stddef.h>
 
-typedef struct {
-    //-1 stands for NULL
-    uint32_t signature;
-    size_t freeClusterNum;
-    BlockLinkedListNode freeClusterListNode;
-    size_t freeFragmentBlockNum;
-    BlockLinkedListNode freeFragmentClusterListNode;
-    uint8_t reserved[180];
-    size_t freeBlockNumInCluster;
-    uint8_t firstFreeBlock;
-    uint8_t freeBlockList[255];
-} __attribute__((packed)) ClusterNode;
+#define ALLOCATOR_NODE_SIZE_IN_BLOCK 2048
 
 typedef struct {
     BlockDevice* device;
-    ClusterNode* superNode;
+    void* superNode;
 } Allocator;
 
-bool checkBlockDevice(const BlockDevice* device);
+/**
+ * @brief Initialize the block allocator
+ */
+void initAllocator();
 
-bool deployAllocator(const BlockDevice* device);
+/**
+ * @brief Check if the block device has the phospherus' super node deployed
+ * 
+ * @param device Block device
+ * @return If the device has super node deployed
+ */
+bool checkBlockDevice(BlockDevice* device);
 
+/**
+ * @brief Deploy the essential data to the device, the block device must have at least one cluster free
+ * 
+ * @param device Block device to deploy
+ * @return Does the deploy succeeded
+ */
+bool deployAllocator(BlockDevice* device);
+
+/**
+ * @brief Load the allocator from the disk
+ * 
+ * @param allocator Allocator to initialize
+ * @param device Block device involved
+ */
 void loadAllocator(Allocator* allocator, BlockDevice* device);
 
+/**
+ * @brief Unload the allocator, make it unavailable for operation
+ * 
+ * @param allocator Allocator to unload
+ */
 void deleteAllocator(Allocator* allocator);
 
-block_index_t allocateCluster(Allocator* allocator);
+/**
+ * @brief Allocate a block (512B)
+ * 
+ * @param allocator Allocator
+ * @return block_index_t Block index of the block
+ */
+block_index_t allocateBlock(Allocator* allocator);
 
-void releaseCluster(Allocator* allocator, block_index_t clusterNodeIndex);
+/**
+ * @brief Release the allocated block
+ * 
+ * @param allocator Allocator
+ * @param blockIndex Block to release
+ */
+void releaseBlock(Allocator* allocator, block_index_t blockIndex);
 
-block_index_t allocateFragmentBlock(Allocator* allocator);
-
-void releaseFragmentBlock(Allocator* allocator, block_index_t fragmentBlock);
+/**
+ * @brief Get the num of the free block
+ * 
+ * @param allocator Allocator
+ * @return size_t Num of the free block
+ */
+size_t getFreeBlockNum(Allocator* allocator);
 
 //TODO: Implement the security check, to avoid a cluster/fragment be released twice
 

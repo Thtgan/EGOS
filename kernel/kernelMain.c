@@ -6,6 +6,7 @@
 #include<fs/blockDevice/blockDevice.h>
 #include<fs/blockDevice/memoryBlockDevice/memoryBlockDevice.h>
 #include<interrupt/IDT.h>
+#include<memory/buffer.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
@@ -32,9 +33,11 @@ void printMemoryAreas() {
     }
 }
 
-char data[512];
+char data[512 * 16];
+block_index_t blocks[4096];
 
 #include<fs/phospherus/allocator.h>
+#include<fs/phospherus/inode.h>
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfo) {
@@ -68,6 +71,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     printf("%u pages available\n", pageNum);
 
+    initBuffer();
+
     initTimer();
 
     initKeyboard();
@@ -76,6 +81,9 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initHardDisk();
 
+    initAllocator();
+    initInode();
+
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
         blowup("Hda not found\n");
@@ -83,6 +91,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     BlockDevice* memoryDevice = createMemoryBlockDevice(1u << 22); //4MB
     printf("%#llX\n", memoryDevice->additionalData);
+    printf("%#llX\n", blocks);
     registerBlockDevice(memoryDevice);
 
     printBlockDevices();
@@ -96,33 +105,38 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
     Allocator allocator;
     loadAllocator(&allocator, memoryDevice);
 
-    block_index_t clusters[16];
-    for (int i = 0; i < 8; ++i) {
-        clusters[i] = allocateCluster(&allocator);
+    block_index_t inodeBlock = createInode(&allocator, 2048);
+    iNodeDesc* inode = openInode(memoryDevice, inodeBlock);
+
+
+    hda->readBlocks(hda->additionalData, 0, data, 8);
+    writeInodeBlocks(inode, data, 8, 8);
+
+    if (!deleteInode(&allocator, inodeBlock)) {
+        printf("Delete failed");
     }
 
-    block_index_t blocks[512];
+    // memset(data, 0, sizeof(data));
 
-    for (int i = 0; i < 512; ++i) {
-        blocks[i] = allocateFragmentBlock(&allocator);
-    }
+    // resizeInode(&allocator, inode->inode, 16);
+    // readInodeBlocks(inode->inode, data, 8, 1);
+    // printf("%#llX\n", ((uint16_t*)data)[255]);
+    // closeInode(memoryDevice, inode);
 
-    for (int i = 0; i < 16; ++i) {
-        hda->readBlocks(hda->additionalData, i, data, 1);
-        memoryDevice->writeBlocks(memoryDevice->additionalData, blocks[i + 250], data, 1);
-    }
+    // for (int i = 0; i < 4096; ++i) {
+    //     blocks[i] = allocateBlock(&allocator);
+    // }
 
-    for (int i = 8; i < 16; ++i) {
-        clusters[i] = allocateCluster(&allocator);
-    }
+    // for (int i = 0; i < 16; ++i) {
+    //     hda->readBlocks(hda->additionalData, i, data, 1);
+    //     memoryDevice->writeBlocks(memoryDevice->additionalData, blocks[i + 2040], data, 1);
+    // }
 
-    for (int i = 511; i >= 0; --i) {
-        releaseFragmentBlock(&allocator, blocks[i]);
-    }
+    // for (int i = 3000; i >= 1000; --i) {
+    //     releaseBlock(&allocator, blocks[i]);
+    // }
 
-    for (int i = 0; i < 16; ++i) {
-        releaseCluster(&allocator, clusters[i]);
-    }
+    // printf("%llu\n", getFreeBufferNum(BUFFER_SIZE_512));
 
     printf("died\n");
 

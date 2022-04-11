@@ -30,6 +30,11 @@ uint32_t umin32(uint32_t a, uint32_t b);
 int64_t min64(int64_t a, int64_t b);
 uint64_t umin64(uint64_t a, uint64_t b);
 
+uint8_t abs8(int8_t val);
+uint8_t abs16(int16_t val);
+uint8_t abs32(int32_t val);
+uint8_t abs64(int64_t val);
+
 //Comparator function for sorting
 #define COMPARATOR_PTR(__X, __T)   int (*__X)(const __T* x1, const __T* x2)
 

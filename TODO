@@ -97,7 +97,8 @@ File system:
   Pospherus:
     ✔ Cluster/Block allocator @done(22-04-05 14:38)
     ☐ Allocator needs further test
-    ☐ iNode
+    ✔ iNode @done(22-04-12 01:43)
+    ☐ iNode needs further test
     ☐ File
     ☐ Directory
   ☐ Make a text LOGO file, read and print it

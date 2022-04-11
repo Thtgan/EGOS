@@ -69,6 +69,22 @@ uint64_t umin64(uint64_t a, uint64_t b) {
     return a < b ? a : b;
 }
 
+uint8_t abs8(int8_t val) {
+    return val < 0 ? -val : val;
+}
+
+uint8_t abs16(int16_t val) {
+    return val < 0 ? -val : val;
+}
+
+uint8_t abs32(int32_t val) {
+    return val < 0 ? -val : val;
+}
+
+uint8_t abs64(int64_t val) {
+    return val < 0 ? -val : val;
+}
+
 /**
  * @brief Merge sort the sub-double linked list
  * 
