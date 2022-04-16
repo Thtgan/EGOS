@@ -5,6 +5,7 @@
 #include<devices/timer/timer.h>
 #include<fs/blockDevice/blockDevice.h>
 #include<fs/blockDevice/memoryBlockDevice/memoryBlockDevice.h>
+#include<fs/fileSystem.h>
 #include<interrupt/IDT.h>
 #include<memory/buffer.h>
 #include<memory/malloc.h>
@@ -32,12 +33,6 @@ void printMemoryAreas() {
         printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
-
-char data[512 * 16];
-block_index_t blocks[4096];
-
-#include<fs/phospherus/allocator.h>
-#include<fs/phospherus/inode.h>
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfo) {
@@ -81,8 +76,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initHardDisk();
 
-    initAllocator();
-    initInode();
+    // phospherus_initAllocator();
+    // phospherus_initInode();
 
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
@@ -91,53 +86,64 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     BlockDevice* memoryDevice = createMemoryBlockDevice(1u << 22); //4MB
     printf("%#llX\n", memoryDevice->additionalData);
-    printf("%#llX\n", blocks);
     registerBlockDevice(memoryDevice);
 
     printBlockDevices();
 
-    deployAllocator(memoryDevice);
-
-    if (!checkBlockDevice(memoryDevice)) {
-        blowup("Deploy failed\n");
+    initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
+    if (deployFileSystem(memoryDevice, FILE_SYSTEM_TYPE_PHOSPHERUS)) {
+        printf("File system deployed\n");
+    } else {
+        blowup("File system deploy failed\n");
     }
 
-    Allocator allocator;
-    loadAllocator(&allocator, memoryDevice);
+    void* buffer = allocateBuffer(BUFFER_SIZE_64);
 
-    block_index_t inodeBlock = createInode(&allocator, 2048);
-    iNodeDesc* inode = openInode(memoryDevice, inodeBlock);
-
-
-    hda->readBlocks(hda->additionalData, 0, data, 8);
-    writeInodeBlocks(inode, data, 8, 8);
-
-    if (!deleteInode(&allocator, inodeBlock)) {
-        printf("Delete failed");
+    FileSystemTypes type = checkFileSystem(memoryDevice);
+    if (type == FILE_SYSTEM_TYPE_NULL) {
+        printf("File system not installed\n");
     }
 
-    // memset(data, 0, sizeof(data));
+    FileSystem* fs = openFileSystem(memoryDevice, type);
+    printf("%s\n", fs->name);
 
-    // resizeInode(&allocator, inode->inode, 16);
-    // readInodeBlocks(inode->inode, data, 8, 1);
-    // printf("%#llX\n", ((uint16_t*)data)[255]);
-    // closeInode(memoryDevice, inode);
+    DirectoryPtr rootDir = fs->pathOperations.getRootDirectory(fs);
+    block_index_t newFileInode = fs->fileOperations.createFile(fs);
+    fs->pathOperations.insertDirectoryItem(fs, rootDir, newFileInode, "test.txt", false);
+    fs->pathOperations.readDirectoryItemName(fs, rootDir, 0, buffer, 63);
+    printf("%s\n", buffer);
 
-    // for (int i = 0; i < 4096; ++i) {
-    //     blocks[i] = allocateBlock(&allocator);
-    // }
+    FilePtr file = fs->fileOperations.openFile(fs, fs->pathOperations.getDirectoryItemInode(fs, rootDir, 0));
+    fs->fileOperations.seekFile(fs, file, 0);
+    fs->fileOperations.writeFile(fs, file, buffer, strlen(buffer) + 1);
+    fs->fileOperations.closeFile(fs, file);
 
-    // for (int i = 0; i < 16; ++i) {
-    //     hda->readBlocks(hda->additionalData, i, data, 1);
-    //     memoryDevice->writeBlocks(memoryDevice->additionalData, blocks[i + 2040], data, 1);
-    // }
+    memset(buffer, 0, sizeof(buffer));
+    file = fs->fileOperations.openFile(fs, fs->pathOperations.getDirectoryItemInode(fs, rootDir, 0));
+    size_t size = fs->fileOperations.getFileSize(fs, file);
+    fs->fileOperations.readFile(fs, file, buffer, size);
+    printf("%s %u\n", buffer, size);
+    fs->fileOperations.closeFile(fs, file);
 
-    // for (int i = 3000; i >= 1000; --i) {
-    //     releaseBlock(&allocator, blocks[i]);
-    // }
+    block_index_t newDirectoryInode = fs->pathOperations.createDirectory(fs);
+    fs->pathOperations.insertDirectoryItem(fs, rootDir, newDirectoryInode, "testDir", true);
+    DirectoryPtr subDirectory = fs->pathOperations.openDirectory(fs, fs->pathOperations.getDirectoryItemInode(fs, rootDir, 1));
+    printf("%u %u\n", fs->pathOperations.getDirectoryItemNum(fs, rootDir), fs->pathOperations.getDirectoryItemNum(fs, subDirectory));
 
-    // printf("%llu\n", getFreeBufferNum(BUFFER_SIZE_512));
+    for (int i = 0; i < 2; ++i) {
+        fs->pathOperations.readDirectoryItemName(fs, rootDir, i, buffer, 63);
+        printf("%s\n", buffer);
+    }
 
+    block_index_t removed = fs->pathOperations.removeDirectoryItem(fs, rootDir, 0);
+    fs->fileOperations.deleteFile(fs, removed);
+    printf("%u\n", fs->pathOperations.getDirectoryItemNum(fs, rootDir));
+    fs->pathOperations.readDirectoryItemName(fs, rootDir, 0, buffer, 63);
+    printf("%s\n", buffer);
+
+    closeFileSystem(fs);
+    releaseBuffer(buffer, BUFFER_SIZE_64);
+    
     printf("died\n");
 
     die();

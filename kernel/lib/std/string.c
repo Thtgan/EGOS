@@ -154,6 +154,7 @@ char* strncpy(char* des, const char* src, size_t n) {
     for (; *src != '\0' && n != 0; ++src, ++des, --n) {
         *des = *src;
     }
+    *des = '\0';
     return ret;
 }
 

@@ -96,11 +96,11 @@ File system:
   ✔ Block device abstraction @done(22-04-05 14:37)
   Pospherus:
     ✔ Cluster/Block allocator @done(22-04-05 14:38)
-    ☐ Allocator needs further test
     ✔ iNode @done(22-04-12 01:43)
-    ☐ iNode needs further test
-    ☐ File
-    ☐ Directory
+    ✔ File @done(22-04-17 01:12)
+    ✔ Directory @done(22-04-17 01:12)
+    ☐ The whole file system needs further test
+    ☐ Tool to inject file into the image
   ☐ Make a text LOGO file, read and print it
   
 Misc:

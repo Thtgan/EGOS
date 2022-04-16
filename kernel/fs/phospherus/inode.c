@@ -87,9 +87,10 @@ typedef struct {
  * @param allocator Allocator
  * @param inode Inode to initialize
  * @param inodeBlock Index of the block where the inode is located
- * @param size Size of the inode
+ * @param blockSize Size of the inode
+ * @param blockTaken Num of blocks taken by inode
  */
-static void __createInode(Allocator* allocator, iNode* inode, block_index_t inodeBlock, size_t size);
+static void __createInode(Phospherus_Allocator* allocator, iNode* inode, block_index_t inodeBlock, size_t blockSize, size_t blockTaken);
 
 /**
  * @brief Destroy the inode, including destroy the blocks belongs to this inode
@@ -97,26 +98,26 @@ static void __createInode(Allocator* allocator, iNode* inode, block_index_t inod
  * @param allocator Allocator
  * @param inode Inode to destroy
  */
-static void __destroyInode(Allocator* allocator, iNode* inode);
+static void __destroyInode(Phospherus_Allocator* allocator, iNode* inode);
 
 /**
  * @brief Create tables of the inode connected to all the blocks
  * 
  * @param allocator Allocator
  * @param inode Inode to create the tables
- * @param size Num of the blocks contained by the tables
+ * @param blockSize Num of the blocks contained by the tables
  */
-static void __createBlockTables(Allocator* allocator, iNode* inode, size_t size);
+static void __createBlockTables(Phospherus_Allocator* allocator, iNode* inode, size_t blockSize);
 
 /**
  * @brief Create a table connected to the blocks
  * 
  * @param allocator Allocator
  * @param level Level of the table
- * @param size Num of the blocks contained by the table
+ * @param blockSize Num of the blocks contained by the table
  * @return block_index_t The index of the block contains the table
  */
-static block_index_t __createBlockTable(Allocator* allocator, size_t level, size_t size);
+static block_index_t __createBlockTable(Phospherus_Allocator* allocator, size_t level, size_t blockSize);
 
 /**
  * @brief Destroy the tables connected to all the blocks
@@ -124,7 +125,7 @@ static block_index_t __createBlockTable(Allocator* allocator, size_t level, size
  * @param allocator Allocator
  * @param inode Inode contains tables to destroy
  */
-static void __destroyBlockTables(Allocator* allocator, iNode* inode);
+static void __destroyBlockTables(Phospherus_Allocator* allocator, iNode* inode);
 
 /**
  * @brief Deatroy a table connected to the blocks
@@ -133,16 +134,16 @@ static void __destroyBlockTables(Allocator* allocator, iNode* inode);
  * @param tableBlock Index of the block contains the table to destroy
  * @param level Level of the table
  */
-static void __destoryBlockTable(Allocator* allocator, block_index_t tableBlock, size_t level);
+static void __destoryBlockTable(Phospherus_Allocator* allocator, block_index_t tableBlock, size_t level);
 
 /**
  * @brief Resize the tables
  * 
  * @param allocator Allocator
  * @param inode Inode contains tables to resize
- * @param newSize New size to resize to
+ * @param newBlockSize New size to resize to
  */
-static void __resizeBlockTables(Allocator* allocator, iNode* inode, size_t newSize);
+static void __resizeBlockTables(Phospherus_Allocator* allocator, iNode* inode, size_t newBlockSize);
 
 /**
  * @brief Resize the table, will truncate the data if the removed part contains the data
@@ -150,10 +151,10 @@ static void __resizeBlockTables(Allocator* allocator, iNode* inode, size_t newSi
  * @param allocator Allocator
  * @param tableBlock Index of the block contains the table to resize
  * @param level Level of the table
- * @param size Original size of the table
- * @param newSize New size to resize to
+ * @param blockSize Original size of the table
+ * @param newBlockSize New size to resize to
  */
-static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, size_t level, size_t size, size_t newSize);
+static void __resizeBlockTable(Phospherus_Allocator* allocator, block_index_t tableBlock, size_t level, size_t blockSize, size_t newBlockSize);
 
 /**
  * @brief Read the blocks
@@ -163,9 +164,9 @@ static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, s
  * @param tableIndex Index of the block contains the table
  * @param level Level of the table
  * @param blockIndexInTable First block to read, start from the beginning of the table
- * @param size How many block(s) to read
+ * @param blockSize How many block(s) to read
  */
-static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t size);
+static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize);
 
 /**
  * @brief Write the blocks
@@ -175,45 +176,26 @@ static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableI
  * @param tableIndex Index of the block contains the table
  * @param level Level of the table
  * @param blockIndexInTable First block to write, start from the beginning of the table
- * @param size How many block(s) to write
+ * @param blockSize How many block(s) to write
  */
-static void __writeBlocks(BlockDevice* device, const void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t size);
-
-/**
- * @brief Check is the allocator has enough blocks to create the inode
- * 
- * @param allocator Allocator
- * @param size Size of the inode
- * @return Is the create possible
- */
-static bool __checkCreatePossible(Allocator* allocator, size_t size);
-
-/**
- * @brief Check is the allocator has enough blocks to resize the inode
- * 
- * @param allocator Allocator
- * @param size Old size
- * @param newSize New size to resize to
- * @return Is the resize possible
- */
-static bool __checkResizePossible(Allocator* allocator, size_t size, size_t newSize);
+static void __writeBlocks(BlockDevice* device, const void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize);
 
 /**
  * @brief Estimate a inode in given size will take how many blocks
  * 
- * @param size Size of the inode
+ * @param blockSize Size of the inode
  * @return size_t How many blocks will inode take
  */
-static size_t __estimateiNodeBlockNum(size_t size);
+static size_t __estimateiNodeBlockNum(size_t blockSize);
 
 /**
  * @brief Estimate a table connected to given size of blocks will take how many blocks
  * 
  * @param level Level of the table
- * @param size Size of the table
+ * @param blockSize Size of the table
  * @return size_t How many blocks will table take
  */
-static size_t __estimateBlockTableBlockNum(size_t level, size_t size);
+static size_t __estimateBlockTableBlockNum(size_t level, size_t blockSize);
 
 /**
  * @brief Search inode from opened inodes
@@ -225,20 +207,21 @@ static iNodeDesc* __searchInodeDesc(block_index_t inodeBlock);
 
 static LinkedList _inodeList;   //Linked list of the opened inodes
 
-void initInode() {
+void phospherus_initInode() {
     initLinkedList(&_inodeList);
 }
 
-block_index_t createInode(Allocator* allocator, size_t size) {
-    if (!__checkCreatePossible(allocator, size)) {  //Counting on the check
+block_index_t phospherus_createInode(Phospherus_Allocator* allocator, size_t blockSize) {
+    size_t blockTaken = __estimateiNodeBlockNum(blockSize);
+    if (blockTaken > phospherus_getFreeBlockNum(allocator)) {  //Counting on the check
         return PHOSPHERUS_NULL;
     }
 
-    BlockDevice* device = allocator->device;
-    block_index_t ret = allocateBlock(allocator);
+    BlockDevice* device = phospherus_getAllocatorDevice(allocator);
+    block_index_t ret = phospherus_allocateBlock(allocator);
 
     iNode* inode = allocateBuffer(BUFFER_SIZE_512);
-    __createInode(allocator, inode, ret, size);
+    __createInode(allocator, inode, ret, blockSize, blockTaken);
     device->writeBlocks(device->additionalData, ret, inode, 1);
 
     releaseBuffer(inode, BUFFER_SIZE_512);
@@ -246,12 +229,12 @@ block_index_t createInode(Allocator* allocator, size_t size) {
     return ret;
 }
 
-bool deleteInode(Allocator* allocator, block_index_t inodeBlock) {
+bool phospherus_deleteInode(Phospherus_Allocator* allocator, block_index_t inodeBlock) {
     if (__searchInodeDesc(inodeBlock) != NULL) {    //If opened, cannt be deleted
         return false;
     }
 
-    BlockDevice* device = allocator->device;
+    BlockDevice* device = phospherus_getAllocatorDevice(allocator);
     iNode* inode = allocateBuffer(BUFFER_SIZE_512);
 
     device->readBlocks(device->additionalData, inodeBlock, inode, 1);
@@ -261,42 +244,45 @@ bool deleteInode(Allocator* allocator, block_index_t inodeBlock) {
     }
 
     __destroyInode(allocator, inode);
+    device->writeBlocks(device->additionalData, inodeBlock, inode, 1);
 
-    releaseBlock(allocator, inodeBlock);
+    phospherus_releaseBlock(allocator, inodeBlock);
 
     releaseBuffer(inode, BUFFER_SIZE_512);
     return true;
 }
 
-bool resizeInode(Allocator* allocator, iNodeDesc* inodeDesc, size_t newSize) {
+bool phospherus_resizeInode(iNodeDesc* inodeDesc, size_t newBlockSize) {
     if (inodeDesc->writeProtection) {   //Cannot be modified
         return false;
     }
 
+    Phospherus_Allocator* allocator = inodeDesc->allocator;
     iNode* inode = inodeDesc->inode;
-    size_t size = inode->size;
-    if (__checkResizePossible(allocator, size, newSize)) {
+    size_t blockTaken = inode->blockTaken, newBlockTaken = __estimateiNodeBlockNum(newBlockSize);
+    if (!(blockTaken >= newBlockTaken || (newBlockTaken - blockTaken) < phospherus_getFreeBlockNum(allocator))) {
         return false;
     }
 
-    if (size == newSize) {
+    if (inode->blockSize == newBlockSize) {
         return true;
     }
 
-    __resizeBlockTables(allocator, inode, newSize);
-    inode->size = newSize;
-    BlockDevice* device = allocator->device;
+    __resizeBlockTables(allocator, inode, newBlockSize);
+    inode->blockSize = newBlockSize;
+    BlockDevice* device = phospherus_getAllocatorDevice(allocator);
     device->writeBlocks(device->additionalData, inode->blockIndex, inode, 1);
     return true;
 }
 
-iNodeDesc* openInode(BlockDevice* device, block_index_t iNodeBlock) {
+iNodeDesc* phospherus_openInode(Phospherus_Allocator* allocator, block_index_t iNodeBlock) {
     iNodeDesc* ret;
     if ((ret = __searchInodeDesc(iNodeBlock)) != NULL) {    //If opened
         linkedListDelete(&ret->node);                       //Move it to the top, cause it might be used again soon
         ++ret->openCnt;
     } else {
         iNode* inode = malloc(sizeof(iNode));
+        BlockDevice* device = phospherus_getAllocatorDevice(allocator);
         device->readBlocks(device->additionalData, iNodeBlock, inode, 1);
         if (inode->signature != SYSTEM_INFO_MAGIC32) {      //Validation failed
             free(inode);
@@ -308,13 +294,14 @@ iNodeDesc* openInode(BlockDevice* device, block_index_t iNodeBlock) {
         ret->inode = inode;
         ret->openCnt = 1;
         ret->writeProtection = false;
+        ret->allocator = allocator;
     }
     
     linkedListInsertBack(&_inodeList, &ret->node);
     return ret;
 }
 
-void closeInode(BlockDevice* device, iNodeDesc* inodeDesc) {
+void phospherus_closeInode(iNodeDesc* inodeDesc) {
     if (inodeDesc->openCnt == 0) {  //If the closed inode is closed again
         blowup("A closed inode is begin closed, which is not excepted!");
     }
@@ -330,28 +317,26 @@ void closeInode(BlockDevice* device, iNodeDesc* inodeDesc) {
 
 static const char* _readInodeBlocksFailInfo = "Read inode blocks failed";
 
-void readInodeBlocks(iNodeDesc* inodeDesc, void* buffer, size_t blockIndexInNode, size_t size) {
+void phospherus_readInodeBlocks(iNodeDesc* inodeDesc, void* buffer, size_t blockIndexInNode, size_t blockSize) {
     iNode* inode = inodeDesc->inode;
-    BlockDevice* device = getBlockDeviceByName(inode->deviceName);
-    if (device == NULL) {   //Device not found
-        blowup(_readInodeBlocksFailInfo);
-    }
+    BlockDevice* device = phospherus_getAllocatorDevice(inodeDesc->allocator);
 
     void* currentBuffer = buffer;
-    size_t blockSum = 0, remainBlocksToRead = size, currentReadBegin = blockIndexInNode;
+    size_t blockSum = 0, remainBlocksToRead = blockSize, currentReadBegin = blockIndexInNode;
     for (int level = 0; level < 6 && remainBlocksToRead > 0; ++level) {
+        size_t levelTableSize = _levelTableSizes[level];
         for (int i = 0; i < _levelTableNums[level] && remainBlocksToRead > 0; ++i) {
             block_index_t tableIndex = ((block_index_t*)(((void*)inode) + _levelTableOffsets[level]))[i];
             if (tableIndex == PHOSPHERUS_NULL) {
                 blowup(_readInodeBlocksFailInfo);
             }
 
-            size_t afterSum = blockSum + _levelTableSizes[level];
+            size_t afterSum = blockSum + levelTableSize;
 
             if (afterSum > currentReadBegin) {  //This round involves the block(s) to read
                 size_t 
-                    tableReadBegin = umin64(currentReadBegin - blockSum, _levelTableSizes[level] - 1),
-                    tableReadSize = umin64(_levelTableSizes[level] - tableReadBegin, remainBlocksToRead);
+                    tableReadBegin = umin64(currentReadBegin - blockSum, levelTableSize - 1),
+                    tableReadSize = umin64(levelTableSize - tableReadBegin, remainBlocksToRead);
 
                 __readBlocks(device, currentBuffer, tableIndex, level, tableReadBegin, tableReadSize);
 
@@ -371,32 +356,30 @@ void readInodeBlocks(iNodeDesc* inodeDesc, void* buffer, size_t blockIndexInNode
 
 static const char* _writeInodeBlocksFailInfo = "Write inode blocks failed";
 
-bool writeInodeBlocks(iNodeDesc* inodeDesc, const void* buffer, size_t blockIndexInNode, size_t size) {
+bool phospherus_writeInodeBlocks(iNodeDesc* inodeDesc, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
     if (inodeDesc->writeProtection) {   //Cannot be modified
         return false;
     }
 
     iNode* inode = inodeDesc->inode;
-    BlockDevice* device = getBlockDeviceByName(inode->deviceName);
-    if (device == NULL) {   //Device not found
-        blowup(_writeInodeBlocksFailInfo);
-    }
+    BlockDevice* device = phospherus_getAllocatorDevice(inodeDesc->allocator);
 
     const void* currentBuffer = buffer;
-    size_t blockSum = 0, remainBlocksToWrite = size, currentWriteBegin = blockIndexInNode;
+    size_t blockSum = 0, remainBlocksToWrite = blockSize, currentWriteBegin = blockIndexInNode;
     for (int level = 0; level < 6 && remainBlocksToWrite > 0; ++level) {
+        size_t levelTableSize = _levelTableSizes[level];
         for (int i = 0; i < _levelTableNums[level] && remainBlocksToWrite > 0; ++i) {
             block_index_t tableIndex = ((block_index_t*)(((void*)inode) + _levelTableOffsets[level]))[i];
             if (tableIndex == PHOSPHERUS_NULL) {
                 blowup(_writeInodeBlocksFailInfo);
             }
 
-            size_t afterSum = blockSum + _levelTableSizes[level];
+            size_t afterSum = blockSum + levelTableSize;
 
             if (afterSum > currentWriteBegin) {  //This round involves the block(s) to write
                 size_t 
-                    tableWriteBegin = umin64(currentWriteBegin - blockSum, _levelTableSizes[level] - 1),
-                    tableWriteSize = umin64(_levelTableSizes[level] - tableWriteBegin, remainBlocksToWrite);
+                    tableWriteBegin = umin64(currentWriteBegin - blockSum, levelTableSize - 1),
+                    tableWriteSize = umin64(levelTableSize - tableWriteBegin, remainBlocksToWrite);
 
                 __writeBlocks(device, currentBuffer, tableIndex, level, tableWriteBegin, tableWriteSize);
 
@@ -416,24 +399,44 @@ bool writeInodeBlocks(iNodeDesc* inodeDesc, const void* buffer, size_t blockInde
     return true;
 }
 
-void setInodeWriteProtection(iNodeDesc* inodeDesc, bool writeProtection) {
+bool phospherus_getInodeWriteProtection(iNodeDesc* inodeDesc) {
+    return inodeDesc->writeProtection;
+}
+
+void phospherus_setInodeWriteProtection(iNodeDesc* inodeDesc, bool writeProtection) {
     inodeDesc->writeProtection = writeProtection;
 }
 
-static void __createInode(Allocator* allocator, iNode* inode, block_index_t inodeBlock, size_t size) {
-    BlockDevice* device = allocator->device;
+size_t phospherus_getInodeDataSize(iNodeDesc* inodeDesc) {
+    return inodeDesc->inode->dataSize;
+}
+
+void phospherus_setInodeDataSize(iNodeDesc* inodeDesc, size_t dataSize) {
+    BlockDevice* device = phospherus_getAllocatorDevice(inodeDesc->allocator);
+    inodeDesc->inode->dataSize = dataSize;
+    device->writeBlocks(device->additionalData, inodeDesc->inode->blockIndex, inodeDesc->inode, 1);
+}
+
+size_t phospherus_getInodeBlockSize(iNodeDesc* inodeDesc) {
+    return inodeDesc->inode->blockSize;
+}
+
+static void __createInode(Phospherus_Allocator* allocator, iNode* inode, block_index_t inodeBlock, size_t blockSize, size_t blockTaken) {
+    BlockDevice* device = phospherus_getAllocatorDevice(allocator);
     memset(inode, 0, sizeof(iNode));
 
     strcpy(inode->deviceName, device->name);
     inode->blockIndex = inodeBlock;
     inode->signature = SYSTEM_INFO_MAGIC32;
-    inode->size = size;
+    inode->blockSize = blockSize;
+    inode->blockTaken = blockTaken;
+    inode->dataSize = 0;
 
-    __createBlockTables(allocator, inode, size);
+    __createBlockTables(allocator, inode, blockSize);
 }
 
-static void __destroyInode(Allocator* allocator, iNode* inode) {
-    BlockDevice* device = allocator->device;
+static void __destroyInode(Phospherus_Allocator* allocator, iNode* inode) {
+    BlockDevice* device = phospherus_getAllocatorDevice(allocator);
 
     __destroyBlockTables(allocator, inode);
 
@@ -442,8 +445,8 @@ static void __destroyInode(Allocator* allocator, iNode* inode) {
 
 static const char* _createBlockTablesFailedInfo = "Create block tables failed";
 
-static void __createBlockTables(Allocator* allocator, iNode* inode, size_t size) {
-    size_t remainBlock = size;
+static void __createBlockTables(Phospherus_Allocator* allocator, iNode* inode, size_t blockSize) {
+    size_t remainBlock = blockSize;
     memset(&inode->blockTables, PHOSPHERUS_NULL, sizeof(inode->blockTables));
     for (int level = 0; level < 6; ++level) {
         for (int i = 0; i < _levelTableNums[level]; ++i) {
@@ -474,20 +477,20 @@ static void __createBlockTables(Allocator* allocator, iNode* inode, size_t size)
 
 static const char* _createBlockTableFailedInfo = "Create block table failed";
 
-static block_index_t __createBlockTable(Allocator* allocator, size_t level, size_t size) {
+static block_index_t __createBlockTable(Phospherus_Allocator* allocator, size_t level, size_t blockSize) {
     block_index_t ret = PHOSPHERUS_NULL;
     if (level == 0) {   //End of the recursion
-        ret = allocateBlock(allocator);
+        ret = phospherus_allocateBlock(allocator);
     } else {
-        BlockDevice* device = allocator->device;
-        ret = allocateBlock(allocator);
+        BlockDevice* device = phospherus_getAllocatorDevice(allocator);
+        ret = phospherus_allocateBlock(allocator);
         if (ret == PHOSPHERUS_NULL) {
             blowup(_createBlockTableFailedInfo);
         }
 
         IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
 
-        size_t remainBlock = size, subTableSize = _levelTableSizes[level - 1];
+        size_t remainBlock = blockSize, subTableSize = _levelTableSizes[level - 1];
         memset(table, PHOSPHERUS_NULL, sizeof(IndexTable));
         for (int i = 0; remainBlock > 0 && i < __TABLE_INDEX_NUM; ++i) {
             //How many block(s) does the sub-table have
@@ -515,7 +518,7 @@ static block_index_t __createBlockTable(Allocator* allocator, size_t level, size
     return ret;
 }
 
-static void __destroyBlockTables(Allocator* allocator, iNode* inode) {
+static void __destroyBlockTables(Phospherus_Allocator* allocator, iNode* inode) {
     for (int level = 0; level < 6; ++level) {
         for (int i = 0; i < _levelTableNums[level]; ++i) {
             block_index_t* tableIndex = ((block_index_t*)(((void*)inode) + _levelTableOffsets[level])) + i;
@@ -529,11 +532,11 @@ static void __destroyBlockTables(Allocator* allocator, iNode* inode) {
     }
 }
 
-static void __destoryBlockTable(Allocator* allocator, block_index_t tableBlock, size_t level) {
+static void __destoryBlockTable(Phospherus_Allocator* allocator, block_index_t tableBlock, size_t level) {
     if (level == 0) {   //End of the recursion
-        releaseBlock(allocator, tableBlock);
+        phospherus_releaseBlock(allocator, tableBlock);
     } else {
-        BlockDevice* device = allocator->device;
+        BlockDevice* device = phospherus_getAllocatorDevice(allocator);
 
         IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
         device->readBlocks(device->additionalData, tableBlock, table, 1);
@@ -549,34 +552,35 @@ static void __destoryBlockTable(Allocator* allocator, block_index_t tableBlock, 
 
         releaseBuffer(table, BUFFER_SIZE_512);
 
-        releaseBlock(allocator, tableBlock);
+        phospherus_releaseBlock(allocator, tableBlock);
     }
 }
 
 static const char* _resizeBlockTablesFailedInfo = "Resize block tables failed";
 
-static void __resizeBlockTables(Allocator* allocator, iNode* inode, size_t newSize) {
-    size_t size = inode->size;
-    if (size == newSize) {
+static void __resizeBlockTables(Phospherus_Allocator* allocator, iNode* inode, size_t newBlockSize) {
+    size_t blockSize = inode->blockSize;
+    if (blockSize == newBlockSize) {
         return;
     }
 
-    if (size < newSize) {   //Expand the inode
-        size_t blockSum = 0, currentSize = size;
-        for (int level = 0; level < 6 && currentSize < newSize; ++level) {
-            for (int i = 0; i < _levelTableNums[level] && currentSize < newSize; ++i) {
+    if (blockSize < newBlockSize) {   //Expand the inode
+        size_t blockSum = 0, currentSize = blockSize;
+        for (int level = 0; level < 6 && currentSize < newBlockSize; ++level) {
+            size_t levelTableSize = _levelTableSizes[level];
+            for (int i = 0; i < _levelTableNums[level] && currentSize < newBlockSize; ++i) {
                 block_index_t* indexPtr = ((block_index_t*)(((void*)inode) + _levelTableOffsets[level])) + i;
 
-                size_t afterSum = blockSum + _levelTableSizes[level];
-                if (afterSum > size) {  //At this round, new block need to be added
-                    size_t newSubSize = umin64(_levelTableSizes[level], newSize - blockSum);
-                    if (blockSum < size) {  //Current table not empty, should use resize
+                size_t afterSum = blockSum + levelTableSize;
+                if (afterSum > blockSize) {  //At this round, new block need to be added
+                    size_t newSubSize = umin64(levelTableSize, newBlockSize - blockSum);
+                    if (blockSum < blockSize) {  //Current table not empty, should use resize
                         if (*indexPtr == PHOSPHERUS_NULL) {
                             blowup(_resizeBlockTablesFailedInfo);
                         }
 
-                        __resizeBlockTable(allocator, *indexPtr, level, size - blockSum, newSubSize);
-                        currentSize += (newSubSize - (size - blockSum));
+                        __resizeBlockTable(allocator, *indexPtr, level, blockSize - blockSum, newSubSize);
+                        currentSize += (newSubSize - (blockSize - blockSum));
                     } else {    //Current table is empty, create the new table
                         if (*indexPtr != PHOSPHERUS_NULL) {
                             blowup(_resizeBlockTablesFailedInfo);
@@ -595,25 +599,26 @@ static void __resizeBlockTables(Allocator* allocator, iNode* inode, size_t newSi
             }
         }
 
-        if (currentSize != newSize) {
+        if (currentSize != newBlockSize) {
             blowup(_resizeBlockTablesFailedInfo);
         }
     } else {    //Truncate the inode, data might be lost here
-        size_t blockSum = 0, currentSize = size;
-        for (int level = 0; level < 6 && currentSize > newSize; ++level) {
-            for (int i = 0; i < _levelTableNums[level] && currentSize > newSize; ++i) {
+        size_t blockSum = 0, currentSize = blockSize;
+        for (int level = 0; level < 6 && currentSize > newBlockSize; ++level) {
+            size_t levelTableSize = _levelTableSizes[level];
+            for (int i = 0; i < _levelTableNums[level] && currentSize > newBlockSize; ++i) {
                 block_index_t* indexPtr = ((block_index_t*)(((void*)inode) + _levelTableOffsets[level])) + i;
 
-                size_t afterSum = blockSum + _levelTableSizes[level];
-                if (afterSum > newSize) {  //At this round, block(s) need to be removed
+                size_t afterSum = blockSum + levelTableSize;
+                if (afterSum > newBlockSize) {  //At this round, block(s) need to be removed
                     if (*indexPtr == PHOSPHERUS_NULL) {
                         blowup(_resizeBlockTablesFailedInfo);
                     }
 
-                    size_t subSize = umin64(size - blockSum, _levelTableSizes[level]);
-                    if (blockSum < newSize) {   //Some the of the block in the table should be retained, use resize
-                        __resizeBlockTable(allocator, *indexPtr, level, subSize, newSize - blockSum);
-                        currentSize -= (subSize - (newSize - blockSum));
+                    size_t subSize = umin64(blockSize - blockSum, levelTableSize);
+                    if (blockSum < newBlockSize) {   //Some the of the block in the table should be retained, use resize
+                        __resizeBlockTable(allocator, *indexPtr, level, subSize, newBlockSize - blockSum);
+                        currentSize -= (subSize - (newBlockSize - blockSum));
                     } else {    //The whole table is not necessary, destroy it
                         __destoryBlockTable(allocator, *indexPtr, level);
                         *indexPtr = PHOSPHERUS_NULL;
@@ -625,7 +630,7 @@ static void __resizeBlockTables(Allocator* allocator, iNode* inode, size_t newSi
             }
         }
 
-        if (currentSize != newSize) {   //Not expected
+        if (currentSize != newBlockSize) {   //Not expected
             blowup(_resizeBlockTablesFailedInfo);
         }
     }
@@ -633,24 +638,24 @@ static void __resizeBlockTables(Allocator* allocator, iNode* inode, size_t newSi
 
 static const char* _resizeBlockTableFailedInfo = "Resize block table failed";
 
-static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, size_t level, size_t size, size_t newSize) {
+static void __resizeBlockTable(Phospherus_Allocator* allocator, block_index_t tableBlock, size_t level, size_t blockSize, size_t newBlockSize) {
     if (level == 0) {
         blowup(_resizeBlockTableFailedInfo);
     }
 
-    if (size == newSize) {
+    if (blockSize == newBlockSize) {
         return;
     }
 
-    BlockDevice* device = allocator->device;
+    BlockDevice* device = phospherus_getAllocatorDevice(allocator);
     IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
     device->readBlocks(device->additionalData, tableBlock, table, 1);
 
-    size_t lowerLevelSize = _levelTableSizes[level - 1], currentSize = size;
-    if (size < newSize) {   //Expand the table
+    size_t lowerLevelSize = _levelTableSizes[level - 1], currentSize = blockSize;
+    if (blockSize < newBlockSize) {   //Expand the table
         if (level == 1) {
-            for (int i = currentSize; currentSize < newSize; i++) {
-                table->indexes[i] = allocateBlock(allocator);
+            for (int i = currentSize; currentSize < newBlockSize; i++) {
+                table->indexes[i] = phospherus_allocateBlock(allocator);
                 if (table->indexes[i] == PHOSPHERUS_NULL) {
                     blowup(_resizeBlockTableFailedInfo);
                 }
@@ -658,16 +663,16 @@ static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, s
                 ++currentSize;
             }
         } else {
-            size_t blockSum = size / lowerLevelSize * lowerLevelSize;
-            for (int i = size / lowerLevelSize; currentSize < newSize; i++) {   //i is the index of the first sub table needs to be expanded
+            size_t blockSum = blockSize / lowerLevelSize * lowerLevelSize;
+            for (int i = blockSize / lowerLevelSize; currentSize < newBlockSize; i++) {   //i is the index of the first sub table needs to be expanded
                 size_t afterSum = blockSum + lowerLevelSize;
             
-                if (blockSum < size) {  //Current table not empty, should use resize
+                if (blockSum < blockSize) {  //Current table not empty, should use resize
                     if (table->indexes[i] == PHOSPHERUS_NULL) {
                         blowup(_resizeBlockTableFailedInfo);
                     }
 
-                    size_t subSize = umin64(currentSize - blockSum, lowerLevelSize), newSubSize = umin64(newSize - blockSum, lowerLevelSize);
+                    size_t subSize = umin64(currentSize - blockSum, lowerLevelSize), newSubSize = umin64(newBlockSize - blockSum, lowerLevelSize);
                     __resizeBlockTable(allocator, table->indexes[i], level - 1, subSize, newSubSize);
                     currentSize += (newSubSize - subSize);
                 } else {    //Current table not empty, create the new table
@@ -675,7 +680,7 @@ static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, s
                         blowup(_resizeBlockTableFailedInfo);
                     }
 
-                    size_t newSubSize = umin64(newSize - blockSum, lowerLevelSize);
+                    size_t newSubSize = umin64(newBlockSize - blockSum, lowerLevelSize);
                     table->indexes[i] = __createBlockTable(allocator, level - 1, newSubSize);
 
                     if (table->indexes[i] == PHOSPHERUS_NULL) {
@@ -689,30 +694,30 @@ static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, s
         }
     } else {    //Truncate the table
         if (level == 1) {
-            for (int i = (currentSize - 1) / lowerLevelSize; currentSize > newSize; --i) {
+            for (int i = (currentSize - 1) / lowerLevelSize; currentSize > newBlockSize; --i) {
                 if (table->indexes[i] == PHOSPHERUS_NULL) {
                     blowup(_resizeBlockTableFailedInfo);
                 }
 
-                releaseBlock(allocator, table->indexes[i]);
+                phospherus_releaseBlock(allocator, table->indexes[i]);
                 table->indexes[i] = PHOSPHERUS_NULL;
                 --currentSize;
             }
         } else {
-            size_t blockSum = newSize / lowerLevelSize * lowerLevelSize;
-            for (int i = newSize / lowerLevelSize; currentSize > newSize; ++i) {   //i is the index of the first sub table needs to be truncated
+            size_t blockSum = newBlockSize / lowerLevelSize * lowerLevelSize;
+            for (int i = newBlockSize / lowerLevelSize; currentSize > newBlockSize; ++i) {   //i is the index of the first sub table needs to be truncated
                 if (table->indexes[i] == PHOSPHERUS_NULL) {
                     blowup(_resizeBlockTableFailedInfo);
                 }
 
                 size_t afterSum = blockSum + lowerLevelSize;
-                if (newSize < afterSum) {   //Some the of the block in the table should be retained, use resize
-                    size_t subSize = umin64(currentSize - blockSum, lowerLevelSize), newSubSize = umin64(newSize - blockSum, lowerLevelSize);
+                if (newBlockSize < afterSum) {   //Some the of the block in the table should be retained, use resize
+                    size_t subSize = umin64(currentSize - blockSum, lowerLevelSize), newSubSize = umin64(newBlockSize - blockSum, lowerLevelSize);
 
                     __resizeBlockTable(allocator, table->indexes[i], level - 1, subSize, newSubSize);
                     currentSize -= (subSize - newSubSize);
                 } else {    //The whole table is not necessary, destroy it
-                    size_t subSize = umin64(size - blockSum, lowerLevelSize);
+                    size_t subSize = umin64(blockSize - blockSum, lowerLevelSize);
                     __destoryBlockTable(allocator, table->indexes[i], level - 1);
                     table->indexes[i] = PHOSPHERUS_NULL;
                     currentSize -= subSize;
@@ -723,7 +728,7 @@ static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, s
         }
     }
 
-    if (currentSize != newSize) {
+    if (currentSize != newBlockSize) {
         blowup(_resizeBlockTableFailedInfo);
     }
 
@@ -732,7 +737,7 @@ static void __resizeBlockTable(Allocator* allocator, block_index_t tableBlock, s
     releaseBuffer(table, BUFFER_SIZE_512);
 }
 
-static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t size) {
+static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
         device->readBlocks(device->additionalData, tableIndex, buffer, 1);
         return;
@@ -742,21 +747,22 @@ static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableI
     device->readBlocks(device->additionalData, tableIndex, table, 1);
 
     void* currentBuffer = buffer;
-    size_t subTableSize = _levelTableSizes[level - 1], base = blockIndexInTable / subTableSize * subTableSize, remainBlockToRead = size, currentIndex = blockIndexInTable;
+    size_t subTableSize = _levelTableSizes[level - 1], blockSum = blockIndexInTable / subTableSize * subTableSize, remainBlockToRead = blockSize, currentIndex = blockIndexInTable;
     for (int i = blockIndexInTable / subTableSize; remainBlockToRead > 0; ++i) {
-        size_t subBlockIndex = umin64(currentIndex - base, subTableSize - 1), subSize = umin64(subBlockIndex + size, subTableSize) - subBlockIndex;
+        size_t subBlockIndex = umin64(currentIndex - blockSum, subTableSize - 1), subSize = umin64(remainBlockToRead, subTableSize - subBlockIndex);
 
-        __readBlocks(device, currentBuffer, table->indexes[i], level - 1, subBlockIndex, size);
+        __readBlocks(device, currentBuffer, table->indexes[i], level - 1, subBlockIndex, subSize);
 
         remainBlockToRead -= subSize;
         currentIndex += subSize;
         currentBuffer += subSize * BLOCK_SIZE;
+        blockSum += subTableSize;
     }
 
     releaseBuffer(table, BUFFER_SIZE_512);
 }
 
-static void __writeBlocks(BlockDevice* device, const void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t size) {
+static void __writeBlocks(BlockDevice* device, const void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
         device->writeBlocks(device->additionalData, tableIndex, buffer, 1);
         return;
@@ -766,51 +772,46 @@ static void __writeBlocks(BlockDevice* device, const void* buffer, block_index_t
     device->readBlocks(device->additionalData, tableIndex, table, 1);
 
     const void* currentBuffer = buffer;
-    size_t subTableSize = _levelTableSizes[level - 1], base = blockIndexInTable / subTableSize * subTableSize, remainBlockToWrite = size, currentIndex = blockIndexInTable;
+    size_t subTableSize = _levelTableSizes[level - 1], blockSum = blockIndexInTable / subTableSize * subTableSize, remainBlockToWrite = blockSize, currentIndex = blockIndexInTable;
     for (int i = blockIndexInTable / subTableSize; remainBlockToWrite > 0; ++i) {
-        size_t subBlockIndex = umin64(currentIndex - base, subTableSize - 1), subSize = umin64(subBlockIndex + size, subTableSize) - subBlockIndex;
+        size_t subBlockIndex = umin64(currentIndex - blockSum, subTableSize - 1), subSize = umin64(remainBlockToWrite, subTableSize - subBlockIndex);
 
-        __writeBlocks(device, currentBuffer, table->indexes[i], level - 1, subBlockIndex, size);
+        __writeBlocks(device, currentBuffer, table->indexes[i], level - 1, subBlockIndex, subSize);
 
         remainBlockToWrite -= subSize;
         currentIndex += subSize;
         currentBuffer += subSize * BLOCK_SIZE;
+        blockSum += subTableSize;
     }
 
     releaseBuffer(table, BUFFER_SIZE_512);
 }
 
-static bool __checkCreatePossible(Allocator* allocator, size_t size) {
-    return __estimateiNodeBlockNum(size) <= getFreeBlockNum(allocator);
-}
-
-static bool __checkResizePossible(Allocator* allocator, size_t size, size_t newSize) {
-    size_t blockNum = __estimateiNodeBlockNum(size), newBlockNum = __estimateiNodeBlockNum(newSize);
-    return blockNum >= newBlockNum || (newBlockNum - blockNum) < getFreeBlockNum(allocator);
-}
-
-static size_t __estimateiNodeBlockNum(size_t size) {
-    size_t remainBlock = size, ret = 1;
+static size_t __estimateiNodeBlockNum(size_t blockSize) {
+    size_t remainBlock = blockSize, ret = 1;
     for (int level = 0; level < 6 && remainBlock > 0; ++level) {
+        size_t levelTableSize = _levelTableSizes[level], levelTableFullSize = _levelTableFullSizes[level];
         for (int i = 0; i < _levelTableNums[level] && remainBlock > 0; ++i) {
-            if (remainBlock >= _levelTableNums[level]) {    //The full table will use prepared counts to accelerate the calculation
-                ret += _levelTableFullSizes[level];
-                remainBlock -= _levelTableNums[level];
+            if (remainBlock >= levelTableSize) {    //The full table will use prepared counts to accelerate the calculation
+                ret += levelTableFullSize;
+                remainBlock -= levelTableSize;
             } else {
                 ret += __estimateBlockTableBlockNum(level, remainBlock);
                 remainBlock = 0;
             }
         }
     }
+
+    return ret;
 }
 
-static size_t __estimateBlockTableBlockNum(size_t level, size_t size) {
+static size_t __estimateBlockTableBlockNum(size_t level, size_t blockSize) {
     if (level == 0) {
         return 1;
     }
 
     size_t ret = 1;
-    size_t lowerLevelSize = _levelTableSizes[level - 1], remainBlock = size;
+    size_t lowerLevelSize = _levelTableSizes[level - 1], remainBlock = blockSize;
     for (int i = 0; remainBlock > 0; ++i) {
         if (remainBlock >= lowerLevelSize) {    //The full table will use prepared counts to accelerate the calculation
             ret += _levelTableFullSizes[level - 1];

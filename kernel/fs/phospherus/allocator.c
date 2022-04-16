@@ -18,14 +18,14 @@ typedef struct {
     uint32_t signature;
     block_index_t blockIndex;
     size_t freeBlockNum;
-    BlockLinkedListNode nodeListNode;
+    Phospherus_BlockLinkedListNode nodeListNode;
     uint8_t reserved[220];
     size_t freeBlockNumInNode;
     uint8_t bitmap[256];
 } __attribute__((packed)) __Node;
 
-#define __BLOCK_LIST_REMOVE_NEXT(__DEVICE, __NODE_PTR) blockLinkedListNodeRemoveNext(__DEVICE, &(__NODE_PTR)->nodeListNode, offsetof(__Node, nodeListNode))
-#define __BLOCK_LIST_INSERT_NEXT(__DEVICE, __NODE_PTR, __NEW_NODE_INDEX) blockLinkedListNodeInsertNext(__DEVICE, &(__NODE_PTR)->nodeListNode, __NEW_NODE_INDEX, offsetof(__Node, nodeListNode))
+#define __BLOCK_LIST_REMOVE_NEXT(__DEVICE, __NODE_PTR) phospherus_blockLinkedListNodeRemoveNext(__DEVICE, &(__NODE_PTR)->nodeListNode, offsetof(__Node, nodeListNode))
+#define __BLOCK_LIST_INSERT_NEXT(__DEVICE, __NODE_PTR, __NEW_NODE_INDEX) phospherus_blockLinkedListNodeInsertNext(__DEVICE, &(__NODE_PTR)->nodeListNode, __NEW_NODE_INDEX, offsetof(__Node, nodeListNode))
 
 /**
  * @brief Initialize a node
@@ -53,12 +53,12 @@ void __releaseBlockToNode(__Node* node, block_index_t blockIndex);
 
 static const uint8_t _emptyBlock[512];
 
-void initAllocator() {
+void phospherus_initAllocator() {
     uint64_t ptr = (uint64_t)_emptyBlock;
     memset((void*)ptr, 0, sizeof(_emptyBlock));
 }
 
-bool checkBlockDevice(BlockDevice* device) {
+bool phospherus_checkBlockDevice(BlockDevice* device) {
     __Node* superNode = allocateBuffer(BUFFER_SIZE_512);
     device->readBlocks(device->additionalData, __SUPER_NODE_INDEX, superNode, 1);
 
@@ -70,7 +70,7 @@ bool checkBlockDevice(BlockDevice* device) {
 }
 
 //TODO: These read/write are ugly, simplify them
-bool deployAllocator(BlockDevice* device) {
+bool phospherus_deployAllocator(BlockDevice* device) {
     size_t deviceSize = device->availableBlockNum;
     size_t nodeNum = deviceSize / ALLOCATOR_NODE_SIZE_IN_BLOCK;
 
@@ -90,7 +90,7 @@ bool deployAllocator(BlockDevice* device) {
         node->blockIndex = i * ALLOCATOR_NODE_SIZE_IN_BLOCK;
 
         //Setting up the linked list
-        blockLinkedListNodeSetNext(&node->nodeListNode, i + 1 < nodeNum ? (i + 1) * ALLOCATOR_NODE_SIZE_IN_BLOCK : PHOSPHERUS_NULL);
+        phospherus_blockLinkedListNodeSetNext(&node->nodeListNode, i + 1 < nodeNum ? (i + 1) * ALLOCATOR_NODE_SIZE_IN_BLOCK : PHOSPHERUS_NULL);
 
         device->writeBlocks(device->additionalData, i * ALLOCATOR_NODE_SIZE_IN_BLOCK, node, 1);  //Deploy a node each 2048 blocks
     }
@@ -100,26 +100,30 @@ bool deployAllocator(BlockDevice* device) {
     return true;
 }
 
-void loadAllocator(Allocator* allocator, BlockDevice* device) {
+Phospherus_Allocator* phospherus_openAllocator(BlockDevice* device) {
     __Node* superNode = malloc(sizeof(__Node));
+    Phospherus_Allocator* ret = malloc(sizeof(Phospherus_Allocator));
 
     device->readBlocks(device->additionalData, __SUPER_NODE_INDEX, superNode, 1);
 
-    allocator->device = device;
-    allocator->superNode = superNode;
+    ret->device = device;
+    ret->superNode = superNode;
+
+    return ret;
 }
 
-void deleteAllocator(Allocator* allocator) {
+void phospherus_closeAllocator(Phospherus_Allocator* allocator) {
     if (allocator == NULL || allocator->superNode == NULL) {
         return;
     }
     free(allocator->superNode); //Destroy supernode will make allocator unavailable
     allocator->superNode = NULL;
+    free(allocator);
 }
 
 static const char* _allocateBlockFailInfo = "Allocate block failed";
 
-block_index_t allocateBlock(Allocator* allocator) {
+block_index_t phospherus_allocateBlock(Phospherus_Allocator* allocator) {
     BlockDevice* device = allocator->device;
     __Node* superNode = (__Node*)allocator->superNode;
     if (superNode->freeBlockNum == 0) {
@@ -130,7 +134,7 @@ block_index_t allocateBlock(Allocator* allocator) {
     if (superNode->freeBlockNumInNode > 0) {    //Getting the block from super node
         ret = __allocateBlockFromNode(superNode);
     } else {                                    //Getting the block from other nodes
-        block_index_t blockNode = blockLinkedListNodeGetNext(&superNode->nodeListNode);
+        block_index_t blockNode = phospherus_blockLinkedListNodeGetNext(&superNode->nodeListNode);
         if (blockNode == PHOSPHERUS_NULL) {
             blowup(_allocateBlockFailInfo);
         }
@@ -161,7 +165,7 @@ block_index_t allocateBlock(Allocator* allocator) {
 }
 
 //TODO: Add the handle to multiple release to same block
-void releaseBlock(Allocator* allocator, block_index_t blockIndex) {
+void phospherus_releaseBlock(Phospherus_Allocator* allocator, block_index_t blockIndex) {
     if (blockIndex == PHOSPHERUS_NULL) {
         return;
     }
@@ -198,7 +202,7 @@ void __initNode(__Node* node, block_index_t nodeIndex) {
     node->blockIndex = nodeIndex;
 
     node->freeBlockNum = PHOSPHERUS_NULL;
-    initBlockLinkedListNode(&node->nodeListNode);
+    phospherus_initBlockLinkedListNode(&node->nodeListNode);
 
     node->freeBlockNumInNode = ALLOCATOR_NODE_SIZE_IN_BLOCK - 1;
 }
@@ -244,7 +248,11 @@ void __releaseBlockToNode(__Node* node, block_index_t blockIndex) {
     ++node->freeBlockNumInNode;
 }
 
-size_t getFreeBlockNum(Allocator* allocator) {
+size_t phospherus_getFreeBlockNum(Phospherus_Allocator* allocator) {
     __Node* superNode = (__Node*)allocator->superNode;
     return superNode->freeBlockNum;
+}
+
+BlockDevice* phospherus_getAllocatorDevice(Phospherus_Allocator* allocator) {
+    return allocator->device;
 }
