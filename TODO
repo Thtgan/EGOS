@@ -100,8 +100,8 @@ File system:
     ✔ File @done(22-04-17 01:12)
     ✔ Directory @done(22-04-17 01:12)
     ☐ The whole file system needs further test
-    ☐ Tool to inject file into the image
-  ☐ Make a text LOGO file, read and print it
+    ✔ Tool to inject file into the image @done(22-05-01 22:43)
+  ✔ Make a text LOGO file, read and print it @done(22-05-01 22:43)
   
 Misc:
   ☐ Transplant project to UEFI

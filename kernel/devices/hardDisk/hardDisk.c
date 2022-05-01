@@ -299,8 +299,7 @@ void initHardDisk() {
 
             d->isBoot = __checkBootDisk(d);
 
-            //d->freeSectorBegin = d->isBoot ? (BOOT_DISK_FREE_BEGIN / SECTOR_SIZE) : 0;
-            d->freeSectorBegin = 0;
+            d->freeSectorBegin = d->isBoot ? (BOOT_DISK_FREE_BEGIN / SECTOR_SIZE) : 0;
 
             __registerDiskBlockDevice(d);   //Register as the block device
         }

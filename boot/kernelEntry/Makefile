@@ -37,17 +37,17 @@ build: buildDir $(BUILD_OBJECT_NAME)
 postBuild:
 
 buildDir:
-	for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
+	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
 
 $(BUILD_OBJECT_NAME): $(OBJ_FILES_ASM) $(OBJ_FILES_C)
-	$(LD) $(BUILD_OBJ_FILES) $(LD_OPTIONS) -o $(BUILD_OBJECT_NAME)
+	@$(LD) $(BUILD_OBJ_FILES) $(LD_OPTIONS) -o $(BUILD_OBJECT_NAME)
 
 $(OBJ_FILES_ASM):%.o:%.asm
-	$(NASM) -i./ $< -f elf32 -o $(BUILD_DIR)/$@
+	@$(NASM) -i./ $< -f elf32 -o $(BUILD_DIR)/$@
 
 $(OBJ_FILES_C):%.o:%.c
-	$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@
+	@$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@
 
 clean:
-	rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR)
 	

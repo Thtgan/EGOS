@@ -60,7 +60,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
     
     printf("MoonLite kernel loading...\n");
 
-    printMemoryAreas();
+    //printMemoryAreas();
 
     size_t pageNum = initMemory(systemInfo);
 
@@ -76,73 +76,38 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     initHardDisk();
 
-    // phospherus_initAllocator();
-    // phospherus_initInode();
-
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
         blowup("Hda not found\n");
     }
 
-    BlockDevice* memoryDevice = createMemoryBlockDevice(1u << 22); //4MB
-    printf("%#llX\n", memoryDevice->additionalData);
-    registerBlockDevice(memoryDevice);
-
-    printBlockDevices();
-
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
-    if (deployFileSystem(memoryDevice, FILE_SYSTEM_TYPE_PHOSPHERUS)) {
-        printf("File system deployed\n");
-    } else {
-        blowup("File system deploy failed\n");
-    }
 
-    void* buffer = allocateBuffer(BUFFER_SIZE_64);
-
-    FileSystemTypes type = checkFileSystem(memoryDevice);
+    FileSystemTypes type = checkFileSystem(hda);
     if (type == FILE_SYSTEM_TYPE_NULL) {
-        printf("File system not installed\n");
+        blowup("File system not installed\n");
     }
 
-    FileSystem* fs = openFileSystem(memoryDevice, type);
-    printf("%s\n", fs->name);
+    void* buffer = allocateBuffer(BUFFER_SIZE_512);
+    FileSystem* fs = openFileSystem(hda, type);
 
     DirectoryPtr rootDir = fs->pathOperations.getRootDirectory(fs);
-    block_index_t newFileInode = fs->fileOperations.createFile(fs);
-    fs->pathOperations.insertDirectoryItem(fs, rootDir, newFileInode, "test.txt", false);
-    fs->pathOperations.readDirectoryItemName(fs, rootDir, 0, buffer, 63);
-    printf("%s\n", buffer);
-
-    FilePtr file = fs->fileOperations.openFile(fs, fs->pathOperations.getDirectoryItemInode(fs, rootDir, 0));
-    fs->fileOperations.seekFile(fs, file, 0);
-    fs->fileOperations.writeFile(fs, file, buffer, strlen(buffer) + 1);
-    fs->fileOperations.closeFile(fs, file);
-
-    memset(buffer, 0, sizeof(buffer));
-    file = fs->fileOperations.openFile(fs, fs->pathOperations.getDirectoryItemInode(fs, rootDir, 0));
-    size_t size = fs->fileOperations.getFileSize(fs, file);
-    fs->fileOperations.readFile(fs, file, buffer, size);
-    printf("%s %u\n", buffer, size);
-    fs->fileOperations.closeFile(fs, file);
-
-    block_index_t newDirectoryInode = fs->pathOperations.createDirectory(fs);
-    fs->pathOperations.insertDirectoryItem(fs, rootDir, newDirectoryInode, "testDir", true);
-    DirectoryPtr subDirectory = fs->pathOperations.openDirectory(fs, fs->pathOperations.getDirectoryItemInode(fs, rootDir, 1));
-    printf("%u %u\n", fs->pathOperations.getDirectoryItemNum(fs, rootDir), fs->pathOperations.getDirectoryItemNum(fs, subDirectory));
-
-    for (int i = 0; i < 2; ++i) {
-        fs->pathOperations.readDirectoryItemName(fs, rootDir, i, buffer, 63);
-        printf("%s\n", buffer);
+    size_t index = fs->pathOperations.searchDirectoryItem(fs, rootDir, "LOGO.bin", false);
+    if (index == -1) {
+        blowup("File not found\n");
     }
+    block_index_t inode = fs->pathOperations.getDirectoryItemInode(fs, rootDir, index);
+    FilePtr file = fs->fileOperations.openFile(fs, inode);
+    size_t size = fs->fileOperations.getFileSize(fs, file);
+    
+    fs->fileOperations.seekFile(fs, file, 0);
+    fs->fileOperations.readFile(fs, file, buffer, size);
+    fs->fileOperations.closeFile(fs, file);
 
-    block_index_t removed = fs->pathOperations.removeDirectoryItem(fs, rootDir, 0);
-    fs->fileOperations.deleteFile(fs, removed);
-    printf("%u\n", fs->pathOperations.getDirectoryItemNum(fs, rootDir));
-    fs->pathOperations.readDirectoryItemName(fs, rootDir, 0, buffer, 63);
     printf("%s\n", buffer);
 
     closeFileSystem(fs);
-    releaseBuffer(buffer, BUFFER_SIZE_64);
+    releaseBuffer(buffer, BUFFER_SIZE_512);
     
     printf("died\n");
 

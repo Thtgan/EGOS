@@ -42,6 +42,8 @@ void phospherus_initFileSystem() {
     phospherus_initInode();
 }
 
+#include<stdio.h>
+
 bool phospherus_deployFileSystem(BlockDevice* device) {
     phospherus_deployAllocator(device);
     if (!phospherus_checkBlockDevice(device)) {

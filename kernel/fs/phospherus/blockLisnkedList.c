@@ -48,4 +48,5 @@ Phospherus_BlockLinkedListNode* __loadNode(BlockDevice* device, block_index_t no
 void __saveNode(BlockDevice* device, block_index_t nodeIndex, Phospherus_BlockLinkedListNode* node, size_t offsetInBlock) {
     void* block = ((void*)node) - offsetInBlock;
     device->writeBlocks(device->additionalData, nodeIndex, block, 1);
+    releaseBuffer(block, BUFFER_SIZE_512);
 }

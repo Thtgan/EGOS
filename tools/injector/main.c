@@ -15,6 +15,7 @@ typedef enum {
     LIST,
     REMOVE_FILE,
     REMOVE_DIRECTORY,
+    DEPLOY
 } Mode;
 
 static DirectoryPtr __navigateDirectory(FileSystem* fs, DirectoryPtr rootDir, char* path);
@@ -34,7 +35,8 @@ static bool __removeDirectory(FileSystem* fs, DirectoryPtr rootDir, char* path);
 int main(int argc, char** argv) {
     char option;
     char* imgFile = NULL, * injectFile = NULL, * path = NULL, * deviceName = NULL, * modeStr = NULL;
-    while ((option = getopt(argc, argv, "i:f:p:d:m:b:")) != -1) {
+    size_t base = 0, size = -1;
+    while ((option = getopt(argc, argv, "i:f:p:d:m:b:s:")) != -1) {
         switch (option) {
             case 'i':
                 imgFile = optarg;
@@ -51,13 +53,15 @@ int main(int argc, char** argv) {
             case 'm':
                 modeStr = optarg;
                 break;
+            case 'b':
+                base = (size_t)strtol(optarg, NULL, 0);
+                break;
+            case 's':
+                size = (size_t)strtol(optarg, NULL, 0);
+                break;
             default:
                 blowup("Unknown option found");
         }
-    }
-
-    if (imgFile == NULL || path == NULL || deviceName == NULL) {
-        blowup("Argument not completed");
     }
 
     Mode mode = ADD_FILE;
@@ -89,20 +93,40 @@ int main(int argc, char** argv) {
                 break;
             }
 
+            if (strcmp(modeStr, "deploy") == 0) {
+                mode = DEPLOY;
+                break;
+            }
+
             blowup("Unknown mode found");
         } while (false);
     }
 
+    if (imgFile == NULL || deviceName == NULL) {
+        blowup("Image name and device name must be given");
+    }
+
+    if (mode != DEPLOY && path == NULL) {
+        blowup("Non-deploy command must give the path for operation");
+    }
+
     if ((mode == ADD_FILE || mode == ADD_DIRECTORY) && injectFile == NULL) {
-        blowup("ADD mode but not refered a file to inject");
+        blowup("Add file/directory must have file to inject");
     }
     
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
-    BlockDevice* device = createBlockDevice(imgFile, deviceName);
+    BlockDevice* device = createBlockDevice(imgFile, deviceName, base, size);
     if (device == NULL) {
         blowup("Device create failed");
     }
     printf("Device %s: %lu blocks contained\n", device->name, device->availableBlockNum);
+
+    if (mode == DEPLOY) {
+        if (!deployFileSystem(device, FILE_SYSTEM_TYPE_PHOSPHERUS)) {
+            blowup("Deploy failed");
+        }
+        return 0;
+    }
 
     if (checkFileSystem(device) != FILE_SYSTEM_TYPE_PHOSPHERUS) {
         blowup("Disk has no phospherus file system");
@@ -130,12 +154,12 @@ int main(int argc, char** argv) {
             break;
         case REMOVE_FILE:
             if (!__removeFile(fs, fs->pathOperations.getRootDirectory(fs), path)) {
-                blowup("List failed");
+                blowup("Remove file failed");
             }
             break;
         case REMOVE_DIRECTORY:
             if (!__removeDirectory(fs, fs->pathOperations.getRootDirectory(fs), path)) {
-                blowup("List failed");
+                blowup("Remove directory failed");
             }
             break;
         default:

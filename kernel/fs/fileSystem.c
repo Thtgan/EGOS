@@ -24,7 +24,7 @@ bool deployFileSystem(BlockDevice* device, FileSystemTypes type) {
 }
 
 static bool (*_checkers[FILE_SYSTEM_TYPE_NULL])(BlockDevice*) = {
-    phospherus_checkFileSystem
+    [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherus_checkFileSystem
 };
 
 FileSystemTypes checkFileSystem(BlockDevice* device) {

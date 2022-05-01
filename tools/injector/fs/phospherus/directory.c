@@ -131,8 +131,9 @@ bool phospherus_directoryAddEntry(Phospherus_Directory* directory, block_index_t
         directory->entries = malloc(sizeof(DirectoryEntry));
     } else {
         directory->entries = realloc(directory->entries, (header->entryNum + 1) * sizeof(DirectoryEntry));
-        memset(directory->entries + header->entryNum * sizeof(DirectoryEntry), 0, sizeof(DirectoryEntry));
     }
+    memset(directory->entries + header->entryNum * sizeof(DirectoryEntry), 0, sizeof(DirectoryEntry));
+    
     ++header->entryNum;
     DirectoryEntry* entryPtr = directory->entries + (header->entryNum - 1) * sizeof(DirectoryEntry);
 

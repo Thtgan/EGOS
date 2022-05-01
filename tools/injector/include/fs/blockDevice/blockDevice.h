@@ -39,7 +39,7 @@ typedef struct {
     void (*writeBlocks)(void* additionalData, block_index_t blockIndex, const void* buffer, size_t n);
 } BlockDevice;
 
-BlockDevice* createBlockDevice(const char* filePath, const char* deviceName);
+BlockDevice* createBlockDevice(const char* filePath, const char* deviceName, size_t base, size_t size);
 
 void deleteBlockDevice(BlockDevice* device);
 

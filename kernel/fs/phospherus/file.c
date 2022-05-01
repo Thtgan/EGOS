@@ -218,10 +218,10 @@ bool phospherus_truncateFile(File* file, size_t truncateAt) {
         void* buffer = allocateBuffer(BUFFER_SIZE_512);
         phospherus_readInodeBlocks(file->inode, buffer, truncatedBlockNum - 1, 1);
         memset(buffer + (truncateAt % BLOCK_SIZE), 0, BLOCK_SIZE - (truncateAt % BLOCK_SIZE));
-        releaseBuffer(buffer, BUFFER_SIZE_512);
         if (!phospherus_writeInodeBlocks(file->inode, buffer, truncatedBlockNum - 1, 1)) {
             return false;
         }
+        releaseBuffer(buffer, BUFFER_SIZE_512);
     }
     phospherus_setInodeDataSize(file->inode, truncateAt);
 
