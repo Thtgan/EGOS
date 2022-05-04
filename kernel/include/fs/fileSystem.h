@@ -2,6 +2,7 @@
 #define __FILESYSTEM_H
 
 #include<fs/blockDevice/blockDevice.h>
+#include<kit/oop.h>
 #include<stddef.h>
 
 typedef enum {
@@ -10,38 +11,36 @@ typedef enum {
 } FileSystemTypes;
 
 typedef void* FilePtr;
-
 typedef void* DirectoryPtr;
 
 struct __FileSystem;
-
 typedef struct __FileSystem FileSystem;
 
 typedef struct {
-    block_index_t   (*createFile)   (FileSystem* fileSystem);
-    bool            (*deleteFile)   (FileSystem* fileSystem, block_index_t inode);
-    FilePtr         (*openFile)     (FileSystem* fileSystem, block_index_t inode);
-    void            (*closeFile)    (FileSystem* fileSystem, FilePtr file);
-    size_t          (*getFileSize)  (FileSystem* fileSystem, FilePtr file);
-    void            (*seekFile)     (FileSystem* fileSystem, FilePtr file, size_t pointer);
-    size_t          (*readFile)     (FileSystem* fileSystem, FilePtr file, void* buffer, size_t n);
-    size_t          (*writeFile)    (FileSystem* fileSystem, FilePtr file, const void* buffer, size_t n);
-    bool            (*truncateFile) (FileSystem* fileSystem, FilePtr file, size_t truncateAt);
+    block_index_t   (*createFile)   (THIS_ARG_APPEND_NO_ARG(FileSystem));
+    bool            (*deleteFile)   (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+    FilePtr         (*openFile)     (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+    void            (*closeFile)    (THIS_ARG_APPEND(FileSystem, FilePtr file));
+    size_t          (*getFileSize)  (THIS_ARG_APPEND(FileSystem, FilePtr file));
+    void            (*seekFile)     (THIS_ARG_APPEND(FileSystem, FilePtr file, size_t pointer));
+    size_t          (*readFile)     (THIS_ARG_APPEND(FileSystem, FilePtr file, void* buffer, size_t n));
+    size_t          (*writeFile)    (THIS_ARG_APPEND(FileSystem, FilePtr file, const void* buffer, size_t n));
+    bool            (*truncateFile) (THIS_ARG_APPEND(FileSystem, FilePtr file, size_t truncateAt));
 } FileOperations;
 
 typedef struct {
-    DirectoryPtr    (*getRootDirectory)                 (FileSystem* fileSystem);
-    block_index_t   (*createDirectory)                  (FileSystem* fileSystem);
-    bool            (*deleteDirectory)                  (FileSystem* fileSystem, block_index_t inode);
-    DirectoryPtr    (*openDirectory)                    (FileSystem* fileSystem, block_index_t inode);
-    void            (*closeDirectory)                   (FileSystem* fileSystem, DirectoryPtr directory);
-    size_t          (*getDirectoryItemNum)              (FileSystem* fileSystem, DirectoryPtr directory);
-    size_t          (*searchDirectoryItem)              (FileSystem* fileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory);
-    block_index_t   (*getDirectoryItemInode)            (FileSystem* fileSystem, DirectoryPtr directory, size_t index);
-    bool            (*checkIsDirectoryItemDirectory)    (FileSystem* fileSystem, DirectoryPtr directory, size_t index);
-    void            (*readDirectoryItemName)            (FileSystem* fileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n);
-    block_index_t   (*removeDirectoryItem)              (FileSystem* fileSystem, DirectoryPtr directory, size_t itemIndex);
-    bool            (*insertDirectoryItem)              (FileSystem* fileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory);
+    DirectoryPtr    (*getRootDirectory)                 (THIS_ARG_APPEND_NO_ARG(FileSystem));
+    block_index_t   (*createDirectory)                  (THIS_ARG_APPEND_NO_ARG(FileSystem));
+    bool            (*deleteDirectory)                  (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+    DirectoryPtr    (*openDirectory)                    (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+    void            (*closeDirectory)                   (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory));
+    size_t          (*getDirectoryItemNum)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory));
+    size_t          (*searchDirectoryItem)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory));
+    block_index_t   (*getDirectoryItemInode)            (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index));
+    bool            (*checkIsDirectoryItemDirectory)    (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index));
+    void            (*readDirectoryItemName)            (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n));
+    block_index_t   (*removeDirectoryItem)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t itemIndex));
+    bool            (*insertDirectoryItem)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory));
 } PathOperations;
 
 struct __FileSystem {

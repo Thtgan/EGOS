@@ -6,6 +6,7 @@
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
 #include<kit/macro.h>
+#include<kit/oop.h>
 #include<lib/blowup.h>
 #include<memory/memory.h>
 #include<memory/malloc.h>
@@ -377,27 +378,24 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
     }
 }
 
-//Function for block device, so no prototypes
-//Read the block from disk, additional data is actually the disk struct
-//TODO: According to collected info, lambda is possible in C, replace these with lambda
-static void __readBlocks(void* additionalData, block_index_t blockIndex, void* buffer, size_t n) {
-    Disk* d = (Disk*)additionalData;
-    __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-}
-
-//Write the block to disk, additional data is actually the disk struct
-static void __writeBlocks(void* additionalData, block_index_t blockIndex, const void* buffer, size_t n) {
-    Disk* d = (Disk*)additionalData;
-    __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-}
-
 static void __registerDiskBlockDevice(Disk* d) {
     BlockDevice* device = createBlockDevice(d->name, d->parameters->addressableSectorNum - d->freeSectorBegin, BLOCK_DEVICE_TYPE_DISK);
 
     device->additionalData = d; //Disk block device's additional data is itself
 
-    device->readBlocks = __readBlocks;
-    device->writeBlocks = __writeBlocks;
+    device->readBlocks = LAMBDA(
+        void, (THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
+            Disk* d = (Disk*)this->additionalData;
+            __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+        }
+    );
+
+    device->writeBlocks = LAMBDA(
+        void, (THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
+            Disk* d = (Disk*)this->additionalData;
+            __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+        }
+    );
     
     registerBlockDevice(device);
 }

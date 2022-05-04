@@ -7,6 +7,7 @@
 #include<fs/blockDevice/memoryBlockDevice/memoryBlockDevice.h>
 #include<fs/fileSystem.h>
 #include<interrupt/IDT.h>
+#include<kit/oop.h>
 #include<memory/buffer.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
@@ -23,7 +24,7 @@ const SystemInfo* systemInfo;
 /**
  * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
  */
-void printMemoryAreas() {
+static void printMemoryAreas() {
     const MemoryMap* mMap = (const MemoryMap*)systemInfo->memoryMap;
 
     printf("%d memory areas detected\n", mMap->size);
@@ -108,7 +109,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     closeFileSystem(fs);
     releaseBuffer(buffer, BUFFER_SIZE_512);
-    
+
     printf("died\n");
 
     die();

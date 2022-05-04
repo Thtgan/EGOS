@@ -1,6 +1,7 @@
 #if !defined(__BLOCK_DEVICE_H)
 #define __BLOCK_DEVICE_H
 
+#include<kit/oop.h>
 #include<stddef.h>
 #include<stdint.h>
 #include<structs/singlyLinkedList.h>
@@ -15,7 +16,7 @@ typedef enum {
     BLOCK_DEVICE_TYPE_UNKNOWN
 } BlockDeviceType;
 
-typedef struct {
+RECURSIVE_REFER_STRUCT(BlockDevice) {
     SinglyLinkedListNode node;
 
     char name[16];
@@ -36,7 +37,8 @@ typedef struct {
      * @param buffer Buffer to storage the read data
      * @param n Num of blocks to read
      */
-    void (*readBlocks)(void* additionalData, block_index_t blockIndex, void* buffer, size_t n);
+    //void (*readBlocks)(void* additionalData, block_index_t blockIndex, void* buffer, size_t n);
+    void (*readBlocks)(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
 
     /**
      * @brief Write blocks to the block device
@@ -46,8 +48,9 @@ typedef struct {
      * @param buffer Buffer contains the data to write
      * @param n Num of blocks to write
      */
-    void (*writeBlocks)(void* additionalData, block_index_t blockIndex, const void* buffer, size_t n);
-} BlockDevice;
+    //void (*writeBlocks)(void* additionalData, block_index_t blockIndex, const void* buffer, size_t n);
+    void (*writeBlocks)(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
+};
 
 /**
  * @brief Initialize the block device manager

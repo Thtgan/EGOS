@@ -222,7 +222,7 @@ block_index_t phospherus_createInode(Phospherus_Allocator* allocator, size_t blo
 
     iNode* inode = allocateBuffer(BUFFER_SIZE_512);
     __createInode(allocator, inode, ret, blockSize, blockTaken);
-    device->writeBlocks(device->additionalData, ret, inode, 1);
+    THIS_ARG_APPEND_CALL(device, writeBlocks, ret, inode, 1);
 
     releaseBuffer(inode, BUFFER_SIZE_512);
 
@@ -237,14 +237,14 @@ bool phospherus_deleteInode(Phospherus_Allocator* allocator, block_index_t inode
     BlockDevice* device = phospherus_getAllocatorDevice(allocator);
     iNode* inode = allocateBuffer(BUFFER_SIZE_512);
 
-    device->readBlocks(device->additionalData, inodeBlock, inode, 1);
+    THIS_ARG_APPEND_CALL(device, readBlocks, inodeBlock, inode, 1);
     if (inode->signature != SYSTEM_INFO_MAGIC32) {  //Validation failed
         releaseBuffer(inode, BUFFER_SIZE_512);
         return false;
     }
 
     __destroyInode(allocator, inode);
-    device->writeBlocks(device->additionalData, inodeBlock, inode, 1);
+    THIS_ARG_APPEND_CALL(device, writeBlocks, inodeBlock, inode, 1);
 
     phospherus_releaseBlock(allocator, inodeBlock);
 
@@ -271,19 +271,19 @@ bool phospherus_resizeInode(iNodeDesc* inodeDesc, size_t newBlockSize) {
     __resizeBlockTables(allocator, inode, newBlockSize);
     inode->blockSize = newBlockSize;
     BlockDevice* device = phospherus_getAllocatorDevice(allocator);
-    device->writeBlocks(device->additionalData, inode->blockIndex, inode, 1);
+    THIS_ARG_APPEND_CALL(device, writeBlocks, inode->blockIndex, inode, 1);
     return true;
 }
 
-iNodeDesc* phospherus_openInode(Phospherus_Allocator* allocator, block_index_t iNodeBlock) {
+iNodeDesc* phospherus_openInode(Phospherus_Allocator* allocator, block_index_t inodeBlock) {
     iNodeDesc* ret;
-    if ((ret = __searchInodeDesc(iNodeBlock)) != NULL) {    //If opened
+    if ((ret = __searchInodeDesc(inodeBlock)) != NULL) {    //If opened
         linkedListDelete(&ret->node);                       //Move it to the top, cause it might be used again soon
         ++ret->openCnt;
     } else {
         iNode* inode = malloc(sizeof(iNode));
         BlockDevice* device = phospherus_getAllocatorDevice(allocator);
-        device->readBlocks(device->additionalData, iNodeBlock, inode, 1);
+        THIS_ARG_APPEND_CALL(device, readBlocks, inodeBlock, inode, 1);
         if (inode->signature != SYSTEM_INFO_MAGIC32) {      //Validation failed
             free(inode);
             return NULL;
@@ -414,7 +414,7 @@ size_t phospherus_getInodeDataSize(iNodeDesc* inodeDesc) {
 void phospherus_setInodeDataSize(iNodeDesc* inodeDesc, size_t dataSize) {
     BlockDevice* device = phospherus_getAllocatorDevice(inodeDesc->allocator);
     inodeDesc->inode->dataSize = dataSize;
-    device->writeBlocks(device->additionalData, inodeDesc->inode->blockIndex, inodeDesc->inode, 1);
+    THIS_ARG_APPEND_CALL(device, writeBlocks, inodeDesc->inode->blockIndex, inodeDesc->inode, 1);
 }
 
 size_t phospherus_getInodeBlockSize(iNodeDesc* inodeDesc) {
@@ -508,7 +508,7 @@ static block_index_t __createBlockTable(Phospherus_Allocator* allocator, size_t 
             blowup(_createBlockTableFailedInfo);
         }
 
-        device->writeBlocks(device->additionalData, ret, table, 1);
+        THIS_ARG_APPEND_CALL(device, writeBlocks, ret, table, 1);
         releaseBuffer(table, BUFFER_SIZE_512);
     }
 
@@ -539,7 +539,7 @@ static void __destoryBlockTable(Phospherus_Allocator* allocator, block_index_t t
         BlockDevice* device = phospherus_getAllocatorDevice(allocator);
 
         IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
-        device->readBlocks(device->additionalData, tableBlock, table, 1);
+        THIS_ARG_APPEND_CALL(device, readBlocks, tableBlock, table, 1);
 
         for (int i = 0; i < __TABLE_INDEX_NUM; ++i) {
             if (table->indexes[i] == PHOSPHERUS_NULL) { //Meaning following tables not exists (If not, it is not expected)
@@ -649,7 +649,7 @@ static void __resizeBlockTable(Phospherus_Allocator* allocator, block_index_t ta
 
     BlockDevice* device = phospherus_getAllocatorDevice(allocator);
     IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
-    device->readBlocks(device->additionalData, tableBlock, table, 1);
+    THIS_ARG_APPEND_CALL(device, readBlocks, tableBlock, table, 1);
 
     size_t lowerLevelSize = _levelTableSizes[level - 1], currentSize = blockSize;
     if (blockSize < newBlockSize) {   //Expand the table
@@ -732,19 +732,19 @@ static void __resizeBlockTable(Phospherus_Allocator* allocator, block_index_t ta
         blowup(_resizeBlockTableFailedInfo);
     }
 
-    device->writeBlocks(device->additionalData, tableBlock, table, 1);
+    THIS_ARG_APPEND_CALL(device, writeBlocks, tableBlock, table, 1);
 
     releaseBuffer(table, BUFFER_SIZE_512);
 }
 
 static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
-        device->readBlocks(device->additionalData, tableIndex, buffer, 1);
+        THIS_ARG_APPEND_CALL(device, readBlocks, tableIndex, buffer, 1);
         return;
     }
 
     IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
-    device->readBlocks(device->additionalData, tableIndex, table, 1);
+    THIS_ARG_APPEND_CALL(device, readBlocks, tableIndex, table, 1);
 
     void* currentBuffer = buffer;
     size_t subTableSize = _levelTableSizes[level - 1], blockSum = blockIndexInTable / subTableSize * subTableSize, remainBlockToRead = blockSize, currentIndex = blockIndexInTable;
@@ -764,12 +764,12 @@ static void __readBlocks(BlockDevice* device, void* buffer, block_index_t tableI
 
 static void __writeBlocks(BlockDevice* device, const void* buffer, block_index_t tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
-        device->writeBlocks(device->additionalData, tableIndex, buffer, 1);
+        THIS_ARG_APPEND_CALL(device, writeBlocks, tableIndex, buffer, 1);
         return;
     }
 
     IndexTable* table = allocateBuffer(BUFFER_SIZE_512);
-    device->readBlocks(device->additionalData, tableIndex, table, 1);
+    THIS_ARG_APPEND_CALL(device, readBlocks, tableIndex, table, 1);
 
     const void* currentBuffer = buffer;
     size_t subTableSize = _levelTableSizes[level - 1], blockSum = blockIndexInTable / subTableSize * subTableSize, remainBlockToWrite = blockSize, currentIndex = blockIndexInTable;

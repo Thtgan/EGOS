@@ -1,5 +1,6 @@
 #include<fs/phospherus/phospherus.h>
 
+#include<kit/oop.h>
 #include<fs/phospherus/allocator.h>
 #include<fs/phospherus/directory.h>
 #include<fs/phospherus/file.h>
@@ -14,28 +15,28 @@ typedef struct {
     void* rootDirectory;
 } __Phospherus_FileSystem;
 
-static block_index_t    __createFile    (FileSystem* fileSystem);
-static bool             __deleteFile    (FileSystem* fileSystem, block_index_t inode);
-static FilePtr          __openFile      (FileSystem* fileSystem, block_index_t inode);
-static void             __closeFile     (FileSystem* fileSystem, FilePtr file);
-static size_t           __getFileSize   (FileSystem* fileSystem, FilePtr file);
-static void             __seekFile      (FileSystem* fileSystem, FilePtr file, size_t pointer);
-static size_t           __readFile      (FileSystem* fileSystem, FilePtr file, void* buffer, size_t n);
-static size_t           __writeFile     (FileSystem* fileSystem, FilePtr file, const void* buffer, size_t n);
-static bool             __truncateFile  (FileSystem* fileSystem, FilePtr file, size_t truncateAt);
+static block_index_t    __createFile    (THIS_ARG_APPEND_NO_ARG(FileSystem));
+static bool             __deleteFile    (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+static FilePtr          __openFile      (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+static void             __closeFile     (THIS_ARG_APPEND(FileSystem, FilePtr file));
+static size_t           __getFileSize   (THIS_ARG_APPEND(FileSystem, FilePtr file));
+static void             __seekFile      (THIS_ARG_APPEND(FileSystem, FilePtr file, size_t pointer));
+static size_t           __readFile      (THIS_ARG_APPEND(FileSystem, FilePtr file, void* buffer, size_t n));
+static size_t           __writeFile     (THIS_ARG_APPEND(FileSystem, FilePtr file, const void* buffer, size_t n));
+static bool             __truncateFile  (THIS_ARG_APPEND(FileSystem, FilePtr file, size_t truncateAt));
 
-static DirectoryPtr     __getRootDirectory                  (FileSystem* fileSystem);
-static block_index_t    __createDirectory                   (FileSystem* fileSystem);
-static bool             __deleteDirectory                   (FileSystem* fileSystem, block_index_t inode);
-static DirectoryPtr     __openDirectory                     (FileSystem* fileSystem, block_index_t inode);
-static void             __closeDirectory                    (FileSystem* fileSystem, DirectoryPtr directory);
-static size_t           __getDirectoryItemNum               (FileSystem* fileSystem, DirectoryPtr directory);
-static size_t           __searchDirectoryItem               (FileSystem* fileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory);
-static block_index_t    __getDirectoryItemInode             (FileSystem* fileSystem, DirectoryPtr directory, size_t index);
-static bool             __checkIsDirectoryItemDirectory     (FileSystem* fileSystem, DirectoryPtr directory, size_t index);
-static void             __readDirectoryItemName             (FileSystem* fileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n);
-static block_index_t    __removeDirectoryItem               (FileSystem* fileSystem, DirectoryPtr directory, size_t itemIndex);
-static bool             __insertDirectoryItem               (FileSystem* fileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory);
+static DirectoryPtr     __getRootDirectory                  (THIS_ARG_APPEND_NO_ARG(FileSystem));
+static block_index_t    __createDirectory                   (THIS_ARG_APPEND_NO_ARG(FileSystem));
+static bool             __deleteDirectory                   (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+static DirectoryPtr     __openDirectory                     (THIS_ARG_APPEND(FileSystem, block_index_t inode));
+static void             __closeDirectory                    (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory));
+static size_t           __getDirectoryItemNum               (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory));
+static size_t           __searchDirectoryItem               (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory));
+static block_index_t    __getDirectoryItemInode             (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index));
+static bool             __checkIsDirectoryItemDirectory     (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index));
+static void             __readDirectoryItemName             (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n));
+static block_index_t    __removeDirectoryItem               (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t itemIndex));
+static bool             __insertDirectoryItem               (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory));
 
 void phospherus_initFileSystem() {
     phospherus_initAllocator();
@@ -142,98 +143,98 @@ void phospherus_closeFileSystem(FileSystem* system) {
     free(system);
 }
 
-static block_index_t __createFile(FileSystem* fileSystem) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static block_index_t __createFile(THIS_ARG_APPEND_NO_ARG(FileSystem)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return phospherus_createFile(specificSystem->allocator);
 }
 
-static bool __deleteFile(FileSystem* fileSystem, block_index_t inode) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static bool __deleteFile(THIS_ARG_APPEND(FileSystem, block_index_t inode)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return phospherus_deleteFile(specificSystem->allocator, inode);
 }
 
-static FilePtr __openFile(FileSystem* fileSystem, block_index_t inode) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static FilePtr __openFile(THIS_ARG_APPEND(FileSystem, block_index_t inode)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return phospherus_openFile(specificSystem->allocator, inode);
 }
 
-static void __closeFile(FileSystem* fileSystem, FilePtr file) {
+static void __closeFile(THIS_ARG_APPEND(FileSystem, FilePtr file)) {
     phospherus_closeFile(file);
 }
 
-static size_t __getFileSize(FileSystem* fileSystem, FilePtr file) {
+static size_t __getFileSize(THIS_ARG_APPEND(FileSystem, FilePtr file)) {
     phospherus_getFileSize(file);
 }
 
-static void __seekFile(FileSystem* fileSystem, FilePtr file, size_t pointer) {
+static void __seekFile(THIS_ARG_APPEND(FileSystem, FilePtr file, size_t pointer)) {
     phospherus_seekFile(file, pointer);
 }
 
-static size_t __readFile(FileSystem* fileSystem, FilePtr file, void* buffer, size_t n) {
+static size_t __readFile(THIS_ARG_APPEND(FileSystem, FilePtr file, void* buffer, size_t n)) {
     return phospherus_readFile(file, buffer, n);
 }
 
-static size_t __writeFile(FileSystem* fileSystem, FilePtr file, const void* buffer, size_t n) {
+static size_t __writeFile(THIS_ARG_APPEND(FileSystem, FilePtr file, const void* buffer, size_t n)) {
     return phospherus_writeFile(file, buffer, n);
 }
 
-static bool __truncateFile(FileSystem* fileSystem, FilePtr file, size_t truncateAt) {
+static bool __truncateFile(THIS_ARG_APPEND(FileSystem, FilePtr file, size_t truncateAt)) {
     return phospherus_truncateFile(file, truncateAt);
 }
 
 //---------------------------------------------------------------------------------------------------
 
-static DirectoryPtr __getRootDirectory(FileSystem* fileSystem) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static DirectoryPtr __getRootDirectory(THIS_ARG_APPEND_NO_ARG(FileSystem)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return specificSystem->rootDirectory;
 }
 
-static block_index_t __createDirectory(FileSystem* fileSystem) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static block_index_t __createDirectory(THIS_ARG_APPEND_NO_ARG(FileSystem)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return phospherus_createDirectory(specificSystem->allocator);
 }
 
-static bool __deleteDirectory(FileSystem* fileSystem, block_index_t inode) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static bool __deleteDirectory(THIS_ARG_APPEND(FileSystem, block_index_t inode)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return phospherus_deleteDirectory(specificSystem->allocator, inode);
 }
 
-static DirectoryPtr __openDirectory(FileSystem* fileSystem, block_index_t inode) {
-    __Phospherus_FileSystem* specificSystem = fileSystem->specificFileSystem;
+static DirectoryPtr __openDirectory(THIS_ARG_APPEND(FileSystem, block_index_t inode)) {
+    __Phospherus_FileSystem* specificSystem = this->specificFileSystem;
     return phospherus_openDirectory(specificSystem->allocator, inode);
 }
 
-static void __closeDirectory(FileSystem* fileSystem, DirectoryPtr directory) {
+static void __closeDirectory(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory)) {
     phospherus_closeDirectory(directory);
 }
 
-static size_t __getDirectoryItemNum(FileSystem* fileSystem, DirectoryPtr directory) {
+static size_t __getDirectoryItemNum(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory)) {
     return phospherus_getDirectoryEntryNum(directory);
 }
 
-static size_t __searchDirectoryItem(FileSystem* fileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory) {
+static size_t __searchDirectoryItem(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory)) {
     return phospherus_directorySearchEntry(directory, itemName, isDirectory);
 }
 
-static block_index_t __getDirectoryItemInode(FileSystem* fileSystem, DirectoryPtr directory, size_t index) {
+static block_index_t __getDirectoryItemInode(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index)) {
     return phospherus_getDirectoryEntryInodeIndex(directory, index);
 }
 
-static bool __checkIsDirectoryItemDirectory(FileSystem* fileSystem, DirectoryPtr directory, size_t index) {
+static bool __checkIsDirectoryItemDirectory(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index)) {
     return phospherus_checkDirectoryEntryIsDirectory(directory, index);
 }
 
-static void __readDirectoryItemName(FileSystem* fileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n) {
+static void __readDirectoryItemName(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n)) {
     const char* namePtr = phospherus_getDirectoryEntryName(directory, index);
     strncpy(buffer, namePtr, n);
 }
 
-static block_index_t __removeDirectoryItem(FileSystem* fileSystem, DirectoryPtr directory, size_t itemIndex) {
+static block_index_t __removeDirectoryItem(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t itemIndex)) {
     block_index_t ret = phospherus_getDirectoryEntryInodeIndex(directory, itemIndex);
     phospherus_deleteDirectoryEntry(directory, itemIndex);
     return ret;
 }
 
-static bool __insertDirectoryItem(FileSystem* fileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory) {
+static bool __insertDirectoryItem(THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory)) {
     return phospherus_directoryAddEntry(directory, inode, itemName, isDirectory);
 }

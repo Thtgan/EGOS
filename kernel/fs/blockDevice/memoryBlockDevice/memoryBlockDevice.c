@@ -1,6 +1,7 @@
 #include<fs/blockDevice/memoryBlockDevice/memoryBlockDevice.h>
 
 #include<fs/blockDevice/blockDevice.h>
+#include<kit/oop.h>
 #include<memory/malloc.h>
 #include<memory/memory.h>
 #include<stddef.h>
@@ -28,20 +29,21 @@ BlockDevice* createMemoryBlockDevice(size_t size) {
     _nameTemplate[6] += _deviceCnt; //TODO: Replace this with sprintf
 
     device->additionalData = region;    //RAM block device's additional data is its memory region's begin
-    device->readBlocks = __readBlocks;
-    device->writeBlocks = __writeBlocks;
+    device->readBlocks = LAMBDA(
+        void, (THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
+            memcpy(buffer, this->additionalData + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE); //Just simple memcpy
+        }
+    );
+
+    device->writeBlocks = LAMBDA(
+        void, (THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
+            memcpy(this->additionalData + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE); //Just simple memcpy
+        }
+    );
 
     ++_deviceCnt;
 }
 
 void deleteMemoryBlockDevice(BlockDevice* blockDevice) {
     free(blockDevice->additionalData);
-}
-
-static void __readBlocks(void* additionalData, block_index_t blockIndex, void* buffer, size_t n) {
-    memcpy(buffer, additionalData + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE);    //Just simple memcpy
-}
-
-static void __writeBlocks(void* additionalData, block_index_t blockIndex, const void* buffer, size_t n) {
-    memcpy(additionalData + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE);    //Just simple memcpy
 }
