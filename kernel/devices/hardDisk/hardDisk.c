@@ -17,7 +17,6 @@
 #include<stdint.h>
 #include<stdio.h>
 #include<string.h>
-#include<structs/singlyLinkedList.h>
 #include<system/address.h>
 #include<system/deviceIdentify.h>
 #include<system/systemInfo.h>
@@ -39,7 +38,7 @@ typedef struct __Channel Channel;
 
 typedef struct {
     char name[8];
-    bool available, isMaster, isATA, isBoot;
+    bool available, isMaster, isBoot;
     Channel* channel;
     LBA28_t freeSectorBegin;
     DeviceIdentifyData* parameters; //Data inside is meanful iff available is true
@@ -52,31 +51,22 @@ struct __Channel {
 };
 
 /**
- * @brief Translate CHS address to LBA address
- * 
- * @param chs CHS address
- * @param d Disk
- * @return LBA28_t LBA address
- */
-static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d);
-
-/**
- * @brief Translate LBA address to CHS address
- * 
- * @param chs CHS address to write in
- * @param lba LBA address
- * @param d Disk
- */
-static inline void __LBA2CHS(CHSAddress* chs, LBA28_t lba, const Disk* d);
-
-/**
  * @brief Wait channel till wait flags cleared, or retry times out
  * 
  * @param ch Channel to wait
  * @param waitFlags Flags to wait for clear
  * @return uint8_t Final status returned
  */
-static uint8_t __waitChannel(const Channel* ch, uint8_t waitFlags);
+static uint8_t __waitChannelClear(const Channel* ch, uint8_t waitFlags);
+
+/**
+ * @brief Wait channel till wait flags set, or retry times out
+ * 
+ * @param ch Channel to wait
+ * @param waitFlags Flags to wait for set
+ * @return uint8_t Final status returned
+ */
+static uint8_t __waitChannelSet(const Channel* ch, uint8_t waitFlags);
 
 /**
  * @brief Select device d
@@ -84,14 +74,6 @@ static uint8_t __waitChannel(const Channel* ch, uint8_t waitFlags);
  * @param d Device to select
  */
 static uint8_t __selectDevice(const Disk* d);
-
-/**
- * @brief Check if the disk is an ATA device via device's signature, better call this after resetting the channel
- * 
- * @param d Disk to check
- * @return If the disk is an ATA device
- */
-static bool __isATAdevice(Disk* d);
 
 /**
  * @brief Read identify data of the device, and check device's availibility
@@ -159,26 +141,25 @@ static void __registerDiskBlockDevice(Disk* d);
  */
 static bool __checkBootDisk(Disk* d);
 
-static inline LBA28_t __CHS2LBA(const CHSAddress* chs, const Disk* d) {
-    const DeviceIdentifyData* params = d->parameters;
-    return (((uint32_t)chs->cylinder) * params->headNum + chs->head) * params->sectorNumPerTrack + chs->sector - 1;
-}
-
-static inline void __LBA2CHS(CHSAddress* chs, LBA28_t lba, const Disk* d) {
-    const DeviceIdentifyData* params = d->parameters;
-    chs->cylinder = lba / (params->headNum * params->sectorNumPerTrack);
-    chs->head = (lba / params->sectorNumPerTrack) % params->headNum;
-    chs->sector = lba % params->sectorNumPerTrack + 1;
-}
-
 #define RETRY_TIME 65535
 
-static uint8_t __waitChannel(const Channel* ch, uint8_t waitFlags) {
+static uint8_t __waitChannelClear(const Channel* ch, uint8_t waitFlags) {
     uint16_t retry = RETRY_TIME;
     uint8_t status;
     do {
         status = inb(HDC_ALT_STATUS(ch->portBase));
+        sleep(MICROSECOND, 1);
     } while (TEST_FLAGS_CONTAIN(status, waitFlags) && retry-- != 0);
+    return status;
+}
+
+static uint8_t __waitChannelSet(const Channel* ch, uint8_t waitFlags) {
+    uint16_t retry = RETRY_TIME;
+    uint8_t status;
+    do {
+        status = inb(HDC_ALT_STATUS(ch->portBase));
+        sleep(MICROSECOND, 1);
+    } while (TEST_FLAGS_NONE(status, waitFlags) && retry-- != 0);
     return status;
 }
 
@@ -192,47 +173,39 @@ static uint8_t __selectDevice(const Disk* d) {
 
     sleep(NANOSECOND, 400);
 
-    uint8_t ret = inb(HDC_ALT_STATUS(portBase));
-    return ret;
-}
-
-static bool __isATAdevice(Disk* d) {
-    __selectDevice(d);
-
-    uint16_t portBase = d->channel->portBase;
-
-    uint8_t
-        signature1 = inb(HDC_LBA_8_15(portBase)),
-        signature2 = inb(HDC_LBA_16_23(portBase));
-
-    return 
-        (signature1 == 0x00 && signature2 == 0x00) ||
-        (signature1 == 0x3C && signature2 == 0xC3);
+    return inb(HDC_ALT_STATUS(portBase));
 }
 
 static uint8_t __identifyDevice(Disk* d) {
+    d->available = false;
     __selectDevice(d);
 
     Channel* c = d->channel;
 
+    outb(HDC_SECTOR_COUNT(c->portBase), 0);
+    outb(HDC_LBA_0_7(c->portBase), 0);
+    outb(HDC_LBA_8_15(c->portBase), 0);
+    outb(HDC_LBA_16_23(c->portBase), 0);
+
     __postChannelCommand(c, HDC_COMMAND_IDENTIFY_DEVICE);
 
-    while (c->waitingForInterrupt) {
-        nop();
-    }   //TODO: Replace this with semaphore implementation
+    uint8_t status = inb(HDC_STATUS(c->portBase));
+    if (status == 0) {
+        return 0;
+    }
 
-    uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
-
-    if (
-        TEST_FLAGS_FAIL(status, HDC_STATUS_DATA_REQUIRE_SERVICE)    ||
-        TEST_FLAGS(status, HDC_STATUS_ERROR)
-    ) {
+    status = __waitChannelClear(c, HDC_STATUS_BUSY);
+    if (!(inb(HDC_LBA_8_15(c->portBase)) == 0 && inb(HDC_LBA_16_23(c->portBase)) == 0)) {
+        d->parameters->generalConfiguration.isNotATA = true;
         return status;
     }
 
-    d->available = true;
+    __waitChannelSet(c, HDC_STATUS_ERROR | HDC_STATUS_DATA_REQUIRE_SERVICE);
 
-    insw(HDC_DATA(c->portBase), d->parameters, sizeof(DeviceIdentifyData) / sizeof(uint16_t));
+    if (!TEST_FLAGS(status, HDC_STATUS_ERROR)) {
+        insw(HDC_DATA(c->portBase), d->parameters, sizeof(DeviceIdentifyData) / sizeof(uint16_t));
+    }
+    d->available = true;
 
     return status;
 }
@@ -284,14 +257,12 @@ void initHardDisk() {
 
             d->available = false;
             d->isMaster = (j == 0);
-            d->isATA = __isATAdevice(d);
 
-            if (!d->isATA) {
+            uint8_t identifyStatus = __identifyDevice(d);
+            if (d->parameters->generalConfiguration.isNotATA) {
                 printf("%s hard disk is not an ATA device, ignored.\n", d->name);
                 continue;
             }
-
-            uint8_t identifyStatus = __identifyDevice(d);
 
             if (!d->available) { //TODO: May fail here, might be caused by delay
                 printf("%s hard disk not available, final status: %#02X.\n", d->name, identifyStatus);
@@ -310,7 +281,7 @@ void initHardDisk() {
 static void __resetChannel(const Channel* c) {
     uint16_t portBase = c->portBase;
     outb(HDC_CONTROL(portBase), 0);
-    outb(HDC_CONTROL(portBase), 4);
+    outb(HDC_CONTROL(portBase), 4); //Disk reset bit
     outb(HDC_CONTROL(portBase), 0);
 }
 
@@ -349,7 +320,7 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
             nop();
         }   //TODO: Replace this with semaphore implementation
 
-        uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
+        uint8_t status = __waitChannelClear(c, HDC_STATUS_BUSY);
 
         insw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
         buffer += SECTOR_SIZE;
@@ -366,7 +337,7 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
 
     while (n--) {
         c->waitingForInterrupt = true;
-        uint8_t status = __waitChannel(c, HDC_STATUS_BUSY);
+        uint8_t status = __waitChannelClear(c, HDC_STATUS_BUSY);
 
         outsw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
 

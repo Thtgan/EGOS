@@ -13,7 +13,7 @@ typedef struct {
         uint8_t fixedDevice         : 1;
         uint8_t removableDevice     : 1;
         uint8_t retired3            : 7;
-        uint8_t isATA               : 1;
+        uint8_t isNotATA            : 1;
     } generalConfiguration;
     uint16_t cylinderNum;
     uint16_t specificConfiguration;
