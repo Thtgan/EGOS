@@ -21,7 +21,6 @@ toolsBuild:
 	@echo BUILDING TOOLS
 	@cd tools && $(MAKE) > /dev/null
 	@echo BUILD TOOLS COMPLETE
-	@mv ./tools/build/* $(BUILD_DIR)
 
 boot.bin:
 	@echo BUILDING BOOT
@@ -37,7 +36,7 @@ kernel.bin:
 
 injectFiles:
 	@echo INJECTING FILES
-	@./fileInject.sh ./kernel/files ./build/injector ./build/EGOS.img hda 0x800 > /dev/null
+	@./fileInject.sh ./kernel/files ./tools/injector/build/injector ./build/EGOS.img hda 0x800 > /dev/null
 
 clean:
 	@cd boot && $(MAKE) clean > /dev/null
