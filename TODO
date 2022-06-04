@@ -40,9 +40,9 @@ Implement basic drivers:
     ✔ Basic kerboard interrupt handling(ASCII input, cursor control) @done(22-01-12 19:44)
 
   PIO disk driver (Hard Disk Driver):
-    ☐ Read identify data
-    ☐ Read sectors
-    ☐ Write Sectors
+    ✔ Read identify data @done(22-03-27 16:39)
+    ✔ Read sectors @done(22-03-27 16:39)
+    ✔ Write Sectors @done(22-03-27 16:39)
 
   VGA text mode driver:
     ✔ Basic text mode operation(Print character, string, cursor control) @done(22-01-12 19:48)
