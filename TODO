@@ -66,11 +66,12 @@ Memory management:
     ✔ Page allocating and recycling @done(22-01-12 20:19)
     ✔ Activate pages @done(22-01-12 20:20)
     ✔ Basic page fault handling @done(22-01-12 20:20)
-    ☐ Upgrade page allocating and recycling to implementedby RB tree
 
   ✔ Memory allocating and recycling(malloc, free) @done(22-01-12 20:20)
   ✔ calloc @done(22-01-20 22:27)
   ✔ realloc @done(22-01-20 22:27)
+  ☐ User/Kernel memory split
+  ☐ Virtual space management
   ☐ These todos needs long-term tests
 
 Implement utilization library:
@@ -102,9 +103,19 @@ File system:
     ☐ The whole file system needs further test
     ✔ Tool to inject file into the image @done(22-05-01 22:43)
   ✔ Make a text LOGO file, read and print it @done(22-05-01 22:43)
-  
+
+Multitask:
+  Context switch:
+    ☐ Page table copy
+    ☐ Page table switch
+    ☐ Stack copy
+    ☐ Stack switch
+  ☐ Process
+  ☐ Schedule
+
 Misc:
   ☐ Transplant project to UEFI
   ☐ Sperate Bootloader and OS
+  ☐ Transplant project to Rust
 
 

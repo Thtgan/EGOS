@@ -1,7 +1,7 @@
 #include<fs/blockDevice/blockDevice.h>
 
-#include<memory/malloc.h>
 #include<memory/memory.h>
+#include<memory/virtualMalloc.h>
 #include<stdio.h>
 #include<string.h>
 #include<structs/singlyLinkedList.h>
@@ -22,7 +22,7 @@ BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, Block
         }
     }
 
-    BlockDevice* ret = malloc(sizeof(BlockDevice));
+    BlockDevice* ret = vMalloc(sizeof(BlockDevice));
     memset(ret, 0, sizeof(BlockDevice));
 
     initSinglyLinkedListNode(&ret->node);
@@ -35,7 +35,7 @@ BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, Block
 }
 
 void deleteBlockDevice(BlockDevice* device) {
-    free(device);
+    vFree(device);
 }
 
 BlockDevice* registerBlockDevice(BlockDevice* device) {

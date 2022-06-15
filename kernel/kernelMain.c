@@ -9,9 +9,9 @@
 #include<interrupt/IDT.h>
 #include<kit/oop.h>
 #include<memory/buffer.h>
-#include<memory/malloc.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
+#include<memory/virtualMalloc.h>
 #include<real/simpleAsmLines.h>
 #include<SSE.h>
 #include<stdio.h>
@@ -63,11 +63,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
 
     //printMemoryAreas();
 
-    size_t pageNum = initMemory(systemInfo);
+    printf("Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
 
-    printf("%u pages available\n", pageNum);
+    initMemory(systemInfo, (void*)readRegister_RBP_64());
 
-    initBuffer();
+    printf("Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
 
     initTimer();
 

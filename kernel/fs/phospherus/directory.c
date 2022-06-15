@@ -6,7 +6,7 @@
 #include<fs/phospherus/phospherus.h>
 #include<memory/buffer.h>
 #include<memory/memory.h>
-#include<memory/malloc.h>
+#include<memory/virtualMalloc.h>
 #include<stdbool.h>
 #include<stdio.h>
 #include<string.h>
@@ -65,23 +65,23 @@ bool phospherus_deleteDirectory(Phospherus_Allocator* allocator, block_index_t i
 }
 
 Phospherus_Directory* phospherus_openDirectory(Phospherus_Allocator* allocator, block_index_t inodeIndex) {
-    Phospherus_Directory* ret = malloc(sizeof(Phospherus_Directory));
+    Phospherus_Directory* ret = vMalloc(sizeof(Phospherus_Directory));
 
     ret->file = phospherus_openFile(allocator, inodeIndex);
     if (ret->file == NULL) {
-        free(ret);
+        vFree(ret);
         return NULL;
     }
     ret->allocator = allocator;
 
-    ret->header = malloc(sizeof(DirectoryHeader));
+    ret->header = vMalloc(sizeof(DirectoryHeader));
     phospherus_seekFile(ret->file, 0);
     phospherus_readFile(ret->file, ret->header, sizeof(DirectoryHeader));
     size_t entryNum = ((DirectoryHeader*)ret->header)->entryNum;
 
     ret->entries = NULL;
     if (entryNum > 0) {
-        ret->entries = malloc(entryNum * sizeof(DirectoryEntry));
+        ret->entries = vMalloc(entryNum * sizeof(DirectoryEntry));
         phospherus_seekFile(ret->file, sizeof(DirectoryHeader));
         phospherus_readFile(ret->file, ret->entries, entryNum * sizeof(DirectoryEntry));
     }
@@ -92,13 +92,13 @@ Phospherus_Directory* phospherus_openDirectory(Phospherus_Allocator* allocator, 
 void phospherus_closeDirectory(Phospherus_Directory* directory) {
     phospherus_closeFile(directory->file);
 
-    free(directory->header);
+    vFree(directory->header);
 
     if (directory->entries != NULL) {
-        free(directory->entries);
+        vFree(directory->entries);
     }
 
-    free(directory);
+    vFree(directory);
 }
 
 size_t phospherus_getDirectoryEntryNum(Phospherus_Directory* directory) {
@@ -128,9 +128,9 @@ bool phospherus_directoryAddEntry(Phospherus_Directory* directory, block_index_t
     DirectoryHeader* header = directory->header;
 
     if (header->entryNum == 0) {
-        directory->entries = malloc(sizeof(DirectoryEntry));
+        directory->entries = vMalloc(sizeof(DirectoryEntry));
     } else {
-        directory->entries = realloc(directory->entries, (header->entryNum + 1) * sizeof(DirectoryEntry));
+        directory->entries = vRealloc(directory->entries, (header->entryNum + 1) * sizeof(DirectoryEntry));
     }
     memset(directory->entries + header->entryNum * sizeof(DirectoryEntry), 0, sizeof(DirectoryEntry));
 
@@ -160,11 +160,11 @@ void phospherus_deleteDirectoryEntry(Phospherus_Directory* directory, size_t ent
     DirectoryHeader* header = directory->header;
 
     if (header->entryNum == 1) {
-        free(directory->entries);
+        vFree(directory->entries);
         directory->entries = NULL;
     } else {
         memmove(directory->entries + entryIndex * sizeof(DirectoryEntry), directory->entries + (entryIndex + 1) * sizeof(DirectoryEntry), (header->entryNum - entryIndex - 1) * sizeof(DirectoryEntry));
-        directory->entries = realloc(directory->entries, (header->entryNum - 1) * sizeof(DirectoryEntry));
+        directory->entries = vRealloc(directory->entries, (header->entryNum - 1) * sizeof(DirectoryEntry));
     }
     --header->entryNum;
 

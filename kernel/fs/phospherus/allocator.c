@@ -7,8 +7,8 @@
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<memory/buffer.h>
-#include<memory/malloc.h>
 #include<memory/memory.h>
+#include<memory/virtualMalloc.h>
 #include<stddef.h>
 #include<stdint.h>
 #include<system/systemInfo.h>
@@ -102,8 +102,8 @@ bool phospherus_deployAllocator(BlockDevice* device) {
 }
 
 Phospherus_Allocator* phospherus_openAllocator(BlockDevice* device) {
-    __Node* superNode = malloc(sizeof(__Node));
-    Phospherus_Allocator* ret = malloc(sizeof(Phospherus_Allocator));
+    __Node* superNode = vMalloc(sizeof(__Node));
+    Phospherus_Allocator* ret = vMalloc(sizeof(Phospherus_Allocator));
 
     THIS_ARG_APPEND_CALL(device, readBlocks, __SUPER_NODE_INDEX, superNode, 1);
 
@@ -117,9 +117,9 @@ void phospherus_closeAllocator(Phospherus_Allocator* allocator) {
     if (allocator == NULL || allocator->superNode == NULL) {
         return;
     }
-    free(allocator->superNode); //Destroy supernode will make allocator unavailable
+    vFree(allocator->superNode); //Destroy supernode will make allocator unavailable
     allocator->superNode = NULL;
-    free(allocator);
+    vFree(allocator);
 }
 
 static const char* _allocateBlockFailInfo = "Allocate block failed";

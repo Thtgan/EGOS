@@ -18,8 +18,6 @@ static inline bool __checkLongMode();
 __attribute__((noreturn))
 void kernelEntry(uint32_t magic, uint32_t sysInfo) {
     SystemInfo* info = (SystemInfo*)sysInfo;
-
-    uint16_t* ptr = (uint16_t*)0xB8000;
     if (!checkCPUID() || !__checkLongMode()) {
         die();
     }

@@ -1,7 +1,7 @@
 #include<memory/buffer.h>
 
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
+#include<memory/paging/vPageAlloc.h>
 #include<stddef.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
@@ -61,7 +61,7 @@ void __addPage(BufferSizes size) {
     _bufferNums[size] += PAGE_SIZE / _bufferSizes[size];
     _freeBufferNums[size] += PAGE_SIZE / _bufferSizes[size];
 
-    void* page = allocatePage();
+    void* page = vPageAlloc(1);
     for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[size]) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)(page + j);
         initSinglyLinkedListNode(node);

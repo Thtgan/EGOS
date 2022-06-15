@@ -15,11 +15,11 @@ bool checkSSE() {
 }
 
 void enableSSE() {
-    uint64_t cr0 = readCR0_64();
+    uint64_t cr0 = readRegister_CR0_64();
     SET_FLAG_BACK(cr0, CR0_MP);
-    writeCR0_64(cr0);
+    writeRegister_CR0_64(cr0);
 
-    uint64_t cr4 = readCR4_64();
+    uint64_t cr4 = readRegister_CR4_64();
     SET_FLAG_BACK(cr4, CR4_OSFXSR | CR4_OSXMMEXCPT);
-    writeCR4_64(cr4);
+    writeRegister_CR4_64(cr4);
 }

@@ -1,7 +1,7 @@
 %define MBR_BEGIN               0x7C00
 %define MBR_END                 0x7E00
 ;;Stack grows downwords, it won't corrupt the MBR
-%define KERNEL_STACK_BOTTOM     MBR_BEGIN
+%define STACK_BOTTOM            MBR_BEGIN
 
 %define REAL_MODE_CODE_BEGIN    MBR_END
 
@@ -25,7 +25,7 @@ globalBootEntry:
     mov es, bx  ;;0 --> es
     mov ss, bx  ;;0 --> ss
 
-    mov sp, KERNEL_STACK_BOTTOM ;;0x0000:0x7C00 --> ss::sp
+    mov sp, STACK_BOTTOM ;;0x0000:0x7C00 --> ss::sp
 
     sti         ;;Set interrupt flag
     ;;End of initialization
@@ -33,7 +33,7 @@ globalBootEntry:
     jmp checkIODevice
 checkPassed:
     ;;Check passed, meaning program running on a i386+ platform and 32-bit registers are available
-    mov esp, KERNEL_STACK_BOTTOM
+    mov esp, STACK_BOTTOM
 
     ;;Read boot program
     mov ax, 0x0000

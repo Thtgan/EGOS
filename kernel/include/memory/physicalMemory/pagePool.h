@@ -1,7 +1,7 @@
 #if !defined(__PAGING_POOL_H)
 #define __PAGING_POOL_H
 
-#include<memory/paging/pageNode.h>
+#include<memory/physicalMemory/pageNode.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdint.h>

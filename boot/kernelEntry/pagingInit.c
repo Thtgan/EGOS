@@ -6,6 +6,7 @@
 #include<real/flags/msr.h>
 #include<real/simpleAsmLines.h>
 #include<system/pageTable.h>
+#include<system/systemInfo.h>
 
 __attribute__((aligned(PAGE_SIZE)))
 static PML4Table _PML4Table;
@@ -20,10 +21,10 @@ __attribute__((aligned(PAGE_SIZE)))
 static PageTable _firstPageTable;
 
 void initPaging(SystemInfo* sysInfo) {
-    writeCR0(CLEAR_FLAG(readCR0(), CR0_PG));    //Disable paging
+    writeRegister_CR0_32(CLEAR_FLAG(readRegister_CR0_32(), CR0_PG));    //Disable paging
 
-    writeCR3((uint32_t)(&_PML4Table));          //Resister PML4 table address
-    writeCR4(SET_FLAG(readCR4(), CR4_PAE));     //Setting up PAE
+    writeRegister_CR3_32((uint32_t)(&_PML4Table));                      //Resister PML4 table address
+    writeRegister_CR4_32(SET_FLAG(readRegister_CR4_32(), CR4_PAE));     //Setting up PAE
 
     //Setting up PML4 table
     _PML4Table.tableEntries[0] = BUILD_PML4_ENTRY((uint32_t)&_firstPDPTable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
@@ -53,7 +54,7 @@ void initPaging(SystemInfo* sysInfo) {
     //2 MB mapped to real physical address
 
     //Store the base PML4 table for memory manager initialization
-    sysInfo->basePML4 = (uint32_t)&_PML4Table;
+    sysInfo->kernelTable = (uint32_t)&_PML4Table;
 
     //Setting up LME
     uint32_t eax, edx;
@@ -61,5 +62,5 @@ void initPaging(SystemInfo* sysInfo) {
     SET_FLAG_BACK(eax, MSR_EFER_LME);
     wrmsr(MSR_ADDR_EFER, edx, eax);
 
-    writeCR0(SET_FLAG(readCR0(), CR0_PG));    //Enable paging
+    writeRegister_CR0_32(SET_FLAG(readRegister_CR0_32(), CR0_PG));    //Enable paging
 }

@@ -1,16 +1,31 @@
 #include<memory/memory.h>
 
-#include<memory/malloc.h>
+#include<memory/buffer.h>
+#include<memory/paging/directAccess.h>
 #include<memory/paging/paging.h>
+#include<memory/physicalMemory/pPageAlloc.h>
+#include<memory/stackUtility.h>
+#include<memory/virtualMalloc.h>
 #include<stddef.h>
 #include<stdint.h>
+#include<system/address.h>
 #include<system/systemInfo.h>
 
-size_t initMemory(const SystemInfo* sysInfo) {
-    size_t availablePages = initPaging(sysInfo);
-    initMalloc();
+#include<stdio.h>
 
-    return availablePages;
+void initMemory(const SystemInfo* sysInfo, void* mainStackBase) {
+    setupKernelStack((void*)KERNEL_STACK_BOTTOM, mainStackBase);
+    initPaging(sysInfo);
+
+    enableDirectAccess();
+
+    initPpageAlloc(sysInfo);
+
+    disableDirectAccess();
+
+    initVirtualMalloc();
+
+    initBuffer();
 }
 
 void* memcpy(void* des, const void* src, size_t n) {

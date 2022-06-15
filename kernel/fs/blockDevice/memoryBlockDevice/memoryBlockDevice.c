@@ -2,8 +2,8 @@
 
 #include<fs/blockDevice/blockDevice.h>
 #include<kit/oop.h>
-#include<memory/malloc.h>
 #include<memory/memory.h>
+#include<memory/virtualMalloc.h>
 #include<stddef.h>
 #include<string.h>
 #include<structs/singlyLinkedList.h>
@@ -18,7 +18,7 @@ static void __writeBlocks(void* additionalData, size_t blockIndex, const void* b
 BlockDevice* createMemoryBlockDevice(size_t size) {
     size_t blockSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    void* region = malloc(blockSize * BLOCK_SIZE);
+    void* region = vMalloc(blockSize * BLOCK_SIZE);
     if (region == NULL) {
         return NULL;
     }
@@ -45,5 +45,5 @@ BlockDevice* createMemoryBlockDevice(size_t size) {
 }
 
 void deleteMemoryBlockDevice(BlockDevice* blockDevice) {
-    free(blockDevice->additionalData);
+    vFree(blockDevice->additionalData);
 }

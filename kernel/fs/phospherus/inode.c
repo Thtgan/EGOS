@@ -7,8 +7,8 @@
 #include<fs/phospherus/phospherus.h>
 #include<kit/macro.h>
 #include<memory/buffer.h>
-#include<memory/malloc.h>
 #include<memory/memory.h>
+#include<memory/virtualMalloc.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdio.h>
@@ -281,15 +281,15 @@ iNodeDesc* phospherus_openInode(Phospherus_Allocator* allocator, block_index_t i
         linkedListDelete(&ret->node);                       //Move it to the top, cause it might be used again soon
         ++ret->openCnt;
     } else {
-        iNode* inode = malloc(sizeof(iNode));
+        iNode* inode = vMalloc(sizeof(iNode));
         BlockDevice* device = phospherus_getAllocatorDevice(allocator);
         THIS_ARG_APPEND_CALL(device, readBlocks, inodeBlock, inode, 1);
         if (inode->signature != SYSTEM_INFO_MAGIC32) {      //Validation failed
-            free(inode);
+            vFree(inode);
             return NULL;
         }
 
-        ret = malloc(sizeof(iNodeDesc));
+        ret = vMalloc(sizeof(iNodeDesc));
         initLinkedListNode(&ret->node);
         ret->inode = inode;
         ret->openCnt = 1;
@@ -309,9 +309,9 @@ void phospherus_closeInode(iNodeDesc* inodeDesc) {
     --inodeDesc->openCnt;
     if (inodeDesc->openCnt == 0) {
         linkedListDelete(&inodeDesc->node);
-        free(inodeDesc->inode);
+        vFree(inodeDesc->inode);
         inodeDesc->inode = NULL;
-        free(inodeDesc);
+        vFree(inodeDesc);
     }
 }
 

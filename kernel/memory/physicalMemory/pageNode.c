@@ -1,4 +1,4 @@
-#include<memory/paging/pageNode.h>
+#include<memory/physicalMemory/pageNode.h>
 
 #include<stddef.h>
 #include<structs/linkedList.h>

@@ -106,7 +106,6 @@ void vgaPutchar(char ch) {
         break;
     default:
         nextPos = __NEXT_POSITION(_tmInfo.cursorPosition);
-        nop();
         __putChar(_tmInfo.cursorPosition, ch);
         break;
     }

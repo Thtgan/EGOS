@@ -5,7 +5,7 @@
 #include<fs/phospherus/directory.h>
 #include<fs/phospherus/file.h>
 #include<fs/phospherus/inode.h>
-#include<memory/malloc.h>
+#include<memory/virtualMalloc.h>
 #include<string.h>
 
 #define PHOSPHERUS_ROOT_DIRECTORY_INODE 1
@@ -80,26 +80,26 @@ bool phospherus_checkFileSystem(BlockDevice* device) {
 }
 
 FileSystem* phospherus_openFileSystem(BlockDevice* device) {
-    __Phospherus_FileSystem* specificSystem = malloc(sizeof(__Phospherus_FileSystem));
+    __Phospherus_FileSystem* specificSystem = vMalloc(sizeof(__Phospherus_FileSystem));
     specificSystem->allocator = phospherus_openAllocator(device);
     if (specificSystem->allocator == NULL) {
-        free(specificSystem);
+        vFree(specificSystem);
         return NULL;
     }
 
     specificSystem->rootDirectory = phospherus_openDirectory(specificSystem->allocator, PHOSPHERUS_ROOT_DIRECTORY_INODE);
     if (specificSystem->rootDirectory == NULL) {
-        free(specificSystem);
+        vFree(specificSystem);
         return NULL;
     }
 
     if (!phospherus_checkIsRootDirectory(specificSystem->rootDirectory)) {
         phospherus_closeDirectory(specificSystem->rootDirectory);
-        free(specificSystem);
+        vFree(specificSystem);
         return NULL;
     }
     
-    FileSystem* ret = malloc(sizeof(FileSystem));
+    FileSystem* ret = vMalloc(sizeof(FileSystem));
 
     strcpy(ret->name, "phospherus");
     ret->type = FILE_SYSTEM_TYPE_PHOSPHERUS;
@@ -139,8 +139,8 @@ void phospherus_closeFileSystem(FileSystem* system) {
     __Phospherus_FileSystem* specificSystem = system->specificFileSystem;
     phospherus_closeDirectory(specificSystem->rootDirectory);
     phospherus_closeAllocator(specificSystem->allocator);
-    free(specificSystem);
-    free(system);
+    vFree(specificSystem);
+    vFree(system);
 }
 
 static block_index_t __createFile(THIS_ARG_APPEND_NO_ARG(FileSystem)) {

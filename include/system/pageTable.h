@@ -52,10 +52,11 @@ typedef uint64_t PML4Entry;
 #define BUILD_PML4_ENTRY(__PDPT_ADDR, __FLAGS)              \
 (                                                           \
     TRIM_VAL_RANGE((uint64_t)(__PDPT_ADDR), 64, 12, 52) |   \
-    CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 63)                 \
+    CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                 \
 )
 
 #define PDPT_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY) ((PDPTable*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 12, 52))
+#define FLAGS_FROM_PML4_ENTRY(__PML4_ENTRY)     (CLEAR_VAL_RANGLE((__PML4_ENTRY), 64, 12, 52))
 
 #define PML4_ENTRY_FLAG_PRESENT FLAG64(0)
 #define PML4_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
@@ -107,10 +108,11 @@ typedef uint64_t PDPTEntry;
 #define BUILD_PDPT_ENTRY(__PAGE_DIRECTORY_ADDR, __FLAGS)            \
 (                                                                   \
     TRIM_VAL_RANGE((uint64_t)(__PAGE_DIRECTORY_ADDR), 64, 12, 52) | \
-    CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 63)                         \
+    CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                         \
 )
 
 #define PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY)   ((PageDirectory*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 12, 52))
+#define FLAGS_FROM_PDPT_ENTRY(__PDPT_ENTRY)                 (CLEAR_VAL_RANGLE((__PDPT_ENTRY), 64, 12, 52))
 
 #define PDPT_ENTRY_FLAG_PRESENT FLAG64(0)
 #define PDPT_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
@@ -156,11 +158,12 @@ typedef uint64_t PageDirectoryEntry;
 #define BUILD_PAGE_DIRECTORY_ENTRY(__PAGE_TABLE_ADDR, __FLAGS)      \
 (                                                                   \
     TRIM_VAL_RANGE((uint64_t)(__PAGE_TABLE_ADDR), 64, 12, 52)   |   \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 63)                           \
+    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                           \
 )
 
 
 #define PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)   ((PageTable*)TRIM_VAL_RANGE(__PAGE_DIRECTORY_ENTRY, 64, 12, 52))
+#define FLAGS_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
 
 #define PAGE_DIRECTORY_ENTRY_FLAG_PRESENT   FLAG64(0)
 #define PAGE_DIRECTORY_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
@@ -208,7 +211,7 @@ typedef uint64_t PageTableEntry;
 #define BUILD_PAGE_TABLE_ENTRY_WITH_PROTECTION_KEY(__PAGE_ADDR, __FLAGS, __PROTECTION_KEY)  \
 (                                                                                           \
     TRIM_VAL_RANGE((uint64_t)(__PAGE_ADDR), 64, 12, 52)         |                           \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 63)                       |                           \
+    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                       |                           \
     TRIM_VAL_RANGE((uint64_t)(__PROTECTION_KEY), 64, 59, 63)                                \
 )
 
@@ -216,10 +219,11 @@ typedef uint64_t PageTableEntry;
 #define BUILD_PAGE_TABLE_ENTRY(__PAGE_ADDR, __FLAGS)        \
 (                                                           \
     TRIM_VAL_RANGE((uint64_t)(__PAGE_ADDR), 64, 12, 52) |   \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 63)                   \
+    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                   \
 )
 
 #define PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY) ((void*)TRIM_VAL_RANGE(__PAGE_TABLE_ENTRY, 64, 12, 52))
+#define FLAGS_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)     (CLEAR_VAL_RANGLE((__PAGE_TABLE_ENTRY), 64, 12, 52))
 
 #define PAGE_TABLE_ENTRY_FLAG_PRESENT   FLAG64(0)
 #define PAGE_TABLE_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
@@ -236,5 +240,7 @@ typedef uint64_t PageTableEntry;
 typedef struct {
     PageTableEntry tableEntries[PAGE_TABLE_SIZE];
 } __attribute__((packed)) PageTable;
+
+#define PAGE_ENTRY_PUBLIC_FLAG_SHARE    FLAG64(52)  //Share page between directories
 
 #endif // __PAGE_TABLE_H

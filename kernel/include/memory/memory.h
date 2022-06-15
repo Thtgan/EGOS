@@ -9,9 +9,8 @@
  * @brief Initialize the memory, enable paging and memory allocation
  * 
  * @param sysInfo System information
- * @return size_t Num of available pages
  */
-size_t initMemory(const SystemInfo* sysInfo);
+void initMemory(const SystemInfo* sysInfo, void* mainStackBase);
 
 /**
  * @brief Copy data from source to destination, overlap not handled

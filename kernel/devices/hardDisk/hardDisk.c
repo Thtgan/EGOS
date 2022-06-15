@@ -9,7 +9,7 @@
 #include<kit/oop.h>
 #include<lib/blowup.h>
 #include<memory/memory.h>
-#include<memory/malloc.h>
+#include<memory/buffer.h>
 #include<real/ports/HDC.h>
 #include<real/simpleAsmLines.h>
 #include<stdbool.h>
@@ -372,12 +372,12 @@ static void __registerDiskBlockDevice(Disk* d) {
 }
 
 static bool __checkBootDisk(Disk* d) {
-    uint16_t* MBR = malloc(SECTOR_SIZE);    //TODO: Try to replace with a reserved buffer?
+    uint16_t* MBR = allocateBuffer(BUFFER_SIZE_512);
     __readSectors(d, 0, MBR, 1);
 
     bool ret = (MBR[219] == SYSTEM_INFO_MAGIC16) && (MBR[255] == 0xAA55);
 
-    free(MBR);
+    releaseBuffer(MBR, BUFFER_SIZE_512);
 
     return ret;
 }

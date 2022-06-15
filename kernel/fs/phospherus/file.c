@@ -7,8 +7,8 @@
 #include<fs/phospherus/inode.h>
 #include<fs/phospherus/phospherus.h>
 #include<memory/buffer.h>
-#include<memory/malloc.h>
 #include<memory/memory.h>
+#include<memory/virtualMalloc.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<stdio.h>
@@ -39,7 +39,7 @@ File* phospherus_openFile(Phospherus_Allocator* allocator, block_index_t inodeBl
         return NULL;
     }
 
-    File* ret = malloc(sizeof(File));
+    File* ret = vMalloc(sizeof(File));
     ret->inode = inode;
     ret->pointer = 0;
 
@@ -50,7 +50,7 @@ void phospherus_closeFile(File* file) {
     phospherus_closeInode(file->inode);
     file->inode = NULL;
     file->pointer = 0;
-    free(file);
+    vFree(file);
 }
 
 size_t phospherus_getFilePointer(File* file) {

@@ -126,6 +126,58 @@ __WRITE_MEMORY_FUNC_SEG(16, GS);
 __WRITE_MEMORY_FUNC_SEG(32, GS);
 __WRITE_MEMORY_FUNC_SEG(64, GS);
 
+#define __READ_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH)                                   \
+static inline UINT(__LENGTH) MACRO_CONCENTRATE4(readRegister_, __REGISTER, _, __LENGTH) ()
+
+#define __READ_REGISTER_FUNC_INLINE_ASM(__REGISTER, __LENGTH)               \
+MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %%" MACRO_STR(__REGISTER) ", %0"     \
+: "=r"(ret)                                                                 \
+:
+
+#define __READ_REGISTER_FUNC(__REGISTER, __LENGTH)                          \
+__READ_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH) {                         \
+    UINT(__LENGTH) ret;                                                     \
+    asm volatile(__READ_REGISTER_FUNC_INLINE_ASM(__REGISTER, __LENGTH));    \
+    return ret;                                                             \
+}
+
+__READ_REGISTER_FUNC(CR0, 32)
+__READ_REGISTER_FUNC(CR3, 32)
+__READ_REGISTER_FUNC(CR4, 32)
+
+__READ_REGISTER_FUNC(CR0, 64)
+__READ_REGISTER_FUNC(CR2, 64)
+__READ_REGISTER_FUNC(CR3, 64)
+__READ_REGISTER_FUNC(CR4, 64)
+
+__READ_REGISTER_FUNC(RIP, 64)
+__READ_REGISTER_FUNC(RSP, 64)
+__READ_REGISTER_FUNC(RBP, 64)
+
+#define __WRITE_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH)                                          \
+static inline void MACRO_CONCENTRATE4(writeRegister_, __REGISTER, _, __LENGTH) (UINT(__LENGTH) val)
+
+#define __WRITE_REGISTER_FUNC_INLINE_ASM(__REGISTER, __LENGTH)          \
+MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %0, %%" MACRO_STR(__REGISTER)    \
+:                                                                       \
+: "r"(val)
+
+#define __WRITE_REGISTER_FUNC(__REGISTER, __LENGTH)                         \
+__WRITE_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH) {                        \
+    asm volatile(__WRITE_REGISTER_FUNC_INLINE_ASM(__REGISTER, __LENGTH));   \
+}
+
+__WRITE_REGISTER_FUNC(CR0, 32)
+__WRITE_REGISTER_FUNC(CR3, 32)
+__WRITE_REGISTER_FUNC(CR4, 32)
+
+__WRITE_REGISTER_FUNC(CR0, 64)
+__WRITE_REGISTER_FUNC(CR3, 64)
+__WRITE_REGISTER_FUNC(CR4, 64)
+
+__WRITE_REGISTER_FUNC(RSP, 64)
+__WRITE_REGISTER_FUNC(RBP, 64)
+
 #define IN(__LENGTH)    MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, in, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __IN_FUNC_HEADER(__LENGTH)                          \
@@ -205,85 +257,6 @@ __OUTS_FUNC_HEADER(__LENGTH) {                      \
 __OUTS_FUNC(8)
 __OUTS_FUNC(16)
 __OUTS_FUNC(32)
-
-#define __READ_CR_FUNC_HEADER(__CR)                         \
-static inline uint32_t MACRO_CONCENTRATE2(readCR, __CR)()
-
-#define __READ_CR_FUNC_INLINE_ASM(__CR)         \
-"movl %%cr" MACRO_CALL(MACRO_STR, __CR) ", %0"  \
-: "=r"(ret)                                     
-
-#define __READ_CR_FUNC(__CR)                        \
-__READ_CR_FUNC_HEADER(__CR) {                       \
-    uint32_t ret;                                   \
-    asm volatile(__READ_CR_FUNC_INLINE_ASM(__CR));  \
-    return ret;                                     \
-}
-
-__READ_CR_FUNC(0)
-__READ_CR_FUNC(1)
-__READ_CR_FUNC(2)
-__READ_CR_FUNC(3)
-__READ_CR_FUNC(4)
-
-#define __WRITE_CR_FUNC_HEADER(__CR)                                \
-static inline void MACRO_CONCENTRATE2(writeCR, __CR)(uint32_t val)
-
-#define __WRITE_CR_FUNC_INLINE_ASM(__CR)    \
-"movl %0, %%cr" MACRO_CALL(MACRO_STR, __CR) \
-:                                           \
-: "r"(val)
-
-#define __WRITE_CR_FUNC(__CR)                       \
-__WRITE_CR_FUNC_HEADER(__CR) {                      \
-    asm volatile(__WRITE_CR_FUNC_INLINE_ASM(__CR)); \
-}
-
-__WRITE_CR_FUNC(0)
-__WRITE_CR_FUNC(1)
-__WRITE_CR_FUNC(2)
-__WRITE_CR_FUNC(3)
-__WRITE_CR_FUNC(4)
-
-#define __READ_CR_FUNC64_HEADER(__CR)                           \
-static inline uint64_t MACRO_CONCENTRATE3(readCR, __CR, _64)()
-
-#define __READ_CR_FUNC64_INLINE_ASM(__CR)       \
-"movq %%cr" MACRO_CALL(MACRO_STR, __CR) ", %0"  \
-: "=r"(ret)                                     \
-:
-
-#define __READ_CR_FUNC64(__CR)                          \
-__READ_CR_FUNC64_HEADER(__CR) {                         \
-    uint64_t ret;                                       \
-    asm volatile(__READ_CR_FUNC64_INLINE_ASM(__CR));    \
-    return ret;                                         \
-}
-
-__READ_CR_FUNC64(0)
-__READ_CR_FUNC64(1)
-__READ_CR_FUNC64(2)
-__READ_CR_FUNC64(3)
-__READ_CR_FUNC64(4)
-
-#define __WRITE_CR_FUNC64_HEADER(__CR)                                \
-static inline void MACRO_CONCENTRATE3(writeCR, __CR, _64)(uint64_t val)
-
-#define __WRITE_CR_FUNC64_INLINE_ASM(__CR)  \
-"movq %0, %%cr" MACRO_CALL(MACRO_STR, __CR) \
-:                                           \
-: "r"(val)
-
-#define __WRITE_CR_FUNC64(__CR)                       \
-__WRITE_CR_FUNC64_HEADER(__CR) {                      \
-    asm volatile(__WRITE_CR_FUNC64_INLINE_ASM(__CR)); \
-}
-
-__WRITE_CR_FUNC64(0)
-__WRITE_CR_FUNC64(1)
-__WRITE_CR_FUNC64(2)
-__WRITE_CR_FUNC64(3)
-__WRITE_CR_FUNC64(4)
 
 #define __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_HEADER(__INSTRUCTION) \
 static inline void __INSTRUCTION()

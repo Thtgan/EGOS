@@ -1,11 +1,5 @@
 {
     "files.associations": {
-        "unistd.h": "c",
-        "blockdevice.h": "c",
-        "stddef.h": "c",
-        "malloc.h": "c",
-        "buffer.h": "c",
-        "stdbool.h": "c",
-        "algorithms.h": "c"
+        "*.h": "c"
     }
 }

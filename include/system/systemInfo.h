@@ -10,7 +10,7 @@ typedef struct {
     uint16_t magic;
     uint64_t memoryMap; //Memory map of the system
     uint64_t gdtDesc;   //GDT Descriptor
-    uint64_t basePML4;
+    uint64_t kernelTable;
 } __attribute__((packed)) SystemInfo;
 //Don't remove this attribute, passing these data with no conflicting between three modes is all counting on it
 

@@ -1,7 +1,9 @@
 #include<pm.h>
 
 #include<GDTInit.h>
+#include<kit/bit.h>
 #include<realmode.h>
+#include<real/flags/cr0.h>
 #include<real/simpleAsmLines.h>
 #include<stdint.h>
 #include<system/GDT.h>
@@ -24,7 +26,7 @@ void jumpToKernel(SystemInfo* sysInfo) {
     sysInfo->gdtDesc = (uint32_t)setupGDT();
     
     //Switch to protected mode
-    writeCR0(readCR0() | 1);
+    writeRegister_CR0_32(SET_FLAG(readRegister_CR0_32(), CR0_PE));
 
     //ANCHOR[id=arch_boot_sys_pm_c_cli]
     cli();//Clear interrupt flag
