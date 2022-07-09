@@ -17,6 +17,8 @@ void setTable(PML4Table* tablePaddr);
  */
 void switchToTable(PML4Table* tablePaddr);
 
+void markCurrentTable(PML4Table* tablePaddr);
+
 /**
  * @brief Get current PML4 table physical address
  * 

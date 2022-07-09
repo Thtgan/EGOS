@@ -10,7 +10,11 @@ void setTable(PML4Table* tablePaddr) {
 }
 
 void switchToTable(PML4Table* tablePaddr) {
-    setTable(tablePaddr);
+    writeRegister_CR3_64((uint64_t)tablePaddr);
+    _currentTable = tablePaddr;
+}
+
+void markCurrentTable(PML4Table* tablePaddr) {
     _currentTable = tablePaddr;
 }
 

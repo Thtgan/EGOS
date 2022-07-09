@@ -35,6 +35,10 @@ static void printMemoryAreas() {
     }
 }
 
+#include<multitask/process.h>
+
+Process p1, p2;
+
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfo) {
     systemInfo = (SystemInfo*)sysInfo;
@@ -105,10 +109,26 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
     fs->fileOperations.readFile(fs, file, buffer, size);
     fs->fileOperations.closeFile(fs, file);
 
-    printf("%s\n", buffer);
+    printf("%s", buffer);
 
     closeFileSystem(fs);
     releaseBuffer(buffer, BUFFER_SIZE_512);
+
+    Process* mainProcess = initProcess();
+    Process* forked = forkFromCurrentProcess("Forked");
+
+    Process* p = getCurrentProcess();
+
+    printf("PID: %u\n", p->pid);
+    if (p->pid == 0) {
+        printf("This is main process, name: %s\n", p->name);
+        switchProcess(mainProcess, forked);
+    } else {
+        printf("This is child process, name: %s\n", p->name);
+        switchProcess(forked, mainProcess);
+    }
+
+    printf("PID: %u\n", p->pid);
 
     printf("died\n");
 

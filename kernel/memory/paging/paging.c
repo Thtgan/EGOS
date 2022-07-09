@@ -10,7 +10,7 @@
 #include<real/simpleAsmLines.h>
 #include<system/pageTable.h>
 
-ISR_EXCEPTION_FUNC_HEADER(__pageFaultHandler) {
+ISR_FUNC_HEADER(__pageFaultHandler) {
     blowup("Page fault: %#018llX access not allowed.", (uint64_t)readRegister_CR2_64()); //Not allowed since malloc is implemented
 
     EOI();
@@ -35,5 +35,5 @@ void initPaging(const SystemInfo* sysInfo) {
 static void __setupPages(PML4Table* kernelTable) {
     PDPTable* PDPTableAddr = PDPT_ADDR_FROM_PML4_ENTRY(kernelTable->tableEntries[0]);
     PageDirectory* pageDirectoryAddr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPTableAddr->tableEntries[0]);
-    pageDirectoryAddr->tableEntries[0] |= PAGE_ENTRY_PUBLIC_FLAG_SHARE;
+    pageDirectoryAddr->tableEntries[0] |= PAGE_ENTRY_PUBLIC_FLAG_SHARE; //First 2MB is shared
 }

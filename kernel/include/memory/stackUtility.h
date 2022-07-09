@@ -1,10 +1,11 @@
 #if !defined(__STACK_UTILITY)
 #define __STACK_UTILITY
 
+#include<stddef.h>
 #include<stdint.h>
 
-void setupKernelStack(void* kernelStackBottom, void* mainStackBase);
+void setupKernelStack(void* mainStackBase);
 
-void copyCurrentStack(void* oldStackTop, void* oldStackBase, void* newStackBottom);
+size_t copyCurrentStack(void* oldStackTop, void* oldStackBase, void* newStackBottom);
 
 #endif // __STACK_UTILITY

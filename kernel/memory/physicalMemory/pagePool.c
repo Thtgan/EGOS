@@ -5,8 +5,6 @@
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
 
-#include<stdio.h>
-
 /**
  * @brief Collect the page node which was cut out from the list
  * 

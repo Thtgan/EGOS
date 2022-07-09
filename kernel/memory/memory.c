@@ -11,10 +11,7 @@
 #include<system/address.h>
 #include<system/systemInfo.h>
 
-#include<stdio.h>
-
 void initMemory(const SystemInfo* sysInfo, void* mainStackBase) {
-    setupKernelStack((void*)KERNEL_STACK_BOTTOM, mainStackBase);
     initPaging(sysInfo);
 
     enableDirectAccess();
@@ -26,6 +23,8 @@ void initMemory(const SystemInfo* sysInfo, void* mainStackBase) {
     initVirtualMalloc();
 
     initBuffer();
+
+    setupKernelStack(mainStackBase);
 }
 
 void* memcpy(void* des, const void* src, size_t n) {

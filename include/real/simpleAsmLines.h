@@ -150,7 +150,6 @@ __READ_REGISTER_FUNC(CR2, 64)
 __READ_REGISTER_FUNC(CR3, 64)
 __READ_REGISTER_FUNC(CR4, 64)
 
-__READ_REGISTER_FUNC(RIP, 64)
 __READ_REGISTER_FUNC(RSP, 64)
 __READ_REGISTER_FUNC(RBP, 64)
 
@@ -329,6 +328,68 @@ __POP_FUNC_HEADER(__LENGTH) {                       \
 __POP_FUNC(16)
 __POP_FUNC(32)
 __POP_FUNC(64)
+
+#define __PUSH_REGISTER_HEADER(__REGISTER, __LENGTH)                                \
+static inline void MACRO_CONCENTRATE4(pushRegister_, __REGISTER, _, __LENGTH) ()
+
+#define __PUSH_REGISTER_INLINE_ASM(__REGISTER, __LENGTH)            \
+MACRO_CALL(MACRO_STR, PUSH(__LENGTH)) " %%" MACRO_STR(__REGISTER)   \
+:                                                                   \
+:                                                                   \
+:  "memory"
+
+#define __PUSH_REGISTER_FUNC(__REGISTER, __LENGTH)                  \
+__PUSH_REGISTER_HEADER(__REGISTER, __LENGTH) {                      \
+    asm volatile(__PUSH_REGISTER_INLINE_ASM(__REGISTER, __LENGTH)); \
+}
+
+__PUSH_REGISTER_FUNC(RAX, 64);
+__PUSH_REGISTER_FUNC(RBX, 64);
+__PUSH_REGISTER_FUNC(RCX, 64);
+__PUSH_REGISTER_FUNC(RDX, 64);
+
+__PUSH_REGISTER_FUNC(R8, 64);
+__PUSH_REGISTER_FUNC(R9, 64);
+__PUSH_REGISTER_FUNC(R10, 64);
+__PUSH_REGISTER_FUNC(R11, 64);
+__PUSH_REGISTER_FUNC(R12, 64);
+__PUSH_REGISTER_FUNC(R13, 64);
+__PUSH_REGISTER_FUNC(R14, 64);
+__PUSH_REGISTER_FUNC(R15, 64);
+
+__PUSH_REGISTER_FUNC(RSP, 64);
+__PUSH_REGISTER_FUNC(RBP, 64);
+
+#define __POP_REGISTER_HEADER(__REGISTER, __LENGTH)                             \
+static inline void MACRO_CONCENTRATE4(popRegister_, __REGISTER, _, __LENGTH) ()
+
+#define __POP_REGISTER_INLINE_ASM(__REGISTER, __LENGTH)             \
+MACRO_CALL(MACRO_STR, POP(__LENGTH)) " %%" MACRO_STR(__REGISTER)    \
+:                                                                   \
+:                                                                   \
+:  "memory"
+
+#define __POP_REGISTER_FUNC(__REGISTER, __LENGTH)                   \
+__POP_REGISTER_HEADER(__REGISTER, __LENGTH) {                       \
+    asm volatile(__POP_REGISTER_INLINE_ASM(__REGISTER, __LENGTH));  \
+}
+
+__POP_REGISTER_FUNC(RAX, 64)
+__POP_REGISTER_FUNC(RBX, 64)
+__POP_REGISTER_FUNC(RCX, 64)
+__POP_REGISTER_FUNC(RDX, 64)
+
+__POP_REGISTER_FUNC(R8, 64);
+__POP_REGISTER_FUNC(R9, 64);
+__POP_REGISTER_FUNC(R10, 64);
+__POP_REGISTER_FUNC(R11, 64);
+__POP_REGISTER_FUNC(R12, 64);
+__POP_REGISTER_FUNC(R13, 64);
+__POP_REGISTER_FUNC(R14, 64);
+__POP_REGISTER_FUNC(R15, 64);
+
+__POP_REGISTER_FUNC(RBP, 64)
+__POP_REGISTER_FUNC(RSP, 64)
 
 static inline void rdmsr(uint32_t addr, uint32_t* edx, uint32_t* eax) {
     asm volatile(

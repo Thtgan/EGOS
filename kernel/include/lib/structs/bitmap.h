@@ -66,4 +66,8 @@ void clearBit(Bitmap* b, size_t index);
  */
 void clearBits(Bitmap* b, size_t index, size_t n);
 
+size_t findFirstSet(Bitmap* b, size_t begin);
+
+size_t findFirstClear(Bitmap* b, size_t begin);
+
 #endif // __BITMAP_H

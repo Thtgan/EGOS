@@ -36,18 +36,18 @@ typedef struct {
 
 typedef struct {
     uint16_t size;
-    uint64_t tablePtr;
+    uint32_t tablePtr;
 } __attribute__((packed)) IDTdesc;
 
 /**
  * @brief Before enter the interrupt handler, CPU will push these registers into stack
  */
 typedef struct {
-    uint32_t ip;
-    uint32_t cs;        //Padded to doubleword
-    uint32_t eflags;
-    uint32_t sp;
-    uint32_t ss;
+    uint64_t ip;
+    uint64_t cs;        //Padded to doubleword
+    uint64_t eflags;
+    uint64_t sp;
+    uint64_t ss;
 } __attribute__((packed)) InterruptFrame;
 
 /**

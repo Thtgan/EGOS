@@ -52,3 +52,63 @@ void clearBits(Bitmap* b, const size_t index, const size_t n) {
         --b->bitSetNum;
     }
 }
+
+size_t findFirstSet(Bitmap* b, size_t begin) {
+    if (b->bitSetNum == 0) {
+        return -1;
+    }
+
+    uint64_t* ptr = (void*)&b->bitPtr[begin >> 3];
+
+    size_t i = begin, limit = CLEAR_VAL_SIMPLE(begin, 64, 6) + 64;
+    for (; i < limit && i < b->bitNum; ++i) {
+        if (__RAW_TEST(b->bitPtr, i)) {
+            return i;
+        }
+    }
+
+    i += 64;
+
+    while (i < b->bitNum && *ptr == EMPTY_FLAGS) {
+        ++ptr;
+        i += 64;
+    }
+
+    for (; i < b->bitNum; ++i) {
+        if (__RAW_TEST(b->bitPtr, i)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+size_t findFirstClear(Bitmap* b, size_t begin) {
+    if (b->bitSetNum == b->bitNum) {
+        return -1;
+    }
+
+    uint64_t* ptr = (void*)&b->bitPtr[begin >> 3];
+
+    size_t i = begin, limit = CLEAR_VAL_SIMPLE(begin, 64, 6) + 64;
+    for (; i < limit && i < b->bitNum; ++i) {
+        if (!__RAW_TEST(b->bitPtr, i)) {
+            return i;
+        }
+    }
+
+    i += 64;
+
+    while (i < b->bitNum && *ptr == FULL_MASK(64)) {
+        ++ptr;
+        i += 64;
+    }
+
+    for (; i < b->bitNum; ++i) {
+        if (!__RAW_TEST(b->bitPtr, i)) {
+            return i;
+        }
+    }
+
+    return -1;
+}

@@ -2,9 +2,10 @@
 
 #include<blowup.h>
 #include<memory/memory.h>
+#include<memory/virtualMalloc.h>
 #include<real/simpleAsmLines.h>
 #include<stddef.h>
-#include<stdio.h>
+#include<system/address.h>
 #include<system/stackFrame.h>
 
 #define STACK_GUARD 0x0000000000000000
@@ -25,14 +26,18 @@
 //|          Return Address          |   |
 //|       Last Stack Base (RBP)------+---+
 //#=======Function 2's Header========# <- RBP(Point to header)
-//|               ...                |
-//|               ...                |
-//|               ...                | <- RSP(Unknown position, but must in this function)
-//|               ...                |
+//|  Function 2's Local variables... |
+//#============Function 3============#
+//|          Return Address          |
+//#=======Function 3's Return========# <- Seems GCC will not push RBP at the Function does not call other functions, so this is not a header
+//|  Function 3's Local variables... | <- RSP(Unknown position, but must in this function)
+//#==================================#
 //             LowMemory
 
-void setupKernelStack(void* kernelStackAddr, void* mainStackBase) {
-    void* copyEnd = kernelStackAddr - sizeof(StackFrameHeader);
+void setupKernelStack(void* mainStackBase) {
+    void* newStackBottom = vMalloc(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE;
+
+    void* copyEnd = newStackBottom - sizeof(StackFrameHeader);
     memset(copyEnd, 0, sizeof(StackFrameHeader));
     ((StackFrameHeader*)copyEnd)->returnAddr    = 
     ((StackFrameHeader*)copyEnd)->lastStackBase = STACK_GUARD;
@@ -60,6 +65,21 @@ void setupKernelStack(void* kernelStackAddr, void* mainStackBase) {
     writeRegister_RSP_64((uint64_t)newStackTop);
 }
 
-void copyCurrentStack(void* oldStackTop, void* oldStackBase, void* newStackBottom) {
-    
+size_t copyCurrentStack(void* oldStackTop, void* oldStackBase, void* newStackBottom) {
+    StackFrameHeader* header = (StackFrameHeader*)oldStackBase;
+    while (header->lastStackBase != STACK_GUARD) {
+        header = (StackFrameHeader*)header->lastStackBase;
+    }
+    size_t size = (void*)header - oldStackTop + sizeof(StackFrameHeader);
+
+    memcpy(newStackBottom - size, oldStackTop, size);
+
+    size_t offset = newStackBottom - size - oldStackTop;
+    header = (StackFrameHeader*)(oldStackBase + offset);
+    while (header->lastStackBase != STACK_GUARD) {
+        header->lastStackBase += offset;
+        header = (StackFrameHeader*)header->lastStackBase;
+    }
+
+    return size;
 }
