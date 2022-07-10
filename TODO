@@ -106,10 +106,10 @@ File system:
 
 Multitask:
   Context switch:
-    ☐ Page table copy
-    ☐ Page table switch
-    ☐ Stack copy
-    ☐ Stack switch
+    ✔ Page table copy @done(22-07-10 20:15)
+    ✔ Page table switch @done(22-07-10 20:15)
+    ✔ Stack copy @done(22-07-10 20:15)
+    ✔ Stack switch @done(22-07-10 20:15)
   ☐ Process
   ☐ Schedule
 

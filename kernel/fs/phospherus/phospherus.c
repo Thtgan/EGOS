@@ -15,6 +15,7 @@ typedef struct {
     void* rootDirectory;
 } __Phospherus_FileSystem;
 
+//Functions opened to file system interface
 static block_index_t    __createFile    (THIS_ARG_APPEND_NO_ARG(FileSystem));
 static bool             __deleteFile    (THIS_ARG_APPEND(FileSystem, block_index_t inode));
 static FilePtr          __openFile      (THIS_ARG_APPEND(FileSystem, block_index_t inode));

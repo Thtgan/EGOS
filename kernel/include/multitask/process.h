@@ -27,12 +27,34 @@ struct _Process {
     char name[32];
 };
 
+/**
+ * @brief Set up the processes, get kernel process ready
+ * 
+ * @return Process* 
+ */
 Process* initProcess();
 
+/**
+ * @brief Switch process
+ * 
+ * @param from Switch from process
+ * @param to Switch to process
+ */
 void switchProcess(Process* from, Process* to);
 
+/**
+ * @brief Get current process
+ * 
+ * @return Process* Current process
+ */
 Process* getCurrentProcess();
 
+/**
+ * @brief Fork from the current process, a new process will be created, and start from here
+ * 
+ * @param processName New process's name
+ * @return Process* Forked process for caller process, return NULL when forked process exit from this function
+ */
 Process* forkFromCurrentProcess(const char* processName);
 
 #endif // __PROCESS_H

@@ -5,10 +5,27 @@
 #include<stddef.h>
 #include<system/systemInfo.h>
 
+/**
+ * @brief Initialize of the physical page allocation
+ * 
+ * @param sysInfo System info
+ */
 void initPpageAlloc(const SystemInfo* sysInfo);
 
+/**
+ * @brief Allocate continous physical pages
+ * 
+ * @param n Number of page
+ * @return void* Physical address of the pages
+ */
 void* pPageAlloc(size_t n);
 
+/**
+ * @brief Free continous physical pages
+ * 
+ * @param pPageBegin Physical address of the pages
+ * @param n Number of page
+ */
 void pPageFree(void* pPageBegin, size_t n);
 
 #endif // __P_PAGE_ALLOC

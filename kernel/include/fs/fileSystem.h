@@ -51,14 +51,44 @@ struct __FileSystem {
     PathOperations pathOperations;
 };
 
+/**
+ * @brief Initialize the file system
+ * 
+ * @param type File system type to initialize
+ */
 void initFileSystem(FileSystemTypes type);
 
+/**
+ * @brief Deploy file system on device
+ * 
+ * @param device Device to mount the file system
+ * @param type File system type to deploy
+ * @return Is deployment succeeded
+ */
 bool deployFileSystem(BlockDevice* device, FileSystemTypes type);
 
+/**
+ * @brief Check type of file system on device
+ * 
+ * @param device DEvice to check
+ * @return FileSystemTypes Type of file system
+ */
 FileSystemTypes checkFileSystem(BlockDevice* device);
 
+/**
+ * @brief Open file system on device
+ * 
+ * @param device Device to open
+ * @param type File system type
+ * @return FileSystem* File system
+ */
 FileSystem* openFileSystem(BlockDevice* device, FileSystemTypes type);
 
+/**
+ * @brief Close a opened file system, cannot close a closed file system
+ * 
+ * @param system File system
+ */
 void closeFileSystem(FileSystem* system);
 
 #endif // __FILESYSTEM_H
