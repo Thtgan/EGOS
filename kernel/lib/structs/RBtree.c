@@ -69,6 +69,7 @@ bool insertNode(RBtree* tree, RBtreeNode* newNode) {
         }
     }
 
+    newNode->parent = parent;
     if (parent == NULL) {
         tree->root = newNode;
     } else if (cmp < 0) {
@@ -216,11 +217,6 @@ static RBtreeNode* __getSibling(RBtreeNode* node) {
 
 static void __insertFix(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = newNode->parent;
-
-    if (parent == NULL) {
-        newNode->color = RB_TREE_COLOR_BLACK;
-        return;
-    }
 
     //newNode is not root, and is red
 
