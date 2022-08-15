@@ -2,23 +2,24 @@
 
 #include<algorithms.h>
 #include<blowup.h>
+#include<kernel.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalMemory/pagePool.h>
+#include<stdint.h>
 #include<system/address.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
-#include<system/systemInfo.h>
 
 static size_t _poolNum = 0;
 static PagePool _pools[MEMORY_AREA_NUM];
 
-void initPpageAlloc(const SystemInfo* sysInfo) {
+void initPpageAlloc() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
 
-    for (int i = 0; i < mMap->size; ++i) {
+    for (int i = 0; i < mMap->entryNum; ++i) {
         const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
 
-        if (e->type != MEMORY_MAP_ENTRY_TYPE_USABLE || (e->base + e->size) <= FREE_PAGE_BEGIN) { //Memory must be usable and higher than reserved area
+        if (e->type != MEMORY_MAP_ENTRY_TYPE_RAM || (e->base + e->size) <= FREE_PAGE_BEGIN) { //Memory must be usable and higher than reserved area
             continue;
         }
 
@@ -27,7 +28,7 @@ void initPpageAlloc(const SystemInfo* sysInfo) {
         initPagePool(
             &_pools[_poolNum],
             (void*)PAGE_ROUND_UP((uint64_t)realBase),
-            realSize >> PAGE_SIZE_BIT
+            realSize >> PAGE_SIZE_SHIFT
         );
 
         ++_poolNum;

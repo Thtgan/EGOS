@@ -21,8 +21,8 @@
  * +---------+-----------+----------------------+
  */
 
-#define PAGE_SIZE_BIT   12  //4KB page
-#define PAGE_SIZE       (1 << PAGE_SIZE_BIT)
+#define PAGE_SIZE_SHIFT     12  //4KB page
+#define PAGE_SIZE           (1 << PAGE_SIZE_SHIFT)
 
 /**
  * @brief Level-4 Page Map entry
@@ -46,7 +46,12 @@
  */
 typedef uint64_t PML4Entry;
 
-#define EMPTY_PML4_ENTRY 0
+#define EMPTY_PML4_ENTRY    0
+
+#define PML4_SPAN_SHIFT     48
+#define PML4_SPAN           (1llu << PML4_SPAN_SHIFT)   //How much memory a PML4 table can cover (256TB)
+
+#define PML4_INDEX(__VA)    EXTRACT_VAL((uint64_t)(__VA), 64, PDPT_SPAN_SHIFT, PML4_SPAN_SHIFT)
 
 //Build a PML4 entry
 #define BUILD_PML4_ENTRY(__PDPT_ADDR, __FLAGS)              \
@@ -102,7 +107,12 @@ typedef struct {
  */
 typedef uint64_t PDPTEntry;
 
-#define EMPTY_PDPT_ENTRY 0
+#define EMPTY_PDPT_ENTRY    0
+
+#define PDPT_SPAN_SHIFT     39
+#define PDPT_SPAN           (1llu << PDPT_SPAN_SHIFT)   //How much memory a page directory pointer table can cover (512GB)
+
+#define PDPT_INDEX(__VA)    EXTRACT_VAL((uint64_t)(__VA), 64, PAGE_DIRECTORY_SPAN_SHIFT, PDPT_SPAN_SHIFT)
 
 //Build a PDPT entry
 #define BUILD_PDPT_ENTRY(__PAGE_DIRECTORY_ADDR, __FLAGS)            \
@@ -152,7 +162,12 @@ typedef struct {
  */
 typedef uint64_t PageDirectoryEntry;
 
-#define EMPTY_PAGE_DIRECTORY_ENTRY 0
+#define EMPTY_PAGE_DIRECTORY_ENTRY  0
+
+#define PAGE_DIRECTORY_SPAN_SHIFT   30
+#define PAGE_DIRECTORY_SPAN         (1llu << PAGE_DIRECTORY_SPAN_SHIFT) //How much memory a page directory can cover (1GB)
+
+#define PAGE_DIRECTORY_INDEX(__VA)  EXTRACT_VAL((uint64_t)(__VA), 64, PAGE_TABLE_SPAN_SHIFT, PAGE_DIRECTORY_SPAN_SHIFT)
 
 //Build a Page Directory entry
 #define BUILD_PAGE_DIRECTORY_ENTRY(__PAGE_TABLE_ADDR, __FLAGS)      \
@@ -205,7 +220,12 @@ typedef struct {
  */
 typedef uint64_t PageTableEntry;
 
-#define EMPTY_PAGE_TABLE_ENTRY 0
+#define EMPTY_PAGE_TABLE_ENTRY  0
+
+#define PAGE_TABLE_SPAN_SHIFT   21
+#define PAGE_TABLE_SPAN         (1llu << PAGE_TABLE_SPAN_SHIFT) //How much memory a page table can cover (2MB)
+
+#define PAGE_TABLE_INDEX(__VA)  EXTRACT_VAL((uint64_t)(__VA), 64, PAGE_SIZE_SHIFT, PAGE_TABLE_SPAN_SHIFT)
 
 //Build a Page Table entry with protection key
 #define BUILD_PAGE_TABLE_ENTRY_WITH_PROTECTION_KEY(__PAGE_ADDR, __FLAGS, __PROTECTION_KEY)  \
@@ -242,5 +262,6 @@ typedef struct {
 } __attribute__((packed)) PageTable;
 
 #define PAGE_ENTRY_PUBLIC_FLAG_SHARE    FLAG64(52)  //Share page between directories
+#define PAGE_ENTRY_PUBLIC_FLAG_IGNORE   FLAG64(53)  //Ignore this entry in copying
 
 #endif // __PAGE_TABLE_H

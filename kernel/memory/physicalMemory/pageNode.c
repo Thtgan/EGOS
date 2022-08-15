@@ -5,6 +5,7 @@
 #include<system/pageTable.h>
 
 PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength) {
+    pageAreaBegin = pageAreaBegin;
     PageNode* node = (PageNode*)pageAreaBegin;
 
     node->base = pageAreaBegin;
@@ -17,6 +18,7 @@ PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength) {
 
 PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, size_t pageAreaLength) {
     PageNode* firstNode = initPageNode(pageAreaBegin, pageAreaLength);
+
     initLinkedList(listHead);
     linkedListInsertBack(listHead, &firstNode->node);
 
@@ -81,7 +83,7 @@ PageNode* splitPageNode(PageNode* node, size_t splitLength) {
 
     PageNode* prev = getPrevPageNode(node), * next = getNextPageNode(node);
     size_t length = getPageNodeLength(node);
-    void* newNodeBegin = (void*)node + (splitLength << PAGE_SIZE_BIT);
+    void* newNodeBegin = (void*)node + (splitLength << PAGE_SIZE_SHIFT);
 
     removePageNode(node);
 
@@ -108,7 +110,7 @@ PageNode* cutPageNodeFront(PageNode* node, size_t cutLength) {
 
     removePageNode(node);
 
-    void* newNodeBegin = (void*)node + (cutLength << PAGE_SIZE_BIT);
+    void* newNodeBegin = (void*)node + (cutLength << PAGE_SIZE_SHIFT);
 
     PageNode* ret = initPageNode(newNodeBegin, length - cutLength); //Remove and form new node
 

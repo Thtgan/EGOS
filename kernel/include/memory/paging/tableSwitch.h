@@ -1,6 +1,7 @@
 #if !defined(__TABLE_SWITCH_H)
 #define __TABLE_SWITCH_H
 
+#include<real/simpleAsmLines.h>
 #include<system/pageTable.h>
 
 /**
@@ -11,12 +12,17 @@
 void setTable(PML4Table* tablePaddr);
 
 /**
- * @brief Switch to given PML4 table
+ * @brief Switch to given PML4 table, with recording
  * 
  * @param tablePaddr Physical address of the PML4 table
  */
 void switchToTable(PML4Table* tablePaddr);
 
+/**
+ * @brief Set PML4 table record
+ * 
+ * @param tablePaddr Physical address of the PML4 table
+ */
 void markCurrentTable(PML4Table* tablePaddr);
 
 /**
@@ -27,8 +33,10 @@ void markCurrentTable(PML4Table* tablePaddr);
 PML4Table* getCurrentTable();
 
 /**
- * @brief Reload current PML4 table
+ * @brief Reload current PML4 table with recorded table
  */
 void reloadCurrentTable();
+
+#define FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
 #endif // __TABLE_SWITCH_H

@@ -28,7 +28,7 @@ typedef struct {
 
 #define MIN_REGION_LENGTH_BIT       5
 #define MIN_REGION_LENGTH           (1 << MIN_REGION_LENGTH_BIT)    //32B
-#define MAX_REGION_LENGTH_BIT       PAGE_SIZE_BIT
+#define MAX_REGION_LENGTH_BIT       PAGE_SIZE_SHIFT
 #define MAX_REGION_LENGTH           (1 << MAX_REGION_LENGTH_BIT)
 #define REGION_LIST_NUM             (MAX_REGION_LENGTH_BIT - MIN_REGION_LENGTH_BIT + 1)
 #define PAGE_ALLOCATE_BATCH_SIZE    4  //Power of 2 is strongly recommended
@@ -90,7 +90,7 @@ void* vMalloc(size_t n) {
     bool isMultiPage = realSize > _regionLists[REGION_LIST_NUM - 1].length;
     if (isMultiPage) {                                          //Required size is greater than maximum region size
         realSize = PAGE_ROUND_UP(realSize);                     //Round up to size of a page
-        ret = vPageAlloc(realSize >> PAGE_SIZE_BIT);            //Specially allocated
+        ret = vPageAlloc(realSize >> PAGE_SIZE_SHIFT);            //Specially allocated
     } else {
         for (; regionLevel < REGION_LIST_NUM; ++regionLevel) {
             if (realSize <= _regionLists[regionLevel].length) {  //Fit the smallest region
@@ -115,7 +115,7 @@ void vFree(void* ptr) {
     size_t n = header->size;
 
     if (n >= REGION_LIST_NUM) { //Release the specially allocated pages
-        vPageFree(header, n >> PAGE_SIZE_BIT);
+        vPageFree(header, n >> PAGE_SIZE_SHIFT);
     } else {
         __addRegionToList(header, n);
 

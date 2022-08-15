@@ -38,10 +38,12 @@
  *                   |                                |
  *      +------------+--------------------------------+
  *   PagePool (Stored below 1MB location)
+ * 
+ * It is worth noting that since the direct access mapping is implemented, the whole physical allocator runs on direct access pointer
  */
 typedef struct {
     PageNodeList freePageNodeList;  //Linker list formed by allocatable page nodes, with head node
-    void* freePageBase;             //Beginning pointer of the allocatable pages
+    void* freePageBase;             //Beginning pointer of the allocatable pages(Direct access pointer)
     size_t freePageSize;            //How many free pages this pool has
 } PagePool;
 

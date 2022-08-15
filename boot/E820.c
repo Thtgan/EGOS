@@ -14,9 +14,21 @@ MemoryMap _memoryMap;
 /**
  * @brief Detect memory area with 0x15, EAX = E820
  * 
- * @return number of memory areas detected
+ * @param memoryMap Memory map
+ * @return int number of memory areas detected
  */
-static int __detectE820(MemoryMap* memoryMap) {
+static int __E820detect(MemoryMap* memoryMap);
+
+int detectMemory(SystemInfo* info) {
+    int ret = __E820detect(&_memoryMap);
+    if (ret == 0) {
+        ret = -1;
+    }
+    info->memoryMap = (uint32_t)&_memoryMap;
+    return ret;
+}
+
+static int __E820detect(MemoryMap* memoryMap) {
     MemoryMapEntry buf;
     MemoryMapEntry* table = memoryMap->memoryMapEntries;
     
@@ -38,14 +50,7 @@ static int __detectE820(MemoryMap* memoryMap) {
         table[cnt++] = buf;
     } while (registers.ebx != 0 && cnt < MEMORY_AREA_NUM);
 
-    return memoryMap->size = cnt;
-}
+    memoryMap->entryNum = cnt;
 
-int detectMemory(SystemInfo* info) {
-    int ret = __detectE820(&_memoryMap);
-    if (ret == 0) {
-        ret = -1;
-    }
-    info->memoryMap = (uint32_t)&_memoryMap;
-    return ret;
+    return cnt;
 }

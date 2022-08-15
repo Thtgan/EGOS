@@ -63,6 +63,8 @@ typedef LinkedList PageNodeList;
  * 
  * @param pageAreaBegin Page area begin
  * @param pageAreaLength Page area length (In number of pages)
+ * 
+ * @return Initialized page node
  */
 PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength);
 
@@ -72,6 +74,7 @@ PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength);
  * @param listHead Page node list header
  * @param pageAreaBegin First page area begin
  * @param pageAreaLength First page area length (In number of pages)
+ * 
  * @return PageNode* First page node of the initialized page node list
  */
 PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, size_t pageAreaLength);

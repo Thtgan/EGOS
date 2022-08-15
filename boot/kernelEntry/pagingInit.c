@@ -5,6 +5,7 @@
 #include<real/flags/cr4.h>
 #include<real/flags/msr.h>
 #include<real/simpleAsmLines.h>
+#include<system/address.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
@@ -16,9 +17,6 @@ static PDPTable _firstPDPTable;
 
 __attribute__((aligned(PAGE_SIZE)))
 static PageDirectory _firstPageDirectory;
-
-__attribute__((aligned(PAGE_SIZE)))
-static PageTable _firstPageTable;
 
 void initPaging(SystemInfo* sysInfo) {
     writeRegister_CR0_32(CLEAR_FLAG(readRegister_CR0_32(), CR0_PG));    //Disable paging
@@ -38,20 +36,20 @@ void initPaging(SystemInfo* sysInfo) {
         _firstPDPTable.tableEntries[i] = EMPTY_PDPT_ENTRY;
     }
 
+    if (INIT_PAGING_DIRECT_MAP_SIZE > PAGE_DIRECTORY_SPAN) {
+        die();
+    }
+
     //Setting up page directory
-    _firstPageDirectory.tableEntries[0] = BUILD_PAGE_DIRECTORY_ENTRY((uint32_t)&_firstPageTable, PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
-    for (int i = 1; i < PAGE_DIRECTORY_SIZE; ++i) {
+    for (int i = 0; i < INIT_PAGING_DIRECT_MAP_SIZE / PAGE_TABLE_SPAN; ++i) {
+        _firstPageDirectory.tableEntries[i] = BUILD_PAGE_DIRECTORY_ENTRY(i << PAGE_TABLE_SPAN_SHIFT, PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PS | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
+    }
+    
+    for (int i = INIT_PAGING_DIRECT_MAP_SIZE / PAGE_TABLE_SPAN; i < PAGE_DIRECTORY_SIZE; ++i) {
         _firstPageDirectory.tableEntries[i] = EMPTY_PAGE_DIRECTORY_ENTRY;
     }
 
-    //Setting up page table
-    for (int i = 0; i < PAGE_TABLE_SIZE; ++i) {
-        _firstPageTable.tableEntries[i] = BUILD_PAGE_TABLE_ENTRY(i << PAGE_SIZE_BIT, PAGE_TABLE_ENTRY_FLAG_RW | PAGE_TABLE_ENTRY_FLAG_PRESENT);
-    }
-
-    _PML4Table.counters[0] = _firstPageDirectory.counters[0] = PAGE_TABLE_SIZE;
-
-    //2 MB mapped to real physical address
+    _PML4Table.counters[0] = _firstPageDirectory.counters[0] = INIT_PAGING_DIRECT_MAP_SIZE / PAGE_TABLE_SIZE;
 
     //Store the base PML4 table for memory manager initialization
     sysInfo->kernelTable = (uint32_t)&_PML4Table;

@@ -4,7 +4,7 @@
 #include<stddef.h>
 #include<stdint.h>
 
-#define MEMORY_MAP_ENTRY_TYPE_USABLE                1
+#define MEMORY_MAP_ENTRY_TYPE_RAM                   1
 #define MEMORY_MAP_ENTRY_TYPE_RESERVED              2
 #define MEMORY_MAP_ENTRY_TYPE_ACPI_RECLAIMABLE      3
 #define MEMORY_MAP_ENTRY_TYPE_ACPI_NVS              4
@@ -21,7 +21,10 @@ typedef struct {
 
 typedef struct {
     MemoryMapEntry memoryMapEntries[MEMORY_AREA_NUM];
-    uint32_t size;
+    uint32_t entryNum;
+    uint64_t allPageSpan;
+    uint64_t directAccessTableBegin;
+    uint64_t directAccessTableEnd;
 } MemoryMap;
 
 #endif // __MEMORY_AREA_H

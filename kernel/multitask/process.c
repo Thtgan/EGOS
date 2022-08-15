@@ -3,8 +3,9 @@
 #include<interrupt/IDT.h>
 #include<memory/memory.h>
 #include<memory/multitaskUtility.h>
+#include<memory/paging/directAccess.h>
 #include<memory/paging/tableSwitch.h>
-#include<memory/virtualMalloc.h>
+#include<memory/physicalMemory/pPageAlloc.h>
 #include<stddef.h>
 #include<stdint.h>
 #include<string.h>
@@ -34,7 +35,9 @@ Process* initProcess() {
     initBitmap(&pidBitmap, MAXIMUM_PROCESS_NUM, &pidBitmapBits);
     setBit(&pidBitmap, 0);
 
-    Process* mainProcess = vMalloc(sizeof(Process));
+    Process* mainProcess = pPageAlloc(1);
+
+    mainProcess = PA_TO_DIRECT_ACCESS_VA(mainProcess);
 
     mainProcess->pid = 0;
     mainProcess->status = PROCESS_STATUS_RUNNING;
@@ -43,6 +46,8 @@ Process* initProcess() {
     memcpy(mainProcess->name, mainProcessName, strlen(mainProcessName));
 
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
+    mainProcess = DIRECT_ACCESS_VA_TO_PA(mainProcess);
+
     switchProcess(mainProcess, mainProcess);
 
     return mainProcess;
@@ -66,10 +71,14 @@ static void __handleSwitch(Process* from, Process* to) {
     pushfq();
     pushRegister_RBP_64();
 
+    from = PA_TO_DIRECT_ACCESS_VA(from);
+    to = PA_TO_DIRECT_ACCESS_VA(to);
+
     from->stackTop = (void*)readRegister_RSP_64();
     from->status = PROCESS_STATUS_READY;
 
     //Switch the page table
+    //Why not using switchToTable: It is a function, will corrupt the stack
     markCurrentTable(to->pageTable);
     writeRegister_CR3_64((uint64_t)to->pageTable);
 
@@ -79,7 +88,7 @@ static void __handleSwitch(Process* from, Process* to) {
     writeRegister_RSP_64((uint64_t)to->stackTop);
     
     to->status = PROCESS_STATUS_RUNNING;
-    _currentProcess = to;
+    _currentProcess = DIRECT_ACCESS_VA_TO_PA(to);
 
     popRegister_RBP_64();
     popfq();
@@ -105,20 +114,24 @@ static void __releasePID(uint16_t pid) {
 }
 
 Process* forkFromCurrentProcess(const char* processName) {
-    Process* newProcess = vMalloc(sizeof(Process));
+    Process* newProcess = pPageAlloc(1), * oldProcessDirectAccess = PA_TO_DIRECT_ACCESS_VA(_currentProcess);
 
-    uint32_t oldPID = _currentProcess->pid, newPID = __allocatePID();
+    uint32_t oldPID = oldProcessDirectAccess->pid, newPID = __allocatePID();
     switchProcess(_currentProcess, _currentProcess);    //Mark the current process's stack here, forked process will take the stack address and starts from here
 
-    if (_currentProcess->pid == oldPID) {   //The parent process is forking new process, forked process will execute this statement too but will not pass
+    if (oldProcessDirectAccess->pid == oldPID) {   //The parent process is forking new process, forked process will execute this statement too but will not pass
+        writeRegister_RSP_64(readRegister_RSP_64() - SWITCH_HANDLE_STACK_PADDING);  //Padding the stack to avoid stack corruption
+        newProcess = PA_TO_DIRECT_ACCESS_VA(newProcess);
+
         newProcess->pid = newPID;
         newProcess->status = PROCESS_STATUS_READY;
-        newProcess->stackTop = _currentProcess->stackTop;
+        newProcess->stackTop = oldProcessDirectAccess->stackTop;
         
-        writeRegister_RSP_64(readRegister_RSP_64() - SWITCH_HANDLE_STACK_PADDING);  //Padding the stack to avoid stack corruption
         initSinglyLinkedListNode(&newProcess->node);
         memcpy(newProcess->name, processName, strlen(processName));
-        newProcess->pageTable = copyPML4Table(_currentProcess->pageTable);
+        newProcess->pageTable = copyPML4Table(oldProcessDirectAccess->pageTable);
+
+        newProcess = DIRECT_ACCESS_VA_TO_PA(newProcess);
         writeRegister_RSP_64(readRegister_RSP_64() + SWITCH_HANDLE_STACK_PADDING);
 
         return newProcess;

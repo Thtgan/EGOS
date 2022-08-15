@@ -7,10 +7,8 @@
 
 /**
  * @brief Initialize of the physical page allocation
- * 
- * @param sysInfo System info
  */
-void initPpageAlloc(const SystemInfo* sysInfo);
+void initPpageAlloc();
 
 /**
  * @brief Allocate continous physical pages

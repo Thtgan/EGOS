@@ -1,5 +1,6 @@
 #include<memory/physicalMemory/pagePool.h>
 
+#include<memory/paging/directAccess.h>
 #include<stdbool.h>
 #include<stddef.h>
 #include<structs/linkedList.h>
@@ -14,9 +15,11 @@
 static void __collectPages(PagePool* p, PageNode* node);
 
 void initPagePool(PagePool* p, void* areaBegin, size_t areaPageSize) {
+    areaBegin = PA_DIRECT_ACCESS_VA_CONVERT_UNSAFE(areaBegin);
+
     p->freePageBase = areaBegin;
     p->freePageSize = areaPageSize;
-
+    
     initPageNodeList(&p->freePageNodeList, p->freePageBase, p->freePageSize); //Initialize the page node list
 }
 
@@ -30,7 +33,9 @@ void* poolAllocatePages(PagePool* p, size_t n) {
     void* ret = getPageNodeBase(node);
 
     cutPageNodeFront(node, n);
-    
+
+    ret = PA_DIRECT_ACCESS_VA_CONVERT_UNSAFE(ret);
+
     return ret;
 }
 
@@ -39,12 +44,16 @@ void poolReleasePage(PagePool* p, void* pageBegin) {
 }
 
 void poolReleasePages(PagePool* p, void* pagesBegin, size_t n) {
+    pagesBegin = PA_DIRECT_ACCESS_VA_CONVERT_UNSAFE(pagesBegin);
+
     PageNode* newNode = initPageNode(pagesBegin, n);
     __collectPages(p, newNode);
 }
 
 bool isPageBelongToPool(PagePool* p, void* pageBegin) {
-    return p->freePageBase <= pageBegin && pageBegin < p->freePageBase + (p->freePageSize << PAGE_SIZE_BIT);
+    pageBegin = PA_DIRECT_ACCESS_VA_CONVERT_UNSAFE(pageBegin);
+
+    return p->freePageBase <= pageBegin && pageBegin < p->freePageBase + (p->freePageSize << PAGE_SIZE_SHIFT);
 }
 
 static void __collectPages(PagePool* p, PageNode* node) {
@@ -56,7 +65,7 @@ static void __collectPages(PagePool* p, PageNode* node) {
     } else {
         //Find a node whose base is higher than the node to collect (Theoreticlly, equal is impossible)
         while (true) {
-            LinkedListNode* nextListNode = linkedListGetNext(&node->node);
+            LinkedListNode* nextListNode = linkedListGetNext(&position->node);
             if (nextListNode == list || getPageNodeBase(HOST_POINTER(nextListNode, PageNode, node)) > getPageNodeBase(node)) {
                 insertPageNodeBack(position, node);
                 break;
@@ -73,14 +82,14 @@ static void __collectPages(PagePool* p, PageNode* node) {
     PageNode* combinedNode = node;
     if (prevListNode != list) {
         PageNode* prevNode = HOST_POINTER(prevListNode, PageNode, node);
-        if (getPageNodeBase(prevNode) + (getPageNodeLength(prevNode) << PAGE_SIZE_BIT) == getPageNodeBase(combinedNode)) {
+        if (getPageNodeBase(prevNode) + (getPageNodeLength(prevNode) << PAGE_SIZE_SHIFT) == getPageNodeBase(combinedNode)) {
             combinedNode = combinePrevPageNode(combinedNode);
         }
     }
 
     if (nextListNode != list) {
         PageNode* nextNode = HOST_POINTER(nextListNode, PageNode, node);
-        if (getPageNodeBase(combinedNode) + (getPageNodeLength(combinedNode) << PAGE_SIZE_BIT) == getPageNodeBase(nextNode)) {
+        if (getPageNodeBase(combinedNode) + (getPageNodeLength(combinedNode) << PAGE_SIZE_SHIFT) == getPageNodeBase(nextNode)) {
             combinedNode = combineNextPageNode(combinedNode);
         }
     }

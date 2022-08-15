@@ -11,7 +11,6 @@
 #include<memory/virtualMalloc.h>
 #include<stdbool.h>
 #include<stddef.h>
-#include<stdio.h>
 
 block_index_t phospherus_createFile(Phospherus_Allocator* allocator) {
     block_index_t inodeIndex = phospherus_createInode(allocator, 0);

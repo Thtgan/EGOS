@@ -11,7 +11,6 @@
 #include<memory/virtualMalloc.h>
 #include<stdbool.h>
 #include<stddef.h>
-#include<stdio.h>
 #include<string.h>
 #include<structs/linkedList.h>
 #include<system/systemInfo.h>

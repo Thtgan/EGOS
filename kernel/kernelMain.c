@@ -19,17 +19,17 @@
 #include<system/memoryMap.h>
 #include<system/systemInfo.h>
 
-const SystemInfo* systemInfo;
+SystemInfo* sysInfo;
 
 /**
  * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
  */
 static void printMemoryAreas() {
-    const MemoryMap* mMap = (const MemoryMap*)systemInfo->memoryMap;
+    const MemoryMap* mMap = (const MemoryMap*)sysInfo->memoryMap;
 
-    printf("%d memory areas detected\n", mMap->size);
+    printf("%d memory areas detected\n", mMap->entryNum);
     printf("|     Base Address     |     Area Length     | Type |\n");
-    for (int i = 0; i < mMap->size; ++i) {
+    for (int i = 0; i < mMap->entryNum; ++i) {
         const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
         printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
@@ -39,11 +39,15 @@ static void printMemoryAreas() {
 
 Process p1, p2;
 
-__attribute__((section(".kernelMain"), regparm(2)))
-void kernelMain(uint64_t magic, uint64_t sysInfo) {
-    systemInfo = (SystemInfo*)sysInfo;
+#include<memory/E820.h>
+#include<memory/paging/directAccess.h>
+#include<memory/physicalMemory/pPageAlloc.h>
 
-    if (systemInfo->magic != SYSTEM_INFO_MAGIC16) {
+__attribute__((section(".kernelMain"), regparm(2)))
+void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
+    sysInfo = (SystemInfo*)sysInfoPtr;
+
+    if (sysInfo->magic != SYSTEM_INFO_MAGIC16) {
         blowup("Magic not match\n");
     }
 
@@ -65,11 +69,13 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
     
     printf("MoonLite kernel loading...\n");
 
-    //printMemoryAreas();
+    printMemoryAreas();
 
     printf("Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
 
-    initMemory(systemInfo, (void*)readRegister_RBP_64());
+    initMemory((void*)readRegister_RBP_64());
+
+    printf("Memory Ready\n");
 
     printf("Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
 
@@ -117,7 +123,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
     Process* mainProcess = initProcess();
     Process* forked = forkFromCurrentProcess("Forked");
 
-    Process* p = getCurrentProcess();
+    Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
     printf("PID: %u\n", p->pid);
     if (p->pid == 0) {
@@ -127,6 +133,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfo) {
         printf("This is child process, name: %s\n", p->name);
         switchProcess(forked, mainProcess);
     }
+
+    p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
     printf("PID: %u\n", p->pid);
 

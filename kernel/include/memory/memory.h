@@ -3,14 +3,13 @@
 
 #include<stddef.h>
 #include<stdint.h>
-#include<system/systemInfo.h>
 
 /**
  * @brief Initialize the memory, enable paging and memory allocation
  * 
  * @param sysInfo System information
  */
-void initMemory(const SystemInfo* sysInfo, void* mainStackBase);
+void initMemory(void* mainStackBase);
 
 /**
  * @brief Copy data from source to destination, overlap not handled

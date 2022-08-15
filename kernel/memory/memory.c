@@ -1,6 +1,7 @@
 #include<memory/memory.h>
 
 #include<memory/buffer.h>
+#include<memory/E820.h>
 #include<memory/paging/directAccess.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalMemory/pPageAlloc.h>
@@ -9,16 +10,15 @@
 #include<stddef.h>
 #include<stdint.h>
 #include<system/address.h>
-#include<system/systemInfo.h>
 
-void initMemory(const SystemInfo* sysInfo, void* mainStackBase) {
-    initPaging(sysInfo);
+void initMemory(void* mainStackBase) {
+    E820Audit();
 
-    enableDirectAccess();
+    initPaging();
 
-    initPpageAlloc(sysInfo);
+    initDirectAccess();
 
-    disableDirectAccess();
+    initPpageAlloc();
 
     initVirtualMalloc();
 
