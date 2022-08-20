@@ -11,11 +11,13 @@
 typedef struct _Process Process;
 
 typedef enum {
+    PROCESS_STATUS_UNKNOWN, //Default status for all brand-new created process(After memset 0), shouldn't be used for new status
     PROCESS_STATUS_RUNNING,
     PROCESS_STATUS_READY,
     PROCESS_STATUS_WAITING,
     PROCESS_STATUS_NEW,
-    PROCESS_STATUS_DEAD
+    PROCESS_STATUS_DEAD,
+    PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
 } ProcessStatus;
 
 struct _Process {

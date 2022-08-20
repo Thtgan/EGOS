@@ -1,11 +1,13 @@
 #include<multitask/process.h>
 
 #include<interrupt/IDT.h>
+#include<kernel.h>
 #include<memory/memory.h>
 #include<memory/multitaskUtility.h>
 #include<memory/paging/directAccess.h>
-#include<memory/paging/tableSwitch.h>
+#include<memory/paging/paging.h>
 #include<memory/physicalMemory/pPageAlloc.h>
+#include<multitask/schedule.h>
 #include<stddef.h>
 #include<stdint.h>
 #include<string.h>
@@ -13,6 +15,8 @@
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<real/simpleAsmLines.h>
+
+#include<stdio.h>
 
 static Process* _currentProcess = NULL;
 
@@ -36,19 +40,19 @@ Process* initProcess() {
     setBit(&pidBitmap, 0);
 
     Process* mainProcess = pPageAlloc(1);
+    Process* mainProcessDirectAccess = PA_TO_DIRECT_ACCESS_VA(mainProcess);
 
-    mainProcess = PA_TO_DIRECT_ACCESS_VA(mainProcess);
+    memset(mainProcessDirectAccess, 0, sizeof(Process));
 
-    mainProcess->pid = 0;
-    mainProcess->status = PROCESS_STATUS_RUNNING;
-    mainProcess->pageTable = getCurrentTable();
-    initSinglyLinkedListNode(&mainProcess->node);
-    memcpy(mainProcess->name, mainProcessName, strlen(mainProcessName));
+    mainProcessDirectAccess->pid = 0;
+    mainProcessDirectAccess->pageTable = currentTable;
+    initSinglyLinkedListNode(&mainProcessDirectAccess->node);
+    memcpy(mainProcessDirectAccess->name, mainProcessName, strlen(mainProcessName));
 
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
-    mainProcess = DIRECT_ACCESS_VA_TO_PA(mainProcess);
-
     switchProcess(mainProcess, mainProcess);
+
+    changeProcessStatus(mainProcess, PROCESS_STATUS_RUNNING);
 
     return mainProcess;
 }
@@ -56,7 +60,11 @@ Process* initProcess() {
 __attribute__((optimize("O0")))
 void switchProcess(Process* from, Process* to) {
     asm volatile(
-        "call %P0"  //Magic code to call function properly
+        "pushfq;"
+        "pushq %%rbp;"
+        "call %P0;"  //Magic code to call function properly
+        "popq %%rbp;"
+        "popfq;"
         :
         : "i"(__handleSwitch), "D"(from), "S"(to)
         : "memory", "cc", CLOBBER_REGISTERS
@@ -65,35 +73,24 @@ void switchProcess(Process* from, Process* to) {
 
 #define SWITCH_HANDLE_STACK_PADDING 0x1000
 
+//WARNING: DO NOT MAKE ANY FUNCTION CALL INSIDE THIS FUNCTION, IT MAY CORRUPT THE STACK AND BREAK THE WHOLE SYSTEM(PRINCIPLE STILL UNKNOWN)
+//YOU STILL CAN USE SOMETHING LIKE MACRO OR INLINE FUNCTIONS HERE
+//Current tests showed that if there is function call inside this function, there might be a chance that stack got corrupted
+//The frame of this function is normal, but corruption happens in switchProcess function
+//When recovering the registers, the return address might be corrupted, and new process will jump to a unknown position
+//What is strange is that, the gdb test showed corruption happens in pop instruction, a shrinking stack affects the memory below
+//Or might be something with the timer, still not clear
 static void __handleSwitch(Process* from, Process* to) {
-    bool enabled = disableInterrupt();
+    Process* fromDirectAccess = PA_TO_DIRECT_ACCESS_VA(from), * toDirectAccess = PA_TO_DIRECT_ACCESS_VA(to);
 
-    pushfq();
-    pushRegister_RBP_64();
-
-    from = PA_TO_DIRECT_ACCESS_VA(from);
-    to = PA_TO_DIRECT_ACCESS_VA(to);
-
-    from->stackTop = (void*)readRegister_RSP_64();
-    from->status = PROCESS_STATUS_READY;
-
-    //Switch the page table
-    //Why not using switchToTable: It is a function, will corrupt the stack
-    markCurrentTable(to->pageTable);
-    writeRegister_CR3_64((uint64_t)to->pageTable);
-
-    //No function calls between codes here (May corrupt the stack)
+    fromDirectAccess->stackTop = (void*)readRegister_RSP_64();
 
     //Switch the stack, the stack contains the return address
-    writeRegister_RSP_64((uint64_t)to->stackTop);
+    writeRegister_RSP_64((uint64_t)toDirectAccess->stackTop);
+    //Switch the page table
+    SWITCH_TO_TABLE(toDirectAccess->pageTable);
     
-    to->status = PROCESS_STATUS_RUNNING;
-    _currentProcess = DIRECT_ACCESS_VA_TO_PA(to);
-
-    popRegister_RBP_64();
-    popfq();
-
-    setInterrupt(enabled);
+    _currentProcess = to;
 }
 
 Process* getCurrentProcess() {
@@ -119,20 +116,24 @@ Process* forkFromCurrentProcess(const char* processName) {
     uint32_t oldPID = oldProcessDirectAccess->pid, newPID = __allocatePID();
     switchProcess(_currentProcess, _currentProcess);    //Mark the current process's stack here, forked process will take the stack address and starts from here
 
-    if (oldProcessDirectAccess->pid == oldPID) {   //The parent process is forking new process, forked process will execute this statement too but will not pass
+    uint32_t currentPID = ((Process*)PA_TO_DIRECT_ACCESS_VA(_currentProcess))->pid;
+    if (currentPID == oldPID) {   //The parent process is forking new process, forked process will execute this statement too but will not pass
         writeRegister_RSP_64(readRegister_RSP_64() - SWITCH_HANDLE_STACK_PADDING);  //Padding the stack to avoid stack corruption
-        newProcess = PA_TO_DIRECT_ACCESS_VA(newProcess);
-
-        newProcess->pid = newPID;
-        newProcess->status = PROCESS_STATUS_READY;
-        newProcess->stackTop = oldProcessDirectAccess->stackTop;
         
-        initSinglyLinkedListNode(&newProcess->node);
-        memcpy(newProcess->name, processName, strlen(processName));
-        newProcess->pageTable = copyPML4Table(oldProcessDirectAccess->pageTable);
+        Process* newProcessDirectAccess = PA_TO_DIRECT_ACCESS_VA(newProcess);
 
-        newProcess = DIRECT_ACCESS_VA_TO_PA(newProcess);
+        memset(newProcessDirectAccess, 0, sizeof(Process));
+
+        newProcessDirectAccess->pid = newPID;
+        newProcessDirectAccess->stackTop = oldProcessDirectAccess->stackTop;
+        
+        initSinglyLinkedListNode(&newProcessDirectAccess->node);
+        memcpy(newProcessDirectAccess->name, processName, strlen(processName));
+        newProcessDirectAccess->pageTable = copyPML4Table(oldProcessDirectAccess->pageTable);
+
         writeRegister_RSP_64(readRegister_RSP_64() + SWITCH_HANDLE_STACK_PADDING);
+
+        changeProcessStatus(newProcess, PROCESS_STATUS_READY);
 
         return newProcess;
     }

@@ -1,10 +1,10 @@
 #include<memory/paging/vPageAlloc.h>
 
 #include<blowup.h>
+#include<kernel.h>
 #include<kit/bit.h>
 #include<memory/memory.h>
 #include<memory/paging/directAccess.h>
-#include<memory/paging/tableSwitch.h>
 #include<memory/physicalMemory/pPageAlloc.h>
 #include<stdbool.h>
 #include<system/address.h>
@@ -30,8 +30,6 @@ static void* __removeVPAddrMapping(void* vAddr);
 const char* ALLOCATE_FAILED = "Virtual page Allocate failed";
 
 void* vPageAlloc(size_t n) {
-    //enableDirectAccess();
-
     void* ret = pPageAlloc(n);
 
     if (ret != NULL) {
@@ -42,16 +40,12 @@ void* vPageAlloc(size_t n) {
         }
     }
 
-    //disableDirectAccess();
-
     return ret;
 }
 
 const char* RELEASE_FAILED = "Virtual page Release failed";
 
 void vPageFree(void* vPageBegin, size_t n) {
-    //enableDirectAccess();
-
     void* pAddr = NULL; //Physical address of first page
 
     //Remove mapping
@@ -66,8 +60,6 @@ void vPageFree(void* vPageBegin, size_t n) {
     }
 
     pPageFree(pAddr, n); //Release pages
-
-    //disableDirectAccess();
 }
 
 static bool __buildVPAddrMapping(void* vAddr, void* pAddr) {
@@ -81,7 +73,7 @@ static bool __buildVPAddrMapping(void* vAddr, void* pAddr) {
         pageDirectoryIndex  = PAGE_DIRECTORY_INDEX(vAddr),
         pageTableIndex      = PAGE_TABLE_INDEX(vAddr);
 
-    PML4Table* PML4TableAddr = getCurrentTable();
+    PML4Table* PML4TableAddr = currentTable;
     PML4TableAddr = PA_DIRECT_ACCESS_VA_CONVERT_UNSAFE(PML4TableAddr);
 
     PDPTable* PDPTableAddr = NULL;
@@ -162,7 +154,7 @@ static void* __removeVPAddrMapping(void* vAddr) {
         pageDirectoryIndex  = PAGE_DIRECTORY_INDEX(vAddr),
         pageTableIndex      = PAGE_TABLE_INDEX(vAddr);
     
-    PML4Table* PML4TableAddr = getCurrentTable();
+    PML4Table* PML4TableAddr = currentTable;
     PML4TableAddr = PA_DIRECT_ACCESS_VA_CONVERT_UNSAFE(PML4TableAddr);
     if (TEST_FLAGS_FAIL(PML4TableAddr->tableEntries[PML4TableIndex], PML4_ENTRY_FLAG_PRESENT)) {
         return NULL;

@@ -10,8 +10,11 @@
 #include<kit/oop.h>
 #include<memory/buffer.h>
 #include<memory/memory.h>
+#include<memory/paging/directAccess.h>
 #include<memory/paging/paging.h>
 #include<memory/virtualMalloc.h>
+#include<multitask/process.h>
+#include<multitask/schedule.h>
 #include<real/simpleAsmLines.h>
 #include<SSE.h>
 #include<stdio.h>
@@ -20,6 +23,8 @@
 #include<system/systemInfo.h>
 
 SystemInfo* sysInfo;
+
+Process p1, p2;
 
 /**
  * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
@@ -34,14 +39,6 @@ static void printMemoryAreas() {
         printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
-
-#include<multitask/process.h>
-
-Process p1, p2;
-
-#include<memory/E820.h>
-#include<memory/paging/directAccess.h>
-#include<memory/physicalMemory/pPageAlloc.h>
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -120,25 +117,22 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     closeFileSystem(fs);
     releaseBuffer(buffer, BUFFER_SIZE_512);
 
+    initSchedule();
     Process* mainProcess = initProcess();
     Process* forked = forkFromCurrentProcess("Forked");
-
     Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
     printf("PID: %u\n", p->pid);
     if (p->pid == 0) {
         printf("This is main process, name: %s\n", p->name);
-        switchProcess(mainProcess, forked);
     } else {
         printf("This is child process, name: %s\n", p->name);
-        switchProcess(forked, mainProcess);
     }
 
     p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
     printf("PID: %u\n", p->pid);
 
-    printf("died\n");
-
     die();
+    blowup("DEAD\n");
 }

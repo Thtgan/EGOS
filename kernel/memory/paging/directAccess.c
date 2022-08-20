@@ -2,8 +2,7 @@
 
 #include<algorithms.h>
 #include<blowup.h>
-#include<kernel.h>
-#include<memory/paging/tableSwitch.h>
+#include<memory/paging/paging.h>
 #include<stdint.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>

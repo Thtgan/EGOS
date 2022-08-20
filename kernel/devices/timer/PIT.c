@@ -4,6 +4,7 @@
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
+#include<multitask/schedule.h>
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
 #include<stdbool.h>
@@ -14,6 +15,7 @@ static uint64_t _tick, _loopPerTick;
 
 ISR_FUNC_HEADER(__timerHandler) {
     ++_tick;
+    schedule();
     EOI();
 }
 

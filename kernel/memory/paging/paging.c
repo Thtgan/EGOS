@@ -6,10 +6,11 @@
 #include<interrupt/ISR.h>
 #include<kernel.h>
 #include<memory/memory.h>
-#include<memory/paging/tableSwitch.h>
 #include<real/simpleAsmLines.h>
 #include<system/address.h>
 #include<system/pageTable.h>
+
+PML4Table* currentTable = NULL;
 
 ISR_FUNC_HEADER(__pageFaultHandler) {
     blowup("Page fault: %#018llX access not allowed.", (uint64_t)readRegister_CR2_64()); //Not allowed since malloc is implemented
@@ -29,7 +30,7 @@ void initPaging() {
 
     __setupPages(kernelTable);
 
-    markCurrentTable(kernelTable);
+    SET_CURRENT_TABLE(kernelTable);
 
     registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32); //Register default page fault handler
 }
