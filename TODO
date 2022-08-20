@@ -110,8 +110,12 @@ Multitask:
     ✔ Page table switch @done(22-07-10 20:15)
     ✔ Stack copy @done(22-07-10 20:15)
     ✔ Stack switch @done(22-07-10 20:15)
-  ☐ Process
-  ☐ Schedule
+  Process:
+    ✔ Process fork @done(22-08-21 02:42)
+    Process exit
+    Spinning Lock
+  Schedule:
+    ✔ Schedule in timer @done(22-08-21 02:42)
 
 Misc:
   ☐ Transplant project to UEFI

@@ -14,6 +14,7 @@
  */
 void initPaging();
 
+//Some macro for page switch operation
 #define SET_CURRENT_TABLE(__PAGE_TABLE) currentTable = __PAGE_TABLE
 
 #define SWITCH_TO_TABLE(__PAGE_TABLE)               \
@@ -22,6 +23,7 @@ do {                                                \
     writeRegister_CR3_64((uint64_t)currentTable);   \
 } while(0)
 
+//Flush the TLB
 #define FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
 #endif // __PAGING_H
