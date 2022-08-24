@@ -1,7 +1,7 @@
 #if !defined(__PHOSPHERUS_BLOCK_LINKED_LIST_H)
 #define __PHOSPHERUS_BLOCK_LINKED_LIST_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 
 typedef struct {
     block_index_t nextNodeIndex;

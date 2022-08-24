@@ -1,5 +1,6 @@
 #include<memory/physicalMemory/pagePool.h>
 
+#include<kit/types.h>
 #include<memory/paging/directAccess.h>
 #include<stdbool.h>
 #include<stddef.h>

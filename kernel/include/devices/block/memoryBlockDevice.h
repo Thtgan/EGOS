@@ -1,11 +1,11 @@
 #if !defined(MEMORY_BLOCK_DEVICE_H)
 #define MEMORY_BLOCK_DEVICE_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<stddef.h>
 
 /**
- * @brief Initialize a virtual block device works on memory
+ * @brief Initialize a virtual block device works on memory, for now, only one memory device can be created at one time
  * 
  * @param size The size of device
  * 

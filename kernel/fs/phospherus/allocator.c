@@ -1,7 +1,7 @@
 #include<fs/phospherus/allocator.h>
 
 #include<blowup.h>
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/phospherus/blockLinkedList.h>
 #include<fs/phospherus/phospherus.h>
 #include<kit/bit.h>
@@ -61,7 +61,7 @@ void phospherus_initAllocator() {
 
 bool phospherus_checkBlockDevice(BlockDevice* device) {
     __Node* superNode = allocateBuffer(BUFFER_SIZE_512);
-    THIS_ARG_APPEND_CALL(device, readBlocks, __SUPER_NODE_INDEX, superNode, 1);
+    THIS_ARG_APPEND_OPERATION_CALL(device, readBlocks, __SUPER_NODE_INDEX, superNode, 1);
 
     bool ret = (superNode->signature == SYSTEM_INFO_MAGIC32);   //Check by reading the signature
 
@@ -93,7 +93,7 @@ bool phospherus_deployAllocator(BlockDevice* device) {
         //Setting up the linked list
         phospherus_blockLinkedListNodeSetNext(&node->nodeListNode, i + 1 < nodeNum ? (i + 1) * ALLOCATOR_NODE_SIZE_IN_BLOCK : PHOSPHERUS_NULL);
 
-        THIS_ARG_APPEND_CALL(device, writeBlocks, i * ALLOCATOR_NODE_SIZE_IN_BLOCK, node, 1);  //Deploy a node each 2048 blocks
+        THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, i * ALLOCATOR_NODE_SIZE_IN_BLOCK, node, 1);  //Deploy a node each 2048 blocks
     }
 
     releaseBuffer(node, BUFFER_SIZE_512);
@@ -105,7 +105,7 @@ Phospherus_Allocator* phospherus_openAllocator(BlockDevice* device) {
     __Node* superNode = vMalloc(sizeof(__Node));
     Phospherus_Allocator* ret = vMalloc(sizeof(Phospherus_Allocator));
 
-    THIS_ARG_APPEND_CALL(device, readBlocks, __SUPER_NODE_INDEX, superNode, 1);
+    THIS_ARG_APPEND_OPERATION_CALL(device, readBlocks, __SUPER_NODE_INDEX, superNode, 1);
 
     ret->device = device;
     ret->superNode = superNode;
@@ -140,11 +140,11 @@ block_index_t phospherus_allocateBlock(Phospherus_Allocator* allocator) {
             blowup(_allocateBlockFailInfo);
         }
         __Node* node = allocateBuffer(BUFFER_SIZE_512);
-        THIS_ARG_APPEND_CALL(device, readBlocks, blockNode, node, 1);
+        THIS_ARG_APPEND_OPERATION_CALL(device, readBlocks, blockNode, node, 1);
         ret = __allocateBlockFromNode(node);
 
         size_t freeBlockNumInNode = node->freeBlockNumInNode;
-        THIS_ARG_APPEND_CALL(device, writeBlocks, blockNode, node, 1);
+        THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, blockNode, node, 1);
 
         if (freeBlockNumInNode == 0) {   //If the node cannot allocate any more blocks, remove it
             __BLOCK_LIST_REMOVE_NEXT(device, superNode);
@@ -158,9 +158,9 @@ block_index_t phospherus_allocateBlock(Phospherus_Allocator* allocator) {
     }
 
     --superNode->freeBlockNum;
-    THIS_ARG_APPEND_CALL(device, writeBlocks, __SUPER_NODE_INDEX, superNode, 1);
+    THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, __SUPER_NODE_INDEX, superNode, 1);
 
-    THIS_ARG_APPEND_CALL(device, writeBlocks, ret, _emptyBlock, 1); //Clear the block
+    THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, ret, _emptyBlock, 1); //Clear the block
 
     return ret;
 }
@@ -180,10 +180,10 @@ void phospherus_releaseBlock(Phospherus_Allocator* allocator, block_index_t bloc
         __releaseBlockToNode(superNode, blockIndex);
     } else {
         __Node* node = allocateBuffer(BUFFER_SIZE_512);
-        THIS_ARG_APPEND_CALL(device, readBlocks, nodeIndex, node, 1);
+        THIS_ARG_APPEND_OPERATION_CALL(device, readBlocks, nodeIndex, node, 1);
 
         __releaseBlockToNode(node, blockIndex);
-        THIS_ARG_APPEND_CALL(device, writeBlocks, nodeIndex, node, 1);
+        THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, nodeIndex, node, 1);
 
         if (node->freeBlockNumInNode == 1) {  //The empty node has the first released block, insert back to the node list
             __BLOCK_LIST_INSERT_NEXT(device, superNode, nodeIndex);
@@ -194,7 +194,7 @@ void phospherus_releaseBlock(Phospherus_Allocator* allocator, block_index_t bloc
 
     ++superNode->freeBlockNum;
     
-    THIS_ARG_APPEND_CALL(device, writeBlocks, __SUPER_NODE_INDEX, superNode, 1);
+    THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, __SUPER_NODE_INDEX, superNode, 1);
 }
 
 void __initNode(__Node* node, block_index_t nodeIndex) {

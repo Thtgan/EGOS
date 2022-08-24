@@ -2,7 +2,7 @@
 
 #include<algorithms.h>
 #include<blowup.h>
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/phospherus/allocator.h>
 #include<fs/phospherus/inode.h>
 #include<fs/phospherus/phospherus.h>

@@ -42,12 +42,12 @@ void phospherus_blockLinkedListNodeInsertNext(BlockDevice* device, Phospherus_Bl
 
 Phospherus_BlockLinkedListNode* __loadNode(BlockDevice* device, block_index_t nodeIndex, size_t offsetInBlock) {
     void* block = allocateBuffer(BUFFER_SIZE_512);
-    THIS_ARG_APPEND_CALL(device, readBlocks, nodeIndex, block, 1);
+    THIS_ARG_APPEND_OPERATION_CALL(device, readBlocks, nodeIndex, block, 1);
     return (Phospherus_BlockLinkedListNode*)(block + offsetInBlock);
 }
 
 void __saveNode(BlockDevice* device, block_index_t nodeIndex, Phospherus_BlockLinkedListNode* node, size_t offsetInBlock) {
     void* block = ((void*)node) - offsetInBlock;
-    THIS_ARG_APPEND_CALL(device, writeBlocks, nodeIndex, block, 1);
+    THIS_ARG_APPEND_OPERATION_CALL(device, writeBlocks, nodeIndex, block, 1);
     releaseBuffer(block, BUFFER_SIZE_512);
 }

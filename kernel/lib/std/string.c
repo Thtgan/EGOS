@@ -179,3 +179,14 @@ int strncmp(const char* str1, const char* str2, size_t n) {
     }
     return ret;
 }
+
+size_t strhash(const char* str, size_t p, size_t mod) {
+    size_t pp = 1, ret = 0;
+
+    for (int i = 0; str[i] != '\0'; ++i) {
+        ret = (ret + str[i] * pp) % mod;
+        pp = (pp * p) % mod;
+    }
+
+    return ret;
+}

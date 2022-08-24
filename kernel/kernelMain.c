@@ -1,10 +1,9 @@
 #include<blowup.h>
+#include<devices/block/blockDevice.h>
 #include<devices/hardDisk/hardDisk.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/vga/textmode.h>
 #include<devices/timer/timer.h>
-#include<fs/blockDevice/blockDevice.h>
-#include<fs/blockDevice/memoryBlockDevice/memoryBlockDevice.h>
 #include<fs/fileSystem.h>
 #include<interrupt/IDT.h>
 #include<kit/oop.h>
@@ -19,12 +18,11 @@
 #include<SSE.h>
 #include<stdio.h>
 #include<string.h>
+#include<structs/hashTable.h>
 #include<system/memoryMap.h>
 #include<system/systemInfo.h>
 
 SystemInfo* sysInfo;
-
-Process p1, p2;
 
 /**
  * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
@@ -117,22 +115,21 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     closeFileSystem(fs);
     releaseBuffer(buffer, BUFFER_SIZE_512);
 
-    initSchedule();
-    Process* mainProcess = initProcess();
-    Process* forked = forkFromCurrentProcess("Forked");
-    Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+    // initSchedule();
+    // Process* mainProcess = initProcess();
+    // Process* forked = forkFromCurrentProcess("Forked");
+    // Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
-    printf("PID: %u\n", p->pid);
-    if (p->pid == 0) {
-        printf("This is main process, name: %s\n", p->name);
-    } else {
-        printf("This is child process, name: %s\n", p->name);
-    }
+    // printf("PID: %u\n", p->pid);
+    // if (p->pid == 0) {
+    //     printf("This is main process, name: %s\n", p->name);
+    // } else {
+    //     printf("This is child process, name: %s\n", p->name);
+    // }
 
-    p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+    // p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
-    printf("PID: %u\n", p->pid);
+    // printf("PID: %u\n", p->pid);
 
-    die();
     blowup("DEAD\n");
 }

@@ -1,5 +1,6 @@
 #include<memory/physicalMemory/pageNode.h>
 
+#include<kit/types.h>
 #include<stddef.h>
 #include<structs/linkedList.h>
 #include<system/pageTable.h>

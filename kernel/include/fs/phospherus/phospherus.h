@@ -1,7 +1,7 @@
 #if !defined(__PHOSPHERUS_H)
 #define __PHOSPHERUS_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/fileSystem.h>
 #include<fs/phospherus/allocator.h>
 #include<stdbool.h>

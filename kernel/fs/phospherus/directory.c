@@ -1,7 +1,7 @@
 #include<fs/phospherus/directory.h>
 
 #include<blowup.h>
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/phospherus/file.h>
 #include<fs/phospherus/phospherus.h>
 #include<memory/buffer.h>

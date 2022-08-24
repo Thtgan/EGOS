@@ -1,6 +1,7 @@
 #include<multitask/schedule.h>
 
 #include<interrupt/IDT.h>
+#include<kit/types.h>
 #include<memory/paging/directAccess.h>
 #include<multitask/process.h>
 #include<stdbool.h>

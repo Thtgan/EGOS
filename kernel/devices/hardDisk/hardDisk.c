@@ -1,12 +1,13 @@
 #include<devices/hardDisk/hardDisk.h>
 
+#include<devices/block/blockDevice.h>
 #include<devices/timer/timer.h>
-#include<fs/blockDevice/blockDevice.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
 #include<kit/macro.h>
 #include<kit/oop.h>
+#include<kit/types.h>
 #include<lib/blowup.h>
 #include<memory/memory.h>
 #include<memory/buffer.h>
@@ -140,6 +141,15 @@ static void __registerDiskBlockDevice(Disk* d);
  * @return If the system is booted from this disk
  */
 static bool __checkBootDisk(Disk* d);
+
+static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
+
+static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
+
+static BlockDeviceOperation _operations = {
+    .readBlocks = __readBlocks,
+    .writeBlocks = __writeBlocks
+};
 
 #define RETRY_TIME 65535
 
@@ -350,24 +360,7 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
 }
 
 static void __registerDiskBlockDevice(Disk* d) {
-    BlockDevice* device = createBlockDevice(d->name, d->parameters->addressableSectorNum - d->freeSectorBegin, BLOCK_DEVICE_TYPE_DISK);
-
-    device->additionalData = d; //Disk block device's additional data is itself
-
-    device->readBlocks = LAMBDA(
-        void, (THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
-            Disk* d = (Disk*)this->additionalData;
-            __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-        }
-    );
-
-    device->writeBlocks = LAMBDA(
-        void, (THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
-            Disk* d = (Disk*)this->additionalData;
-            __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-        }
-    );
-    
+    BlockDevice* device = createBlockDevice(d->name, d->parameters->addressableSectorNum - d->freeSectorBegin, &_operations, (Object)d);
     registerBlockDevice(device);
 }
 
@@ -380,4 +373,14 @@ static bool __checkBootDisk(Disk* d) {
     releaseBuffer(MBR, BUFFER_SIZE_512);
 
     return ret;
+}
+
+static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
+    Disk* d = (Disk*)this->additionalData;
+    __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+}
+
+static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
+    Disk* d = (Disk*)this->additionalData;
+    __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
 }

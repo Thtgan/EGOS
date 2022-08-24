@@ -1,7 +1,7 @@
 #if !defined(__PHOSPHERUS_DIRECTORY_H)
 #define __PHOSPHERUS_DIRECTORY_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/phospherus/allocator.h>
 #include<fs/phospherus/file.h>
 #include<stdbool.h>

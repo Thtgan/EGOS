@@ -1,7 +1,7 @@
 #if !defined(__FILESYSTEM_H)
 #define __FILESYSTEM_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<kit/oop.h>
 #include<stddef.h>
 

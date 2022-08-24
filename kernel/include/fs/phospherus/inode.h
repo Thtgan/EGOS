@@ -1,7 +1,7 @@
 #if !defined(__PHOSPHERUS_INODE_H)
 #define __PHOSPHERUS_INODE_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/phospherus/allocator.h>
 #include<structs/linkedList.h>
 

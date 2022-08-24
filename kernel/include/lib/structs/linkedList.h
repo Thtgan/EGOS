@@ -9,11 +9,6 @@ struct __LinkedListNode {
     struct __LinkedListNode* prev;
 };
 
-#if !defined(HOST_POINTER)
-//Get the host pointer containing the node
-#define HOST_POINTER(__NODE_PTR, __TYPE, __MEMBER)  ((__TYPE*)(((void*)(__NODE_PTR)) - offsetof(__TYPE, __MEMBER)))
-#endif
-
 //Node of the double linked list
 typedef struct __LinkedListNode LinkedListNode;
 //Header of the double linked list, which is actually a double linked list node

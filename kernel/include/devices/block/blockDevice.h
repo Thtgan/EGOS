@@ -2,6 +2,7 @@
 #define __BLOCK_DEVICE_H
 
 #include<kit/oop.h>
+#include<kit/types.h>
 #include<stddef.h>
 #include<stdint.h>
 #include<structs/singlyLinkedList.h>
@@ -10,25 +11,20 @@
 
 typedef uint64_t block_index_t; //-1 (0xFFFFFFFFFFFFFFFF) stands for NULL
 
-typedef enum {
-    BLOCK_DEVICE_TYPE_RAM,
-    BLOCK_DEVICE_TYPE_DISK,
-    BLOCK_DEVICE_TYPE_UNKNOWN
-} BlockDeviceType;
+STRUCT_PRE_DEFINE(BlockDeviceOperation);
 
 RECURSIVE_REFER_STRUCT(BlockDevice) {
     SinglyLinkedListNode node;
 
-    char name[16];
+    char name[32];
+    ID deviceID;            //ID of the device
     size_t availableBlockNum;
-    BlockDeviceType type;
 
-    void* additionalData;   //Something to assist the block device working, can be anything
-    //          ^
-    //          | Yes, pass the additional data manually, cause there is no "this" pointer in C
-    //          +---------------------------------------+
-    //                                                  |
-    //                                                  |
+    Object additionalData;  //Something to assist the block device working, can be anything
+    BlockDeviceOperation* operations;
+};
+
+STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
     /**
      * @brief Read blocks from the block device
      * 
@@ -37,7 +33,6 @@ RECURSIVE_REFER_STRUCT(BlockDevice) {
      * @param buffer Buffer to storage the read data
      * @param n Num of blocks to read
      */
-    //void (*readBlocks)(void* additionalData, block_index_t blockIndex, void* buffer, size_t n);
     void (*readBlocks)(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
 
     /**
@@ -48,7 +43,6 @@ RECURSIVE_REFER_STRUCT(BlockDevice) {
      * @param buffer Buffer contains the data to write
      * @param n Num of blocks to write
      */
-    //void (*writeBlocks)(void* additionalData, block_index_t blockIndex, const void* buffer, size_t n);
     void (*writeBlocks)(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
 };
 
@@ -62,10 +56,10 @@ void initBlockDeviceManager();
  * 
  * @param name Name of the device, not allowed to be duplicated with registered device
  * @param availableBlockNum Number of block that device contains
- * @param type Type of the device
+ * @param operations Operation functions for block device
  * @return BlockDevice* Created block device, NULL if device has duplicated name with registered device
  */
-BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceType type);
+BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
 
 /**
  * @brief Delete created block device, be sure that this device is NOT REGISTERED
@@ -91,7 +85,7 @@ BlockDevice* registerBlockDevice(BlockDevice* device);
 BlockDevice* unregisterBlockDeviceByName(const char* name);
 
 /**
- * @brief Search the block device By name
+ * @brief Search the block device by name
  * 
  * @param name Name of the block device
  * @return BlockDevice* Block device found, NULL if not exist
@@ -99,17 +93,11 @@ BlockDevice* unregisterBlockDeviceByName(const char* name);
 BlockDevice* getBlockDeviceByName(const char* name);
 
 /**
- * @brief Search the first block device match the required type, start at the next device of the begin
+ * @brief Search the block device by ID
  * 
- * @param begin Beginning of the search, if NULL, search from the head of list
- * @param type Type to search
+ * @param id ID of the block device
  * @return BlockDevice* Block device found, NULL if not exist
  */
-BlockDevice* getBlockDeviceByType(BlockDevice* begin, BlockDeviceType type);
-
-/**
- * @brief List the names of registered block devices, and the capacity of the device
- */
-void printBlockDevices();
+BlockDevice* getBlockDeviceByID(ID id);
 
 #endif // __BLOCK_DEVICE_H

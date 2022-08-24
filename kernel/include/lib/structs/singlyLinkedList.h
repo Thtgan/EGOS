@@ -8,11 +8,6 @@ struct __SinglyLinkedListNode {
     struct __SinglyLinkedListNode* next;
 };
 
-#if !defined(HOST_POINTER)
-//Get the host pointer containing the node
-#define HOST_POINTER(__NODE_PTR, __TYPE, __MEMBER)  ((__TYPE*)(((void*)(__NODE_PTR)) - offsetof(__TYPE, __MEMBER)))
-#endif
-
 /**
  * @brief Node of the singly linked list
  */

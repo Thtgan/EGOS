@@ -112,4 +112,14 @@ int strcmp(const char* str1, const char* str2);
  */
 int strncmp(const char* str1, const char* str2, size_t n);
 
+/**
+ * @brief Get polynomial rolling hash of the string
+ * 
+ * @param str String to hash
+ * @param p Prime number for rolling
+ * @param mod Mod of the hash
+ * @return size_t Hash value of string
+ */
+size_t strhash(const char* str, size_t p, size_t mod);
+
 #endif // __KERNEL_STRING_H
