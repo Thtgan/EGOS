@@ -105,29 +105,26 @@ typedef struct {
 /**
  * @brief Create a iNode with given size on device
  * 
- * @param device Device to operate
  * @param type type of the iNode
  * @return Index64 The index of the block where the iNode is located
  */
-static Index64 __createInode(ID device, iNodeType type);
+static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type));
 
 /**
  * @brief Delete iNode from device
  * 
- * @param device Device to operate
  * @param iNodeBlock Block index where the inode is located
  * @return Status of the operation
  */
-static int __deleteInode(ID device, Index64 iNodeBlock);
+static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
 
 /**
  * @brief Open a inode through on the given block
  * 
- * @param device Device to operate
  * @param iNodeBlock Block where the inode is located
  * @return iNode* Opened iNode
  */
-static iNode* __openInode(ID device, Index64 iNodeBlock);
+static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
 
 /**
  * @brief Close the inode opened
@@ -281,8 +278,8 @@ void makeInode(BlockDevice* device, Index64 blockIndex, iNodeType type) {
     releaseBuffer(record, BUFFER_SIZE_512);
 }
 
-static Index64 __createInode(ID device, iNodeType type) {
-    BlockDevice* devicePtr = getBlockDeviceByID(device);
+static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type)) {
+    BlockDevice* devicePtr = getBlockDeviceByID(this->device);
     PhospherusAllocator* allocator = phospherusOpenAllocator(devicePtr);
     block_index_t ret = phospherusAllocateBlock(allocator);
 
@@ -295,13 +292,13 @@ static Index64 __createInode(ID device, iNodeType type) {
     return ret;
 }
 
-static int __deleteInode(ID device, Index64 iNodeBlock) {
-    Object obj, iNodeID = __INODE_ID(device, iNodeBlock);
+static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
+    Object obj, iNodeID = __INODE_ID(this->device, iNodeBlock);
     if (hashTableFind(&_openedInodes, iNodeID, &obj)) {    //If opened, cannt be deleted
         return -1;
     }
 
-    BlockDevice* devicePtr = getBlockDeviceByID(device);
+    BlockDevice* devicePtr = getBlockDeviceByID(this->device);
 
     RecordOnDevice* record = allocateBuffer(BUFFER_SIZE_512);
     THIS_ARG_APPEND_CALL(devicePtr, operations->readBlocks, iNodeBlock, record, 1);
@@ -321,8 +318,8 @@ static int __deleteInode(ID device, Index64 iNodeBlock) {
     return 0;
 }
 
-static iNode* __openInode(ID device, Index64 iNodeBlock) {
-    Object obj, iNodeID = __INODE_ID(device, iNodeBlock);
+static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
+    Object obj, iNodeID = __INODE_ID(this->device, iNodeBlock);
     iNode* ret = NULL;
     if (hashTableFind(&_openedInodes, iNodeID, &obj)) { //If opened, return it
         ret = (iNode*)obj;
@@ -330,7 +327,7 @@ static iNode* __openInode(ID device, Index64 iNodeBlock) {
     } else {
         ret = vMalloc(sizeof(iNode));
 
-        BlockDevice* devicePtr = getBlockDeviceByID(device);
+        BlockDevice* devicePtr = getBlockDeviceByID(this->device);
         ret->device = devicePtr;
         ret->blockIndex = iNodeBlock;
         ret->openCnt = 1;

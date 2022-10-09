@@ -109,23 +109,23 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     {
         Index64 iNodeIndex = -1;
-        iNode* rootDirInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, fs->rootDirectoryInode);
+        iNode* rootDirInode = THIS_ARG_APPEND_CALL(fs, opearations->iNodeGlobalOperations->openInode, fs->rootDirectoryInode);
         Directory* rootDir = fs->opearations->directoryGlobalOperations->openDirectory(rootDirInode);
 
-        Index64 entryIndex = rootDir->operations->lookupEntry(rootDir, "LOGO.bin", INODE_TYPE_FILE);
-        DirectoryEntry* entry = rootDir->operations->getEntry(rootDir, entryIndex);
+        Index64 entryIndex = THIS_ARG_APPEND_CALL(rootDir, operations->lookupEntry, "LOGO.bin", INODE_TYPE_FILE);
+        DirectoryEntry* entry = THIS_ARG_APPEND_CALL(rootDir, operations->getEntry, entryIndex);
         iNodeIndex = entry->iNodeIndex;
         vFree(entry);
 
         fs->opearations->directoryGlobalOperations->closeDirectory(rootDir);
         fs->opearations->iNodeGlobalOperations->closeInode(rootDirInode);
 
-        iNode* fileInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, iNodeIndex);
+        iNode* fileInode = THIS_ARG_APPEND_CALL(fs, opearations->iNodeGlobalOperations->openInode, iNodeIndex);
         File* logoFile = fs->opearations->fileGlobalOperations->openFile(fileInode);
 
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        logoFile->operations->seek(logoFile, 0);
-        logoFile->operations->read(logoFile, buffer, logoFile->iNode->onDevice.dataSize);
+        THIS_ARG_APPEND_CALL(logoFile, operations->seek, 0);
+        THIS_ARG_APPEND_CALL(logoFile, operations->read, buffer, logoFile->iNode->onDevice.dataSize);
         printf("%s\n", buffer);
 
         fs->opearations->fileGlobalOperations->closeFile(logoFile);

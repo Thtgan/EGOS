@@ -10,11 +10,11 @@
 #include<memory/memory.h>
 #include<memory/virtualMalloc.h>
 
-int __seek(File* file, size_t seekTo);
+int __seek(THIS_ARG_APPEND(File, size_t seekTo));
 
-int __read(File* file, void* buffer, size_t n);
+int __read(THIS_ARG_APPEND(File, void* buffer, size_t n));
 
-int __write(File* file, const void* buffer, size_t n);
+int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n));
 
 FileOperations fileOperations = {
     .seek = __seek,
@@ -35,21 +35,21 @@ FileGlobalOperations* phospherusInitFiles() {
     return &fileGlobalOperations;
 }
 
-int __seek(File* file, size_t seekTo) {
+int __seek(THIS_ARG_APPEND(File, size_t seekTo)) {
     if (seekTo == PHOSPHERUS_NULL) {
         return PHOSPHERUS_NULL;
     }
-    size_t fileSize = file->iNode->onDevice.dataSize;
-    return file->pointer = seekTo >= fileSize ? PHOSPHERUS_NULL : seekTo;
+    size_t fileSize = this->iNode->onDevice.dataSize;
+    return this->pointer = seekTo >= fileSize ? PHOSPHERUS_NULL : seekTo;
 }
 
-int __read(File* file, void* buffer, size_t n) {
-    Index64 pointer = file->pointer;
+int __read(THIS_ARG_APPEND(File, void* buffer, size_t n)) {
+    Index64 pointer = this->pointer;
     if (pointer == PHOSPHERUS_NULL) {
         return -1;
     }
 
-    iNode* iNode = file->iNode;
+    iNode* iNode = this->iNode;
 
     size_t fileSize = iNode->onDevice.dataSize;
     size_t remainByteToRead = umin64(fileSize - pointer, n), currentReadPointer = pointer;
@@ -90,14 +90,14 @@ int __read(File* file, void* buffer, size_t n) {
         return -1;
     }
 
-    __seek(file, currentReadPointer);
+    __seek(this, currentReadPointer);
     return 0;
 }
 
-int __write(File* file, const void* buffer, size_t n) {
-    iNode* iNode = file->iNode;
+int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n)) {
+    iNode* iNode = this->iNode;
 
-    size_t pointer = file->pointer;
+    size_t pointer = this->pointer;
     pointer = (pointer == PHOSPHERUS_NULL) ? iNode->onDevice.dataSize : pointer;
 
     size_t blockNum = iNode->onDevice.availableBlockSize, leastBlockNumAfterWrite = (pointer + n + BLOCK_SIZE - 1) / BLOCK_SIZE;
@@ -155,7 +155,7 @@ int __write(File* file, const void* buffer, size_t n) {
     iNode->onDevice.dataSize = umax64(iNode->onDevice.dataSize, pointer + n);
     THIS_ARG_APPEND_CALL(iNode->device, operations->writeBlocks, iNode->blockIndex, &iNode->onDevice, 1);
 
-    __seek(file, currentWritePointer);
+    __seek(this, currentWritePointer);
     return 0;
 }
 

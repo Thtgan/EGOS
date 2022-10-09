@@ -15,13 +15,13 @@ typedef struct {
     char name[PHOSPHERUS_MAX_NAME_LENGTH + 1];
 } __attribute__((packed)) __DirectoryEntry;
 
-int __addEntry(Directory* directory, iNode* entryInode, ConstCstring name);
+int __addEntry(THIS_ARG_APPEND(Directory, iNode* entryInode, ConstCstring name));
 
-int __removeEntry(Directory* directory, Index64 entryIndex);
+int __removeEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex));
 
-Index64 __lookupEntry(Directory* directory, ConstCstring name, iNodeType type);
+Index64 __lookupEntry(THIS_ARG_APPEND(Directory, ConstCstring name, iNodeType type));
 
-DirectoryEntry* __getEntry(Directory* directory, Index64 entryIndex);
+DirectoryEntry* __getEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex));
 
 DirectoryOperations directoryOperations = {
     .addEntry = __addEntry,
@@ -43,26 +43,26 @@ DirectoryGlobalOperations* phospherusInitDirectories() {
     return &directoryGlobalOperations;
 }
 
-int __addEntry(Directory* directory, iNode* entryInode, ConstCstring name) {
-    if (__lookupEntry(directory, name, entryInode->onDevice.type) != PHOSPHERUS_NULL) {
+int __addEntry(THIS_ARG_APPEND(Directory, iNode* entryInode, ConstCstring name)) {
+    if (__lookupEntry(this, name, entryInode->onDevice.type) != PHOSPHERUS_NULL) {
         return -1;
     }
 
-    iNode* directoryInode = directory->iNode;
+    iNode* directoryInode = this->iNode;
 
     size_t 
         oldBlockSize = directoryInode->onDevice.availableBlockSize,
-        newBlockSize = ((directory->size + 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        newBlockSize = ((this->size + 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    if (directory->size == 0) {
-        directory->directoryInMemory = vMalloc(sizeof(__DirectoryEntry));
+    if (this->size == 0) {
+        this->directoryInMemory = vMalloc(sizeof(__DirectoryEntry));
     } else if (oldBlockSize != newBlockSize) {
-        directory->directoryInMemory = vRealloc(directory->directoryInMemory, newBlockSize * BLOCK_SIZE);
+        this->directoryInMemory = vRealloc(this->directoryInMemory, newBlockSize * BLOCK_SIZE);
     }
 
-    __DirectoryEntry* newEntry = (__DirectoryEntry*)(directory->directoryInMemory + directory->size * sizeof(__DirectoryEntry));
+    __DirectoryEntry* newEntry = (__DirectoryEntry*)(this->directoryInMemory + this->size * sizeof(__DirectoryEntry));
     memset(newEntry, 0, sizeof(__DirectoryEntry));
-    ++directory->size;
+    ++this->size;
 
     newEntry->inodeBlockIndex = entryInode->blockIndex;
     newEntry->type = entryInode->onDevice.type;
@@ -74,36 +74,36 @@ int __addEntry(Directory* directory, iNode* entryInode, ConstCstring name) {
         }
     }
 
-    if (directoryInode->operations->writeBlocks(directoryInode, directory->directoryInMemory + (newBlockSize - 1) * BLOCK_SIZE, newBlockSize - 1, 1) == -1) {
+    if (directoryInode->operations->writeBlocks(directoryInode, this->directoryInMemory + (newBlockSize - 1) * BLOCK_SIZE, newBlockSize - 1, 1) == -1) {
         return -1;
     }
 
-    directoryInode->onDevice.dataSize = directory->size * sizeof(__DirectoryEntry);
+    directoryInode->onDevice.dataSize = this->size * sizeof(__DirectoryEntry);
     THIS_ARG_APPEND_CALL(directoryInode->device, operations->writeBlocks, directoryInode->blockIndex, &directoryInode->onDevice, 1);
 
     return 0;
 }
 
-int __removeEntry(Directory* directory, Index64 entryIndex) {
-    iNode* directoryInode = directory->iNode;
+int __removeEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex)) {
+    iNode* directoryInode = this->iNode;
 
     size_t 
         oldBlockSize = directoryInode->onDevice.availableBlockSize,
-        newBlockSize = ((directory->size - 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        newBlockSize = ((this->size - 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    if (directory->size == 1) {
-        vFree(directory->directoryInMemory);
-        directory->directoryInMemory = NULL;
+    if (this->size == 1) {
+        vFree(this->directoryInMemory);
+        this->directoryInMemory = NULL;
     } else {
         memmove(
-            directory->directoryInMemory + entryIndex * sizeof(__DirectoryEntry),
-            directory->directoryInMemory + (entryIndex + 1) * sizeof(__DirectoryEntry),
-            (directory->size - entryIndex - 1) * sizeof(__DirectoryEntry)
+            this->directoryInMemory + entryIndex * sizeof(__DirectoryEntry),
+            this->directoryInMemory + (entryIndex + 1) * sizeof(__DirectoryEntry),
+            (this->size - entryIndex - 1) * sizeof(__DirectoryEntry)
             );
 
-        directory->directoryInMemory = vRealloc(directory->directoryInMemory, (directory->size - 1) * sizeof(__DirectoryEntry));
+        this->directoryInMemory = vRealloc(this->directoryInMemory, (this->size - 1) * sizeof(__DirectoryEntry));
     }
-    --directory->size;
+    --this->size;
 
     if (newBlockSize != oldBlockSize) {
         if (directoryInode->operations->resize(directoryInode, newBlockSize) == -1) {
@@ -112,20 +112,20 @@ int __removeEntry(Directory* directory, Index64 entryIndex) {
     }
 
     if (newBlockSize > 0) {
-        if (directoryInode->operations->writeBlocks(directoryInode, directory->directoryInMemory, 0, newBlockSize) == -1) {
+        if (directoryInode->operations->writeBlocks(directoryInode, this->directoryInMemory, 0, newBlockSize) == -1) {
             return -1;
         }
     }
 
-    directoryInode->onDevice.dataSize = directory->size * sizeof(__DirectoryEntry);
+    directoryInode->onDevice.dataSize = this->size * sizeof(__DirectoryEntry);
     THIS_ARG_APPEND_CALL(directoryInode->device, operations->writeBlocks, directoryInode->blockIndex, &directoryInode->onDevice, 1);
 
     return 0;
 }
 
-Index64 __lookupEntry(Directory* directory, ConstCstring name, iNodeType type) {
-    __DirectoryEntry* entries = directory->directoryInMemory;
-    for (int i = 0; i < directory->size; ++i) {
+Index64 __lookupEntry(THIS_ARG_APPEND(Directory, ConstCstring name, iNodeType type)) {
+    __DirectoryEntry* entries = this->directoryInMemory;
+    for (int i = 0; i < this->size; ++i) {
         if (entries[i].type == type && strcmp(name, entries[i].name) == 0) {
             return i;
         }
@@ -134,13 +134,13 @@ Index64 __lookupEntry(Directory* directory, ConstCstring name, iNodeType type) {
     return PHOSPHERUS_NULL;
 }
 
-DirectoryEntry* __getEntry(Directory* directory, Index64 entryIndex) {
-    if (entryIndex >= directory->size) {
+DirectoryEntry* __getEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex)) {
+    if (entryIndex >= this->size) {
         return NULL;
     }
 
     DirectoryEntry* ret = vMalloc(sizeof(DirectoryEntry));
-    __DirectoryEntry* entry = directory->directoryInMemory + entryIndex;
+    __DirectoryEntry* entry = this->directoryInMemory + entryIndex;
     ret->name = entry->name;
     ret->iNodeIndex = entry->inodeBlockIndex;
     ret->type = entry->type;

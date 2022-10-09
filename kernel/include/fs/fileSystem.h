@@ -12,32 +12,41 @@ typedef enum {
 } FileSystemType;
 
 typedef struct {
+    File* (*openFile)(iNode* iNode);
+    int (*closeFile)(File* file);
+} FileGlobalOperations;
+
+typedef struct {
+    Directory* (*openDirectory)(iNode* iNode);
+    int (*closeDirectory)(Directory* directory);
+} DirectoryGlobalOperations;
+
+STRUCT_PRE_DEFINE(FileSystem);
+
+typedef struct {
     /**
      * @brief Create a iNode with given size on device
      * 
-     * @param device Device to operate
      * @param type type of the iNode
      * @return Index64 The index of the block where the iNode is located
      */
-    Index64 (*createInode)(ID device, iNodeType type);
+    Index64 (*createInode)(THIS_ARG_APPEND(FileSystem, iNodeType type));
 
     /**
      * @brief Delete iNode from device
      * 
-     * @param device Device to operate
      * @param iNodeBlock Block index where the inode is located
      * @return int Status of the operation
      */
-    int (*deleteInode)(ID device, Index64 iNodeBlock);
+    int (*deleteInode)(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
 
     /**
      * @brief Open a inode through on the given block
      * 
-     * @param device Device to operate
      * @param iNodeBlock Block where the inode is located
      * @return iNode* Opened iNode
      */
-    iNode* (*openInode)(ID device, Index64 iNodeBlock);
+    iNode* (*openInode)(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
 
     /**
      * @brief Close the inode opened
@@ -49,29 +58,19 @@ typedef struct {
 } iNodeGlobalOperations;
 
 typedef struct {
-    File* (*openFile)(iNode* iNode);
-    int (*closeFile)(File* file);
-} FileGlobalOperations;
-
-typedef struct {
-    Directory* (*openDirectory)(iNode* iNode);
-    int (*closeDirectory)(Directory* directory);
-} DirectoryGlobalOperations;
-
-typedef struct {
     iNodeGlobalOperations* iNodeGlobalOperations;
     FileGlobalOperations* fileGlobalOperations;
     DirectoryGlobalOperations* directoryGlobalOperations;
 } FileSystemOperations;
 
-typedef struct {
+STRUCT_PRIVATE_DEFINE(FileSystem) {
     char name[32];
     FileSystemType type;
     FileSystemOperations* opearations;
     ID device;
     Index64 rootDirectoryInode;
     void* data;
-} FileSystem;
+};
 
 /**
  * @brief Initialize the file system
