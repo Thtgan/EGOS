@@ -4,7 +4,6 @@
 #include<devices/keyboard/keyboard.h>
 #include<devices/vga/textmode.h>
 #include<devices/timer/timer.h>
-#include<fs/fileSystem.h>
 #include<interrupt/IDT.h>
 #include<kit/oop.h>
 #include<memory/buffer.h>
@@ -22,6 +21,12 @@
 #include<system/memoryMap.h>
 #include<system/systemInfo.h>
 
+#include<devices/block/memoryBlockDevice.h>
+#include<fs/fileSystem.h>
+#include<fs/file.h>
+#include<fs/directory.h>
+#include<fs/inode.h>
+
 SystemInfo* sysInfo;
 
 /**
@@ -37,6 +42,8 @@ static void printMemoryAreas() {
         printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
+
+char buffer[256];
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -87,49 +94,61 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         blowup("Hda not found\n");
     }
 
+    BlockDevice* mDevice = createMemoryBlockDevice(2 * MB);
+    registerBlockDevice(mDevice);
+    printf("Memory block device begins at: %p\n", mDevice->additionalData);
+
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
-
-    FileSystemTypes type = checkFileSystem(hda);
-    if (type == FILE_SYSTEM_TYPE_NULL) {
-        blowup("File system not installed\n");
+    if (checkFileSystem(hda) == FILE_SYSTEM_TYPE_PHOSPHERUS) {
+        printf("File system check passed\n");
+    } else {
+        printf("File system check failed\n");
     }
 
-    void* buffer = allocateBuffer(BUFFER_SIZE_512);
-    FileSystem* fs = openFileSystem(hda, type);
+    FileSystem* fs = openFileSystem(hda, FILE_SYSTEM_TYPE_PHOSPHERUS);
 
-    DirectoryPtr rootDir = fs->pathOperations.getRootDirectory(fs);
-    size_t index = fs->pathOperations.searchDirectoryItem(fs, rootDir, "LOGO.bin", false);
-    if (index == -1) {
-        blowup("File not found\n");
+    {
+        Index64 iNodeIndex = -1;
+        iNode* rootDirInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, fs->rootDirectoryInode);
+        Directory* rootDir = fs->opearations->directoryGlobalOperations->openDirectory(rootDirInode);
+
+        Index64 entryIndex = rootDir->operations->lookupEntry(rootDir, "LOGO.bin", INODE_TYPE_FILE);
+        DirectoryEntry* entry = rootDir->operations->getEntry(rootDir, entryIndex);
+        iNodeIndex = entry->iNodeIndex;
+        vFree(entry);
+
+        fs->opearations->directoryGlobalOperations->closeDirectory(rootDir);
+        fs->opearations->iNodeGlobalOperations->closeInode(rootDirInode);
+
+        iNode* fileInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, iNodeIndex);
+        File* logoFile = fs->opearations->fileGlobalOperations->openFile(fileInode);
+
+        char* buffer = allocateBuffer(BUFFER_SIZE_512);
+        logoFile->operations->seek(logoFile, 0);
+        logoFile->operations->read(logoFile, buffer, logoFile->iNode->onDevice.dataSize);
+        printf("%s\n", buffer);
+
+        fs->opearations->fileGlobalOperations->closeFile(logoFile);
+        fs->opearations->iNodeGlobalOperations->closeInode(fileInode);
     }
-    block_index_t inode = fs->pathOperations.getDirectoryItemInode(fs, rootDir, index);
-    FilePtr file = fs->fileOperations.openFile(fs, inode);
-    size_t size = fs->fileOperations.getFileSize(fs, file);
-    
-    fs->fileOperations.seekFile(fs, file, 0);
-    fs->fileOperations.readFile(fs, file, buffer, size);
-    fs->fileOperations.closeFile(fs, file);
-
-    printf("%s", buffer);
 
     closeFileSystem(fs);
-    releaseBuffer(buffer, BUFFER_SIZE_512);
 
-    // initSchedule();
-    // Process* mainProcess = initProcess();
-    // Process* forked = forkFromCurrentProcess("Forked");
-    // Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+    initSchedule();
+    Process* mainProcess = initProcess();
+    Process* forked = forkFromCurrentProcess("Forked");
+    Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
-    // printf("PID: %u\n", p->pid);
-    // if (p->pid == 0) {
-    //     printf("This is main process, name: %s\n", p->name);
-    // } else {
-    //     printf("This is child process, name: %s\n", p->name);
-    // }
+    printf("PID: %u\n", p->pid);
+    if (p->pid == 0) {
+        printf("This is main process, name: %s\n", p->name);
+    } else {
+        printf("This is child process, name: %s\n", p->name);
+    }
 
-    // p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+    p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
 
-    // printf("PID: %u\n", p->pid);
+    printf("PID: %u\n", p->pid);
 
     blowup("DEAD\n");
 }

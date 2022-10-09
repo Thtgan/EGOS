@@ -1,56 +1,60 @@
 #include<fs/fileSystem.h>
 
-#include<blowup.h>
+#include<stdio.h>
 #include<fs/phospherus/phospherus.h>
 
-void initFileSystem(FileSystemTypes type) {
+void initFileSystem(FileSystemType type) {
     switch (type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
-            phospherus_initFileSystem();
+            phospherusInitFileSystem();
             break;
         default:
             return;
     }
 }
 
-bool deployFileSystem(BlockDevice* device, FileSystemTypes type) {
+bool deployFileSystem(BlockDevice* device, FileSystemType type) {
     bool ret = false;
     switch (type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
-            ret = phospherus_deployFileSystem(device);
+            ret = phospherusDeployFileSystem(device);
             break;
     }
     return ret;
 }
 
-static bool (*_checkers[FILE_SYSTEM_TYPE_NULL])(BlockDevice*) = {
-    [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherus_checkFileSystem
+static bool (*_checkers[FILE_SYSTEM_TYPE_UNKNOWN])(BlockDevice*) = {
+    [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusCheckFileSystem
 };
 
-FileSystemTypes checkFileSystem(BlockDevice* device) {
-    for (FileSystemTypes i = 0; i < FILE_SYSTEM_TYPE_NULL; ++i) {
+FileSystemType checkFileSystem(BlockDevice* device) {
+    for (FileSystemType i = 0; i < FILE_SYSTEM_TYPE_UNKNOWN; ++i) {
         if (_checkers[i](device)) {
             return i;
         }
     }
-    return FILE_SYSTEM_TYPE_NULL;
+    return FILE_SYSTEM_TYPE_UNKNOWN;
 }
 
-FileSystem* openFileSystem(BlockDevice* device, FileSystemTypes type) {
+FileSystem* openFileSystem(BlockDevice* device, FileSystemType type) {
     FileSystem* ret = NULL;
     switch (type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
-            ret = phospherus_openFileSystem(device);
+            ret = phospherusOpenFileSystem(device);
+            break;
+        default:
+            ret = NULL;
     }
+
     return ret;
 }
 
-void closeFileSystem(FileSystem* system) {
-    switch (system->type) {
+void closeFileSystem(FileSystem* fs) {
+    switch (fs->type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
-            phospherus_closeFileSystem(system);
+            phospherusCloseFileSystem(fs);
             break;
         default:
-            blowup("Closing unknown file system");
+            printf("Closing unknown file system\n");
     }
 }

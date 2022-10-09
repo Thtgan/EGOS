@@ -1,23 +1,48 @@
 #if !defined(__PHOSPHERUS_H)
 #define __PHOSPHERUS_H
 
-#include<fs/blockDevice/blockDevice.h>
+#include<devices/block/blockDevice.h>
 #include<fs/fileSystem.h>
 #include<fs/phospherus/allocator.h>
-#include<stdbool.h>
+#include<kit/types.h>
 
 //TODO: Move this to independent header as a null index pointer
 #define PHOSPHERUS_NULL             -1
-#define PHOSPHERUS_MAX_NAME_LENGTH  54
 
-void phospherus_initFileSystem();
+/**
+ * @brief Initialize the phospherus file system
+ */
+void phospherusInitFileSystem();
 
-bool phospherus_deployFileSystem(BlockDevice* device);
+/**
+ * @brief Deploy phospherus file system on device
+ * 
+ * @param device Device to mount the phospherus file system
+ * @return Is deployment succeeded
+ */
+bool phospherusDeployFileSystem(BlockDevice* device);
 
-bool phospherus_checkFileSystem(BlockDevice* device);
+/**
+ * @brief Check if the device has phospherus deployed
+ * 
+ * @param device Device to check
+ * @return Is the device has phospherus deployed
+ */
+bool phospherusCheckFileSystem(BlockDevice* device);
 
-FileSystem* phospherus_openFileSystem(BlockDevice* device);
+/**
+ * @brief Open phospherus file system on device
+ * 
+ * @param device Device has phospherus deployed
+ * @return FileSystem* OPened file system
+ */
+FileSystem* phospherusOpenFileSystem(BlockDevice* device);
 
-void phospherus_closeFileSystem(FileSystem* system);
+/**
+ * @brief Close a opened phospherus file system, cannot close a closed file system
+ * 
+ * @param fs Fiel system to close
+ */
+void phospherusCloseFileSystem(FileSystem* fs);
 
 #endif // __PHOSPHERUS_H

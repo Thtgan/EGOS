@@ -1,22 +1,28 @@
 #if !defined(__PHOSPHERUS_ALLOCATOR)
 #define __PHOSPHERUS_ALLOCATOR
 
-#include<fs/blockDevice/blockDevice.h>
-#include<fs/phospherus/blockLinkedList.h>
-#include<stdbool.h>
-#include<stddef.h>
+#include<devices/block/blockDevice.h>
+#include<kit/types.h>
 
-#define ALLOCATOR_NODE_SIZE_IN_BLOCK 2048
+#define ROOT_SUPER_NODE_INDEX   0
+#define CLUSTER_BLOCK_SIZE      8
+
+//First free cluster of root super node is reserved for special purpose like root directory
+#define RESERVED_BLOCK_DEVICE_INFO      ((ROOT_SUPER_NODE_INDEX + 1) * CLUSTER_BLOCK_SIZE + 0)
+#define RESERVED_BLOCK_ROOT_DIRECTORY   ((ROOT_SUPER_NODE_INDEX + 1) * CLUSTER_BLOCK_SIZE + 1)
 
 typedef struct {
     BlockDevice* device;
-    void* superNode;
-} Phospherus_Allocator;
+    void* deviceInfo;
+    void* firstFreeSuperNode;
+    void* firstFreeBlockStack;
+    uint8_t openCnt;
+} PhospherusAllocator;
 
 /**
- * @brief Initialize the block allocator
+ * @brief Do necessary initializations for allocator
  */
-void phospherus_initAllocator();
+void phospherusInitAllocator();
 
 /**
  * @brief Check if the block device has the phospherus' super node deployed
@@ -24,7 +30,7 @@ void phospherus_initAllocator();
  * @param device Block device
  * @return If the device has super node deployed
  */
-bool phospherus_checkBlockDevice(BlockDevice* device);
+bool phospherusCheckBlockDevice(BlockDevice* device);
 
 /**
  * @brief Deploy the essential data to the device, the block device must have at least one cluster free
@@ -32,55 +38,61 @@ bool phospherus_checkBlockDevice(BlockDevice* device);
  * @param device Block device to deploy
  * @return Does the deploy succeeded
  */
-bool phospherus_deployAllocator(BlockDevice* device);
+bool phospherusDeployAllocator(BlockDevice* device);
 
 /**
  * @brief Open the allocator from the disk
  * 
  * @param device Block device involved
  */
-Phospherus_Allocator* phospherus_openAllocator(BlockDevice* device);
+PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device);
 
 /**
  * @brief Close the allocator, make it unavailable for operation
  * 
  * @param allocator Allocator to unload
  */
-void phospherus_closeAllocator(Phospherus_Allocator* allocator);
+void phospherusCloseAllocator(PhospherusAllocator* allocator);
 
 /**
- * @brief Allocate a block (512B)
+ * @brief Allocate a cluster
  * 
  * @param allocator Allocator
- * @return block_index_t Block index of the block
+ * @return Index64 First index of the cluster, PHOSPHERUS_NULL if allocate failed
  */
-block_index_t phospherus_allocateBlock(Phospherus_Allocator* allocator);
+Index64 phospherusAllocateCluster(PhospherusAllocator* allocator);
+
+/**
+ * @brief Release the allocated cluster
+ * 
+ * @param allocator Allocator
+ * @param cluster First index of the cluster to release
+ */
+void phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster);
+
+/**
+ * @brief Get the remaining free cluster num on allocator
+ * 
+ * @param allocator Allocator
+ * @return size_t Num of free cluster
+ */
+size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator);
+
+/**
+ * @brief Allocate a block
+ * 
+ * @param allocator Allocator
+ * @return Index64 Index of the block, PHOSPHERUS_NULL if allocate failed
+ */
+Index64 phospherusAllocateBlock(PhospherusAllocator* allocator);
 
 /**
  * @brief Release the allocated block
  * 
  * @param allocator Allocator
- * @param blockIndex Block to release
+ * @param block Index of the block to release
  */
-void phospherus_releaseBlock(Phospherus_Allocator* allocator, block_index_t blockIndex);
-
-/**
- * @brief Get the num of the free block
- * 
- * @param allocator Allocator
- * @return size_t Num of the free block
- */
-size_t phospherus_getFreeBlockNum(Phospherus_Allocator* allocator);
-
-/**
- * @brief Get block device used by allocator
- * 
- * @param allocator Allocator
- * @return BlockDevice* Block device used by allocator
- */
-BlockDevice* phospherus_getAllocatorDevice(Phospherus_Allocator* allocator);
-
-//TODO: Implement the security check, to avoid a cluster/fragment be released twice
+void phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block);
 
 #endif // __PHOSPHERUS_ALLOCATOR
 

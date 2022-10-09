@@ -46,7 +46,6 @@ void* allocateBuffer(BufferSizes size) {
 
     void* ret = singlyLinkedListGetNext(&bufferLists[size]);
     singlyLinkedListDeleteNext(&bufferLists[size]);
-    memset(ret, 0, sizeof(_bufferSizes[size]));
     return ret;
 }
 

@@ -3,8 +3,6 @@
 
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<stddef.h>
-#include<stdint.h>
 #include<structs/singlyLinkedList.h>
 
 #define BLOCK_SIZE 512

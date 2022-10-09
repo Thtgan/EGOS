@@ -1,62 +1,84 @@
 #if !defined(__FILESYSTEM_H)
 #define __FILESYSTEM_H
 
-#include<devices/block/blockDevice.h>
-#include<kit/oop.h>
-#include<stddef.h>
+#include<fs/directory.h>
+#include<fs/file.h>
+#include<fs/inode.h>
+#include<kit/types.h>
 
 typedef enum {
     FILE_SYSTEM_TYPE_PHOSPHERUS,
-    FILE_SYSTEM_TYPE_NULL
-} FileSystemTypes;
-
-typedef void* FilePtr;
-typedef void* DirectoryPtr;
-
-struct __FileSystem;
-typedef struct __FileSystem FileSystem;
+    FILE_SYSTEM_TYPE_UNKNOWN
+} FileSystemType;
 
 typedef struct {
-    block_index_t   (*createFile)   (THIS_ARG_APPEND_NO_ARG(FileSystem));
-    bool            (*deleteFile)   (THIS_ARG_APPEND(FileSystem, block_index_t inode));
-    FilePtr         (*openFile)     (THIS_ARG_APPEND(FileSystem, block_index_t inode));
-    void            (*closeFile)    (THIS_ARG_APPEND(FileSystem, FilePtr file));
-    size_t          (*getFileSize)  (THIS_ARG_APPEND(FileSystem, FilePtr file));
-    void            (*seekFile)     (THIS_ARG_APPEND(FileSystem, FilePtr file, size_t pointer));
-    size_t          (*readFile)     (THIS_ARG_APPEND(FileSystem, FilePtr file, void* buffer, size_t n));
-    size_t          (*writeFile)    (THIS_ARG_APPEND(FileSystem, FilePtr file, const void* buffer, size_t n));
-    bool            (*truncateFile) (THIS_ARG_APPEND(FileSystem, FilePtr file, size_t truncateAt));
-} FileOperations;
+    /**
+     * @brief Create a iNode with given size on device
+     * 
+     * @param device Device to operate
+     * @param type type of the iNode
+     * @return Index64 The index of the block where the iNode is located
+     */
+    Index64 (*createInode)(ID device, iNodeType type);
+
+    /**
+     * @brief Delete iNode from device
+     * 
+     * @param device Device to operate
+     * @param iNodeBlock Block index where the inode is located
+     * @return int Status of the operation
+     */
+    int (*deleteInode)(ID device, Index64 iNodeBlock);
+
+    /**
+     * @brief Open a inode through on the given block
+     * 
+     * @param device Device to operate
+     * @param iNodeBlock Block where the inode is located
+     * @return iNode* Opened iNode
+     */
+    iNode* (*openInode)(ID device, Index64 iNodeBlock);
+
+    /**
+     * @brief Close the inode opened
+     * 
+     * @param iNode iNode to close
+     * @return int Status of the operation
+     */
+    int (*closeInode)(iNode* iNode);
+} iNodeGlobalOperations;
 
 typedef struct {
-    DirectoryPtr    (*getRootDirectory)                 (THIS_ARG_APPEND_NO_ARG(FileSystem));
-    block_index_t   (*createDirectory)                  (THIS_ARG_APPEND_NO_ARG(FileSystem));
-    bool            (*deleteDirectory)                  (THIS_ARG_APPEND(FileSystem, block_index_t inode));
-    DirectoryPtr    (*openDirectory)                    (THIS_ARG_APPEND(FileSystem, block_index_t inode));
-    void            (*closeDirectory)                   (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory));
-    size_t          (*getDirectoryItemNum)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory));
-    size_t          (*searchDirectoryItem)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, const char* itemName, bool isDirectory));
-    block_index_t   (*getDirectoryItemInode)            (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index));
-    bool            (*checkIsDirectoryItemDirectory)    (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index));
-    void            (*readDirectoryItemName)            (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t index, char* buffer, size_t n));
-    block_index_t   (*removeDirectoryItem)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, size_t itemIndex));
-    bool            (*insertDirectoryItem)              (THIS_ARG_APPEND(FileSystem, DirectoryPtr directory, block_index_t inode, const char* itemName, bool isDirectory));
-} PathOperations;
+    File* (*openFile)(iNode* iNode);
+    int (*closeFile)(File* file);
+} FileGlobalOperations;
 
-struct __FileSystem {
+typedef struct {
+    Directory* (*openDirectory)(iNode* iNode);
+    int (*closeDirectory)(Directory* directory);
+} DirectoryGlobalOperations;
+
+typedef struct {
+    iNodeGlobalOperations* iNodeGlobalOperations;
+    FileGlobalOperations* fileGlobalOperations;
+    DirectoryGlobalOperations* directoryGlobalOperations;
+} FileSystemOperations;
+
+typedef struct {
     char name[32];
-    FileSystemTypes type;
-    void* specificFileSystem;
-    FileOperations fileOperations;
-    PathOperations pathOperations;
-};
+    FileSystemType type;
+    FileSystemOperations* opearations;
+    ID device;
+    Index64 rootDirectoryInode;
+    void* data;
+} FileSystem;
 
 /**
  * @brief Initialize the file system
  * 
  * @param type File system type to initialize
  */
-void initFileSystem(FileSystemTypes type);
+void initFileSystem(FileSystemType type);
 
 /**
  * @brief Deploy file system on device
@@ -65,7 +87,7 @@ void initFileSystem(FileSystemTypes type);
  * @param type File system type to deploy
  * @return Is deployment succeeded
  */
-bool deployFileSystem(BlockDevice* device, FileSystemTypes type);
+bool deployFileSystem(BlockDevice* device, FileSystemType type);
 
 /**
  * @brief Check type of file system on device
@@ -73,7 +95,7 @@ bool deployFileSystem(BlockDevice* device, FileSystemTypes type);
  * @param device DEvice to check
  * @return FileSystemTypes Type of file system
  */
-FileSystemTypes checkFileSystem(BlockDevice* device);
+FileSystemType checkFileSystem(BlockDevice* device);
 
 /**
  * @brief Open file system on device
@@ -82,7 +104,7 @@ FileSystemTypes checkFileSystem(BlockDevice* device);
  * @param type File system type
  * @return FileSystem* File system
  */
-FileSystem* openFileSystem(BlockDevice* device, FileSystemTypes type);
+FileSystem* openFileSystem(BlockDevice* device, FileSystemType type);
 
 /**
  * @brief Close a opened file system, cannot close a closed file system
