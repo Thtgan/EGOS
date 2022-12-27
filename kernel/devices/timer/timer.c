@@ -1,7 +1,7 @@
 #include<devices/timer/timer.h>
 
 #include<devices/timer/PIT.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 void initTimer() {
     initPIT();

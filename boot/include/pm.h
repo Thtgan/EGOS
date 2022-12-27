@@ -1,7 +1,7 @@
 #if !defined(__PM_H)
 #define __PM_H
 
-#include<stdint.h>
+#include<kit/types.h>
 #include<system/systemInfo.h>
 
 __attribute__((noreturn))

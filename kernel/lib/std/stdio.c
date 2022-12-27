@@ -3,9 +3,7 @@
 #include<algorithms.h>
 #include<devices/vga/textmode.h>
 #include<kit/bit.h>
-#include<stdarg.h>
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 #include<string.h>
 
 #define __FLAGS_LEFT_JUSTIFY    FLAG8(0)

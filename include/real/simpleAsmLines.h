@@ -3,9 +3,8 @@
 
 #include<kit/bit.h>
 #include<kit/macro.h>
+#include<kit/types.h>
 #include<real/registers.h>
-#include<stddef.h>
-#include<stdint.h>
 
 #define INSTRUCTION_LENGTH_SUFFIX8  b
 #define INSTRUCTION_LENGTH_SUFFIX16 w

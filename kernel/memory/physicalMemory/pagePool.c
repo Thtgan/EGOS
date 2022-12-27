@@ -2,8 +2,6 @@
 
 #include<kit/types.h>
 #include<memory/paging/directAccess.h>
-#include<stdbool.h>
-#include<stddef.h>
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
 

@@ -2,9 +2,7 @@
 
 #include<biosIO.h>
 #include<kit/bit.h>
-#include<stdarg.h>
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 #define __VFPRINTF_FLAGS_LEFT_JUSTIFY   FLAG8(0)    //Justify the printed number to the left
 #define __VFPRINTF_FLAGS_EXPLICIT_SIGN  FLAG8(1)    //Force to print the sign of the number

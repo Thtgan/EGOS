@@ -1,8 +1,7 @@
 #if !defined(__STACK_UTILITY)
 #define __STACK_UTILITY
 
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 /**
  * @brief Set up the kernel stack, will set a guard for security

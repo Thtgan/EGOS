@@ -1,7 +1,7 @@
 #if !defined(__VIRTUAL_MALLOC_H)
 #define __VIRTUAL_MALLOC_H
 
-#include<stddef.h>
+#include<kit/types.h>
 
 /**
  * @brief Initialize the virtual malloc

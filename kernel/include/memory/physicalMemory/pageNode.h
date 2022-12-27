@@ -1,9 +1,7 @@
 #if !defined(__PAGING_NODE_H)
 #define __PAGING_NODE_H
 
-#include<stdbool.h>
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 #include<structs/linkedList.h>
 
 /**

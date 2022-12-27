@@ -1,7 +1,7 @@
 #if !defined(__PROCESS_H)
 #define __PROCESS_H
 
-#include<stdint.h>
+#include<kit/types.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>

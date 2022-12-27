@@ -1,11 +1,11 @@
 #if !defined(__REAL_MODE_H)
 #define __REAL_MODE_H
 
+#include<kit/types.h>
 #include<real/flags/eflags.h>
 #include<real/registers.h>
 #include<real/simpleAsmLines.h>
 
-#include<stdint.h>
 
 /**
  * @brief Reserved register set

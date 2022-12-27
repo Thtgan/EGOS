@@ -1,7 +1,7 @@
 #if !defined(__MEMORY_H)
 #define __MEMORY_H
 
-#include<stddef.h>
+#include<kit/types.h>
 
 /**
  * @brief Set byte in a range of memory

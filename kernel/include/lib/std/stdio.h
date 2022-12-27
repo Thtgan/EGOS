@@ -1,8 +1,7 @@
 #if !defined(__STDIO_H)
 #define __STDIO_H
 
-#include<stdarg.h>
-#include<stddef.h>
+#include<kit/types.h>
 
 //Reference: https://en.cppreference.com/w/c/io
 

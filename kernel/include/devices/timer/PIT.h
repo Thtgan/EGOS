@@ -2,7 +2,7 @@
 #define __PIT_H
 
 #include<devices/timer/timer.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 #define TICK_FREQUENCY 100u
 

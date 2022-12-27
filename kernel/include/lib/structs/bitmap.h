@@ -1,9 +1,7 @@
 #if !defined(__BITMAP_H)
 #define __BITMAP_H
 
-#include<stdbool.h>
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 /**
  * @brief A structure refer to a set of bit

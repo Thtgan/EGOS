@@ -2,7 +2,7 @@
 #define __GDT_H
 
 #include<kit/bit.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 #define GDT_ENTRY_INDEX_NULL        0
 #define GDT_ENTRY_INDEX_CODE        1

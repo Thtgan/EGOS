@@ -2,7 +2,7 @@
 #define __BIT_MACRO_H
 
 #include<kit/macro.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 #define PTR(__LENGTH)                                               MACRO_EVAL(MACRO_CONCENTRATE2(PTR, __LENGTH))
 

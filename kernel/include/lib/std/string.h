@@ -1,7 +1,7 @@
 #if !defined(__KERNEL_STRING_H)
 #define __KERNEL_STRING_H
 
-#include<stddef.h>
+#include<kit/types.h>
 
 /**
  * @brief Return the length of the string, ends with '\0'

@@ -1,7 +1,7 @@
 #if !defined(__LM_H)
 #define __LM_H
 
-#include<stdint.h>
+#include<kit/types.h>
 
 __attribute__((noreturn))
 /**

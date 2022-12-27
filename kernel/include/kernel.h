@@ -1,7 +1,7 @@
 #if !defined(__KERNEL_H)
 #define __KERNEL_H
 
-#include<stdint.h>
+#include<kit/types.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 

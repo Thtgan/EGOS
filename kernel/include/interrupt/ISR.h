@@ -2,9 +2,9 @@
 #define __ISR_H
 
 #include<interrupt/IDT.h>
+#include<kit/types.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
-#include<stdint.h>
 
 /**
  * @brief Header for interrupt service routine function

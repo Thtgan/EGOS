@@ -3,9 +3,9 @@
 #include<algorithms.h>
 #include<blowup.h>
 #include<kernel.h>
+#include<kit/types.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalMemory/pagePool.h>
-#include<stdint.h>
 #include<system/address.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>

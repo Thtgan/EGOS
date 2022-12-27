@@ -1,7 +1,7 @@
 #if !defined(__DEVICE_INDETIFY_H)
 #define __DEVICE_INDETIFY_H
 
-#include<stdint.h>
+#include<kit/types.h>
 
 typedef struct {
     //Word 0:

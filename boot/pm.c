@@ -2,10 +2,10 @@
 
 #include<GDTInit.h>
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<realmode.h>
 #include<real/flags/cr0.h>
 #include<real/simpleAsmLines.h>
-#include<stdint.h>
 #include<system/GDT.h>
 #include<system/systemInfo.h>
 

@@ -1,8 +1,7 @@
 #if !defined(__RB_TREE_H)
 #define __RB_TREE_H
 
-#include<stdbool.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 typedef struct _RBtreeNode RBtreeNode;
 

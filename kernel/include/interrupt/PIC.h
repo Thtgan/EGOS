@@ -1,8 +1,8 @@
 #if !defined(__PIC_H)
 #define __PIC_H
 
+#include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<stdint.h>
 
 /**
  * @brief Remap the PIC

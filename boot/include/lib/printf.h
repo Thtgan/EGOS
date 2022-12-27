@@ -1,7 +1,7 @@
 #if !defined(__PRINTF_H)
 #define __PRINTF_H
 
-#include<stdarg.h>
+#include<kit/types.h>
 
 /**
  * @brief Print the string on the screen with given data

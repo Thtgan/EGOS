@@ -3,10 +3,10 @@
 #include<blowup.h>
 #include<kernel.h>
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/paging/directAccess.h>
 #include<memory/physicalMemory/pPageAlloc.h>
-#include<stdbool.h>
 #include<system/address.h>
 #include<system/pageTable.h>
 

@@ -1,7 +1,7 @@
 #include<string.h>
 
 #include<memory/memory.h>
-#include<stdbool.h>
+#include<kit/types.h>
 
 static bool _flags[256];
 

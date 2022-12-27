@@ -2,7 +2,7 @@
 #define __REGISTERS_H
 
 #include<kit/macro.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 typedef struct {
     union {

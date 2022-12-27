@@ -1,8 +1,7 @@
 #if !defined(__P_PAGE_ALLOC)
 #define __P_PAGE_ALLOC
 
-#include<stdbool.h>
-#include<stddef.h>
+#include<kit/types.h>
 #include<system/systemInfo.h>
 
 /**

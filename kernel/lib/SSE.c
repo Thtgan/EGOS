@@ -1,12 +1,11 @@
 #include<lib/SSE.h>
 
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<real/cpuid.h>
 #include<real/flags/cr0.h>
 #include<real/flags/cr4.h>
 #include<real/simpleAsmLines.h>
-#include<stdbool.h>
-#include<stdint.h>
 
 bool checkSSE() {
     uint32_t eax, ebx, ecx, edx;

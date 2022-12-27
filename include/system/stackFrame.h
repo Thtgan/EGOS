@@ -1,7 +1,7 @@
 #if !defined(__STACK_FRAME_H)
 #define __STACK_FRAME_H
 
-#include<stddef.h>
+#include<kit/types.h>
 
 typedef struct {
     void* lastStackBase;

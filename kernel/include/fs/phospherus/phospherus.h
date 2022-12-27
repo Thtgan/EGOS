@@ -4,7 +4,7 @@
 #include<devices/block/blockDevice.h>
 #include<fs/fileSystem.h>
 #include<fs/phospherus/allocator.h>
-#include<stdbool.h>
+#include<kit/types.h>
 
 //TODO: Move this to independent header as a null index pointer
 #define PHOSPHERUS_NULL             -1

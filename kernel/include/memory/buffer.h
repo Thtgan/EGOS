@@ -1,7 +1,7 @@
 #if !defined(__BUFFER_H)
 #define __BUFFER_H
 
-#include<stddef.h>
+#include<kit/types.h>
 
 typedef enum {
     BUFFER_SIZE_16,

@@ -1,8 +1,7 @@
 #if !defined(__SINGLE_LINKED_LIST_H)
 #define __SINGLE_LINKED_LIST_H
 
-#include<stdbool.h>
-#include<stddef.h>
+#include<kit/types.h>
 
 struct __SinglyLinkedListNode {
     struct __SinglyLinkedListNode* next;

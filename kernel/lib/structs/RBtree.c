@@ -1,8 +1,6 @@
 #include<structs/RBtree.h>
 
-#include<stdbool.h>
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 /**
  * RB tree should obey following rules:

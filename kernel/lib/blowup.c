@@ -1,7 +1,7 @@
 #include<blowup.h>
 
+#include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<stdarg.h>
 #include<stdio.h>
 
 __attribute__((noreturn))

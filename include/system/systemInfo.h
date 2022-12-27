@@ -1,7 +1,7 @@
 #if !defined(__SYSTEM_INFO_H)
 #define __SYSTEM_INFO_H
 
-#include<stdint.h>
+#include<kit/types.h>
 
 #define SYSTEM_INFO_MAGIC16 0xE605
 #define SYSTEM_INFO_MAGIC32 0xE605E605

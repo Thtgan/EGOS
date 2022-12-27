@@ -3,7 +3,6 @@
 
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<stddef.h>
 #include<structs/singlyLinkedList.h>
 
 RECURSIVE_REFER_STRUCT(HashTable) {

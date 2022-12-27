@@ -2,11 +2,10 @@
 
 #include<algorithms.h>
 #include<kit/oop.h>
+#include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
 #include<memory/paging/vPageAlloc.h>
-#include<stddef.h>
-#include<stdint.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>

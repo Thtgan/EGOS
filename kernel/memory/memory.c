@@ -1,5 +1,6 @@
 #include<memory/memory.h>
 
+#include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/E820.h>
 #include<memory/paging/directAccess.h>
@@ -7,8 +8,6 @@
 #include<memory/physicalMemory/pPageAlloc.h>
 #include<memory/stackUtility.h>
 #include<memory/virtualMalloc.h>
-#include<stddef.h>
-#include<stdint.h>
 #include<system/address.h>
 
 void initMemory(void* mainStackBase) {

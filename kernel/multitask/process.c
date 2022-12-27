@@ -2,14 +2,13 @@
 
 #include<interrupt/IDT.h>
 #include<kernel.h>
+#include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/multitaskUtility.h>
 #include<memory/paging/directAccess.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalMemory/pPageAlloc.h>
 #include<multitask/schedule.h>
-#include<stddef.h>
-#include<stdint.h>
 #include<string.h>
 #include<structs/bitmap.h>
 #include<structs/singlyLinkedList.h>

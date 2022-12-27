@@ -2,9 +2,8 @@
 #define __IDT_H
 
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<stdbool.h>
-#include<stdint.h>
 
 #define IDT_FLAGS_TYPE_TASK_GATE32      0b0101
 #define IDT_FLAGS_TYPE_INTERRUPT_GATE16 0b0110

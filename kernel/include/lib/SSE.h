@@ -1,7 +1,7 @@
 #if !defined(__SSE_H)
 #define __SSE_H
 
-#include<stdbool.h>
+#include<kit/types.h>
 
 /**
  * @brief Check if SSE is supported

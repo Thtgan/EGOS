@@ -4,8 +4,6 @@
 #include<kit/types.h>
 #include<memory/paging/directAccess.h>
 #include<multitask/process.h>
-#include<stdbool.h>
-#include<stddef.h>
 #include<structs/singlyLinkedList.h>
 
 SinglyLinkedList statusQueueHead[PROCESS_STATUS_NUM];

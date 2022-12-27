@@ -1,8 +1,7 @@
 #if !defined(__MEMORY_H)
 #define __MEMORY_H
 
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 /**
  * @brief Initialize the memory, enable paging and memory allocation

@@ -1,6 +1,6 @@
 #include<lm.h>
 
-#include<stdint.h>
+#include<kit/types.h>
 #include<system/address.h>
 #include<system/GDT.h>
 #include<system/systemInfo.h>

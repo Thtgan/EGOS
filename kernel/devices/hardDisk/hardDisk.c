@@ -13,9 +13,6 @@
 #include<memory/buffer.h>
 #include<real/ports/HDC.h>
 #include<real/simpleAsmLines.h>
-#include<stdbool.h>
-#include<stddef.h>
-#include<stdint.h>
 #include<stdio.h>
 #include<string.h>
 #include<system/address.h>

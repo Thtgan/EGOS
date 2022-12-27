@@ -1,8 +1,8 @@
 #include<E820.h>
 
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<realmode.h>
-#include<stdint.h>
 #include<system/memoryMap.h>
 #include<system/systemInfo.h>
 

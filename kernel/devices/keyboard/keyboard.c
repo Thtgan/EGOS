@@ -4,9 +4,9 @@
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<real/ports/keyboard.h>
 #include<real/simpleAsmLines.h>
-#include<stdint.h>
 
 __attribute__((aligned(4)))
 static KeyEntry _keyEntries[128] = {

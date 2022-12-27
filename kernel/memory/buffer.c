@@ -1,8 +1,8 @@
 #include<memory/buffer.h>
 
+#include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/paging/vPageAlloc.h>
-#include<stddef.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 

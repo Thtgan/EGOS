@@ -2,7 +2,7 @@
 #define __PAGE_TABLE_H
 
 #include<kit/bit.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 //Reference: https://wiki.osdev.org/Paging
 //https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html#three-volume

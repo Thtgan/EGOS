@@ -1,8 +1,7 @@
 #if !defined(__LINKED_LIST)
 #define __LINKED_LIST
 
-#include<stdbool.h>
-#include<stddef.h>
+#include<kit/types.h>
 
 struct __LinkedListNode {
     struct __LinkedListNode* next;

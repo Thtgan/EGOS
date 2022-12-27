@@ -1,7 +1,7 @@
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/macro.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 extern void (*ISRhandlers[256]) (uint8_t vec, InterruptFrame* interruptFrame);
 

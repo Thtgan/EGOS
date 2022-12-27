@@ -1,7 +1,7 @@
 #if !defined(__TIMER_H)
 #define __TIMER_H
 
-#include<stdint.h>
+#include<kit/types.h>
 
 typedef enum {
     NANOSECOND  = 1,

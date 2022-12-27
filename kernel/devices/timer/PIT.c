@@ -4,11 +4,10 @@
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<multitask/schedule.h>
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
-#include<stdbool.h>
-#include<stdint.h>
 #include<stdio.h>
 
 static uint64_t _tick, _loopPerTick;

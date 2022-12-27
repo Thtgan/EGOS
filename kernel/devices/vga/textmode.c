@@ -1,10 +1,10 @@
 #include<devices/vga/textmode.h>
 
 #include<algorithms.h>
+#include<kit/types.h>
 #include<memory/memory.h>
 #include<real/simpleAsmLines.h>
 #include<real/ports/CGA.h>
-#include<stdint.h>
 
 static TextModeDisplayUnit* const _textModeDisplayUnitPtr = (TextModeDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
 static TextModeInfo _tmInfo;

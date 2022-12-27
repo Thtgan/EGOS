@@ -1,7 +1,7 @@
 #if !defined(__V_PAGE_ALLOC)
 #define __V_PAGE_ALLOC
 
-#include<stddef.h>
+#include<kit/types.h>
 
 /**
  * @brief Allocate continous mapped pages

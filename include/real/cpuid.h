@@ -2,10 +2,9 @@
 #define __CPUID_H
 
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<real/flags/eflags.h>
 #include<real/simpleAsmLines.h>
-#include<stdbool.h>
-#include<stdint.h>
 
 #define CPUID_GET_HIGHEST_BASIC_FUNCTION_AND_MANUFACTURER_ID 0x0
 

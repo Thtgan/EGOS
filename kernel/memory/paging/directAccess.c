@@ -2,8 +2,8 @@
 
 #include<algorithms.h>
 #include<blowup.h>
+#include<kit/types.h>
 #include<memory/paging/paging.h>
-#include<stdint.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>

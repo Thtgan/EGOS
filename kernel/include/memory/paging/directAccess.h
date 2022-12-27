@@ -2,8 +2,7 @@
 #define __DIRECT_ACCESS_H
 
 #include<kit/bit.h>
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 #include<system/address.h>
 #include<system/systemInfo.h>
 

@@ -1,8 +1,7 @@
 #if !defined(__MEMORY_AREA_H)
 #define __MEMORY_AREA_H
 
-#include<stddef.h>
-#include<stdint.h>
+#include<kit/types.h>
 
 #define MEMORY_MAP_ENTRY_TYPE_RAM                   1
 #define MEMORY_MAP_ENTRY_TYPE_RESERVED              2

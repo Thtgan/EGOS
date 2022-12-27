@@ -1,6 +1,6 @@
 #include<memory.h>
 
-#include<stdint.h>
+#include<kit/types.h>
 
 void* memset(void* dest, int ch, size_t count) {
     uint8_t* ptr = (uint8_t*)dest;
