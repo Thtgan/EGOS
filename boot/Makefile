@@ -17,7 +17,7 @@ LD_OPTIONS					=	-melf_i386
 
 BUILD_DIR 					= 	./build
 BUILD_NAME					=	boot.bin
-BUILD_BIN_NAME 				=
+BUILD_BIN_NAME 				=	$(BUILD_DIR)/$(BUILD_NAME)
 
 C_FILES 					:= 	$(filter-out $(wildcard ./kernelEntry/*.c), $(shell find ./ -type f -name '*.c' | sort))
 ASM_FILES					:=	$(filter-out $(wildcard ./kernelEntry/*.asm), $(shell find ./ -type f -name '*.asm' | sort))
@@ -33,17 +33,16 @@ BUILD_OBJ_FILES				:=	$(subst ./, $(BUILD_DIR)/, $(OBJ_FILES_ASM) $(OBJ_FILES_C)
 all: preBuild build postBuild
 
 preBuild:
-override BUILD_OBJECT_NAME = $(BUILD_DIR)/$(BUILD_NAME)
 
-build: buildDir $(BUILD_OBJECT_NAME)
+build: buildDir $(BUILD_BIN_NAME)
 
 postBuild:
 
 buildDir:
 	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
 
-$(BUILD_OBJECT_NAME): $(OBJ_FILES_ASM) $(OBJ_FILES_C) $(ENTRY_OBJ_FILE)
-	@$(LD) $(BUILD_OBJ_FILES) $(LD_OPTIONS) -T linker.ld -o $(BUILD_OBJECT_NAME)
+$(BUILD_BIN_NAME): $(OBJ_FILES_ASM) $(OBJ_FILES_C) $(ENTRY_OBJ_FILE)
+	@$(LD) $(BUILD_OBJ_FILES) $(LD_OPTIONS) -T linker.ld -o $(BUILD_BIN_NAME)
 
 $(OBJ_FILES_ASM):%.o:%.asm
 	@$(NASM) -i./ $< -f elf32 -o $(BUILD_DIR)/$@

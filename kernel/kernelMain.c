@@ -134,21 +134,28 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     closeFileSystem(fs);
 
-    initSchedule();
-    Process* mainProcess = initProcess();
-    Process* forked = forkFromCurrentProcess("Forked");
-    Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+#if defined(DEBUG)
 
-    printf("PID: %u\n", p->pid);
-    if (p->pid == 0) {
-        printf("This is main process, name: %s\n", p->name);
-    } else {
-        printf("This is child process, name: %s\n", p->name);
-    }
+    printf("%s\n", "DEBUG VERSION");
 
-    p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+#endif
 
-    printf("PID: %u\n", p->pid);
+
+    // initSchedule();
+    // Process* mainProcess = initProcess();
+    // Process* forked = forkFromCurrentProcess("Forked");
+    // Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+
+    // printf("PID: %u\n", p->pid);
+    // if (p->pid == 0) {
+    //     printf("This is main process, name: %s\n", p->name);
+    // } else {
+    //     printf("This is child process, name: %s\n", p->name);
+    // }
+
+    // p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
+
+    // printf("PID: %u\n", p->pid);
 
     blowup("DEAD\n");
 }

@@ -1,18 +1,27 @@
+include build.config
+
 BUILD_DIR 					= 	./build
+BUILD_RES					=	1
 
 .PHONY: all clean
 
-all: buildDir toolsBuild EGOS.img injectFiles
+all: buildDir toolsBuild OSbuild injectFiles
 	@echo BUILD COMPLETE
 
-EGOS.img: boot.bin kernel.bin
-	@echo GENETATING $@
+OSbuild: boot.bin kernel.bin
+	@echo GENETATING EGOS
+ifeq ($(FORMAT), IMG)
 	@dd if=$(BUILD_DIR)/boot.bin of=$(BUILD_DIR)/boot.bin bs=1 count=1 seek=131071 > /dev/null
 	@cd $(BUILD_DIR) && cat boot.bin kernel.bin > EGOS.img
 #Fill to 16MB, 1MB for kernel program, others for any operation, like file system
 	@dd if=$(BUILD_DIR)/EGOS.img of=$(BUILD_DIR)/EGOS.img bs=1 count=1 seek=16777215 > /dev/null
 #Yeah, I tested out, part of the image file might be unavailable for there is limitation to have 63 sectors on one track
-	@echo $@ BUILD COMPLETE
+else
+	$(eval override BUILD_RES = 0)
+	@echo ERROR: UNKNOW FORMAT $(FORMAT)
+endif
+
+	@if [ "$(BUILD_RES)" -eq "1" ] ; then echo EGOS BUILD COMPLETE ; fi
 
 buildDir:
 	@mkdir -p $(BUILD_DIR)
@@ -35,8 +44,7 @@ kernel.bin:
 	@mv ./kernel/build/kernel.bin $(BUILD_DIR)
 
 injectFiles:
-	@echo INJECTING FILES
-	@./fileInject.sh ./kernel/files ./tools/injector/build/injector ./build/EGOS.img hda 0x800 > /dev/null
+	@if [ "$(BUILD_RES)" -eq "1" ] ; then echo INJECTING FILES ; ./fileInject.sh ./kernel/files ./tools/injector/build/injector ./build/EGOS.img hda 0x800 > /dev/null ; fi
 
 clean:
 	@cd boot && $(MAKE) clean > /dev/null

@@ -1,3 +1,5 @@
+include ../build.config
+
 NASM 						= 	nasm
 CC 							= 	x86_64-elf-gcc
 CC_OPTIONS 					= 	-nostdlib			\
@@ -16,7 +18,7 @@ LD 							= 	x86_64-elf-ld
 
 BUILD_DIR 					= 	./build
 BUILD_NAME					=	kernel.bin
-BUILD_BIN_NAME				=
+BUILD_BIN_NAME				=	$(BUILD_DIR)/$(BUILD_NAME)
 
 C_FILES 					:= 	$(shell find ./ -type f -name '*.c' | sort)
 ASM_FILES					:=	$(shell find ./ -type f -name '*.asm' | sort)
@@ -30,7 +32,9 @@ BUILD_OBJ_FILES				:=	$(subst ./, $(BUILD_DIR)/, $(OBJ_FILES_ASM) $(OBJ_FILES_C)
 all: preBuild build postBuild
 
 preBuild:
-override BUILD_BIN_NAME = $(BUILD_DIR)/$(BUILD_NAME)
+ifeq ($(TEST), TRUE)
+	$(eval CC_OPTIONS += -D DEBUG)
+endif
 
 build: buildDir $(BUILD_BIN_NAME)
 
