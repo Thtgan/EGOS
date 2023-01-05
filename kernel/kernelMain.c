@@ -15,7 +15,6 @@
 #include<multitask/schedule.h>
 #include<real/simpleAsmLines.h>
 #include<SSE.h>
-#include<stdio.h>
 #include<string.h>
 #include<structs/hashTable.h>
 #include<system/memoryMap.h>
@@ -26,6 +25,9 @@
 #include<fs/file.h>
 #include<fs/directory.h>
 #include<fs/inode.h>
+
+#include<print.h>
+#include<devices/terminal/terminal.h>
 
 SystemInfo* sysInfo;
 
@@ -42,8 +44,6 @@ static void printMemoryAreas() {
         printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
-
-char buffer[256];
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -67,15 +67,16 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
     sti();
 
+    initMemory((void*)readRegister_RBP_64());
+
+    Terminal* terminal = createTerminal(25 * 80 * 4, 80, 25);
+    setCurrentTerminal(terminal);
+
     printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
     
     printf("MoonLite kernel loading...\n");
 
     printMemoryAreas();
-
-    printf("Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
-
-    initMemory((void*)readRegister_RBP_64());
 
     printf("Memory Ready\n");
 
@@ -93,10 +94,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     if (hda == NULL) {
         blowup("Hda not found\n");
     }
-
-    BlockDevice* mDevice = createMemoryBlockDevice(2 * MB);
-    registerBlockDevice(mDevice);
-    printf("Memory block device begins at: %p\n", mDevice->additionalData);
 
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
     if (checkFileSystem(hda) == FILE_SYSTEM_TYPE_PHOSPHERUS) {
@@ -140,7 +137,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
 #endif
 
-
     // initSchedule();
     // Process* mainProcess = initProcess();
     // Process* forked = forkFromCurrentProcess("Forked");
@@ -157,5 +153,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     // printf("PID: %u\n", p->pid);
 
-    blowup("DEAD\n");
+    while (true);
+    //blowup("DEAD\n");
 }

@@ -15,8 +15,6 @@
 #include<system/pageTable.h>
 #include<real/simpleAsmLines.h>
 
-#include<stdio.h>
-
 static Process* _currentProcess = NULL;
 
 static void __handleSwitch(Process* from, Process* to);

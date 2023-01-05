@@ -3,10 +3,10 @@
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
+#include<print.h>
 #include<real/flags/eflags.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
-#include<stdio.h>
 #include<system/GDT.h>
 
 void (*ISRhandlers[256]) (uint8_t vec, InterruptFrame* interruptFrame) = {};

@@ -1,7 +1,7 @@
-#include<stdio.h>
+#include<print.h>
 
 #include<algorithms.h>
-#include<devices/vga/textmode.h>
+#include<devices/terminal/terminal.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<string.h>
@@ -66,7 +66,7 @@ static const char* __readLengthModifier(const char* format, LengthModifier* modi
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printInteger(uint64_t num, int base, int width, int precision, uint8_t flags); //TODO: 64-bit not supported yet
+static int __printInteger(Terminal* terminal, uint64_t num, int base, int width, int precision, uint8_t flags); //TODO: 64-bit not supported yet
 
 /**
  * @brief Print the character in format
@@ -76,7 +76,7 @@ static int __printInteger(uint64_t num, int base, int width, int precision, uint
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printCharacter(char ch, int width, uint8_t flags);
+static int __printCharacter(Terminal* terminal, char ch, int width, uint8_t flags);
 
 /**
  * @brief Print the string in format
@@ -87,7 +87,7 @@ static int __printCharacter(char ch, int width, uint8_t flags);
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printString(const char* str, int width, int precision, uint8_t flags);
+static int __printString(Terminal* terminal, const char* str, int width, int precision, uint8_t flags);
 
 int printf(const char* format, ...) {
     va_list args;
@@ -111,22 +111,12 @@ int sprintf(char* buffer, const char* format, ...) {
     return ret;
 }
 
-int snprintf(char* buffer, size_t n, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-
-    int ret = vsnprintf(buffer, n, format, args);
-
-    va_end(args);
-
-    return ret;
-}
-
 int vprintf(const char* format, va_list args) {
     int ret = 0;
+    Terminal* terminal = getCurrentTerminal();
     for (; *format != '\0'; ++format) { //Scan the string
         if (*format != '%') {
-            vgaPutchar(*format);
+            terminalPutChar(terminal, *format);
             ++ret;
             continue;
         }
@@ -154,18 +144,18 @@ int vprintf(const char* format, va_list args) {
         int base;
         switch (*format) {
             case '%':
-                vgaPutchar('%');
+                terminalPutChar(terminal, '%');
                 break;
             case 'c':
                 switch (modifier) {
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printCharacter((char)va_arg(args, int), width, flags);
+                        ret += __printCharacter(terminal, (char)va_arg(args, int), width, flags);
                         break;
                     case LENGTH_MODIFIER_L:
                         //TODO: Implement wint_t version here
                         break;
                     default:
-                        ret += __printCharacter((char)va_arg(args, int), width, flags);
+                        ret += __printCharacter(terminal, (char)va_arg(args, int), width, flags);
                 }
                 break;
             case 's':
@@ -173,7 +163,7 @@ int vprintf(const char* format, va_list args) {
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printString((const char*)va_arg(args, char*), width, precision, flags);
+                        ret += __printString(terminal, (const char*)va_arg(args, char*), width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
                         //TODO: Implement wchar_t version here
@@ -190,26 +180,26 @@ int vprintf(const char* format, va_list args) {
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger((uint64_t)va_arg(args, int), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger((uint64_t)va_arg(args, long), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger((uint64_t)va_arg(args, long long), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, long long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_J:
-                        ret += __printInteger((uint64_t)va_arg(args, intmax_t), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, intmax_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_Z:
-                        ret += __printInteger((uint64_t)va_arg(args, size_t), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, size_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_T:
-                        ret += __printInteger((uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
                         break;
                     default:
-                        vgaPutchar('e');
+                        terminalPutChar(terminal, 'e');
                 }
                 break;
             case 'o':
@@ -227,23 +217,23 @@ int vprintf(const char* format, va_list args) {
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger((uint64_t)va_arg(args, unsigned int), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, unsigned int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger((uint64_t)va_arg(args, unsigned long), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, unsigned long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger((uint64_t)va_arg(args, unsigned long long), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, unsigned long long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_J:
-                        ret += __printInteger((uint64_t)va_arg(args, uintmax_t), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, uintmax_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_Z:
-                        ret += __printInteger((uint64_t)va_arg(args, size_t), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, size_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_T:
-                        ret += __printInteger((uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
+                        ret += __printInteger(terminal, (uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
                         break;
                     default:
                 }
@@ -293,33 +283,25 @@ int vprintf(const char* format, va_list args) {
             case 'p':
                 base = 16;
                 SET_FLAG_BACK(flags, __FLAGS_SPECIFIER);
-                __printInteger((uint64_t)va_arg(args, void*), base, width, precision, flags);
+                __printInteger(terminal, (uint64_t)va_arg(args, void*), base, width, precision, flags);
                 break;
             default:
-                vgaPutchar('%');
-                vgaPutchar(*format);
+                terminalPutChar(terminal, '%');
+                terminalPutChar(terminal, *format);
                 ret += 2;
         }
     }
 
+    displayFlush();
     return ret;
 }
 
 int vsprintf(char* buffer, const char* format, va_list args) {
-    //TODO: Implement this
-}
-
-int vsnprintf(char* buffer, size_t n, const char* format, va_list args) {
-    //TODO: Implement this
+    
 }
 
 int putchar(int ch) {
-    vgaPutchar(ch);
-}
-
-int puts(const char* str) {
-    vgaPrintString(str);
-    vgaPutchar('\n');
+    terminalPutChar(getCurrentTerminal(), ch);
 }
 
 static const char* __readFlags(const char* format, uint8_t* flags) {
@@ -411,7 +393,7 @@ static const char* _digits = "0123456789ABCDEF";
 static char _tmp[64];   //Number temporary buffer
 
 //TODO: BUG: printf("%#02X", 0xAA55) outputs 0XAA55 (should be 0x55)
-static int __printInteger(uint64_t num, int base, int width, int precision, uint8_t flags) {
+static int __printInteger(Terminal* terminal, uint64_t num, int base, int width, int precision, uint8_t flags) {
     if (base < 2 || base > 16)  //If base not available, return
         return -1;              //error
 
@@ -473,54 +455,54 @@ static int __printInteger(uint64_t num, int base, int width, int precision, uint
 
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            vgaPutchar(' ');
+            terminalPutChar(terminal, ' ');
         }
     }
 
     if (sign != '\0') {     //Guaranteed only sign or specifier, impossible to print both
-        vgaPutchar(sign);
+        terminalPutChar(terminal, sign);
     }
     if (TEST_FLAGS(flags, __FLAGS_SPECIFIER)) {
         if (base == 8) {
-            vgaPutchar('0');
+            terminalPutChar(terminal, '0');
         } else if (base == 16) {
-            vgaPutchar('0');
-            vgaPutchar('X' | lowercaseBit);
+            terminalPutChar(terminal, '0');
+            terminalPutChar(terminal, 'X' | lowercaseBit);
         }
     }
 
     for (; leadingZeroLen > 0; --leadingZeroLen) {
-        vgaPutchar('0');
+        terminalPutChar(terminal, '0');
     }
 
     for (int i = digitLen - 1; i >= 0; --i) {
-        vgaPutchar(_tmp[i]);
+        terminalPutChar(terminal, _tmp[i]);
     }
 
     for (; padding > 0; --padding) {    //If left justified, padding should be 0 when entering this loop
-        vgaPutchar(' ');
+        terminalPutChar(terminal, ' ');
     }
 
     return ret;
 }
 
-static int __printCharacter(char ch, int width, uint8_t flags) {
+static int __printCharacter(Terminal* terminal, char ch, int width, uint8_t flags) {
     int padding = width - 1;
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            vgaPutchar(' ');
+            terminalPutChar(terminal, ' ');
         }
     }
-    vgaPutchar(ch);
+    terminalPutChar(terminal, ch);
 
     for (; padding > 0; --padding) {
-        vgaPutchar(' ');
+        terminalPutChar(terminal, ' ');
     }
 
     return width >= 1 ? width : 1;
 }
 
-static int __printString(const char* str, int width, int precision, uint8_t flags) {
+static int __printString(Terminal* terminal, const char* str, int width, int precision, uint8_t flags) {
     int strLen = strlen(str), padding = 0;
     if (precision >= 0) {
         strLen = min32(strLen, precision);
@@ -532,16 +514,16 @@ static int __printString(const char* str, int width, int precision, uint8_t flag
 
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            vgaPutchar(' ');
+            terminalPutChar(terminal, ' ');
         }
     }
 
     for (int i = 0; i < strLen; ++i) {
-        vgaPutchar(str[i]);
+        terminalPutChar(terminal, str[i]);
     }
 
     for (; padding > 0; --padding) {
-        vgaPutchar(' ');
+        terminalPutChar(terminal, ' ');
     }
 
     return ret;

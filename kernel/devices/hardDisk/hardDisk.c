@@ -1,6 +1,7 @@
 #include<devices/hardDisk/hardDisk.h>
 
 #include<devices/block/blockDevice.h>
+#include<devices/block/blockDeviceTypes.h>
 #include<devices/timer/timer.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
@@ -11,9 +12,9 @@
 #include<lib/blowup.h>
 #include<memory/memory.h>
 #include<memory/buffer.h>
+#include<print.h>
 #include<real/ports/HDC.h>
 #include<real/simpleAsmLines.h>
-#include<stdio.h>
 #include<string.h>
 #include<system/address.h>
 #include<system/deviceIdentify.h>
@@ -357,7 +358,7 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
 }
 
 static void __registerDiskBlockDevice(Disk* d) {
-    BlockDevice* device = createBlockDevice(d->name, d->parameters->addressableSectorNum - d->freeSectorBegin, &_operations, (Object)d);
+    BlockDevice* device = createBlockDevice(d->name, HDD, d->parameters->addressableSectorNum - d->freeSectorBegin, &_operations, (Object)d);
     registerBlockDevice(device);
 }
 

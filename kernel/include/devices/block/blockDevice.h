@@ -1,6 +1,7 @@
 #if !defined(__BLOCK_DEVICE_H)
 #define __BLOCK_DEVICE_H
 
+#include<devices/block/blockDeviceTypes.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<structs/singlyLinkedList.h>
@@ -13,6 +14,7 @@ STRUCT_PRE_DEFINE(BlockDeviceOperation);
 
 RECURSIVE_REFER_STRUCT(BlockDevice) {
     char name[32];
+    BlockDeviceType type;
     ID deviceID;            //ID of the device
     size_t availableBlockNum;
 
@@ -51,11 +53,12 @@ void initBlockDeviceManager();
  * @brief Create a block device, with basic information set, other information lisk additional information must be set manually
  * 
  * @param name Name of the device, not allowed to be duplicated with registered device
+ * @param type Type of the device
  * @param availableBlockNum Number of block that device contains
  * @param operations Operation functions for block device
  * @return BlockDevice* Created block device, NULL if device has duplicated name with registered device
  */
-BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
+BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
 
 /**
  * @brief Delete created block device, be sure that this device is NOT REGISTERED

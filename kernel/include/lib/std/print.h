@@ -1,5 +1,5 @@
-#if !defined(__STDIO_H)
-#define __STDIO_H
+#if !defined(__PRINT_H)
+#define __PRINT_H
 
 #include<kit/types.h>
 
@@ -26,17 +26,6 @@ int printf(const char* format, ...);
 int sprintf(char* buffer, const char* format, ...);
 
 /**
- * @brief Write the string to buffer with given data in format, at most n - 1 characters written
- * 
- * @param buffer Buffer to write
- * @param n Maximum num of characters to write
- * @param format Format
- * @param ... data
- * @return int The length of final string printed
- */
-int snprintf(char* buffer, size_t n, const char* format, ...);
-
-/**
  * @brief Print the string on the screen with given data in format
  * 
  * @param format Format
@@ -56,17 +45,6 @@ int vprintf(const char* format, va_list args);
 int vsprintf(char* buffer, const char* format, va_list args);
 
 /**
- * @brief Write the string to buffer with given data in format, at most n - 1 characters written
- * 
- * @param buffer Buffer to write
- * @param n Maximum num of characters to write
- * @param format Format
- * @param args data
- * @return int The length of final string printed
- */
-int vsnprintf(char* buffer, size_t n, const char* format, va_list args);
-
-/**
  * @brief Print a character to screen
  * 
  * @param ch Character
@@ -74,12 +52,4 @@ int vsnprintf(char* buffer, size_t n, const char* format, va_list args);
  */
 int putchar(int ch);
 
-/**
- * @brief Print a string to screen, with additional '\n'
- * 
- * @param str String
- * @return int 0 for now(Complete it in future)
- */
-int puts(const char* str);
-
-#endif // __STDIO_H
+#endif // __PRINT_H

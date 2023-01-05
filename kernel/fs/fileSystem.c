@@ -1,7 +1,7 @@
 #include<fs/fileSystem.h>
 
-#include<stdio.h>
 #include<fs/phospherus/phospherus.h>
+#include<print.h>
 
 void initFileSystem(FileSystemType type) {
     switch (type) {

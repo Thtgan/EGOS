@@ -1,9 +1,9 @@
 #include<devices/block/blockDevice.h>
 
+#include<devices/block/blockDeviceTypes.h>
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/virtualMalloc.h>
-#include<stdio.h>
 #include<string.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
@@ -16,7 +16,7 @@ void initBlockDeviceManager() {
     initHashTable(&_hashTable, 16, __hashFunc);
 }
 
-BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
+BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
     ID deviceID = strhash(name, 13, 65536);
     Object obj;
     if (hashTableFind(&_hashTable, (Object)deviceID, &obj)) {
@@ -27,6 +27,8 @@ BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, Block
     memset(ret, 0, sizeof(BlockDevice));
 
     strcpy(ret->name, name);
+
+    ret->type = type;
     ret->deviceID = deviceID;
     ret->availableBlockNum = availableBlockNum;
     ret->operations = operations;

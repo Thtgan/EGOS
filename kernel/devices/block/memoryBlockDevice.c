@@ -1,6 +1,7 @@
 #include<devices/block/memoryBlockDevice.h>
 
 #include<devices/block/blockDevice.h>
+#include<devices/block/blockDeviceTypes.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/memory.h>
@@ -34,7 +35,7 @@ BlockDevice* createMemoryBlockDevice(size_t size) {
 
     memset(region, 0, size);
 
-    return createBlockDevice("memory", blockSize, &_operations, (Object)region); //RAM block device's additional data is its memory region's begin
+    return createBlockDevice("memory", RAM, blockSize, &_operations, (Object)region); //RAM block device's additional data is its memory region's begin
 }
 
 void deleteMemoryBlockDevice(BlockDevice* blockDevice) {

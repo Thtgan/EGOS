@@ -6,15 +6,15 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<multitask/schedule.h>
+#include<print.h>
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
-#include<stdio.h>
 
 static uint64_t _tick, _loopPerTick;
 
 ISR_FUNC_HEADER(__timerHandler) {
     ++_tick;
-    schedule();
+    //schedule();
     EOI();
 }
 

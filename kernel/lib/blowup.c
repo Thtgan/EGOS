@@ -2,7 +2,7 @@
 
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<stdio.h>
+#include<print.h>
 
 __attribute__((noreturn))
 void blowup(const char* format, ...) {
