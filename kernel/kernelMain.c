@@ -28,6 +28,7 @@
 
 #include<print.h>
 #include<devices/terminal/terminal.h>
+#include<devices/terminal/terminalSwitch.h>
 
 SystemInfo* sysInfo;
 
@@ -37,11 +38,11 @@ SystemInfo* sysInfo;
 static void printMemoryAreas() {
     const MemoryMap* mMap = (const MemoryMap*)sysInfo->memoryMap;
 
-    printf("%d memory areas detected\n", mMap->entryNum);
-    printf("|     Base Address     |     Area Length     | Type |\n");
+    printf(TERMINAL_LEVEL_DEBUG, "%d memory areas detected\n", mMap->entryNum);
+    printf(TERMINAL_LEVEL_DEBUG, "|     Base Address     |     Area Length     | Type |\n");
     for (int i = 0; i < mMap->entryNum; ++i) {
         const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
-        printf("| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
+        printf(TERMINAL_LEVEL_DEBUG, "| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }
 
@@ -69,18 +70,19 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initMemory((void*)readRegister_RBP_64());
 
-    Terminal* terminal = createTerminal(25 * 80 * 4, 80, 25);
-    setCurrentTerminal(terminal);
-
-    printf("EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    initTerminal();
     
-    printf("MoonLite kernel loading...\n");
+    initTerminalSwitch();
+
+    printf(TERMINAL_LEVEL_OUTPUT, "EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    
+    printf(TERMINAL_LEVEL_OUTPUT, "MoonLite kernel loading...\n");
 
     printMemoryAreas();
 
-    printf("Memory Ready\n");
+    printf(TERMINAL_LEVEL_DEBUG, "Memory Ready\n");
 
-    printf("Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
+    printf(TERMINAL_LEVEL_DEBUG, "Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
 
     initTimer();
 
@@ -96,10 +98,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     }
 
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
+
     if (checkFileSystem(hda) == FILE_SYSTEM_TYPE_PHOSPHERUS) {
-        printf("File system check passed\n");
+        printf(TERMINAL_LEVEL_DEBUG, "File system check passed\n");
     } else {
-        printf("File system check failed\n");
+        printf(TERMINAL_LEVEL_DEBUG, "File system check failed\n");
     }
 
     FileSystem* fs = openFileSystem(hda, FILE_SYSTEM_TYPE_PHOSPHERUS);
@@ -123,7 +126,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
         THIS_ARG_APPEND_CALL(logoFile, operations->seek, 0);
         THIS_ARG_APPEND_CALL(logoFile, operations->read, buffer, logoFile->iNode->onDevice.dataSize);
-        printf("%s\n", buffer);
+        printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
 
         fs->opearations->fileGlobalOperations->closeFile(logoFile);
         fs->opearations->iNodeGlobalOperations->closeInode(fileInode);
@@ -133,7 +136,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
 #if defined(DEBUG)
 
-    printf("%s\n", "DEBUG VERSION");
+    printf(TERMINAL_LEVEL_OUTPUT, "%s\n", "DEBUG VERSION");
 
 #endif
 

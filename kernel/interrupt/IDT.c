@@ -1,5 +1,6 @@
 #include<interrupt/IDT.h>
 
+#include<devices/terminal/terminalSwitch.h>
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
@@ -26,10 +27,10 @@ extern void (*stubs[256])(InterruptFrame* interruptFrame);
 static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
-    printf("%#04X Interrupt triggered!\n", vec);
-    printf("%#018X\n", readRegister_RSP_64());
-    printf("%#018X %#018X %#018X\n", interruptFrame, interruptFrame->ip, interruptFrame->cs);
-    printf("%#018X %#018X %#018X\n", interruptFrame->eflags, interruptFrame->sp, interruptFrame->ss);
+    printf(TERMINAL_LEVEL_DEBUG, "%#04X Interrupt triggered!\n", vec);
+    printf(TERMINAL_LEVEL_DEBUG, "%#018X\n", readRegister_RSP_64());
+    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", interruptFrame, interruptFrame->ip, interruptFrame->cs);
+    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", interruptFrame->eflags, interruptFrame->sp, interruptFrame->ss);
     cli();
     die();
 }

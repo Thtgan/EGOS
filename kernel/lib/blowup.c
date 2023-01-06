@@ -1,5 +1,6 @@
 #include<blowup.h>
 
+#include<devices/terminal/terminalSwitch.h>
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 #include<print.h>
@@ -9,7 +10,7 @@ void blowup(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    vprintf(format, args);
+    vprintf(TERMINAL_LEVEL_DEBUG, format, args);
 
     va_end(args);
 

@@ -2,6 +2,7 @@
 
 #include<devices/block/blockDevice.h>
 #include<devices/block/blockDeviceTypes.h>
+#include<devices/terminal/terminalSwitch.h>
 #include<devices/timer/timer.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
@@ -268,12 +269,12 @@ void initHardDisk() {
 
             uint8_t identifyStatus = __identifyDevice(d);
             if (d->parameters->generalConfiguration.isNotATA) {
-                printf("%s hard disk is not an ATA device, ignored.\n", d->name);
+                printf(TERMINAL_LEVEL_DEBUG, "%s hard disk is not an ATA device, ignored.\n", d->name);
                 continue;
             }
 
             if (!d->available) { //TODO: May fail here, might be caused by delay
-                printf("%s hard disk not available, final status: %#02X.\n", d->name, identifyStatus);
+                printf(TERMINAL_LEVEL_DEBUG, "%s hard disk not available, final status: %#02X.\n", d->name, identifyStatus);
                 continue;
             }
 

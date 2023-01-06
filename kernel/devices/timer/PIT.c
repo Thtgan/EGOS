@@ -1,5 +1,6 @@
 #include<devices/timer/PIT.h>
 
+#include<devices/terminal/terminalSwitch.h>
 #include<devices/timer/timer.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
@@ -90,9 +91,9 @@ void initPIT() {
     configureChannel(0, 3, TICK_FREQUENCY);
     setInterrupt(interruptEnabled);
 
-    printf("Adjusting timer, please wait... ");
+    printf(TERMINAL_LEVEL_DEBUG, "Adjusting timer, please wait... ");
     _loopPerTick = __findTickLoop();
-    printf("done, a tick takes %llu loops\n", _loopPerTick);
+    printf(TERMINAL_LEVEL_DEBUG, "done, a tick takes %llu loops\n", _loopPerTick);
 }
 
 void configureChannel(uint8_t channel, uint8_t mode, uint32_t frequency) {

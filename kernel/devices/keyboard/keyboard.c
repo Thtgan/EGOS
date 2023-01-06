@@ -1,6 +1,7 @@
 #include<devices/keyboard/keyboard.h>
 
 #include<devices/terminal/terminal.h>
+#include<devices/terminal/terminalSwitch.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
@@ -119,8 +120,6 @@ static inline uint8_t __readScancode();
  */
 static uint8_t __toASCII(const uint8_t key);
 
-#include<print.h>
-
 ISR_FUNC_HEADER(__keyboardInterrupt) {
     const uint8_t scancode = __readScancode();
     const uint8_t key = SCANCODE_TRIM(scancode);
@@ -218,8 +217,22 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
             default:
                 break;
             }
-            // printf("%d %d\n", x, y);
+
             terminalSetCursorPosXY(terminal, x, y);
+        } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, FUNCTION)) {
+            switch (key)
+            {
+            case KEY_F1: {
+                switchTerminalLevel(TERMINAL_LEVEL_OUTPUT);
+                break;
+            }
+            case KEY_F3: {
+                switchTerminalLevel(TERMINAL_LEVEL_DEBUG);
+                break;
+            }
+            default:
+                break;
+            }
         }
 
         displayFlush();

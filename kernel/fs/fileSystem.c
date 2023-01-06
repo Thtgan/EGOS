@@ -1,5 +1,6 @@
 #include<fs/fileSystem.h>
 
+#include<devices/terminal/terminalSwitch.h>
 #include<fs/phospherus/phospherus.h>
 #include<print.h>
 
@@ -55,6 +56,6 @@ void closeFileSystem(FileSystem* fs) {
             phospherusCloseFileSystem(fs);
             break;
         default:
-            printf("Closing unknown file system\n");
+            printf(TERMINAL_LEVEL_DEBUG, "Closing unknown file system\n");
     }
 }

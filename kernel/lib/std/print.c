@@ -89,11 +89,11 @@ static int __printCharacter(Terminal* terminal, char ch, int width, uint8_t flag
  */
 static int __printString(Terminal* terminal, const char* str, int width, int precision, uint8_t flags);
 
-int printf(const char* format, ...) {
+int printf(TerminalLevel level, const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    int ret = vprintf(format, args);
+    int ret = vprintf(level, format, args);
 
     va_end(args);
 
@@ -111,9 +111,9 @@ int sprintf(char* buffer, const char* format, ...) {
     return ret;
 }
 
-int vprintf(const char* format, va_list args) {
+int vprintf(TerminalLevel level, const char* format, va_list args) {
     int ret = 0;
-    Terminal* terminal = getCurrentTerminal();
+    Terminal* terminal = getLevelTerminal(level);
     for (; *format != '\0'; ++format) { //Scan the string
         if (*format != '%') {
             terminalPutChar(terminal, *format);
@@ -292,7 +292,9 @@ int vprintf(const char* format, va_list args) {
         }
     }
 
-    displayFlush();
+    if (terminal == getCurrentTerminal()) {
+        displayFlush();
+    }
     return ret;
 }
 
@@ -300,8 +302,15 @@ int vsprintf(char* buffer, const char* format, va_list args) {
     
 }
 
-int putchar(int ch) {
-    terminalPutChar(getCurrentTerminal(), ch);
+int putchar(TerminalLevel level, int ch) {
+    Terminal* terminal = getLevelTerminal(level);
+    terminalPutChar(terminal, ch);
+
+    if (terminal == getCurrentTerminal()) {
+        displayFlush();
+    }
+
+    return ch;
 }
 
 static const char* __readFlags(const char* format, uint8_t* flags) {
