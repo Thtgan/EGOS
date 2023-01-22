@@ -2,8 +2,8 @@
 
 #include<devices/block/blockDeviceTypes.h>
 #include<kit/types.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 #include<string.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
@@ -23,7 +23,7 @@ BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t av
         return (BlockDevice*)obj;
     }
 
-    BlockDevice* ret = vMalloc(sizeof(BlockDevice));
+    BlockDevice* ret = kMalloc(sizeof(BlockDevice));
     memset(ret, 0, sizeof(BlockDevice));
 
     strcpy(ret->name, name);
@@ -38,7 +38,7 @@ BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t av
 }
 
 void deleteBlockDevice(BlockDevice* device) {
-    vFree(device);
+    kFree(device);
 }
 
 BlockDevice* registerBlockDevice(BlockDevice* device) {

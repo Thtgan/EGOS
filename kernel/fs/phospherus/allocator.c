@@ -6,8 +6,8 @@
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/buffer.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 #include<structs/hashTable.h>
 #include<system/systemInfo.h>
 
@@ -172,10 +172,10 @@ PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
         return ret;
     }
 
-    PhospherusAllocator* ret = vMalloc(sizeof(PhospherusAllocator));
-    __DeviceInfo* deviceInfo = vMalloc(sizeof(__DeviceInfo));
-    __SuperNodeInfo* firstFreeSuperNode = vMalloc(sizeof(__SuperNode));
-    __BlockStack * firstFreeBlockStack = vMalloc(sizeof(__BlockStack));
+    PhospherusAllocator* ret = kMalloc(sizeof(PhospherusAllocator));
+    __DeviceInfo* deviceInfo = kMalloc(sizeof(__DeviceInfo));
+    __SuperNodeInfo* firstFreeSuperNode = kMalloc(sizeof(__SuperNode));
+    __BlockStack * firstFreeBlockStack = kMalloc(sizeof(__BlockStack));
 
     THIS_ARG_APPEND_CALL(device, operations->readBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
     if (deviceInfo->firstFreeSuperNode != PHOSPHERUS_NULL) {
@@ -207,11 +207,11 @@ void phospherusCloseAllocator(PhospherusAllocator* allocator) {
     Object obj;
     hashTableDelete(&_hashTable, (Object)device->deviceID, &obj);
 
-    vFree(allocator->deviceInfo);
-    vFree(allocator->firstFreeSuperNode);
-    vFree(allocator->firstFreeBlockStack);
+    kFree(allocator->deviceInfo);
+    kFree(allocator->firstFreeSuperNode);
+    kFree(allocator->firstFreeBlockStack);
     allocator->deviceInfo = allocator->firstFreeSuperNode = allocator->firstFreeBlockStack = NULL;
-    vFree(allocator);
+    kFree(allocator);
 }
 
 Index64 phospherusAllocateCluster(PhospherusAllocator* allocator) {

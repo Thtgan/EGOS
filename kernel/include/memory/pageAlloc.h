@@ -1,5 +1,5 @@
-#if !defined(__P_PAGE_ALLOC)
-#define __P_PAGE_ALLOC
+#if !defined(__PAGE_ALLOC)
+#define __PAGE_ALLOC
 
 #include<kit/types.h>
 #include<system/systemInfo.h>
@@ -7,7 +7,7 @@
 /**
  * @brief Initialize of the physical page allocation
  */
-void initPpageAlloc();
+void initPageAlloc();
 
 /**
  * @brief Allocate continous physical pages
@@ -15,7 +15,7 @@ void initPpageAlloc();
  * @param n Number of page
  * @return void* Physical address of the pages
  */
-void* pPageAlloc(size_t n);
+void* pageAlloc(size_t n);
 
 /**
  * @brief Free continous physical pages
@@ -23,6 +23,6 @@ void* pPageAlloc(size_t n);
  * @param pPageBegin Physical address of the pages
  * @param n Number of page
  */
-void pPageFree(void* pPageBegin, size_t n);
+void pageFree(void* pPageBegin, size_t n);
 
-#endif // __P_PAGE_ALLOC
+#endif // __PAGE_ALLOC

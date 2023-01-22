@@ -2,52 +2,36 @@
 #include<devices/block/blockDevice.h>
 #include<devices/hardDisk/hardDisk.h>
 #include<devices/keyboard/keyboard.h>
-#include<devices/vga/textmode.h>
+#include<devices/terminal/terminal.h>
+#include<devices/terminal/terminalSwitch.h>
 #include<devices/timer/timer.h>
+#include<devices/vga/textmode.h>
+#include<fs/fileSystem.h>
+#include<fs/directory.h>
+#include<fs/file.h>
+#include<fs/inode.h>
 #include<interrupt/IDT.h>
 #include<kit/oop.h>
+#include<kit/types.h>
 #include<memory/buffer.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/paging/directAccess.h>
-#include<memory/paging/paging.h>
-#include<memory/virtualMalloc.h>
+#include<memory/paging.h>
+#include<memory/pageAlloc.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
+#include<print.h>
 #include<real/simpleAsmLines.h>
 #include<SSE.h>
 #include<string.h>
-#include<structs/hashTable.h>
-#include<system/memoryMap.h>
 #include<system/systemInfo.h>
-
-#include<devices/block/memoryBlockDevice.h>
-#include<fs/fileSystem.h>
-#include<fs/file.h>
-#include<fs/directory.h>
-#include<fs/inode.h>
-
-#include<print.h>
-#include<devices/terminal/terminal.h>
-#include<devices/terminal/terminalSwitch.h>
 
 SystemInfo* sysInfo;
 
-/**
- * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
- */
-static void printMemoryAreas() {
-    const MemoryMap* mMap = (const MemoryMap*)sysInfo->memoryMap;
-
-    printf(TERMINAL_LEVEL_DEBUG, "%d memory areas detected\n", mMap->entryNum);
-    printf(TERMINAL_LEVEL_DEBUG, "|     Base Address     |     Area Length     | Type |\n");
-    for (int i = 0; i < mMap->entryNum; ++i) {
-        const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
-        printf(TERMINAL_LEVEL_DEBUG, "| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
-    }
-}
-
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
+    void* rsp = (void*)readRegister_RBP_64();
+
     sysInfo = (SystemInfo*)sysInfoPtr;
 
     if (sysInfo->magic != SYSTEM_INFO_MAGIC16) {
@@ -62,31 +46,22 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initVGATextMode(); //Initialize text mode
 
+    initTerminalSwitch();
+
+    switchTerminalLevel(TERMINAL_LEVEL_OUTPUT);
+
+    printf(TERMINAL_LEVEL_OUTPUT, "EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
+
     initIDT();      //Initialize the interrupt
+
+    initMemory(rsp);
+
+    initKeyboard();
 
     //Set interrupt flag
     //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
     sti();
 
-    initMemory((void*)readRegister_RBP_64());
-
-    initTerminal();
-    
-    initTerminalSwitch();
-
-    printf(TERMINAL_LEVEL_OUTPUT, "EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
-    
-    printf(TERMINAL_LEVEL_OUTPUT, "MoonLite kernel loading...\n");
-
-    printMemoryAreas();
-
-    printf(TERMINAL_LEVEL_DEBUG, "Memory Ready\n");
-
-    printf(TERMINAL_LEVEL_DEBUG, "Stack: %#018X, StackBase: %#018X\n", readRegister_RSP_64(), readRegister_RBP_64());
-
-    initTimer();
-
-    initKeyboard();
 
     initBlockDeviceManager();
 
@@ -99,10 +74,16 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
 
+    initSchedule();
+
+    Process* mainProcess = initProcess();
+
+    initTimer();
+
     if (checkFileSystem(hda) == FILE_SYSTEM_TYPE_PHOSPHERUS) {
         printf(TERMINAL_LEVEL_DEBUG, "File system check passed\n");
     } else {
-        printf(TERMINAL_LEVEL_DEBUG, "File system check failed\n");
+        blowup("File system check failed\n");
     }
 
     FileSystem* fs = openFileSystem(hda, FILE_SYSTEM_TYPE_PHOSPHERUS);
@@ -115,7 +96,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         Index64 entryIndex = THIS_ARG_APPEND_CALL(rootDir, operations->lookupEntry, "LOGO.bin", INODE_TYPE_FILE);
         DirectoryEntry* entry = THIS_ARG_APPEND_CALL(rootDir, operations->getEntry, entryIndex);
         iNodeIndex = entry->iNodeIndex;
-        vFree(entry);
+        kFree(entry);
 
         fs->opearations->directoryGlobalOperations->closeDirectory(rootDir);
         fs->opearations->iNodeGlobalOperations->closeInode(rootDirInode);
@@ -134,28 +115,16 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     closeFileSystem(fs);
 
-#if defined(DEBUG)
+    Process* forked = forkFromCurrentProcess("Forked");
 
-    printf(TERMINAL_LEVEL_OUTPUT, "%s\n", "DEBUG VERSION");
+    Process* p = getCurrentProcess();
+    if (p->pid == 0) {
+        printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", p->name);
+    } else {
+        printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", p->name);
+    }
 
-#endif
+    printf(TERMINAL_LEVEL_OUTPUT, "DONE\n");
 
-    // initSchedule();
-    // Process* mainProcess = initProcess();
-    // Process* forked = forkFromCurrentProcess("Forked");
-    // Process* p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
-
-    // printf("PID: %u\n", p->pid);
-    // if (p->pid == 0) {
-    //     printf("This is main process, name: %s\n", p->name);
-    // } else {
-    //     printf("This is child process, name: %s\n", p->name);
-    // }
-
-    // p = PA_TO_DIRECT_ACCESS_VA(getCurrentProcess());
-
-    // printf("PID: %u\n", p->pid);
-
-    while (true);
-    //blowup("DEAD\n");
+    die();
 }

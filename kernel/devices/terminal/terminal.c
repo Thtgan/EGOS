@@ -4,7 +4,6 @@
 #include<devices/vga/textmode.h>
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 
 static Terminal* _currentTerminal = NULL;
 static TerminalDisplayUnit* const _videoMemory = (TerminalDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
@@ -13,37 +12,29 @@ static TerminalDisplayUnit* const _videoMemory = (TerminalDisplayUnit*) TEXT_MOD
 
 static bool __checkPosInBuffer(Terminal* terminal, int i);
 
-void initTerminal() {
-    _currentTerminal = NULL;
-}
-
-Terminal* createTerminal(size_t bufferSize, size_t width, size_t height) {
-    Terminal* ret = vMalloc(sizeof(Terminal));
-
-    ret->windowBegin = 0, ret->windowWidth = width, ret->windowHeight = height, ret->windowSize = width * height;
+bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
+    if (bufferSize < 2 * width * height) {
+        return false;
+    }
+    terminal->windowBegin = 0, terminal->windowWidth = width, terminal->windowHeight = height, terminal->windowSize = width * height;
     
-    ret->bufferSize = (bufferSize + width - 1) / width, ret->bufferSpaceSize = height + umax64(height, ret->bufferSize);
-    ret->bufferBegin = 0, ret->bufferEnd = ret->bufferSize;
-    ret->buffer = vMalloc(ret->bufferSpaceSize * width * sizeof(TerminalDisplayUnit));
+    terminal->bufferSpaceSize = bufferSize / width, terminal->bufferSize = terminal->bufferSpaceSize - height;
+    terminal->bufferBegin = 0, terminal->bufferEnd = terminal->bufferSize;
+    terminal->buffer = buffer;
 
-    ret->cursorPosX = 0, ret->cursorPosY = 0;
+    terminal->cursorPosX = 0, terminal->cursorPosY = 0;
 
-    ret->tabStride = 4;
-    ret->colorPattern = PATTERN_ENTRY(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);
+    terminal->tabStride = 4;
+    terminal->colorPattern = PATTERN_ENTRY(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);
 
     Index64 index = 0;
-    for (int i = 0; i < ret->bufferSize; ++i) {
+    for (int i = 0; i < terminal->bufferSize; ++i) {
         for (int j = 0; j < width; ++j, ++index) {
-            __TERMINAL_PUT_CHAR(ret, index, ' ');
+            __TERMINAL_PUT_CHAR(terminal, index, ' ');
         }
     }
 
-    return ret;
-}
-
-void deleteTerminal(Terminal* terminal) {
-    vFree(terminal->buffer);
-    vFree(terminal);
+    return true;
 }
 
 void setCurrentTerminal(Terminal* terminal) {

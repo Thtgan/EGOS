@@ -4,8 +4,8 @@
 #include<fs/inode.h>
 #include<fs/phospherus/phospherus.h>
 #include<kit/types.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 #include<string.h>
 
 typedef struct {
@@ -55,9 +55,9 @@ int __addEntry(THIS_ARG_APPEND(Directory, iNode* entryInode, ConstCstring name))
         newBlockSize = ((this->size + 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     if (this->size == 0) {
-        this->directoryInMemory = vMalloc(sizeof(__DirectoryEntry));
+        this->directoryInMemory = kMalloc(sizeof(__DirectoryEntry));
     } else if (oldBlockSize != newBlockSize) {
-        this->directoryInMemory = vRealloc(this->directoryInMemory, newBlockSize * BLOCK_SIZE);
+        this->directoryInMemory = kRealloc(this->directoryInMemory, newBlockSize * BLOCK_SIZE);
     }
 
     __DirectoryEntry* newEntry = (__DirectoryEntry*)(this->directoryInMemory + this->size * sizeof(__DirectoryEntry));
@@ -92,7 +92,7 @@ int __removeEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex)) {
         newBlockSize = ((this->size - 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     if (this->size == 1) {
-        vFree(this->directoryInMemory);
+        kFree(this->directoryInMemory);
         this->directoryInMemory = NULL;
     } else {
         memmove(
@@ -101,7 +101,7 @@ int __removeEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex)) {
             (this->size - entryIndex - 1) * sizeof(__DirectoryEntry)
             );
 
-        this->directoryInMemory = vRealloc(this->directoryInMemory, (this->size - 1) * sizeof(__DirectoryEntry));
+        this->directoryInMemory = kRealloc(this->directoryInMemory, (this->size - 1) * sizeof(__DirectoryEntry));
     }
     --this->size;
 
@@ -139,7 +139,7 @@ DirectoryEntry* __getEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex)) {
         return NULL;
     }
 
-    DirectoryEntry* ret = vMalloc(sizeof(DirectoryEntry));
+    DirectoryEntry* ret = kMalloc(sizeof(DirectoryEntry));
     __DirectoryEntry* entry = this->directoryInMemory + entryIndex;
     ret->name = entry->name;
     ret->iNodeIndex = entry->inodeBlockIndex;
@@ -158,13 +158,13 @@ Directory* __openDirectory(iNode* iNode) {
         return iNode->entryReference;
     }
 
-    Directory* ret = vMalloc(sizeof(Directory));
+    Directory* ret = kMalloc(sizeof(Directory));
     ret->iNode = iNode;
     ret->size = iNode->onDevice.dataSize / sizeof(__DirectoryEntry);
     ret->operations = &directoryOperations;
     ret->directoryInMemory = NULL;
     if (ret->size > 0) {
-        ret->directoryInMemory = vMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE);
+        ret->directoryInMemory = kMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE);
         iNode->operations->readBlocks(iNode, ret->directoryInMemory, 0, iNode->onDevice.availableBlockSize);
     }
 
@@ -180,8 +180,8 @@ int __closeDirectory(Directory* directory) {
     if (--iNode->referenceCnt == 0) {
         iNode->entryReference = NULL;
         directory->iNode = NULL;
-        vFree(directory->directoryInMemory);
-        vFree(directory);
+        kFree(directory->directoryInMemory);
+        kFree(directory);
     }
 
     return 0;

@@ -7,7 +7,8 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-m32				\
 								-I.	 				\
 								-I./include			\
-								-I./include/lib		\
+								-I../include		\
+								-I../include/lib	\
 								-I../../include		\
 								-Os					\
 

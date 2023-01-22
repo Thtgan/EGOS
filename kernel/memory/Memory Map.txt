@@ -4,8 +4,9 @@ This file describes the Virtual Memory Map of the EGOS:
 |                  Range                  |     Size     |                           Description                            |
 #=========================================#==============#==================================================================#
 | 0x0000000000000000 - 0x000000000001FFFF | 128KB        | Reserved for low-level hardware, like IVT                        |
-| 0x0000000000020000 - 0x0000000000FFFFFF | 16MB - 128KB | For kernel codes                                                 |
-| 0x0000000001000000 - 0x0000000001FFFFFF | 16MB         | Reserved pages for some purposes                                 |
-| 0x0000000002000000 - ???                | ???          | Reserved for free allocation, limited by system memory capacity  |
-| 0x0000010000000000 - ???                | ???          | Direct mapping to the lower address(Up to 1TB)                   |
+| 0x0000000000020000 - ???                | ???          | Direct memory access mapping, reserved for user space            |
+| 0x0000010000000000 - 0x000001000001FFFF | 128KB        | Unused                                                           |
+| 0x0000010000020000 - 0x0000010000FFFFFF | 16MB - 128KB | For kernel codes                                                 |
+| 0x0000010001000000 - 0x0000010001003FFF | 16KB         | For kernel stack                                                 |
+| 0x0000010001004000 - ???                | ???          | Kernel memory space                                              |
 #=========================================#==============#==================================================================#

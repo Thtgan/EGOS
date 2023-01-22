@@ -5,7 +5,7 @@
 #include<fs/phospherus/phospherus_inode.h>
 #include<fs/phospherus/phospherus_file.h>
 #include<fs/phospherus/phospherus_directory.h>
-#include<memory/virtualMalloc.h>
+#include<memory/kMalloc.h>
 #include<string.h>
 
 FileSystemOperations fileSystemOperations;
@@ -37,7 +37,7 @@ bool phospherusCheckFileSystem(BlockDevice* device) {
 }
 
 FileSystem* phospherusOpenFileSystem(BlockDevice* device) {
-    FileSystem* ret = vMalloc(sizeof(FileSystem));
+    FileSystem* ret = kMalloc(sizeof(FileSystem));
 
     strcpy(ret->name, "phospherus");
     ret->type = FILE_SYSTEM_TYPE_PHOSPHERUS;
@@ -51,5 +51,5 @@ FileSystem* phospherusOpenFileSystem(BlockDevice* device) {
 
 void phospherusCloseFileSystem(FileSystem* fs) {
     phospherusCloseAllocator((PhospherusAllocator*)fs->data);
-    vFree(fs);
+    kFree(fs);
 }

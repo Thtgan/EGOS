@@ -62,11 +62,7 @@ typedef struct {
     uint8_t tabStride;
 } Terminal;
 
-void initTerminal();
-
-Terminal* createTerminal(size_t bufferSize, size_t width, size_t height);
-
-void deleteTerminal(Terminal* terminal);
+bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height);
 
 void setCurrentTerminal(Terminal* terminal);
 

@@ -226,6 +226,10 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
                 switchTerminalLevel(TERMINAL_LEVEL_OUTPUT);
                 break;
             }
+            case KEY_F2: {
+                switchTerminalLevel(TERMINAL_LEVEL_DEV);
+                break;
+            }
             case KEY_F3: {
                 switchTerminalLevel(TERMINAL_LEVEL_DEBUG);
                 break;

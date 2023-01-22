@@ -1,8 +1,8 @@
 #include<multitask/schedule.h>
 
+#include<blowup.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
-#include<memory/paging/directAccess.h>
 #include<multitask/process.h>
 #include<structs/singlyLinkedList.h>
 
@@ -18,7 +18,10 @@ SinglyLinkedListNode* statusQueueTail[PROCESS_STATUS_NUM];
 static bool __removeProcessFromQueue(Process* process);
 
 void schedule() {
-    Process* current = getStatusQueueHead(PROCESS_STATUS_RUNNING), * next = getStatusQueueHead(PROCESS_STATUS_READY);
+    Process* current = getCurrentProcess(), * next = getStatusQueueHead(PROCESS_STATUS_READY);
+    if (current->status != PROCESS_STATUS_RUNNING) {
+        blowup("Incorrect process status\n");
+    }
 
     if (next != NULL) {
         changeProcessStatus(current, PROCESS_STATUS_READY);
@@ -30,47 +33,49 @@ void schedule() {
 
 void initSchedule() {
     for (int i = 0; i < PROCESS_STATUS_NUM; ++i) {
-        initSinglyLinkedListNode(&statusQueueHead[i]);
+        initSinglyLinkedList(&statusQueueHead[i]);
         statusQueueTail[i] = &statusQueueHead[i];
     }
 }
 
 void changeProcessStatus(Process* process, ProcessStatus status) {
-    Process* processDirectAccess = PA_TO_DIRECT_ACCESS_VA(process);
-    if (processDirectAccess->status != PROCESS_STATUS_UNKNOWN) {
-        if (!__removeProcessFromQueue(process)) {
-
-        }  //Make sure only one same process in alll queues
+    if (process->status == status) {
+        return;
     }
 
-    processDirectAccess->status = status;
-    
-    singlyLinkedListInsertNext(statusQueueTail[status], &processDirectAccess->node);
+    if (process->status != PROCESS_STATUS_UNKNOWN && !__removeProcessFromQueue(process)) {
+        blowup("Remove process from queue failed\n");
+    }
 
-    statusQueueTail[status] = &processDirectAccess->node;
+    process->status = status;
+    
+    initSinglyLinkedListNode(&process->node);
+    singlyLinkedListInsertNext(statusQueueTail[status], &process->node);
+
+    statusQueueTail[status] = &process->node;
 }
 
 Process* getStatusQueueHead(ProcessStatus status) {
-    if (statusQueueHead[status].next == NULL) {
+    if (isSinglyListEmpty(&statusQueueHead[status])) {
         return NULL;
     }
-    return DIRECT_ACCESS_VA_TO_PA(HOST_POINTER(statusQueueHead[status].next, Process, node));
+    return HOST_POINTER(statusQueueHead[status].next, Process, node);
 }
 
 static bool __removeProcessFromQueue(Process* process) {
-    Process* processDirectAccess = PA_TO_DIRECT_ACCESS_VA(process);
-    ProcessStatus status = processDirectAccess->status;
+    ProcessStatus status = process->status;
 
-    void* nodeAddr = &processDirectAccess->node;
-    for (SinglyLinkedListNode* node = &statusQueueHead[status]; node->next != NULL; node = node->next) {
-        if (node->next == nodeAddr) {
+    void* nodeAddr = &process->node;
+    for (SinglyLinkedListNode* node = &statusQueueHead[status]; node->next != &statusQueueHead[status]; node = node->next) {
+        void* next = node->next;
+        if (next == nodeAddr) {
             singlyLinkedListDeleteNext(node);
 
-            if (statusQueueHead[status].next == NULL) {
-                statusQueueTail[status] = &statusQueueHead[status];
+            if (next == statusQueueTail[status]) {
+                statusQueueTail[status] = node;
             }
 
-            initSinglyLinkedListNode(&processDirectAccess->node);
+            initSinglyLinkedListNode(&process->node);
 
             return true;
         }

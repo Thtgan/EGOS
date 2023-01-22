@@ -3,19 +3,19 @@
 
 #include<kernel.h>
 #include<kit/bit.h>
+#include<kit/types.h>
 #include<real/simpleAsmLines.h>
+#include<system/address.h>
 #include<system/pageTable.h>
-
-//TODO: REMOVE THIS
-#define PAGE_ROUND_UP(__SIZE) CLEAR_VAL_SIMPLE(((__SIZE) + PAGE_SIZE - 1), 64, PAGE_SIZE_SHIFT)
 
 /**
  * @brief Further initialization the paging
  */
 void initPaging();
 
-//Some macro for page switch operation
-#define SET_CURRENT_TABLE(__PAGE_TABLE) currentTable = __PAGE_TABLE
+void* translateVaddr(PML4Table* pageTable, void* vAddr);
+
+bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
 
 #define SWITCH_TO_TABLE(__PAGE_TABLE)               \
 do {                                                \

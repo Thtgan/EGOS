@@ -15,7 +15,7 @@ static uint64_t _tick, _loopPerTick;
 
 ISR_FUNC_HEADER(__timerHandler) {
     ++_tick;
-    //schedule();
+    schedule();
     EOI();
 }
 

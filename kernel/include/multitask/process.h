@@ -15,8 +15,6 @@ typedef enum {
     PROCESS_STATUS_RUNNING,
     PROCESS_STATUS_READY,
     PROCESS_STATUS_WAITING,
-    PROCESS_STATUS_NEW,
-    PROCESS_STATUS_DEAD,
     PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
 } ProcessStatus;
 

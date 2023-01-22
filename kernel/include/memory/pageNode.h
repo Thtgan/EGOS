@@ -109,30 +109,6 @@ PageNode* getPrevPageNode(PageNode* node);
  */
 void setPrevPageNode(PageNode* node, PageNode* prevNode);
 
-/**
- * @brief Get the page node's length (in number of pages)
- * 
- * @param node Page node
- * @return size_t Page node's length (in number of pages)
- */
-size_t getPageNodeLength(PageNode* node);
-
-/**
- * @brief Set the page node's length
- * 
- * @param node Page node
- * @return size_t Page node's new length
- */
-void setPageNodeLength(PageNode* node, size_t length);
-
-/**
- * @brief Get the page node's base
- * 
- * @param node Page node
- * @return void* The base of the page node
- */
-void* getPageNodeBase(PageNode* node);
-
 
 //================================================================================
 

@@ -4,8 +4,8 @@
 #include<devices/block/blockDeviceTypes.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 #include<string.h>
 #include<structs/singlyLinkedList.h>
 
@@ -28,7 +28,7 @@ BlockDevice* createMemoryBlockDevice(size_t size) {
 
     size_t blockSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    void* region = vMalloc(blockSize * BLOCK_SIZE);
+    void* region = kMalloc(blockSize * BLOCK_SIZE);
     if (region == NULL) {
         return NULL;
     }
@@ -39,7 +39,7 @@ BlockDevice* createMemoryBlockDevice(size_t size) {
 }
 
 void deleteMemoryBlockDevice(BlockDevice* blockDevice) {
-    vFree((void*)blockDevice->additionalData);
+    kFree((void*)blockDevice->additionalData);
     _created = false;
 }
 

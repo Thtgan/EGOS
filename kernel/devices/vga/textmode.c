@@ -6,7 +6,6 @@
 #include<real/simpleAsmLines.h>
 #include<real/ports/CGA.h>
 
-static TextModeDisplayUnit* const _textModeDisplayUnitPtr = (TextModeDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
 static TextModeInfo _tmInfo;
 
 /**

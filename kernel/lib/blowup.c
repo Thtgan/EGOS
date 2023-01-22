@@ -14,6 +14,8 @@ void blowup(const char* format, ...) {
 
     va_end(args);
 
+    switchTerminalLevel(TERMINAL_LEVEL_DEBUG);
+
     cli();
     die();
 }

@@ -13,6 +13,7 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-I./include/lib/std	\
 								-I../include		\
 								-Os					\
+								-mcmodel=large		\
 
 LD 							= 	x86_64-elf-ld
 

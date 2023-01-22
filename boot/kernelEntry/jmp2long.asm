@@ -15,10 +15,18 @@ __jumpToLongMode:
 bits 64
 __longRelay:
     add rsp, 6
+    
+    mov eax, 1
+    shl rax, 40
+    mov esp, 0x1004000    ;;Set new kernel stack
+    xor rsp, rax
+
     push rbx
 
-    mov rsi, rcx    ;0 --> esi
-    mov rdi, 0xE605 ;0 --> edi
+    ;;Set two kernel arguments
+    mov rsi, rcx
+    mov rdi, 0xE605
+    xor [rsp], rax ;TODO 1TB virtual address base, ugly, rework this
     xor eax, eax    ;0 --> eax
     xor ebx, ebx    ;0 --> ebx
     xor ecx, ecx    ;0 --> ecx

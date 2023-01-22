@@ -1,11 +1,11 @@
-#include<memory/virtualMalloc.h>
+#include<memory/kMalloc.h>
 
 #include<algorithms.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/paging/vPageAlloc.h>
+#include<memory/pageAlloc.h>
+#include<memory/paging.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
@@ -67,7 +67,7 @@ static void __addRegionToList(void* regionBegin, size_t level);
  */
 static void __regionListTidyUp(size_t level);
 
-void initVirtualMalloc() {
+void initKmalloc() {
     for (int i = 0; i < REGION_LIST_NUM; ++i) {
         __PhysicalRegionList* rList = &_regionLists[i];
         initSinglyLinkedList(&rList->list);
@@ -77,7 +77,7 @@ void initVirtualMalloc() {
     }
 }
 
-void* vMalloc(size_t n) {
+void* kMalloc(size_t n) {
     if (n == 0) {
         return NULL;
     }
@@ -87,9 +87,8 @@ void* vMalloc(size_t n) {
     void* ret = NULL;
 
     bool isMultiPage = realSize > _regionLists[REGION_LIST_NUM - 1].length;
-    if (isMultiPage) {                                          //Required size is greater than maximum region size
-        realSize = PAGE_ROUND_UP(realSize);                     //Round up to size of a page
-        ret = vPageAlloc(realSize >> PAGE_SIZE_SHIFT);            //Specially allocated
+    if (isMultiPage) {                                                      //Required size is greater than maximum region size
+        ret = pageAlloc((realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT);    //Specially allocated
     } else {
         for (; regionLevel < REGION_LIST_NUM; ++regionLevel) {
             if (realSize <= _regionLists[regionLevel].length) {  //Fit the smallest region
@@ -107,14 +106,16 @@ void* vMalloc(size_t n) {
     header->size = isMultiPage ? realSize : regionLevel;    //If size greater than REGION_LIST_NUM, it must be pages
 
     return (void*)(header + 1);
+
+    return NULL;
 }
 
-void vFree(void* ptr) {
+void kFree(void* ptr) {
     __RegionHeader* header = ptr - sizeof(__RegionHeader);
     size_t n = header->size;
 
     if (n >= REGION_LIST_NUM) { //Release the specially allocated pages
-        vPageFree(header, n >> PAGE_SIZE_SHIFT);
+        pageFree(header, n >> PAGE_SIZE_SHIFT);
     } else {
         __addRegionToList(header, n);
 
@@ -125,20 +126,20 @@ void vFree(void* ptr) {
     }
 }
 
-void* vCalloc(size_t num, size_t size) {
+void* kCalloc(size_t num, size_t size) {
     if (num == 0 || size == 0) {
         return NULL;
     }
 
     size_t s = num * size;
-    void* ret = vMalloc(s);
+    void* ret = kMalloc(s);
     memset(ret, 0, s);
 
     return ret;
 }
 
 //TODO: When region is large enough, recycle exceedded memory and return old address
-void* vRealloc(void *ptr, size_t newSize) {
+void* kRealloc(void *ptr, size_t newSize) {
     void* ret = NULL;
 
     if (newSize != 0) {
@@ -150,11 +151,11 @@ void* vRealloc(void *ptr, size_t newSize) {
 
         size_t copySize = min64(size, newSize);
 
-        ret = vMalloc(newSize);
+        ret = kMalloc(newSize);
         memcpy(ret, ptr, copySize);
     }
 
-    vFree(ptr);
+    kFree(ptr);
 
     return ret;
 }
@@ -164,7 +165,7 @@ static void* __getRegion(size_t level) {
 
     if (rList->regionNum == 0) { //If region list is empty
         bool needMorePage = level == REGION_LIST_NUM - 1;
-        void* newRegionBase = needMorePage ? vPageAlloc(PAGE_ALLOCATE_BATCH_SIZE) : __getRegion(level + 1); //Allocate new pages or get region from higher level region list
+        void* newRegionBase = needMorePage ? pageAlloc(PAGE_ALLOCATE_BATCH_SIZE) : __getRegion(level + 1); //Allocate new pages or get region from higher level region list
 
         if (newRegionBase == NULL) {
             return NULL;
@@ -206,7 +207,7 @@ static void __regionListTidyUp(size_t level) {
     if (level == REGION_LIST_NUM - 1) { //Just reduce to a limitation, no need to sort
         while (rList->regionNum > PAGE_ALLOCATE_BATCH_SIZE) {
             void* pagesBegin = __getRegionFromList(REGION_LIST_NUM - 1);
-            vPageFree(pagesBegin, 1);
+            pageFree(pagesBegin, 1);
         }
     } else { //Sort before combination
         singlyLinkedListMergeSort(&rList->list, rList->regionNum, 

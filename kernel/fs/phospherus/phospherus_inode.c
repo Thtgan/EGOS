@@ -8,8 +8,8 @@
 #include<kit/macro.h>
 #include<kit/types.h>
 #include<memory/buffer.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 #include<structs/hashTable.h>
 #include<system/systemInfo.h>
 
@@ -325,7 +325,7 @@ static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
         ret = (iNode*)obj;
         ++ret->openCnt;
     } else {
-        ret = vMalloc(sizeof(iNode));
+        ret = kMalloc(sizeof(iNode));
 
         BlockDevice* devicePtr = getBlockDeviceByID(this->device);
         ret->device = devicePtr;
@@ -353,7 +353,7 @@ static int __closeInode(iNode* iNode) {
         if (!hashTableDelete(&_openedInodes, iNodeID, &obj)) {
             return -1;
         }
-        vFree(iNode);
+        kFree(iNode);
     }
 
     return 0;

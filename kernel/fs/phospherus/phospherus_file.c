@@ -7,8 +7,8 @@
 #include<fs/inode.h>
 #include<fs/phospherus/phospherus.h>
 #include<memory/buffer.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/virtualMalloc.h>
 
 int __seek(THIS_ARG_APPEND(File, size_t seekTo));
 
@@ -164,7 +164,7 @@ File* __openFile(iNode* iNode) {
         return NULL;
     }
 
-    File* ret = vMalloc(sizeof(File));
+    File* ret = kMalloc(sizeof(File));
     ret->iNode = iNode;
     ret->operations = &fileOperations;
     ret->pointer = 0;
@@ -174,7 +174,7 @@ File* __openFile(iNode* iNode) {
 
 int __closeFile(File* file) {
     file->iNode = NULL;
-    vFree(file);
+    kFree(file);
 
     return 0;
 }

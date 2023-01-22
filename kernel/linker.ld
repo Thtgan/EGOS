@@ -3,20 +3,21 @@ OUTPUT_FORMAT(binary)
 ENTRY(kernelMain)
 
 SECTIONS {
-    .text 0x20000 : {
+    . = 0x10000000000 + 0x20000;
+    .text ALIGN(0x1000) : {
         ./build/kernelMain.o(.kernelMain)
         *(.text)
     }
 
-    .data ALIGN(16) : {
+    .data ALIGN(0x1000) : {
         *(.data)
     }
 
-    .rodata ALIGN(16) : {
+    .rodata ALIGN(0x1000) : {
         *(.rodata)
     }
 
-    .bss ALIGN(16) : {
+    .bss ALIGN(0x1000) : {
         *(.bss)
     }
 }

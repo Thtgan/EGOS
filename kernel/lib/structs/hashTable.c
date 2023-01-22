@@ -2,7 +2,7 @@
 
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<memory/virtualMalloc.h>
+#include<memory/kMalloc.h>
 #include<structs/singlyLinkedList.h>
 
 typedef struct {
@@ -15,14 +15,14 @@ void initHashTable(HashTable* table, size_t hashSize, HASH_FUNC) {
     table->hashSize = hashSize;
     table->hashFunc = hashFunc;
 
-    table->table = vMalloc(hashSize * sizeof(SinglyLinkedList));
+    table->table = kMalloc(hashSize * sizeof(SinglyLinkedList));
     for (int i = 0; i < hashSize; i++) {
         initSinglyLinkedList(table->table + i);
     }
 }
 
 void destroyHashTable(HashTable* table) {
-    vFree(table->table);
+    kFree(table->table);
 }
 
 bool hashTableInsert(HashTable* table, Object key, Object value) {
@@ -38,7 +38,7 @@ bool hashTableInsert(HashTable* table, Object key, Object value) {
         }
     }
 
-    __HashChainNode* newChainNode = vMalloc(sizeof(__HashChainNode));
+    __HashChainNode* newChainNode = kMalloc(sizeof(__HashChainNode));
     newChainNode->key = key, newChainNode->value = value;
     initSinglyLinkedListNode(&newChainNode->node);
     singlyLinkedListInsertNext(list, &newChainNode->node);
@@ -59,7 +59,7 @@ bool hashTableDelete(HashTable* table, Object key, Object* valueReturn) {
         if (chainNode->key == key) {
             singlyLinkedListDeleteNext(last);
             *valueReturn = chainNode->value;
-            vFree(chainNode);
+            kFree(chainNode);
 
             --table->size;
 

@@ -69,7 +69,7 @@ typedef uint64_t PML4Entry;
 #define PML4_ENTRY_FLAG_PWT     FLAG64(3)   //Page write through
 #define PML4_ENTRY_FLAG_PCD     FLAG64(4)   //Page cache disabled
 #define PML4_ENTRY_FLAG_A       FLAG64(5)   //Accessed
-#define PML4_ENTRY_FLAG_PS      FLAG64(7)   //Page Size
+#define PML4_ENTRY_FLAG_PS      FLAG64(7)   //Page Size (DO NOT SET THIS, NO ONE KNOWS WHY)
 #define PML4_ENTRY_FLAG_R       FLAG64(11)  //HALT paging restart
 #define PML4_ENTRY_FLAG_XD      FLAG64(63)  //Execute Disable
 
@@ -82,7 +82,6 @@ typedef uint64_t PML4Entry;
  */
 typedef struct {
     PML4Entry tableEntries[PML4_TABLE_SIZE];
-    uint64_t counters[PML4_TABLE_SIZE];
 } __attribute__((packed)) PML4Table;
 
 /**
@@ -194,7 +193,6 @@ typedef uint64_t PageDirectoryEntry;
 
 typedef struct {
     PageDirectoryEntry tableEntries[PAGE_DIRECTORY_SIZE];
-    uint64_t counters[PAGE_DIRECTORY_SIZE];
 } __attribute__((packed)) PageDirectory;
 
 /**
@@ -263,5 +261,7 @@ typedef struct {
 
 #define PAGE_ENTRY_PUBLIC_FLAG_SHARE    FLAG64(52)  //Share page between directories
 #define PAGE_ENTRY_PUBLIC_FLAG_IGNORE   FLAG64(53)  //Ignore this entry in copying
+//TODO: Add COW support in multitask
+#define PAGE_ENTRY_PUBLIC_FLAG_COW      FLAG64(54)  //Copy On Write
 
 #endif // __PAGE_TABLE_H

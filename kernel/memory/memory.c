@@ -1,29 +1,42 @@
 #include<memory/memory.h>
 
+#include<devices/terminal/terminalSwitch.h>
+#include<kernel.h>
 #include<kit/types.h>
 #include<memory/buffer.h>
-#include<memory/E820.h>
-#include<memory/paging/directAccess.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalMemory/pPageAlloc.h>
-#include<memory/stackUtility.h>
-#include<memory/virtualMalloc.h>
+#include<memory/kMalloc.h>
+#include<memory/paging.h>
+#include<memory/pageAlloc.h>
+#include<print.h>
 #include<system/address.h>
+#include<system/memoryMap.h>
+
+/**
+ * @brief Prepare the necessary information for memory, not done in boot stage for limitation on instructions
+ */
+void __E820Audit();
+
+/**
+ * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
+ */
+static void __printMemoryAreas();
 
 void initMemory(void* mainStackBase) {
-    E820Audit();
+    __E820Audit();
 
     initPaging();
 
-    initDirectAccess();
+    MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
+    printf(TERMINAL_LEVEL_DEBUG, "Page table takes %u pages\n", mMap->pagingEnd - mMap->pagingBegin);
+    printf(TERMINAL_LEVEL_DEBUG, "Full page space: %u pages\n", mMap->freePageEnd - mMap->freePageBegin);
 
-    initPpageAlloc();
+    initPageAlloc();
 
-    initVirtualMalloc();
+    initKmalloc();
 
     initBuffer();
 
-    setupKernelStack(mainStackBase);
+    printf(TERMINAL_LEVEL_DEBUG, "Memory Ready\n");
 }
 
 void* memcpy(void* des, const void* src, size_t n) {
@@ -81,4 +94,37 @@ void* memmove(void* des, const void* src, size_t n) {
         }
     }
     return ret;
+}
+
+void __E820Audit() {
+    __printMemoryAreas();
+
+    MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
+
+    mMap->freePageBegin = FREE_PAGE_BEGIN >> PAGE_SIZE_SHIFT;
+    for (int i = 0; i < mMap->entryNum; ++i) {
+        MemoryMapEntry* e = mMap->memoryMapEntries + i;
+
+        if (e->type != MEMORY_MAP_ENTRY_TYPE_RAM) {
+            continue;
+        }
+
+        uint32_t endOfRegion = (e->base + e->size) >> PAGE_SIZE_SHIFT;
+
+        if ((e->base >> PAGE_SIZE_SHIFT) <= mMap->freePageBegin && mMap->freePageBegin < endOfRegion) {
+            mMap->freePageEnd = endOfRegion;
+            break;
+        }
+    }
+}
+
+static void __printMemoryAreas() {
+    const MemoryMap* mMap = (const MemoryMap*)sysInfo->memoryMap;
+
+    printf(TERMINAL_LEVEL_DEBUG, "%d memory areas detected\n", mMap->entryNum);
+    printf(TERMINAL_LEVEL_DEBUG, "|     Base Address     |     Area Length     | Type |\n");
+    for (int i = 0; i < mMap->entryNum; ++i) {
+        const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
+        printf(TERMINAL_LEVEL_DEBUG, "| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
+    }
 }

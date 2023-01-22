@@ -19,10 +19,6 @@ typedef struct {
     uint8_t cursorEndScanline;
 } TextModeInfo;
 
-typedef struct {
-    uint8_t character, colorPattern;
-} __attribute__((packed)) TextModeDisplayUnit;
-
 //Bit 7 6 5 4 3 2 1 0
 //    | | | | | | | |
 //    | | | | | ^-^-^-- Foreground color
