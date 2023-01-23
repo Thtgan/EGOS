@@ -18,8 +18,11 @@ typedef enum {
     PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
 } ProcessStatus;
 
+#define PROCESS_TICK    5
+
 struct _Process {
     uint16_t pid;
+    uint16_t remainTick;
     ProcessStatus status;
     PML4Table* pageTable;
     void* stackTop;

@@ -46,6 +46,7 @@ Process* initProcess() {
     memset(mainProcess, 0, sizeof(Process));
 
     mainProcess->pid = 0;
+    mainProcess->remainTick = PROCESS_TICK;
     mainProcess->pageTable = currentTable;
     initSinglyLinkedListNode(&mainProcess->node);
     memcpy(mainProcess->name, _mainProcessName, strlen(_mainProcessName));
@@ -120,6 +121,7 @@ Process* forkFromCurrentProcess(const char* processName) {
         memset(newProcess, 0, sizeof(Process));
 
         newProcess->pid = newPID;
+        newProcess->remainTick = PROCESS_TICK;
         memcpy(newProcess->name, processName, strlen(processName));
         newProcess->pageTable = __copyPML4Table(_currentProcess->pageTable);
         newProcess->stackTop = _currentProcess->stackTop;

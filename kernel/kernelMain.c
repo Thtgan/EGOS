@@ -20,6 +20,7 @@
 #include<memory/pageAlloc.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
+#include<multitask/spinlock.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
 #include<SSE.h>
@@ -27,6 +28,8 @@
 #include<system/systemInfo.h>
 
 SystemInfo* sysInfo;
+
+Spinlock lock = SPINLOCK_LOCKED;
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -124,7 +127,16 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", p->name);
     }
 
-    printf(TERMINAL_LEVEL_OUTPUT, "DONE\n");
+    if (getCurrentProcess()->pid == 0) {
+        spinlockLock(&lock);
+        printf(TERMINAL_LEVEL_OUTPUT, "DONE 0\n");
+    } else {
+        printf(TERMINAL_LEVEL_OUTPUT, "DONE 1\n");
+        sleep(SECOND, 5);
+        spinlockUnlock(&lock);
+    }
+
+    printf(TERMINAL_LEVEL_OUTPUT, "FINAL\n");
 
     die();
 }
