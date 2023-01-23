@@ -234,7 +234,6 @@ ISR_FUNC_HEADER(__channel1Handler) {
     } else {
         blowup("IRQ 14 not expected!");
     }
-    EOI();
 }
 
 ISR_FUNC_HEADER(__channel2Handler) {
@@ -244,7 +243,6 @@ ISR_FUNC_HEADER(__channel2Handler) {
     } else {
         blowup("IRQ 15 not expected!");
     }
-    EOI();
 }
 
 void initHardDisk() {

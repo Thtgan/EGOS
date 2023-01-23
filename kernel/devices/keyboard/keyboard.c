@@ -241,8 +241,6 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
 
         displayFlush();
     }
-
-    EOI();
 }
 
 /**

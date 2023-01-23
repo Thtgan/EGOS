@@ -10,13 +10,13 @@ extern void (*ISRhandlers[256]) (uint8_t vec, InterruptFrame* interruptFrame);
 #define INTERRUPT_STUB(__NUMBER)                                        \
 __attribute__((interrupt, target("general-regs-only")))                 \
 void INTERRUPT_STUB_NAME(__NUMBER) (InterruptFrame* interruptFrame) {   \
+    EOI();                                                              \
     uint8_t vec;                                                        \
     asm volatile(                                                       \
     "mov $" MACRO_STR(__NUMBER) ", %0\n"                                \
     : "=g"(vec)                                                         \
     );                                                                  \
     ISRhandlers[vec](vec, interruptFrame);                              \
-    EOI();                                                              \
 }
 
 INTERRUPT_STUB(0x00) INTERRUPT_STUB(0x01) INTERRUPT_STUB(0x02) INTERRUPT_STUB(0x03)

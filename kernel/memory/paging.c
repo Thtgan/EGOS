@@ -14,8 +14,6 @@ PML4Table* currentTable = NULL;
 
 ISR_FUNC_HEADER(__pageFaultHandler) {
     blowup("Page fault: %#018llX access not allowed.", (uint64_t)readRegister_CR2_64()); //Not allowed since malloc is implemented
-
-    EOI();
 }
 
 static void* __allocPage();
