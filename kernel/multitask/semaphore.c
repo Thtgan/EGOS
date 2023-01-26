@@ -87,6 +87,8 @@ void __down_handler(Semaphore* sema) {
     } while (loop);
 
     spinlockUnlock(&sema->listLock);
+
+    kFree(node);
 }
 
 __attribute__((regparm(1)))
@@ -98,7 +100,6 @@ void __up_handler(Semaphore* sema) {
         WaitListNode* node = getWaitListHead(list);
         removeWaitListHead(list);
         setProcessStatus(node->process, PROCESS_STATUS_READY);
-        kFree(node);
 
         spinlockUnlock(&sema->listLock);
         schedule(PROCESS_STATUS_READY);
