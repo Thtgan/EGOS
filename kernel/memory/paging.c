@@ -1,6 +1,6 @@
 #include<memory/paging.h>
 
-#include<blowup.h>
+#include<debug.h>
 #include<interrupt/exceptions.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>

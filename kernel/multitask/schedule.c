@@ -1,6 +1,6 @@
 #include<multitask/schedule.h>
 
-#include<blowup.h>
+#include<debug.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<multitask/process.h>

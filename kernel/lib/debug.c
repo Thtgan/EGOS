@@ -1,4 +1,4 @@
-#include<blowup.h>
+#include<debug.h>
 
 #include<devices/terminal/terminalSwitch.h>
 #include<kit/types.h>
@@ -6,7 +6,7 @@
 #include<print.h>
 
 __attribute__((noreturn))
-void blowup(const char* format, ...) {
+void blowup(const Cstring format, ...) {
     va_list args;
     va_start(args, format);
 
