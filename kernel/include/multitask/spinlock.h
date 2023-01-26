@@ -29,9 +29,10 @@ static inline void spinlockLock(Spinlock* lock) {
     );
 }
 
-static inline int spinlockTryLock(Spinlock* lock) {
+static inline bool spinlockTryLock(Spinlock* lock) {
     char ret = 0;
     asm volatile(
+        "lock;"
         "xchgb %0, %1"
         : "=" (ret), "=m" (lock->counter)
         :
@@ -43,6 +44,7 @@ static inline int spinlockTryLock(Spinlock* lock) {
 
 static inline void spinlockUnlock(Spinlock* lock) {
     asm volatile(
+        "lock;"
         "movb $1, %0"
         : "=m" (lock->counter)
         :

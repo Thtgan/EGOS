@@ -20,6 +20,7 @@
 #include<memory/pageAlloc.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
+#include<multitask/semaphore.h>
 #include<multitask/spinlock.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
@@ -30,6 +31,7 @@
 SystemInfo* sysInfo;
 
 Spinlock lock = SPINLOCK_LOCKED;
+Semaphore sema;
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -118,6 +120,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     closeFileSystem(fs);
 
+    initSemaphore(&sema, -1);
     Process* forked = forkFromCurrentProcess("Forked");
 
     Process* p = getCurrentProcess();
@@ -128,15 +131,16 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     }
 
     if (getCurrentProcess()->pid == 0) {
-        spinlockLock(&lock);
+        down(&sema);
         printf(TERMINAL_LEVEL_OUTPUT, "DONE 0\n");
     } else {
         printf(TERMINAL_LEVEL_OUTPUT, "DONE 1\n");
-        sleep(SECOND, 5);
-        spinlockUnlock(&lock);
+        up(&sema);
+        sleep(SECOND, 2);
+        up(&sema);
     }
 
-    printf(TERMINAL_LEVEL_OUTPUT, "FINAL\n");
+    printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);
 
     die();
 }

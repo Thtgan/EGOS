@@ -54,7 +54,7 @@ Process* initProcess() {
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
     switchProcess(mainProcess, mainProcess);
 
-    changeProcessStatus(mainProcess, PROCESS_STATUS_RUNNING);
+    setProcessStatus(mainProcess, PROCESS_STATUS_RUNNING);
 
     return mainProcess;
 }
@@ -139,7 +139,7 @@ Process* forkFromCurrentProcess(const char* processName) {
 
         initSinglyLinkedListNode(&newProcess->node);
 
-        changeProcessStatus(newProcess, PROCESS_STATUS_READY);
+        setProcessStatus(newProcess, PROCESS_STATUS_READY);
 
         return newProcess;
     }

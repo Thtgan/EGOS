@@ -4,10 +4,13 @@
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<multitask/process.h>
+#include<multitask/spinlock.h>
 #include<structs/singlyLinkedList.h>
 
 SinglyLinkedList statusQueueHead[PROCESS_STATUS_NUM];
 SinglyLinkedListNode* statusQueueTail[PROCESS_STATUS_NUM];
+
+Spinlock _queueLock = SPINLOCK_UNLOCKED;
 
 /**
  * @brief Remove process from the queue holds the process
@@ -17,17 +20,16 @@ SinglyLinkedListNode* statusQueueTail[PROCESS_STATUS_NUM];
  */
 static bool __removeProcessFromQueue(Process* process);
 
-void schedule() {
+void schedule(ProcessStatus newStatus) {
     Process* current = getCurrentProcess(), * next = getStatusQueueHead(PROCESS_STATUS_READY);
-    if (current->status != PROCESS_STATUS_RUNNING) {
-        blowup("Incorrect process status\n");
-    }
 
     if (next != NULL) {
-        changeProcessStatus(current, PROCESS_STATUS_READY);
-        changeProcessStatus(next, PROCESS_STATUS_RUNNING);
+        setProcessStatus(current, newStatus);
+        setProcessStatus(next, PROCESS_STATUS_RUNNING);
 
-        switchProcess(current, next);
+        if (current != next) {
+            switchProcess(current, next);
+        }
     }
 }
 
@@ -38,10 +40,12 @@ void initSchedule() {
     }
 }
 
-void changeProcessStatus(Process* process, ProcessStatus status) {
+void setProcessStatus(Process* process, ProcessStatus status) {
     if (process->status == status) {
         return;
     }
+
+    spinlockLock(&_queueLock);
 
     if (process->status != PROCESS_STATUS_UNKNOWN && !__removeProcessFromQueue(process)) {
         blowup("Remove process from queue failed\n");
@@ -53,13 +57,19 @@ void changeProcessStatus(Process* process, ProcessStatus status) {
     singlyLinkedListInsertNext(statusQueueTail[status], &process->node);
 
     statusQueueTail[status] = &process->node;
+
+    spinlockUnlock(&_queueLock);
 }
 
 Process* getStatusQueueHead(ProcessStatus status) {
-    if (isSinglyListEmpty(&statusQueueHead[status])) {
-        return NULL;
-    }
-    return HOST_POINTER(statusQueueHead[status].next, Process, node);
+    spinlockLock(&_queueLock);
+
+    bool empty = isSinglyListEmpty(&statusQueueHead[status]);
+    Process* ret = empty ? NULL : HOST_POINTER(statusQueueHead[status].next, Process, node);
+
+    spinlockUnlock(&_queueLock);
+
+    return ret;
 }
 
 static bool __removeProcessFromQueue(Process* process) {

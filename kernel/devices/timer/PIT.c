@@ -19,7 +19,7 @@ ISR_FUNC_HEADER(__timerHandler) {
     Process* p = getCurrentProcess();
     if (--p->remainTick == 0) {
         p->remainTick = PROCESS_TICK;
-        schedule();
+        schedule(PROCESS_STATUS_READY);
     }
 }
 

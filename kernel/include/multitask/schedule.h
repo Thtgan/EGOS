@@ -6,7 +6,7 @@
 /**
  * @brief Schedule the process
  */
-void schedule();
+void schedule(ProcessStatus newStatus);
 
 /**
  * @brief Initialize the schedule
@@ -19,7 +19,7 @@ void initSchedule();
  * @param process Process
  * @param status Process status
  */
-void changeProcessStatus(Process* process, ProcessStatus status);
+void setProcessStatus(Process* process, ProcessStatus status);
 
 /**
  * @brief Get head process of status queue
