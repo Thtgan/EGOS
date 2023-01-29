@@ -2,6 +2,8 @@
 #define __TERMINAL_H
 
 #include<kit/types.h>
+#include<structs/queue.h>
+#include<multitask/spinlock.h>
 
 typedef struct {
     uint8_t character, colorPattern;
@@ -11,30 +13,34 @@ typedef struct {
  * Window width
  * |-------------------------------------------------------------\
  * |                                                              \
- * +--------------------------------------------------------------+ <- Buffer space
+ * +--------------------------------------------------------------+ <- buffer (Pointer)
  * |                                                              |
  * |                                                              |
  * |                                                              |
  * |                                                              |
  * |                                                              |
  * |                                                              |
- * +--------------------------------------------------------------+ <- Buffer begin
- * |                                                              |
- * |                                                              |
- * |                                                              |
- * |                                                              |
- * |                                                              |
- * +--------------------------------------------------------------+ <- Window   \
- * |                                                              |              \
- * |                                                              |               \
- * |                                                              |                Window height
- * |                                                        X <---|--- Cursor     /
- * |                                                              |              /
- * +--------------------------------------------------------------+             /
- * |                                                              |
- * |                                                              |
- * |                                                              |
- * +--------------------------------------------------------------+ <- Buffer end
+ * +--------------------------------------------------------+-----+ <- bufferRowBegin ------------------+
+ * |                                                        |     |                                     |
+ * |                                                        |     |                                     |
+ * |                                          cursorPosX -> |     |                                     |
+ * |                                                        |     |                                     |
+ * |                                                        |     |                                     |
+ * +--------------------------------------------------------+-----+-+ <- windowRowBegin ----+           |
+ * |                                                        |     | |                       |           | Loop
+ * |                                                        |     | |                       |           |
+ * |                                                        |     | |                       |           |
+ * |                                                        |     | |                       |           | <- rollRange
+ * +--------------------------------------------------------+     | | <- windowHeight       | Window    |
+ * |                             ^                          ^     | |                       |           |
+ * |                             |                          |     | |                       |           |
+ * |                       cursorPosY                    Cursor   | |                       |           |
+ * |                                                              | |                       |           |
+ * +--------------------------------------------------------------+-+-----------------------+           |
+ * |                                                              |                                     |
+ * |                                                              |                                     |
+ * |                                                              |                                     |
+ * +--------------------------------------------------------------+-------------------------------------+
  * |                                                              |
  * |                                                              |
  * |                                                              |
@@ -49,14 +55,18 @@ typedef struct {
  */
 
 typedef struct {
-    Index64 bufferBegin, bufferEnd;
-    size_t bufferSpaceSize, bufferSize;
-    TerminalDisplayUnit* buffer;
+    Index16 loopRowBegin;                           //Which row in buffer does loop begin
+    size_t bufferRowSize;                           //Size of buffer (in row)
+    TerminalDisplayUnit* buffer;                    //Buffer
 
-    uint16_t windowWidth, windowHeight, windowSize;
-    int windowBegin;
+    uint16_t windowWidth, windowHeight, windowSize; //Window size
+    Index16 windowRowBegin;                         //Which row in buffer does window
 
-    int16_t cursorPosX, cursorPosY;
+    Index16 rollRange;                              //Range of scrolling
+
+    Spinlock outputLock;                            //Lock for output
+
+    Index16 cursorPosX, cursorPosY;                 //Cursor position, starts from beginning of loop, (0, 0) means first character in first row of loop
 
     uint8_t colorPattern;
     uint8_t tabStride;
@@ -74,14 +84,25 @@ bool terminalScrollUp(Terminal* terminal);
 
 bool terminalScrollDown(Terminal* terminal);
 
-void terminalSetCursorPosXY(Terminal* terminal, int16_t x, int16_t y);
-
-void terminalPrintString(Terminal* terminal, const char* str);
+void terminalPrintString(Terminal* terminal, ConstCstring str);
 
 void terminalPutChar(Terminal* terminal, char ch);
 
 void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foreground);
 
 void terminalSetTabStride(Terminal* terminal, uint8_t stride);
+
+void terminalCursorHome(Terminal* terminal);
+
+void terminalCursorEnd(Terminal* terminal);
+
+typedef enum {
+    TERMINAL_CURSOR_MOVE_UP,
+    TERMINAL_CURSOR_MOVE_DOWN,
+    TERMINAL_CURSOR_MOVE_LEFT,
+    TERMINAL_CURSOR_MOVE_RIGHT
+} TerminalCursorMove;
+
+void terminalCursorMove(Terminal* terminal, TerminalCursorMove move);
 
 #endif // __TERMINAL_H

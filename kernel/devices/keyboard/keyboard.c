@@ -134,91 +134,46 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
         if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ASCII)) {
             terminalPutChar(terminal, __toASCII(key));
         } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
-            int16_t x = terminal->cursorPosX, y = terminal->cursorPosY;
             switch (key)
             {
             case KEY_KEYPAD_1: {
-                y = terminal->windowWidth - 1;
+                terminalCursorEnd(terminal);
                 break;
             }
             case KEY_KEYPAD_2: {
-                if (x + 1 < terminal->windowHeight) {
-                    ++x;
-                } else {
-                    terminalScrollDown(terminal);
-                }
+                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_DOWN);
                 break;
             }
             case KEY_KEYPAD_3: {
-                if (terminalScrollDown(terminal) && x > 0) {
-                    --x;
-                }
+                terminalScrollDown(terminal);
                 break;
             }
             case KEY_KEYPAD_4: {
-                int16_t xx = x, yy = y;
-
-                --yy;
-                if (yy < 0) {
-                    --xx, yy = terminal->windowWidth - 1;
-                }
-
-                bool flag = true;
-                if (xx < 0 && (flag = terminalScrollUp(terminal))) {
-                    xx = 0;
-                }
-
-                if (flag) {
-                    x = xx, y = yy;
-                }
-
+                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_LEFT);
                 break;
             }
             case KEY_KEYPAD_5: {
                 break;
             }
             case KEY_KEYPAD_6: {
-                int16_t xx = x, yy = y;
-
-                ++yy;
-                if (yy >= terminal->windowWidth) {
-                    ++xx, yy = 0;
-                }
-
-                bool flag = true;
-                if (xx >= terminal->windowHeight && (flag = terminalScrollDown(terminal))) {
-                    xx = terminal->windowHeight - 1;
-                }
-
-                if (flag) {
-                    x = xx, y = yy;
-                }
+                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_RIGHT);
                 break;
             }
             case KEY_KEYPAD_7: {
-                y = 0;
+                terminalCursorHome(terminal);
                 break;
             }
             case KEY_KEYPAD_8: {
-                if (x > 0) {
-                    --x;
-                } else {
-                    terminalScrollUp(terminal);
-                }
-
+                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_UP);
                 break;
             }
             case KEY_KEYPAD_9: {
-                if (terminalScrollUp(terminal) && x < terminal->windowHeight) {
-                    ++x;
-                }
+                terminalScrollUp(terminal);
                 break;
             }
             default:
                 break;
             }
-
-            terminalSetCursorPosXY(terminal, x, y);
         } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, FUNCTION)) {
             switch (key)
             {
