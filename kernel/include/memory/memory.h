@@ -5,10 +5,8 @@
 
 /**
  * @brief Initialize the memory, enable paging and memory allocation
- * 
- * @param sysInfo System information
  */
-void initMemory(void* mainStackBase);
+void initMemory();
 
 /**
  * @brief Copy data from source to destination, overlap not handled

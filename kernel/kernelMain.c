@@ -35,8 +35,6 @@ Semaphore sema;
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
-    void* rsp = (void*)readRegister_RBP_64();
-
     sysInfo = (SystemInfo*)sysInfoPtr;
 
     if (sysInfo->magic != SYSTEM_INFO_MAGIC16) {
@@ -59,7 +57,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initIDT();      //Initialize the interrupt
 
-    initMemory(rsp);
+    initMemory();
 
     initKeyboard();
 

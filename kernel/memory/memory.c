@@ -21,7 +21,7 @@ void __E820Audit();
  */
 static void __printMemoryAreas();
 
-void initMemory(void* mainStackBase) {
+void initMemory() {
     __E820Audit();
 
     initPaging();
