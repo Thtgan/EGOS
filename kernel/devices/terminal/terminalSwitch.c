@@ -5,7 +5,7 @@
 #include<kit/types.h>
 
 static Terminal _terminals[TERMINAL_LEVEL_NUM];
-static TerminalDisplayUnit _terminalBuffers[TERMINAL_LEVEL_NUM][4 * TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT];
+static char _terminalBuffers[TERMINAL_LEVEL_NUM][4 * TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT];
 
 void initTerminalSwitch() {
     for (int i = 0; i < TERMINAL_LEVEL_NUM; ++i) {

@@ -57,7 +57,7 @@ typedef struct {
 typedef struct {
     Index16 loopRowBegin;                           //Which row in buffer does loop begin
     size_t bufferRowSize;                           //Size of buffer (in row)
-    TerminalDisplayUnit* buffer;                    //Buffer
+    char* buffer;                                   //Buffer
 
     uint16_t windowWidth, windowHeight, windowSize; //Window size
     Index16 windowRowBegin;                         //Which row in buffer does window

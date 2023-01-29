@@ -6,23 +6,26 @@
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<multitask/spinlock.h>
+#include<string.h>
 
 static Terminal* _currentTerminal = NULL;
 static TerminalDisplayUnit* const _videoMemory = (TerminalDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
 
-#define __TERMINAL_SET_CHAR(__TERMINAL, __POS, __CHAR)  (__TERMINAL)->buffer[(__POS)].character = (__CHAR), (__TERMINAL)->buffer[(__POS)].colorPattern = (__TERMINAL)->colorPattern
-#define __TERMINAL_GET_CHAR(__TERMINAL, __POS)          ((__TERMINAL)->buffer[(__POS)].character)
+#define __ROW_INDEX_ADD(__BASE, __ADD, __BUFFER_ROW_SIZE)   (((__BASE) + (__ADD)) % (__BUFFER_ROW_SIZE))
+#define __ROW_STRING_LENGTH(__TERMINAL, __BUFFERX)                                                                                                  \
+umin16(                                                                                                                                             \
+    (__TERMINAL)->windowWidth,                                                                                                                      \
+    strlen((__TERMINAL)->buffer + __ROW_INDEX_ADD((__TERMINAL)->loopRowBegin, __BUFFERX, (__TERMINAL)->bufferRowSize) * (__TERMINAL)->windowWidth)  \
+)
 
 static bool __checkRowInWindow(Terminal* terminal, Index16 row);
 
 static bool __checkRowInRoll(Terminal* terminal, Index16 row);
 
-static uint16_t __stringLength(Terminal* terminal, Index16 row);
-
 static void __putCharacter(Terminal* terminal, char ch);
 
 bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
-    if (bufferSize < 2 * width * height) {
+    if (bufferSize < width * height) {
         return false;
     }
     terminal->loopRowBegin = 0;
@@ -41,12 +44,7 @@ bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t wi
     terminal->tabStride = 4;
     terminal->colorPattern = PATTERN_ENTRY(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);
 
-    Index64 index = 0;
-    for (int i = 0; i < terminal->bufferRowSize; ++i) {
-        for (int j = 0; j < width; ++j, ++index) {
-            __TERMINAL_SET_CHAR(terminal, index, '\0');
-        }
-    }
+    memset(buffer, '\0', bufferSize);
 
     return true;
 }
@@ -59,15 +57,16 @@ Terminal* getCurrentTerminal() {
     return _currentTerminal;
 }
 
-#define __ROW_INDEX_ADD(__BASE, __ADD, __BUFFER_ROW_SIZE) (((__BASE) + (__ADD)) % (__BUFFER_ROW_SIZE))
-
 static bool _lastInWindow = false;
 
 void displayFlush() {
     ASSERT_SILENT(_currentTerminal != NULL);
     for (int i = 0; i < _currentTerminal->windowHeight; ++i) {
-        TerminalDisplayUnit* row = _currentTerminal->buffer + __ROW_INDEX_ADD(_currentTerminal->windowRowBegin, i, _currentTerminal->bufferRowSize) * _currentTerminal->windowWidth;
-        memcpy(_videoMemory + i * _currentTerminal->windowWidth, row, _currentTerminal->windowWidth * sizeof(TerminalDisplayUnit));
+        char* src = _currentTerminal->buffer + __ROW_INDEX_ADD(_currentTerminal->windowRowBegin, i, _currentTerminal->bufferRowSize) * _currentTerminal->windowWidth;
+        TerminalDisplayUnit* des = _videoMemory + i * _currentTerminal->windowWidth;
+        for (int j = 0; j < _currentTerminal->windowWidth; ++j) {
+            des[j] = (TerminalDisplayUnit) { src[j], _currentTerminal->colorPattern };
+        }
     }
 
     Index16 cursorRow = __ROW_INDEX_ADD(_currentTerminal->loopRowBegin, _currentTerminal->cursorPosX, _currentTerminal->bufferRowSize);
@@ -131,7 +130,7 @@ void terminalCursorHome(Terminal* terminal) {
 }
 
 void terminalCursorEnd(Terminal* terminal) {
-    terminal->cursorPosY = __stringLength(terminal, terminal->cursorPosX);
+    terminal->cursorPosY = __ROW_STRING_LENGTH(terminal, terminal->cursorPosX);
 }
 
 void terminalCursorMove(Terminal* terminal, TerminalCursorMove move) {
@@ -142,7 +141,7 @@ void terminalCursorMove(Terminal* terminal, TerminalCursorMove move) {
             if (nextCursorPosX == terminal->cursorPosX) {
                 nextCursorPosY = terminal->cursorPosY;
             } else {
-                nextCursorPosY = umin16(terminal->cursorPosY, __stringLength(terminal, nextCursorPosX));
+                nextCursorPosY = umin16(terminal->cursorPosY, __ROW_STRING_LENGTH(terminal, nextCursorPosX));
             }
 
             break;
@@ -152,7 +151,7 @@ void terminalCursorMove(Terminal* terminal, TerminalCursorMove move) {
             if (nextCursorPosX == terminal->cursorPosX) {
                 nextCursorPosY = terminal->cursorPosY;
             } else {
-                nextCursorPosY = umin16(terminal->cursorPosY, __stringLength(terminal, nextCursorPosX));
+                nextCursorPosY = umin16(terminal->cursorPosY, __ROW_STRING_LENGTH(terminal, nextCursorPosX));
             }
             
             break;
@@ -165,7 +164,7 @@ void terminalCursorMove(Terminal* terminal, TerminalCursorMove move) {
 
             if (terminal->cursorPosY == 0) {
                 nextCursorPosX = terminal->cursorPosX - 1;
-                nextCursorPosY = __stringLength(terminal, nextCursorPosX);
+                nextCursorPosY = __ROW_STRING_LENGTH(terminal, nextCursorPosX);
             } else {
                 nextCursorPosX = terminal->cursorPosX;
                 nextCursorPosY = terminal->cursorPosY - 1;
@@ -173,7 +172,7 @@ void terminalCursorMove(Terminal* terminal, TerminalCursorMove move) {
             break;
         }
         case TERMINAL_CURSOR_MOVE_RIGHT: {
-            uint16_t len = __stringLength(terminal, terminal->cursorPosX);
+            uint16_t len = __ROW_STRING_LENGTH(terminal, terminal->cursorPosX);
             if (terminal->cursorPosY == len) {
                 if (terminal->cursorPosX == terminal->bufferRowSize - 1) {
                     nextCursorPosX = terminal->cursorPosX;
@@ -237,13 +236,6 @@ static bool __checkRowInRoll(Terminal* terminal, Index16 row) {
     return rollEnd < terminal->loopRowBegin ? !(rollEnd <= row && row < terminal->loopRowBegin) : (terminal->loopRowBegin <= row && row < rollEnd);
 }
 
-static uint16_t __stringLength(Terminal* terminal, Index16 bufferX) {
-    Index32 base = __ROW_INDEX_ADD(terminal->loopRowBegin, bufferX, terminal->bufferRowSize) * terminal->windowWidth;
-    Index16 ret = 0;
-    for (; __TERMINAL_GET_CHAR(terminal, base + ret) != '\0' && ret < terminal->windowWidth; ++ret);
-    return ret;
-}
-
 static void __putCharacter(Terminal* terminal, char ch) {
     Index16 nextCursorPosX = -1, nextCursorPosY = -1;
 
@@ -269,7 +261,7 @@ static void __putCharacter(Terminal* terminal, char ch) {
             if (terminal->cursorPosX == 0 && terminal->cursorPosY == 0) {
                 nextCursorPosX = nextCursorPosY = 0;
             } else if (terminal->cursorPosY == 0) {
-                nextCursorPosX = terminal->cursorPosX - 1, nextCursorPosY = 0, nextCursorPosY = __stringLength(terminal, nextCursorPosX);
+                nextCursorPosX = terminal->cursorPosX - 1, nextCursorPosY = 0, nextCursorPosY = __ROW_STRING_LENGTH(terminal, nextCursorPosX);
             } else {
                 nextCursorPosX = terminal->cursorPosX, nextCursorPosY = terminal->cursorPosY - 1;
             }
@@ -297,11 +289,9 @@ static void __putCharacter(Terminal* terminal, char ch) {
             ++terminal->rollRange;
         }
     } else {
-        if (nextCursorRow == terminal->loopRowBegin) {        //Next row is the first row of buffer
-            Index32 base = terminal->loopRowBegin * terminal->windowWidth;
-            for (int i = 0; i < terminal->windowWidth; ++i) {   //Clear old first row
-                __TERMINAL_SET_CHAR(terminal, base + i, '\0');
-            }
+        if (nextCursorRow == terminal->loopRowBegin) {          //Next row is the first row of buffer
+            //Clear old first row
+            memset(terminal->buffer + terminal->loopRowBegin * terminal->windowWidth, '\0', terminal->windowWidth);
             //Set new first row
             terminal->loopRowBegin = __ROW_INDEX_ADD(terminal->loopRowBegin, 1, terminal->bufferRowSize);
             terminal->cursorPosX = __ROW_INDEX_ADD(terminal->cursorPosX, terminal->bufferRowSize - 1, terminal->bufferRowSize);
@@ -325,7 +315,7 @@ static void __putCharacter(Terminal* terminal, char ch) {
             //The character that control the the write position will work to ensure the screen will not print the sharacter should not print 
             case '\n': {
                 Index64 pos = __ROW_INDEX_ADD(terminal->loopRowBegin, terminal->cursorPosX, terminal->bufferRowSize) * terminal->windowWidth + terminal->cursorPosY;
-                __TERMINAL_SET_CHAR(terminal, pos, '\0');
+                terminal->buffer[pos] = '\0';
                 break;
             }
             case '\r': {
@@ -336,18 +326,18 @@ static void __putCharacter(Terminal* terminal, char ch) {
                     pos1 = __ROW_INDEX_ADD(terminal->loopRowBegin, terminal->cursorPosX, terminal->bufferRowSize) * terminal->windowWidth + terminal->cursorPosY,
                     pos2 = __ROW_INDEX_ADD(terminal->loopRowBegin, nextCursorPosX, terminal->bufferRowSize) * terminal->windowWidth + nextCursorPosY;
                 for (Index64 i = pos1; i != pos2; ++i) {
-                    __TERMINAL_SET_CHAR(terminal, i, ' ');
+                    terminal->buffer[i] = ' ';
                 }
                 break;
             }
             case '\b': {
                 Index64 pos = __ROW_INDEX_ADD(terminal->loopRowBegin, nextCursorPosX, terminal->bufferRowSize) * terminal->windowWidth + nextCursorPosY;
-                __TERMINAL_SET_CHAR(terminal, pos, '\0');
+                terminal->buffer[pos] = '\0';
                 break;
             }
             default: {
                 Index64 pos = __ROW_INDEX_ADD(terminal->loopRowBegin, terminal->cursorPosX, terminal->bufferRowSize) * terminal->windowWidth + terminal->cursorPosY;
-                __TERMINAL_SET_CHAR(terminal, pos, ch);
+                terminal->buffer[pos] = ch;
                 break;
             }
         }
