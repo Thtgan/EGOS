@@ -30,7 +30,6 @@
 
 SystemInfo* sysInfo;
 
-Spinlock lock = SPINLOCK_LOCKED;
 Semaphore sema;
 
 __attribute__((section(".kernelMain"), regparm(2)))
@@ -65,7 +64,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
     sti();
 
-
     initBlockDeviceManager();
 
     initHardDisk();
@@ -78,8 +76,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
 
     initSchedule();
-
-    Process* mainProcess = initProcess();
 
     initTimer();
 
@@ -119,13 +115,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     closeFileSystem(fs);
 
     initSemaphore(&sema, -1);
-    Process* forked = forkFromCurrentProcess("Forked");
 
-    Process* p = getCurrentProcess();
-    if (p->pid == 0) {
-        printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", p->name);
+    if (forkFromCurrentProcess("Forked") != NULL) {
+        printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", getCurrentProcess()->name);
     } else {
-        printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", p->name);
+        printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", getCurrentProcess()->name);
     }
 
     if (getCurrentProcess()->pid == 0) {
@@ -136,6 +130,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         up(&sema);
         sleep(SECOND, 2);
         up(&sema);
+        
+        exitProcess();
     }
 
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);

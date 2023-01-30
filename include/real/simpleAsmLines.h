@@ -266,16 +266,10 @@ __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_HEADER(__INSTRUCTION) {               
     asm volatile(__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_INLINE_ASM(__INSTRUCTION));  \
 }
 
-__attribute__((noreturn))
-static inline void die() {
-    hltLabel:
-    asm volatile("hlt");
-    goto hltLabel;
-}
-
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(cli)
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(sti)
 
+__NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(hlt)
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(nop)
 
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfl);  //Superisingly, this is not available in 32-bit mode
@@ -283,6 +277,13 @@ __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfl);   //Superisingly, this is not 
 
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfq);
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfq);
+
+__attribute__((noreturn))
+static inline void die() {
+    hltLabel:
+    hlt();
+    goto hltLabel;
+}
 
 #define PUSH(__LENGTH) MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, push, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 

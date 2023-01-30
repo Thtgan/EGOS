@@ -5,12 +5,12 @@
 #include<kit/types.h>
 #include<multitask/process.h>
 #include<multitask/spinlock.h>
+#include<structs/queue.h>
 #include<structs/singlyLinkedList.h>
 
-SinglyLinkedList statusQueueHead[PROCESS_STATUS_NUM];
-SinglyLinkedListNode* statusQueueTail[PROCESS_STATUS_NUM];
+static Queue statusQueues[PROCESS_STATUS_NUM];
 
-Spinlock _queueLock = SPINLOCK_UNLOCKED;
+static Spinlock _queueLock = SPINLOCK_UNLOCKED;
 
 /**
  * @brief Remove process from the queue holds the process
@@ -31,12 +31,22 @@ void schedule(ProcessStatus newStatus) {
             switchProcess(current, next);
         }
     }
+
+    while (!isQueueEmpty(&statusQueues[PROCESS_STATUS_DYING])) {
+        Process* dyingProcess = getStatusQueueHead(PROCESS_STATUS_DYING);
+        __removeProcessFromQueue(dyingProcess);
+        destroyProcess(dyingProcess);
+    }
 }
 
 void initSchedule() {
     for (int i = 0; i < PROCESS_STATUS_NUM; ++i) {
-        initSinglyLinkedList(&statusQueueHead[i]);
-        statusQueueTail[i] = &statusQueueHead[i];
+        initQueue(&statusQueues[i]);
+    }
+
+    initProcess();
+    if (forkFromCurrentProcess("Idle") == NULL) {
+        idle();
     }
 }
 
@@ -52,21 +62,16 @@ void setProcessStatus(Process* process, ProcessStatus status) {
     }
 
     process->status = status;
-    
-    initSinglyLinkedListNode(&process->node);
-    singlyLinkedListInsertNext(statusQueueTail[status], &process->node);
 
-    statusQueueTail[status] = &process->node;
+    initQueueNode(&process->node);
+    queuePush(&statusQueues[status], &process->node);
 
     spinlockUnlock(&_queueLock);
 }
 
 Process* getStatusQueueHead(ProcessStatus status) {
     spinlockLock(&_queueLock);
-
-    bool empty = isSinglyListEmpty(&statusQueueHead[status]);
-    Process* ret = empty ? NULL : HOST_POINTER(statusQueueHead[status].next, Process, node);
-
+    Process* ret = isQueueEmpty(&statusQueues[status]) ? NULL : HOST_POINTER(queueFront(&statusQueues[status]), Process, node);
     spinlockUnlock(&_queueLock);
 
     return ret;
@@ -75,21 +80,30 @@ Process* getStatusQueueHead(ProcessStatus status) {
 static bool __removeProcessFromQueue(Process* process) {
     ProcessStatus status = process->status;
 
-    void* nodeAddr = &process->node;
-    for (SinglyLinkedListNode* node = &statusQueueHead[status]; node->next != &statusQueueHead[status]; node = node->next) {
-        void* next = node->next;
+    QueueNode* nodeAddr = &process->node;
+    for (QueueNode* i = &statusQueues[status].q; i->next != &statusQueues[status].q; i = i->next) {
+        void* next = i->next;
         if (next == nodeAddr) {
-            singlyLinkedListDeleteNext(node);
+            singlyLinkedListDeleteNext(i);
 
-            if (next == statusQueueTail[status]) {
-                statusQueueTail[status] = node;
+            if (next == statusQueues[status].qTail) {
+                statusQueues[status].qTail = i;
             }
 
-            initSinglyLinkedListNode(&process->node);
+            initQueueNode(&process->node);
 
             return true;
         }
     }
 
     return false;
+}
+
+void idle() {
+    while (true) {
+        sti();
+        hlt();
+    }
+
+    blowup("Idle is trying to return\n");
 }

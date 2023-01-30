@@ -1,5 +1,6 @@
 #include<multitask/process.h>
 
+#include<debug.h>
 #include<interrupt/IDT.h>
 #include<kernel.h>
 #include<kit/bit.h>
@@ -10,7 +11,7 @@
 #include<multitask/schedule.h>
 #include<string.h>
 #include<structs/bitmap.h>
-#include<structs/singlyLinkedList.h>
+#include<structs/queue.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 #include<real/simpleAsmLines.h>
@@ -27,6 +28,11 @@ static PML4Table* __copyPML4Table(PML4Table* source);
 static PDPTable* __copyPDPTable(PDPTable* source);
 static PageDirectory* __copyPageDirectory(PageDirectory* source);
 static PageTable* __copyPageTable(PageTable* source);
+
+static void __destroyPML4Table(PML4Table* table);
+static void __destroyPDPTable(PDPTable* table);
+static void __destroyPageDirectory(PageDirectory* table);
+static void __destroyPageTable(PageTable* table);
 
 #define CLOBBER_REGISTERS   "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 
@@ -48,7 +54,8 @@ Process* initProcess() {
     mainProcess->pid = 0;
     mainProcess->remainTick = PROCESS_TICK;
     mainProcess->pageTable = currentTable;
-    initSinglyLinkedListNode(&mainProcess->node);
+    //initSinglyLinkedListNode(&mainProcess->node);
+    initQueueNode(&mainProcess->node);
     memcpy(mainProcess->name, _mainProcessName, strlen(_mainProcessName));
 
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
@@ -91,20 +98,9 @@ Process* getCurrentProcess() {
     return _currentProcess;
 }
 
-static uint16_t __allocatePID() {
-    size_t pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
-    if (pid != -1) {
-        setBit(&_pidBitmap, pid);
-        _lastGeneratePID = pid;
-    }
-    return pid;
-}
-
-static void __releasePID(uint16_t pid) {
-    clearBit(&_pidBitmap, pid);
-}
-
 static char _tmpStack[KERNEL_STACK_SIZE];
+
+#define __STACK_PAGE_NUM    ((KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE)
 
 Process* forkFromCurrentProcess(const char* processName) {
     Process* newProcess = pageAlloc(1);
@@ -126,7 +122,7 @@ Process* forkFromCurrentProcess(const char* processName) {
         newProcess->pageTable = __copyPML4Table(_currentProcess->pageTable);
         newProcess->stackTop = _currentProcess->stackTop;
 
-        void* newStackBottom = pageAlloc((KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE) + KERNEL_STACK_SIZE;
+        void* newStackBottom = pageAlloc(__STACK_PAGE_NUM) + KERNEL_STACK_SIZE;
 
         for (uintptr_t i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
             mapAddr(newProcess->pageTable, (void*)KERNEL_STACK_BOTTOM - i, newStackBottom - i);
@@ -145,8 +141,41 @@ Process* forkFromCurrentProcess(const char* processName) {
     }
 
     //Only forked process will return from here
-    return newProcess;
+    return NULL;
 }
+
+void exitProcess() {
+    schedule(PROCESS_STATUS_DYING);
+
+    blowup("Func exitProcess is trying to return\n");
+}
+
+void destroyProcess(Process* process) {
+    void* pAddr = translateVaddr(process->pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
+    memset(pAddr, 0, KERNEL_STACK_SIZE);
+    pageFree(pAddr, __STACK_PAGE_NUM);
+
+    __destroyPML4Table(process->pageTable);
+
+    __releasePID(process->pid);
+    memset(process, 0, PAGE_SIZE);
+    pageFree(process, 1);
+}
+
+static uint16_t __allocatePID() {
+    size_t pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
+    if (pid != -1) {
+        setBit(&_pidBitmap, pid);
+        _lastGeneratePID = pid;
+    }
+    return pid;
+}
+
+static void __releasePID(uint16_t pid) {
+    clearBit(&_pidBitmap, pid);
+}
+
+//================================================================================
 
 static PML4Table* __copyPML4Table(PML4Table* source) {
     PML4Table* ret = pageAlloc(1);
@@ -221,4 +250,47 @@ static PageTable* __copyPageTable(PageTable* source) {
     }
 
     return ret;
+}
+
+//================================================================================
+
+static void __destroyPML4Table(PML4Table* table) {
+    for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
+        if (TEST_FLAGS_FAIL(table->tableEntries[i], PML4_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
+            continue;
+        }
+
+        __destroyPDPTable(PDPT_ADDR_FROM_PML4_ENTRY(table->tableEntries[i]));
+    }
+    memset(table, 0, sizeof(PAGE_SIZE));
+    pageFree(table, 1);
+}
+
+static void __destroyPDPTable(PDPTable* table) {
+    for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
+        if (TEST_FLAGS_FAIL(table->tableEntries[i], PDPT_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
+            continue;
+        }
+
+        __destroyPageDirectory(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(table->tableEntries[i]));
+    }
+    memset(table, 0, sizeof(PAGE_SIZE));
+    pageFree(table, 1);
+}
+
+static void __destroyPageDirectory(PageDirectory* table) {
+    for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
+        if (TEST_FLAGS_FAIL(table->tableEntries[i], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
+            continue;
+        }
+
+        __destroyPageTable(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(table->tableEntries[i]));
+    }
+    memset(table, 0, sizeof(PAGE_SIZE));
+    pageFree(table, 1);
+}
+
+static void __destroyPageTable(PageTable* table) {
+    memset(table, 0, sizeof(PAGE_SIZE));
+    pageFree(table, 1);
 }

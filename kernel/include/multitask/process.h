@@ -2,7 +2,8 @@
 #define __PROCESS_H
 
 #include<kit/types.h>
-#include<structs/singlyLinkedList.h>
+//#include<structs/singlyLinkedList.h>
+#include<structs/queue.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
@@ -15,6 +16,7 @@ typedef enum {
     PROCESS_STATUS_RUNNING,
     PROCESS_STATUS_READY,
     PROCESS_STATUS_WAITING,
+    PROCESS_STATUS_DYING,
     PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
 } ProcessStatus;
 
@@ -26,7 +28,8 @@ struct _Process {
     ProcessStatus status;
     PML4Table* pageTable;
     void* stackTop;
-    SinglyLinkedListNode node;
+    //SinglyLinkedListNode node;
+    QueueNode node;
     char name[32];
 };
 
@@ -59,5 +62,9 @@ Process* getCurrentProcess();
  * @return Process* Forked process for caller process, return NULL when forked process exit from this function
  */
 Process* forkFromCurrentProcess(const char* processName);
+
+void exitProcess();
+
+void destroyProcess(Process* process);
 
 #endif // __PROCESS_H
