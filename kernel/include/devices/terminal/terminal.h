@@ -3,6 +3,7 @@
 
 #include<kit/types.h>
 #include<structs/queue.h>
+#include<multitask/semaphore.h>
 #include<multitask/spinlock.h>
 
 typedef struct {
@@ -70,6 +71,14 @@ typedef struct {
 
     uint8_t colorPattern;
     uint8_t tabStride;
+
+    bool inputMode;
+    Index16 inputBeginPosX, inputBeginPosY;
+    char* inputBuffer;
+    size_t inputLength;
+
+    Queue inputQueue;
+    Semaphore inputSema;
 } Terminal;
 
 bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height);
@@ -104,5 +113,22 @@ typedef enum {
 } TerminalCursorMove;
 
 void terminalCursorMove(Terminal* terminal, TerminalCursorMove move);
+
+typedef struct {
+    QueueNode node;
+    Cstring input;
+    size_t length;
+} TerminalInput;
+
+#define INPUT_BUFFER_SIZE   200
+
+//These operations is unsafe, they can be used ONLY after schedule and memory is ready
+void terminalSwitchInput(Terminal* terminal, bool enabled);
+
+void terminalInputChar(Terminal* terminal, char ch);
+
+void terminalConfirmInput(Terminal* terminal);
+
+void terminalGetInput(Terminal* terminal, char* buffer, size_t n);
 
 #endif // __TERMINAL_H
