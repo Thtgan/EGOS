@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<devices/terminal/terminal.h>
 #include<kit/bit.h>
+#include<kit/oop.h>
 #include<kit/types.h>
 #include<string.h>
 
@@ -15,6 +16,8 @@
 #define __FLAGS_LOWERCASE       FLAG8(6)
 
 #define __IS_DIGIT(__CH)        ('0' <= (__CH) && (__CH) <= '9')
+
+static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_list args);
 
 /**
  * @brief Read flags from format string
@@ -66,7 +69,7 @@ static const char* __readLengthModifier(const char* format, LengthModifier* modi
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printInteger(Terminal* terminal, uint64_t num, int base, int width, int precision, uint8_t flags); //TODO: 64-bit not supported yet
+static int __printInteger(void (*charHandler)(char ch), uint64_t num, int base, int width, int precision, uint8_t flags); //TODO: 64-bit not supported yet
 
 /**
  * @brief Print the character in format
@@ -76,7 +79,7 @@ static int __printInteger(Terminal* terminal, uint64_t num, int base, int width,
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printCharacter(Terminal* terminal, char ch, int width, uint8_t flags);
+static int __printCharacter(void (*charHandler)(char ch), char ch, int width, uint8_t flags);
 
 /**
  * @brief Print the string in format
@@ -87,7 +90,7 @@ static int __printCharacter(Terminal* terminal, char ch, int width, uint8_t flag
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printString(Terminal* terminal, const char* str, int width, int precision, uint8_t flags);
+static int __printString(void (*charHandler)(char ch), const char* str, int width, int precision, uint8_t flags);
 
 int printf(TerminalLevel level, const char* format, ...) {
     va_list args;
@@ -112,11 +115,45 @@ int sprintf(char* buffer, const char* format, ...) {
 }
 
 int vprintf(TerminalLevel level, const char* format, va_list args) {
-    int ret = 0;
     Terminal* terminal = getLevelTerminal(level);
+
+    int ret = __handlePrintf(LAMBDA(void, (char ch) {
+        terminalPutChar(terminal, ch);
+    }), format, args);
+
+    if (terminal == getCurrentTerminal()) {
+        displayFlush();
+    }
+    return ret;
+}
+
+int vsprintf(char* buffer, const char* format, va_list args) {
+    size_t len = 0;
+    int ret =  __handlePrintf(LAMBDA(void, (char ch) {
+        buffer[len++] = ch;
+    }), format, args);
+
+    buffer[len] = '\0';
+
+    return ret;
+}
+
+int putchar(TerminalLevel level, int ch) {
+    Terminal* terminal = getLevelTerminal(level);
+    terminalPutChar(terminal, ch);
+
+    if (terminal == getCurrentTerminal()) {
+        displayFlush();
+    }
+
+    return ch;
+}
+
+static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_list args) {
+    int ret = 0;
     for (; *format != '\0'; ++format) { //Scan the string
         if (*format != '%') {
-            terminalPutChar(terminal, *format);
+            charHandler(*format);
             ++ret;
             continue;
         }
@@ -144,18 +181,18 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
         int base;
         switch (*format) {
             case '%':
-                terminalPutChar(terminal, '%');
+                charHandler('%');
                 break;
             case 'c':
                 switch (modifier) {
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printCharacter(terminal, (char)va_arg(args, int), width, flags);
+                        ret += __printCharacter(charHandler, (char)va_arg(args, int), width, flags);
                         break;
                     case LENGTH_MODIFIER_L:
                         //TODO: Implement wint_t version here
                         break;
                     default:
-                        ret += __printCharacter(terminal, (char)va_arg(args, int), width, flags);
+                        ret += __printCharacter(charHandler, (char)va_arg(args, int), width, flags);
                 }
                 break;
             case 's':
@@ -163,7 +200,7 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printString(terminal, (const char*)va_arg(args, char*), width, precision, flags);
+                        ret += __printString(charHandler, (const char*)va_arg(args, char*), width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
                         //TODO: Implement wchar_t version here
@@ -180,26 +217,26 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, int), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, long), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, long long), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, long long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_J:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, intmax_t), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, intmax_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_Z:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, size_t), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, size_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_T:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
                         break;
                     default:
-                        terminalPutChar(terminal, 'e');
+                        charHandler('e');
                 }
                 break;
             case 'o':
@@ -217,23 +254,23 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, unsigned int), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, unsigned int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, unsigned long), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, unsigned long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, unsigned long long), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, unsigned long long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_J:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, uintmax_t), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, uintmax_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_Z:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, size_t), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, size_t), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_T:
-                        ret += __printInteger(terminal, (uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
+                        ret += __printInteger(charHandler, (uint64_t)va_arg(args, ptrdiff_t), base, width, precision, flags);
                         break;
                     default:
                 }
@@ -283,34 +320,16 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
             case 'p':
                 base = 16;
                 SET_FLAG_BACK(flags, __FLAGS_SPECIFIER);
-                __printInteger(terminal, (uint64_t)va_arg(args, void*), base, width, precision, flags);
+                __printInteger(charHandler, (uint64_t)va_arg(args, void*), base, width, precision, flags);
                 break;
             default:
-                terminalPutChar(terminal, '%');
-                terminalPutChar(terminal, *format);
+                charHandler('%');
+                charHandler(*format);
                 ret += 2;
         }
     }
 
-    if (terminal == getCurrentTerminal()) {
-        displayFlush();
-    }
     return ret;
-}
-
-int vsprintf(char* buffer, const char* format, va_list args) {
-    
-}
-
-int putchar(TerminalLevel level, int ch) {
-    Terminal* terminal = getLevelTerminal(level);
-    terminalPutChar(terminal, ch);
-
-    if (terminal == getCurrentTerminal()) {
-        displayFlush();
-    }
-
-    return ch;
 }
 
 static const char* __readFlags(const char* format, uint8_t* flags) {
@@ -402,7 +421,7 @@ static const char* _digits = "0123456789ABCDEF";
 static char _tmp[64];   //Number temporary buffer
 
 //TODO: BUG: printf("%#02X", 0xAA55) outputs 0XAA55 (should be 0x55)
-static int __printInteger(Terminal* terminal, uint64_t num, int base, int width, int precision, uint8_t flags) {
+static int __printInteger(void (*charHandler)(char ch), uint64_t num, int base, int width, int precision, uint8_t flags) {
     if (base < 2 || base > 16)  //If base not available, return
         return -1;              //error
 
@@ -464,54 +483,54 @@ static int __printInteger(Terminal* terminal, uint64_t num, int base, int width,
 
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            terminalPutChar(terminal, ' ');
+            charHandler(' ');
         }
     }
 
     if (sign != '\0') {     //Guaranteed only sign or specifier, impossible to print both
-        terminalPutChar(terminal, sign);
+        charHandler(sign);
     }
     if (TEST_FLAGS(flags, __FLAGS_SPECIFIER)) {
         if (base == 8) {
-            terminalPutChar(terminal, '0');
+            charHandler('0');
         } else if (base == 16) {
-            terminalPutChar(terminal, '0');
-            terminalPutChar(terminal, 'X' | lowercaseBit);
+            charHandler('0');
+            charHandler('X' | lowercaseBit);
         }
     }
 
     for (; leadingZeroLen > 0; --leadingZeroLen) {
-        terminalPutChar(terminal, '0');
+        charHandler('0');
     }
 
     for (int i = digitLen - 1; i >= 0; --i) {
-        terminalPutChar(terminal, _tmp[i]);
+        charHandler(_tmp[i]);
     }
 
     for (; padding > 0; --padding) {    //If left justified, padding should be 0 when entering this loop
-        terminalPutChar(terminal, ' ');
+        charHandler(' ');
     }
 
     return ret;
 }
 
-static int __printCharacter(Terminal* terminal, char ch, int width, uint8_t flags) {
+static int __printCharacter(void (*charHandler)(char ch), char ch, int width, uint8_t flags) {
     int padding = width - 1;
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            terminalPutChar(terminal, ' ');
+            charHandler(' ');
         }
     }
-    terminalPutChar(terminal, ch);
+    charHandler(ch);
 
     for (; padding > 0; --padding) {
-        terminalPutChar(terminal, ' ');
+        charHandler(' ');
     }
 
     return width >= 1 ? width : 1;
 }
 
-static int __printString(Terminal* terminal, const char* str, int width, int precision, uint8_t flags) {
+static int __printString(void (*charHandler)(char ch), const char* str, int width, int precision, uint8_t flags) {
     int strLen = strlen(str), padding = 0;
     if (precision >= 0) {
         strLen = min32(strLen, precision);
@@ -523,16 +542,16 @@ static int __printString(Terminal* terminal, const char* str, int width, int pre
 
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            terminalPutChar(terminal, ' ');
+            charHandler(' ');
         }
     }
 
     for (int i = 0; i < strLen; ++i) {
-        terminalPutChar(terminal, str[i]);
+        charHandler(str[i]);
     }
 
     for (; padding > 0; --padding) {
-        terminalPutChar(terminal, ' ');
+        charHandler(' ');
     }
 
     return ret;

@@ -10,7 +10,6 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-I.	 				\
 								-I./include			\
 								-I./include/lib		\
-								-I./include/lib/std	\
 								-I../include		\
 								-Os					\
 								-mcmodel=large		\
