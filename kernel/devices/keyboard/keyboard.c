@@ -132,39 +132,12 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
     else if (_pressed[key]) {
         Terminal* terminal = getCurrentTerminal();
         if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ASCII)) {
-            terminalPutChar(terminal, __toASCII(key));
+            terminalInputChar(terminal, __toASCII(key));
         } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
             switch (key)
             {
-            case KEY_KEYPAD_1: {
-                terminalCursorEnd(terminal);
-                break;
-            }
-            case KEY_KEYPAD_2: {
-                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_DOWN);
-                break;
-            }
             case KEY_KEYPAD_3: {
                 terminalScrollDown(terminal);
-                break;
-            }
-            case KEY_KEYPAD_4: {
-                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_LEFT);
-                break;
-            }
-            case KEY_KEYPAD_5: {
-                break;
-            }
-            case KEY_KEYPAD_6: {
-                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_RIGHT);
-                break;
-            }
-            case KEY_KEYPAD_7: {
-                terminalCursorHome(terminal);
-                break;
-            }
-            case KEY_KEYPAD_8: {
-                terminalCursorMove(terminal, TERMINAL_CURSOR_MOVE_UP);
                 break;
             }
             case KEY_KEYPAD_9: {

@@ -2,12 +2,12 @@
 
 #include<algorithms.h>
 #include<debug.h>
+#include<devices/terminal/inputBuffer.h>
 #include<devices/vga/textmode.h>
 #include<kit/types.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<multitask/semaphore.h>
-#include<multitask/spinlock.h>
 #include<string.h>
 #include<structs/queue.h>
 
@@ -43,20 +43,18 @@ bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t wi
 
     terminal->rollRange = height;
 
-    terminal->outputLock = SPINLOCK_UNLOCKED;
+    initSemaphore(&terminal->outputLock, 1);
 
+    terminal->cursorLastInWindow = false;
     terminal->cursorPosX = terminal->cursorPosY = 0;
 
     terminal->tabStride = 4;
     terminal->colorPattern = PATTERN_ENTRY(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);
 
-    initQueue(&terminal->inputQueue);
-    initSemaphore(&terminal->inputSema, 0);
-
     terminal->inputMode = false;
-    terminal->inputBeginPosX = terminal->inputBeginPosY = 0;
-    terminal->inputBuffer = NULL;
     terminal->inputLength = 0;
+    initSemaphore(&terminal->inputLock, 1);
+    initInputBuffer(&terminal->inputBuffer);
 
     return true;
 }
@@ -69,9 +67,8 @@ Terminal* getCurrentTerminal() {
     return _currentTerminal;
 }
 
-static bool _lastInWindow = false;
-
 void displayFlush() {
+    down(&_currentTerminal->outputLock);
     ASSERT_SILENT(_currentTerminal != NULL);
     for (int i = 0; i < _currentTerminal->windowHeight; ++i) {
         char* src = _currentTerminal->buffer + __ROW_INDEX_ADD(_currentTerminal->windowRowBegin, i, _currentTerminal->bufferRowSize) * _currentTerminal->windowWidth;
@@ -83,16 +80,17 @@ void displayFlush() {
 
     Index16 cursorRow = __ROW_INDEX_ADD(_currentTerminal->loopRowBegin, _currentTerminal->cursorPosX, _currentTerminal->bufferRowSize);
     if (__checkRowInWindow(_currentTerminal, cursorRow)) {
-        if (!_lastInWindow) {
+        if (!_currentTerminal->cursorLastInWindow) {
             vgaEnableCursor();
-            _lastInWindow = true;
+            _currentTerminal->cursorLastInWindow = true;
         }
 
         vgaSetCursorPosition(__ROW_INDEX_ADD(cursorRow, _currentTerminal->bufferRowSize - _currentTerminal->windowRowBegin, _currentTerminal->bufferRowSize), _currentTerminal->cursorPosY);
     } else {
         vgaDisableCursor();
-        _lastInWindow = false;
+        _currentTerminal->cursorLastInWindow = false;
     }
+    up(&_currentTerminal->outputLock);
 }
 
 bool terminalScrollUp(Terminal* terminal) {
@@ -115,25 +113,27 @@ bool terminalScrollDown(Terminal* terminal) {
     return false;
 }
 
-void terminalPrintString(Terminal* terminal, ConstCstring str) {
-    spinlockLock(&terminal->outputLock);
+void terminalOutputString(Terminal* terminal, ConstCstring str) {
+    down(&terminal->inputLock); //In input mode, this function will be stuck here
+    down(&terminal->outputLock);
+
     for (; *str != '\0'; ++str) {
         __putCharacter(terminal, *str);
+        
     }
 
-    if (!terminal->inputMode) {
-        terminal->inputBeginPosX = terminal->cursorPosX, terminal->inputBeginPosY = terminal->cursorPosY;
-    }
-    spinlockUnlock(&terminal->outputLock);
+    up(&terminal->outputLock);
+    up(&terminal->inputLock);
 }
 
-void terminalPutChar(Terminal* terminal, char ch) {
-    spinlockLock(&terminal->outputLock);
+void terminalOutputChar(Terminal* terminal, char ch) {
+    down(&terminal->inputLock); //In input mode, this function will be stuck here
+    down(&terminal->outputLock);
+
     __putCharacter(terminal, ch);
-    if (!terminal->inputMode) {
-        terminal->inputBeginPosX = terminal->cursorPosX, terminal->inputBeginPosY = terminal->cursorPosY;
-    }
-    spinlockUnlock(&terminal->outputLock);
+
+    up(&terminal->outputLock);
+    up(&terminal->inputLock);
 }
 
 void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foreground) {
@@ -152,151 +152,60 @@ void terminalCursorEnd(Terminal* terminal) {
     terminal->cursorPosY = __ROW_STRING_LENGTH(terminal, terminal->cursorPosX);
 }
 
-void terminalCursorMove(Terminal* terminal, TerminalCursorMove move) {
-    Index16 nextCursorPosX = -1, nextCursorPosY = -1;
-    switch (move) {
-        case TERMINAL_CURSOR_MOVE_UP: {
-            nextCursorPosX = terminal->cursorPosX > 0 ? (terminal->cursorPosX - 1) : terminal->cursorPosX;
-            if (nextCursorPosX == terminal->cursorPosX) {
-                nextCursorPosY = terminal->cursorPosY;
-            } else {
-                nextCursorPosY = umin16(terminal->cursorPosY, __ROW_STRING_LENGTH(terminal, nextCursorPosX));
-            }
-
-            break;
-        }
-        case TERMINAL_CURSOR_MOVE_DOWN: {
-            nextCursorPosX = terminal->cursorPosX + 1 < terminal->bufferRowSize ? (terminal->cursorPosX + 1) : terminal->cursorPosX;
-            if (nextCursorPosX == terminal->cursorPosX) {
-                nextCursorPosY = terminal->cursorPosY;
-            } else {
-                nextCursorPosY = umin16(terminal->cursorPosY, __ROW_STRING_LENGTH(terminal, nextCursorPosX));
-            }
-            
-            break;
-        }
-        case TERMINAL_CURSOR_MOVE_LEFT: {
-            if (terminal->cursorPosX == 0 && terminal->cursorPosY == 0) {
-                nextCursorPosX = nextCursorPosY = 0;
-            } else if (terminal->cursorPosY == 0) {
-                nextCursorPosX = terminal->cursorPosX - 1;
-                nextCursorPosY = __ROW_STRING_LENGTH(terminal, nextCursorPosX);
-            } else {
-                nextCursorPosX = terminal->cursorPosX;
-                nextCursorPosY = terminal->cursorPosY - 1;
-            }
-
-            break;
-        }
-        case TERMINAL_CURSOR_MOVE_RIGHT: {
-            uint16_t len = __ROW_STRING_LENGTH(terminal, terminal->cursorPosX);
-            if (terminal->cursorPosY == len) {
-                if (terminal->cursorPosX == terminal->bufferRowSize - 1) {
-                    nextCursorPosX = terminal->cursorPosX;
-                    nextCursorPosY = terminal->cursorPosY;
-                } else {
-                    nextCursorPosX = terminal->cursorPosX + 1;
-                    nextCursorPosY = 0;
-                }
-            } else {
-                nextCursorPosX = terminal->cursorPosX;
-                nextCursorPosY = terminal->cursorPosY + 1;
-            }
-            break;
-        }
-        default: {
-            break;
-        }
+void terminalSwitchInput(Terminal* terminal, bool enabled) {
+    if (terminal->inputMode && !enabled) {
+        terminal->inputLength = 0;
     }
 
-    ASSERT(
-        nextCursorPosX < terminal->bufferRowSize && nextCursorPosY < terminal->windowWidth, 
-        "Invalid next posX or posY in cursor move %u: %u, %u, before: %u, %u",
-        move, nextCursorPosX, nextCursorPosY, terminal->cursorPosX, terminal->cursorPosY
-        );
-
-    //Under input mode, cursor can not be moved to printed test
-    if (terminal->inputMode && (nextCursorPosX < terminal->cursorPosX || nextCursorPosY < terminal->cursorPosY)) {
-        nextCursorPosX = terminal->cursorPosX, nextCursorPosY = terminal->cursorPosY;
+    if (terminal->inputMode = enabled) {
+        down(&terminal->inputLock); //Input is prior to output
+    } else {
+        up(&terminal->inputLock);
     }
-
-    __scrollWindowToRow(terminal, nextCursorPosX);
-
-    terminal->cursorPosX = nextCursorPosX, terminal->cursorPosY = nextCursorPosY;
 }
 
-void terminalSwitchInput(Terminal* terminal, bool enabled) {
-    if (terminal->inputMode = enabled) {
-        if (terminal->inputBuffer == NULL) {
-            terminal->inputBuffer = kMalloc(INPUT_BUFFER_SIZE);
-            terminal->inputLength = 0;
-        }
-
-        terminal->cursorPosX = terminal->inputBeginPosX, terminal->cursorPosY = terminal->inputBeginPosY;
+void terminalInputString(Terminal* terminal, ConstCstring str) {
+    if (!terminal->inputMode) { //If not input mode, ignore input
+        return;
     }
+    down(&terminal->outputLock);
+    for (; *str != '\0'; ++str) {
+        if (!(*str == '\b' && terminal->inputLength == 0)) {
+            inputChar(&terminal->inputBuffer, *str);
+            __putCharacter(terminal, *str);
+        }
+    }
+    up(&terminal->outputLock);
 }
 
 void terminalInputChar(Terminal* terminal, char ch) {
-    if (!terminal->inputMode) {
+    if (!terminal->inputMode) { //If not input mode, ignore input
         return;
     }
+    down(&terminal->outputLock);
 
-    ASSERT_SILENT(terminal->inputBuffer != NULL);
-    spinlockLock(&terminal->outputLock);
-
-    switch (ch) {
-        case '\n': {
-            terminalConfirmInput(terminal);
-            terminal->inputBeginPosX = terminal->cursorPosX, terminal->inputBeginPosY = terminal->cursorPosY;
-            break;
-        }
-        case '\b': {
-            terminal->inputBuffer[--terminal->inputLength] = '\0';
-            break;
-        }
-        default: {
-            if (terminal->inputLength < INPUT_BUFFER_SIZE) {
-                terminal->inputBuffer[terminal->inputLength++] = ch;
-            }
-            break;
-        }
+    if (!(ch == '\b' && terminal->inputLength == 0)) {
+        inputChar(&terminal->inputBuffer, ch);
+        __putCharacter(terminal, ch);
     }
-
-    __putCharacter(terminal, ch);
-    spinlockUnlock(&terminal->outputLock);
+    
+    up(&terminal->outputLock);
 }
 
-void terminalConfirmInput(Terminal* terminal) {
-    TerminalInput* inputNode = kMalloc(sizeof(TerminalInput));
-    inputNode->input = terminal->inputBuffer;
-    inputNode->length = terminal->inputLength;
+int terminalGetline(Terminal* terminal, Cstring buffer) {
+    terminalSwitchInput(terminal, true);
+    int ret = bufferGetLine(&terminal->inputBuffer, buffer);
+    terminalSwitchInput(terminal, false);
 
-    terminal->inputBuffer = kMalloc(INPUT_BUFFER_SIZE);
-    memset(terminal->inputBuffer, '\0', INPUT_BUFFER_SIZE);
-    terminal->inputLength = 0;
-
-    queuePush(&terminal->inputQueue, &inputNode->node);
-
-    up(&terminal->inputSema);
+    return ret;
 }
 
-void terminalGetInput(Terminal* terminal, char* buffer, size_t n) {
-    down(&terminal->inputSema);
-    QueueNode* queueNode = queueFront(&terminal->inputQueue);
-    queuePop(&terminal->inputQueue);
-    if (queueNode == NULL) {
-        memset(buffer, '\0', n);
-        return;
-    }
-
-    TerminalInput* inputNode = HOST_POINTER(queueNode, TerminalInput, node);
-    size_t len = umin16(n, inputNode->length);
-    strncpy(buffer, inputNode->input, len);
-    buffer[len] = '\0';
-
-    initQueueNode(&inputNode->node);
-    kFree(inputNode->input);
-    kFree(inputNode);
+int terminalGetChar(Terminal* terminal) {
+    terminalSwitchInput(terminal, true);
+    int ret = bufferGetChar(&terminal->inputBuffer);
+    terminalSwitchInput(terminal, false);
+    
+    return ret;
 }
 
 static bool __checkRowInWindow(Terminal* terminal, Index16 row) {
@@ -318,8 +227,14 @@ static bool __checkRowInRoll(Terminal* terminal, Index16 row) {
 }
 
 static void __putCharacter(Terminal* terminal, char ch) {
-    if (ch == '\b' && terminal->cursorPosX == 0 && terminal->cursorPosY == 0) {
-        return;
+    if (ch == '\b') {
+        if(terminal->cursorPosX == 0 && terminal->cursorPosY == 0) {
+            return;
+        }
+
+        if (terminal->inputMode && terminal->inputLength == 0) {
+            return;
+        }
     }
 
     Index16 nextCursorPosX = -1, nextCursorPosY = -1;
@@ -384,6 +299,7 @@ static void __putCharacter(Terminal* terminal, char ch) {
         }
     }
 
+    int dInputLength = 1;
     switch (ch) {
         //The character that control the the write position will work to ensure the screen will not print the sharacter should not print 
         case '\n': {
@@ -392,6 +308,7 @@ static void __putCharacter(Terminal* terminal, char ch) {
             break;
         }
         case '\r': {
+            dInputLength = 0;   //How?
             break;
         }
         case '\t': {
@@ -401,11 +318,14 @@ static void __putCharacter(Terminal* terminal, char ch) {
             for (Index64 i = pos1; i != pos2; ++i) {
                 terminal->buffer[i] = ' ';
             }
+
+            dInputLength = pos2 - pos1;
             break;
         }
         case '\b': {
             Index64 pos = __ROW_INDEX_ADD(terminal->loopRowBegin, nextCursorPosX, terminal->bufferRowSize) * terminal->windowWidth + nextCursorPosY;
             terminal->buffer[pos] = '\0';
+            dInputLength = -1;
             break;
         }
         default: {
@@ -413,6 +333,11 @@ static void __putCharacter(Terminal* terminal, char ch) {
             terminal->buffer[pos] = ch;
             break;
         }
+
+    }
+
+    if (terminal->inputMode) {
+        terminal->inputLength += dInputLength;
     }
 
     __scrollWindowToRow(terminal, nextCursorPosX);

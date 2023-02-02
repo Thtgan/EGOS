@@ -118,7 +118,7 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
     Terminal* terminal = getLevelTerminal(level);
 
     int ret = __handlePrintf(LAMBDA(void, (char ch) {
-        terminalPutChar(terminal, ch);
+        terminalOutputChar(terminal, ch);
     }), format, args);
 
     if (terminal == getCurrentTerminal()) {
@@ -140,7 +140,7 @@ int vsprintf(char* buffer, const char* format, va_list args) {
 
 int putchar(TerminalLevel level, int ch) {
     Terminal* terminal = getLevelTerminal(level);
-    terminalPutChar(terminal, ch);
+    terminalOutputChar(terminal, ch);
 
     if (terminal == getCurrentTerminal()) {
         displayFlush();

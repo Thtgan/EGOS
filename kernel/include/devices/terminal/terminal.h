@@ -1,10 +1,10 @@
 #if !defined(__TERMINAL_H)
 #define __TERMINAL_H
 
+#include<devices/terminal/inputBuffer.h>
 #include<kit/types.h>
 #include<structs/queue.h>
 #include<multitask/semaphore.h>
-#include<multitask/spinlock.h>
 
 typedef struct {
     uint8_t character, colorPattern;
@@ -65,20 +65,18 @@ typedef struct {
 
     Index16 rollRange;                              //Range of scrolling
 
-    Spinlock outputLock;                            //Lock for output
+    Semaphore outputLock;                           //Lock for output, used to handle output in multitask sence
 
+    bool cursorLastInWindow;
     Index16 cursorPosX, cursorPosY;                 //Cursor position, starts from beginning of loop, (0, 0) means first character in first row of loop
 
     uint8_t colorPattern;
     uint8_t tabStride;
 
     bool inputMode;
-    Index16 inputBeginPosX, inputBeginPosY;
-    char* inputBuffer;
-    size_t inputLength;
-
-    Queue inputQueue;
-    Semaphore inputSema;
+    int inputLength;
+    Semaphore inputLock;                            //Lock for input, used to block output when inputting
+    InputBuffer inputBuffer;
 } Terminal;
 
 bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height);
@@ -93,9 +91,9 @@ bool terminalScrollUp(Terminal* terminal);
 
 bool terminalScrollDown(Terminal* terminal);
 
-void terminalPrintString(Terminal* terminal, ConstCstring str);
+void terminalOutputString(Terminal* terminal, ConstCstring str);
 
-void terminalPutChar(Terminal* terminal, char ch);
+void terminalOutputChar(Terminal* terminal, char ch);
 
 void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foreground);
 
@@ -105,30 +103,14 @@ void terminalCursorHome(Terminal* terminal);
 
 void terminalCursorEnd(Terminal* terminal);
 
-typedef enum {
-    TERMINAL_CURSOR_MOVE_UP,
-    TERMINAL_CURSOR_MOVE_DOWN,
-    TERMINAL_CURSOR_MOVE_LEFT,
-    TERMINAL_CURSOR_MOVE_RIGHT
-} TerminalCursorMove;
-
-void terminalCursorMove(Terminal* terminal, TerminalCursorMove move);
-
-typedef struct {
-    QueueNode node;
-    Cstring input;
-    size_t length;
-} TerminalInput;
-
-#define INPUT_BUFFER_SIZE   200
-
-//These operations is unsafe, they can be used ONLY after schedule and memory is ready
 void terminalSwitchInput(Terminal* terminal, bool enabled);
+
+void terminalInputString(Terminal* terminal, ConstCstring str);
 
 void terminalInputChar(Terminal* terminal, char ch);
 
-void terminalConfirmInput(Terminal* terminal);
+int terminalGetline(Terminal* terminal, Cstring buffer);
 
-void terminalGetInput(Terminal* terminal, char* buffer, size_t n);
+int terminalGetChar(Terminal* terminal);
 
 #endif // __TERMINAL_H

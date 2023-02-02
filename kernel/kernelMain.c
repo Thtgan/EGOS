@@ -31,6 +31,7 @@
 SystemInfo* sysInfo;
 
 Semaphore sema;
+char str[128];
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -128,7 +129,14 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     } else {
         printf(TERMINAL_LEVEL_OUTPUT, "DONE 1\n");
         up(&sema);
-        sleep(SECOND, 2);
+        while (true) {
+            int len = terminalGetline(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), str);
+
+            if (strcmp(str, "PASS") == 0 || len == 0) {
+                break;
+            }
+            printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
+        }
         up(&sema);
         
         exitProcess();
