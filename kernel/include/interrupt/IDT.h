@@ -42,6 +42,7 @@ typedef struct {
  * @brief Before enter the interrupt handler, CPU will push these registers into stack
  */
 typedef struct {
+    uint64_t errorCode;
     uint64_t ip;
     uint64_t cs;        //Padded to doubleword
     uint64_t eflags;

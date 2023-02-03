@@ -60,10 +60,12 @@ void registerISR(uint8_t vector, void* isr, uint8_t attributes) {
     uint8_t mask1, mask2;
     getPICMask(&mask1, &mask2);
 
-    if (vector < REMAP_BASE_2) {
-        CLEAR_FLAG_BACK(mask1, FLAG8(vector - REMAP_BASE_1));
-    } else {
-        CLEAR_FLAG_BACK(mask2, FLAG8(vector - REMAP_BASE_2));
+    if (REMAP_BASE_1 <= vector && vector < REMAP_BASE_2 + 8) {
+        if (vector < REMAP_BASE_2) {
+            CLEAR_FLAG_BACK(mask1, FLAG8(vector - REMAP_BASE_1));
+        } else {
+            CLEAR_FLAG_BACK(mask2, FLAG8(vector - REMAP_BASE_2));
+        }
     }
 
     setPICMask(mask1, mask2);
