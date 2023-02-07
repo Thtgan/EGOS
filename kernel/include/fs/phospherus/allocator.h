@@ -3,6 +3,7 @@
 
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
+#include<structs/hashTable.h>
 
 #define ROOT_SUPER_NODE_INDEX   0
 #define CLUSTER_BLOCK_SIZE      8
@@ -17,6 +18,7 @@ typedef struct {
     void* firstFreeSuperNode;
     void* firstFreeBlockStack;
     uint8_t openCnt;
+    HashChainNode hashChainNode;
 } PhospherusAllocator;
 
 /**

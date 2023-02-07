@@ -251,10 +251,11 @@ static size_t __estimateiNodeBlockTaken(size_t clusterSize);
  */
 static size_t __estimateiNodeSubBlockTaken(size_t level, size_t clusterSize);
 
-static HashTable _openedInodes;
+static HashTable _hashTable;    //Opened iNodes
+static SinglyLinkedList _hashChains[67];
 
 iNodeGlobalOperations* phospherusInitInode() {
-    initHashTable(&_openedInodes, 67, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
+    initHashTable(&_hashTable, 67, _hashChains, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
         return (size_t)key % this->hashSize;
     }));
 
@@ -293,8 +294,7 @@ static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type)) {
 }
 
 static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
-    Object obj, iNodeID = __INODE_ID(this->device, iNodeBlock);
-    if (hashTableFind(&_openedInodes, iNodeID, &obj)) {    //If opened, cannt be deleted
+    if (hashTableFind(&_hashTable, __INODE_ID(this->device, iNodeBlock)) != NULL) {    //If opened, cannt be deleted
         return -1;
     }
 
@@ -319,10 +319,11 @@ static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
 }
 
 static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
-    Object obj, iNodeID = __INODE_ID(this->device, iNodeBlock);
+    Object iNodeID = __INODE_ID(this->device, iNodeBlock);
     iNode* ret = NULL;
-    if (hashTableFind(&_openedInodes, iNodeID, &obj)) { //If opened, return it
-        ret = (iNode*)obj;
+    HashChainNode* node = NULL;
+    if ((node = hashTableFind(&_hashTable, __INODE_ID(this->device, iNodeBlock))) != NULL) {    //If opened, return it
+        ret = HOST_POINTER(node, iNode, hashChainNode);
         ++ret->openCnt;
     } else {
         ret = kMalloc(sizeof(iNode), MEMORY_TYPE_NORMAL);
@@ -333,10 +334,11 @@ static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
         ret->openCnt = 1;
         ret->operations = &phospherusInodeOperations;
         ret->entryReference = NULL;
+        initHashChainNode(&ret->hashChainNode);
 
         THIS_ARG_APPEND_CALL(devicePtr, operations->readBlocks, iNodeBlock, &ret->onDevice, 1);
 
-        hashTableInsert(&_openedInodes, iNodeID, (Object)ret);
+        hashTableInsert(&_hashTable, iNodeID, &ret->hashChainNode);
     }
 
     return ret;
@@ -349,8 +351,7 @@ static int __closeInode(iNode* iNode) {
 
     --iNode->openCnt;
     if (iNode->openCnt == 0) {
-        Object obj, iNodeID = __INODE_ID(iNode->device->deviceID, iNode->blockIndex);
-        if (!hashTableDelete(&_openedInodes, iNodeID, &obj)) {
+        if (hashTableDelete(&_hashTable, __INODE_ID(iNode->device->deviceID, iNode->blockIndex)) == NULL) {
             return -1;
         }
         kFree(iNode);

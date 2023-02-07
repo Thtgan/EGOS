@@ -4,7 +4,7 @@
 #include<devices/block/blockDeviceTypes.h>
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<structs/singlyLinkedList.h>
+#include<structs/hashTable.h>
 
 #define BLOCK_SIZE 512
 
@@ -20,6 +20,7 @@ RECURSIVE_REFER_STRUCT(BlockDevice) {
 
     Object additionalData;  //Something to assist the block device working, can be anything
     BlockDeviceOperation* operations;
+    HashChainNode hashChainNode;
 };
 
 STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
@@ -71,9 +72,9 @@ void deleteBlockDevice(BlockDevice* device);
  * @brief Register the block device, duplicated name not allowed
  * 
  * @param device Block device to register
- * @return BlockDevice* If successed, return the registered device, otherwise NULL
+ * @return BlockDevice* If register successed
  */
-BlockDevice* registerBlockDevice(BlockDevice* device);
+bool registerBlockDevice(BlockDevice* device);
 
 /**
  * @brief Unregister the block device

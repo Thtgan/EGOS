@@ -2,89 +2,75 @@
 
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<memory/kMalloc.h>
 #include<structs/singlyLinkedList.h>
 
-typedef struct {
-    SinglyLinkedListNode node;
-    Object key, value;
-} __HashChainNode;
-
-void initHashTable(HashTable* table, size_t hashSize, HASH_FUNC) {
+void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, HASH_FUNC) {
     table->size = 0;
     table->hashSize = hashSize;
     table->hashFunc = hashFunc;
+    table->chains = chains;
 
-    table->table = kMalloc(hashSize * sizeof(SinglyLinkedList), MEMORY_TYPE_NORMAL);
     for (int i = 0; i < hashSize; i++) {
-        initSinglyLinkedList(table->table + i);
+        initSinglyLinkedList(table->chains + i);
     }
 }
 
-void destroyHashTable(HashTable* table) {
-    kFree(table->table);
-}
-
-bool hashTableInsert(HashTable* table, Object key, Object value) {
+bool hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
     size_t hashKey = THIS_ARG_APPEND_CALL(table, hashFunc, key);
 
-    SinglyLinkedList* list = table->table + hashKey;
-    
-    for (SinglyLinkedListNode* node = list->next; node != list; node = node->next) {
-        __HashChainNode* chainNode = HOST_POINTER(node, __HashChainNode, node);
+    SinglyLinkedList* chain = table->chains + hashKey;
+    for (SinglyLinkedListNode* node = chain->next; node != chain; node = node->next) {
+        HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
             return false;
         }
     }
 
-    __HashChainNode* newChainNode = kMalloc(sizeof(__HashChainNode), MEMORY_TYPE_NORMAL);
-    newChainNode->key = key, newChainNode->value = value;
-    initSinglyLinkedListNode(&newChainNode->node);
-    singlyLinkedListInsertNext(list, &newChainNode->node);
+    newNode->key = key;
+    initSinglyLinkedListNode(&newNode->node);
+    singlyLinkedListInsertNext(chain, &newNode->node);
 
     ++table->size;
 
     return true;
 }
 
-bool hashTableDelete(HashTable* table, Object key, Object* valueReturn) {
+void initHashChainNode(HashChainNode* node) {
+    initSinglyLinkedListNode(&node->node);
+    node->key = 0;
+}
+
+HashChainNode* hashTableDelete(HashTable* table, Object key) {
     size_t hashKey = THIS_ARG_APPEND_CALL(table, hashFunc, key);
 
-    SinglyLinkedList* list = table->table + hashKey;
-    
-    for (SinglyLinkedListNode* node = list->next, *last = list; node != list; last = node, node = node->next) {
-        __HashChainNode* chainNode = HOST_POINTER(node, __HashChainNode, node);
+    SinglyLinkedList* chain = table->chains + hashKey;
+    for (SinglyLinkedListNode* node = chain->next, *last = chain; node != chain; last = node, node = node->next) {
+        HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
             singlyLinkedListDeleteNext(last);
-            *valueReturn = chainNode->value;
-            kFree(chainNode);
-
             --table->size;
 
-            return true;
+            initSinglyLinkedListNode(&chainNode->node);
+            return chainNode;
         }
     }
 
-    *valueReturn = OBJECT_NULL;
-    return false;
+    return NULL;
 }
 
-bool hashTableFind(HashTable* table, Object key, Object* valueReturn) {
+HashChainNode* hashTableFind(HashTable* table, Object key) {
     size_t hashKey = THIS_ARG_APPEND_CALL(table, hashFunc, key);
 
-    SinglyLinkedList* list = table->table + hashKey;
-    
-    for (SinglyLinkedListNode* node = list->next, *last = list; node != list; last = node, node = node->next) {
-        __HashChainNode* chainNode = HOST_POINTER(node, __HashChainNode, node);
+    SinglyLinkedList* chain = table->chains + hashKey;
+    for (SinglyLinkedListNode* node = chain->next, *last = chain; node != chain; last = node, node = node->next) {
+        HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
-            *valueReturn = chainNode->value;
-            return true;
+            return chainNode;
         }
     }
 
-    *valueReturn = OBJECT_NULL;
-    return false;
+    return NULL;
 }

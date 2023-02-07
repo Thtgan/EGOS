@@ -4,6 +4,7 @@
 #include<devices/block/blockDevice.h>
 #include<fs/directory.h>
 #include<kit/types.h>
+#include<structs/hashTable.h>
 
 typedef enum {
     INODE_TYPE_UNKNOWN,
@@ -30,6 +31,7 @@ typedef struct {
     iNodeOperations* operations;
     void* entryReference;
     uint32_t referenceCnt;
+    HashChainNode hashChainNode;
 } iNode;
 
 typedef struct __RecordOnDevice RecordOnDevice;

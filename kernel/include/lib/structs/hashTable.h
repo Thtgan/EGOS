@@ -7,20 +7,25 @@
 
 RECURSIVE_REFER_STRUCT(HashTable) {
     size_t size, hashSize;
-    SinglyLinkedList* table;
+    SinglyLinkedList* chains;
     size_t (*hashFunc)(THIS_ARG_APPEND(HashTable, Object key));
 };
 
+typedef struct {
+    SinglyLinkedListNode node;
+    Object key;
+} HashChainNode;
+
 #define HASH_FUNC size_t (*hashFunc)(THIS_ARG_APPEND(HashTable, Object key))
 
-void initHashTable(HashTable* table, size_t hashSize, HASH_FUNC);
+void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, HASH_FUNC);
 
-void destroyHashTable(HashTable* table);
+void initHashChainNode(HashChainNode* node);
 
-bool hashTableInsert(HashTable* table, Object key, Object value);
+bool hashTableInsert(HashTable* table, Object key, HashChainNode* node);
 
-bool hashTableDelete(HashTable* table, Object key, Object* valueReturn);
+HashChainNode* hashTableDelete(HashTable* table, Object key);
 
-bool hashTableFind(HashTable* table, Object key, Object* valueReturn);
+HashChainNode* hashTableFind(HashTable* table, Object key);
 
 #endif // __HASH_TABLE_H

@@ -97,9 +97,10 @@ typedef struct {
 #define __BLOCK_STACK_SIZE  (sizeof(__BlockStack) / BLOCK_SIZE)
 
 static HashTable _hashTable;
+static SinglyLinkedList _hashChains[37];
 
 void phospherusInitAllocator() {
-    initHashTable(&_hashTable, 37, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
+    initHashTable(&_hashTable, 37, _hashChains, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
         return (size_t)key % this->hashSize;
     }));
 }
@@ -165,14 +166,15 @@ bool phospherusDeployAllocator(BlockDevice* device) {
 }
 
 PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
-    Object found;
-    if (hashTableFind(&_hashTable, (Object)device->deviceID, &found)) { //If allocator opened, give a reference
-        PhospherusAllocator* ret = (PhospherusAllocator*)found;
+    PhospherusAllocator* ret = NULL;
+    HashChainNode* node = NULL;
+    if ((node = hashTableFind(&_hashTable, (Object)device->deviceID)) != NULL) { //If allocator opened, give a reference
+        ret = HOST_POINTER(node, PhospherusAllocator, hashChainNode);
         ++ret->openCnt;
         return ret;
     }
 
-    PhospherusAllocator* ret = kMalloc(sizeof(PhospherusAllocator), MEMORY_TYPE_NORMAL);
+    ret = kMalloc(sizeof(PhospherusAllocator), MEMORY_TYPE_NORMAL);
     __DeviceInfo* deviceInfo = kMalloc(sizeof(__DeviceInfo), MEMORY_TYPE_NORMAL);
     __SuperNodeInfo* firstFreeSuperNode = kMalloc(sizeof(__SuperNode), MEMORY_TYPE_NORMAL);
     __BlockStack * firstFreeBlockStack = kMalloc(sizeof(__BlockStack), MEMORY_TYPE_NORMAL);
@@ -191,8 +193,9 @@ PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
     ret->firstFreeSuperNode = firstFreeSuperNode;
     ret->firstFreeBlockStack = firstFreeBlockStack;
     ret->openCnt = 1;
+    initHashChainNode(&ret->hashChainNode);
 
-    hashTableInsert(&_hashTable, (Object)device->deviceID, (Object)ret);
+    hashTableInsert(&_hashTable, (Object)device->deviceID, &ret->hashChainNode);
 
     return ret;
 }
@@ -204,8 +207,7 @@ void phospherusCloseAllocator(PhospherusAllocator* allocator) {
 
     BlockDevice* device = allocator->device;
 
-    Object obj;
-    hashTableDelete(&_hashTable, (Object)device->deviceID, &obj);
+    hashTableDelete(&_hashTable, (Object)device->deviceID);
 
     kFree(allocator->deviceInfo);
     kFree(allocator->firstFreeSuperNode);
