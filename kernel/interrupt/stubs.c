@@ -39,70 +39,30 @@ extern void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame)
 #define ERROR_CODE_PADDING_EXCEPTION    ""
 #define ERROR_CODE_PADDING_INTERRUPT    "pushq $-1;"
 
-// #define HANDLER_STUB(__NUMBER, __TYPE)                                      \
-// __attribute__((naked, target("general-regs-only")))                         \
-// void HANDLER_STUB_NAME(__NUMBER) (HandlerStackFrame* handlerStackFrame) {   \
-//     asm volatile(                                                           \
-//         MACRO_CONCENTRATE2(ERROR_CODE_PADDING_, __TYPE)                     \
-//         SAVE_ALL                                                            \
-//         "cld;"                                                              \
-//         : "=S"(handlerStackFrame)                                           \
-//     );                                                                      \
-//     EOI();                                                                  \
-//     uint8_t vec;                                                            \
-//     asm volatile(                                                           \
-//         "mov $" MACRO_STR(__NUMBER) ", %0;"                                 \
-//         : "=D"(vec), "=S"(handlerStackFrame)                                \
-//         :                                                                   \
-//         : "memory", "cc"                                                    \
-//     );                                                                      \
-//     (handlers[vec])(vec, handlerStackFrame);                                \
-//     asm volatile(                                                           \
-//         RESTORE_ALL                                                         \
-//         "add $8, %rsp;"                                                     \
-//         "iretq;"                                                            \
-//     );                                                                      \
-// }
-
-// #define HANDLER_STUB(__NUMBER, __TYPE)                                          \
-// __attribute__((interrupt, target("general-regs-only")))                 \
-// void HANDLER_STUB_NAME(__NUMBER) (HandlerStackFrame* handlerStackFrame) {     \
-//     EOI();                                                              \
-//     uint8_t vec;                                                        \
-//     asm volatile(                                                       \
-//     "mov $" MACRO_STR(__NUMBER) ", %0\n"                                \
-//     : "=g"(vec)                                                         \
-//     );                                                                  \
-//     handlers[vec](vec, handlerStackFrame);                              \
-// }
-
-// #include<debug.h>
-// #include<real/simpleAsmLines.h>
-
-#define HANDLER_STUB(__NUMBER, __TYPE)                                          \
-__attribute__((naked, target("general-regs-only")))                 \
-void HANDLER_STUB_NAME(__NUMBER) (HandlerStackFrame* handlerStackFrame) {     \
+#define HANDLER_STUB(__NUMBER, __TYPE)                                      \
+__attribute__((naked, target("general-regs-only")))                         \
+void HANDLER_STUB_NAME(__NUMBER) (HandlerStackFrame* handlerStackFrame) {   \
     asm volatile(                                                           \
         MACRO_CONCENTRATE2(ERROR_CODE_PADDING_, __TYPE)                     \
         SAVE_ALL                                                            \
-        "movq %%rsp, %0;"   \
-        "add $12*8, %0;"  \
+        "movq %%rsp, %0;"                                                   \
+        "add $12*8, %0;"                                                    \
         "cld;"                                                              \
         : "=S"(handlerStackFrame)                                           \
     );                                                                      \
-    EOI();                                                              \
-    uint8_t vec;                                                        \
-    asm volatile(                                                       \
-    "mov $" MACRO_STR(__NUMBER) ", %0\n"                                \
-    : "=D"(vec), "=S"(handlerStackFrame)                                                         \
-    :                                                                   \
-    : "memory", "cc"                                                    \
-    );                                                                  \
-    handlers[vec](vec, handlerStackFrame);                              \
+    EOI();                                                                  \
+    uint8_t vec;                                                            \
+    asm volatile(                                                           \
+    "mov $" MACRO_STR(__NUMBER) ", %0\n"                                    \
+    : "=D"(vec), "=S"(handlerStackFrame)                                    \
+    :                                                                       \
+    : "memory", "cc"                                                        \
+    );                                                                      \
+    handlers[vec](vec, handlerStackFrame);                                  \
     asm volatile(                                                           \
         RESTORE_ALL                                                         \
         "add $8, %rsp;"                                                     \
-        "iretq;"    \
+        "iretq;"                                                            \
     );                                                                      \
 }
 
