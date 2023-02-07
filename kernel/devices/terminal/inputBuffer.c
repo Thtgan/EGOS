@@ -5,6 +5,8 @@
 #include<structs/queue.h>
 #include<system/pageTable.h>
 
+#include<debug.h>
+
 #define __NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(uint16_t) - 16) //-16 for kMalloc padding
 
 typedef struct {

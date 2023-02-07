@@ -17,10 +17,14 @@ void* translateVaddr(PML4Table* pageTable, void* vAddr);
 
 bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
 
+bool pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, uint64_t flags);
+
+uint64_t pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level);
+
 #define SWITCH_TO_TABLE(__PAGE_TABLE)               \
 do {                                                \
-    currentTable = __PAGE_TABLE;                    \
-    writeRegister_CR3_64((uint64_t)currentTable);   \
+    currentPageTable = __PAGE_TABLE;                    \
+    writeRegister_CR3_64((uint64_t)currentPageTable);   \
 } while(0)
 
 //Flush the TLB

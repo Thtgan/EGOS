@@ -164,7 +164,7 @@ File* __openFile(iNode* iNode) {
         return NULL;
     }
 
-    File* ret = kMalloc(sizeof(File));
+    File* ret = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
     ret->iNode = iNode;
     ret->operations = &fileOperations;
     ret->pointer = 0;

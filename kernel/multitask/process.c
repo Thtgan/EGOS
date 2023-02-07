@@ -7,7 +7,9 @@
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/pageAlloc.h>
-#include<memory/paging.h>
+#include<memory/paging/paging.h>
+#include<memory/paging/pagingCopy.h>
+#include<memory/paging/pagingRelease.h>
 #include<multitask/schedule.h>
 #include<string.h>
 #include<structs/bitmap.h>
@@ -24,21 +26,11 @@ static uint16_t __allocatePID();
 
 static void __releasePID(uint16_t pid);
 
-static PML4Table* __copyPML4Table(PML4Table* source);
-static PDPTable* __copyPDPTable(PDPTable* source);
-static PageDirectory* __copyPageDirectory(PageDirectory* source);
-static PageTable* __copyPageTable(PageTable* source);
-
-static void __destroyPML4Table(PML4Table* table);
-static void __destroyPDPTable(PDPTable* table);
-static void __destroyPageDirectory(PageDirectory* table);
-static void __destroyPageTable(PageTable* table);
-
 #define CLOBBER_REGISTERS   "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 
-uint16_t _lastGeneratePID = 0;
-Bitmap _pidBitmap;
-uint8_t _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
+static uint16_t _lastGeneratePID = 0;
+static Bitmap _pidBitmap;
+static uint8_t _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
 
 static char* _mainProcessName = "Kernel Process";
 
@@ -51,11 +43,11 @@ Process* initProcess() {
 
     memset(mainProcess, 0, sizeof(Process));
 
-    mainProcess->pid = 0;
+    mainProcess->pid = mainProcess->ppid = 0;
     mainProcess->remainTick = PROCESS_TICK;
-    mainProcess->pageTable = currentTable;
-    //initSinglyLinkedListNode(&mainProcess->node);
-    initQueueNode(&mainProcess->node);
+    mainProcess->pageTable = currentPageTable;
+    initQueueNode(&mainProcess->statusQueueNode);
+    initQueueNode(&mainProcess->semaWaitQueueNode);
     memcpy(mainProcess->name, _mainProcessName, strlen(_mainProcessName));
 
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
@@ -117,9 +109,10 @@ Process* forkFromCurrentProcess(const char* processName) {
         memset(newProcess, 0, sizeof(Process));
 
         newProcess->pid = newPID;
+        newProcess->ppid = oldPID;
         newProcess->remainTick = PROCESS_TICK;
         memcpy(newProcess->name, processName, strlen(processName));
-        newProcess->pageTable = __copyPML4Table(_currentProcess->pageTable);
+        newProcess->pageTable = copyPML4Table(_currentProcess->pageTable);
         newProcess->stackTop = _currentProcess->stackTop;
 
         void* newStackBottom = pageAlloc(__STACK_PAGE_NUM) + KERNEL_STACK_SIZE;
@@ -133,7 +126,8 @@ Process* forkFromCurrentProcess(const char* processName) {
             des[i] = _tmpStack[i];
         }
 
-        initSinglyLinkedListNode(&newProcess->node);
+        initQueueNode(&newProcess->statusQueueNode);
+        initQueueNode(&newProcess->semaWaitQueueNode);
 
         setProcessStatus(newProcess, PROCESS_STATUS_READY);
 
@@ -150,12 +144,12 @@ void exitProcess() {
     blowup("Func exitProcess is trying to return\n");
 }
 
-void destroyProcess(Process* process) {
+void releaseProcess(Process* process) {
     void* pAddr = translateVaddr(process->pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
     memset(pAddr, 0, KERNEL_STACK_SIZE);
     pageFree(pAddr, __STACK_PAGE_NUM);
 
-    __destroyPML4Table(process->pageTable);
+    releasePML4Table(process->pageTable);
 
     __releasePID(process->pid);
     memset(process, 0, PAGE_SIZE);
@@ -173,124 +167,4 @@ static uint16_t __allocatePID() {
 
 static void __releasePID(uint16_t pid) {
     clearBit(&_pidBitmap, pid);
-}
-
-//================================================================================
-
-static PML4Table* __copyPML4Table(PML4Table* source) {
-    PML4Table* ret = pageAlloc(1);
-
-    for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(source->tableEntries[i], PML4_ENTRY_FLAG_PRESENT) || TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_IGNORE)) {
-            ret->tableEntries[i] = EMPTY_PML4_ENTRY;
-            continue;
-        }
-
-        if (TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
-            ret->tableEntries[i] = source->tableEntries[i];
-        } else {
-            PDPTable* PDPTablePtr = __copyPDPTable(PDPT_ADDR_FROM_PML4_ENTRY(source->tableEntries[i]));
-            ret->tableEntries[i] = BUILD_PML4_ENTRY(PDPTablePtr, FLAGS_FROM_PML4_ENTRY(source->tableEntries[i]));
-        }
-    }
-
-    return ret;
-}
-
-static PDPTable* __copyPDPTable(PDPTable* source) {
-    PDPTable* ret = pageAlloc(1);
-
-    for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(source->tableEntries[i], PDPT_ENTRY_FLAG_PRESENT) || TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_IGNORE)) {
-            ret->tableEntries[i] = EMPTY_PDPT_ENTRY;
-            continue;
-        }
-
-        if (TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
-            ret->tableEntries[i] = source->tableEntries[i];
-        } else {
-            PageDirectory* pageDirectoryPtr = __copyPageDirectory(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(source->tableEntries[i]));
-            ret->tableEntries[i] = BUILD_PDPT_ENTRY(pageDirectoryPtr, FLAGS_FROM_PDPT_ENTRY(source->tableEntries[i]));
-        }
-    }
-
-    return ret;
-}
-
-static PageDirectory* __copyPageDirectory(PageDirectory* source) {
-    PageDirectory* ret = pageAlloc(1);
-
-    for (int i = 0; i < PAGE_DIRECTORY_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(source->tableEntries[i], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT) || TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_IGNORE)) {
-            ret->tableEntries[i] = EMPTY_PAGE_DIRECTORY_ENTRY;
-            continue;
-        }
-
-        if (TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
-            ret->tableEntries[i] = source->tableEntries[i];
-        } else {
-            PageTable* pageTablePtr = __copyPageTable(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(source->tableEntries[i]));
-            ret->tableEntries[i] = BUILD_PAGE_DIRECTORY_ENTRY(pageTablePtr, FLAGS_FROM_PAGE_DIRECTORY_ENTRY(source->tableEntries[i]));
-        }
-    }
-
-    return ret;
-}
-
-static PageTable* __copyPageTable(PageTable* source) {
-    PageTable* ret = pageAlloc(1);
-
-    for (int i = 0; i < PAGE_TABLE_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(source->tableEntries[i], PAGE_TABLE_ENTRY_FLAG_PRESENT) || TEST_FLAGS(source->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_IGNORE)) {
-            ret->tableEntries[i] = EMPTY_PAGE_TABLE_ENTRY;
-            continue;
-        }
-
-        ret->tableEntries[i] = source->tableEntries[i];
-    }
-
-    return ret;
-}
-
-//================================================================================
-
-static void __destroyPML4Table(PML4Table* table) {
-    for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(table->tableEntries[i], PML4_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
-            continue;
-        }
-
-        __destroyPDPTable(PDPT_ADDR_FROM_PML4_ENTRY(table->tableEntries[i]));
-    }
-    memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
-}
-
-static void __destroyPDPTable(PDPTable* table) {
-    for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(table->tableEntries[i], PDPT_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
-            continue;
-        }
-
-        __destroyPageDirectory(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(table->tableEntries[i]));
-    }
-    memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
-}
-
-static void __destroyPageDirectory(PageDirectory* table) {
-    for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
-        if (TEST_FLAGS_FAIL(table->tableEntries[i], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->tableEntries[i], PAGE_ENTRY_PUBLIC_FLAG_SHARE)) {
-            continue;
-        }
-
-        __destroyPageTable(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(table->tableEntries[i]));
-    }
-    memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
-}
-
-static void __destroyPageTable(PageTable* table) {
-    memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
 }

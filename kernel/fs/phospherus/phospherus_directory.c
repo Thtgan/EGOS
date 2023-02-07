@@ -55,7 +55,7 @@ int __addEntry(THIS_ARG_APPEND(Directory, iNode* entryInode, ConstCstring name))
         newBlockSize = ((this->size + 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
     if (this->size == 0) {
-        this->directoryInMemory = kMalloc(sizeof(__DirectoryEntry));
+        this->directoryInMemory = kMalloc(sizeof(__DirectoryEntry), MEMORY_TYPE_NORMAL);
     } else if (oldBlockSize != newBlockSize) {
         this->directoryInMemory = kRealloc(this->directoryInMemory, newBlockSize * BLOCK_SIZE);
     }
@@ -139,7 +139,7 @@ DirectoryEntry* __getEntry(THIS_ARG_APPEND(Directory, Index64 entryIndex)) {
         return NULL;
     }
 
-    DirectoryEntry* ret = kMalloc(sizeof(DirectoryEntry));
+    DirectoryEntry* ret = kMalloc(sizeof(DirectoryEntry), MEMORY_TYPE_NORMAL);
     __DirectoryEntry* entry = this->directoryInMemory + entryIndex;
     ret->name = entry->name;
     ret->iNodeIndex = entry->inodeBlockIndex;
@@ -158,13 +158,13 @@ Directory* __openDirectory(iNode* iNode) {
         return iNode->entryReference;
     }
 
-    Directory* ret = kMalloc(sizeof(Directory));
+    Directory* ret = kMalloc(sizeof(Directory), MEMORY_TYPE_NORMAL);
     ret->iNode = iNode;
     ret->size = iNode->onDevice.dataSize / sizeof(__DirectoryEntry);
     ret->operations = &directoryOperations;
     ret->directoryInMemory = NULL;
     if (ret->size > 0) {
-        ret->directoryInMemory = kMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE);
+        ret->directoryInMemory = kMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE, MEMORY_TYPE_NORMAL);
         iNode->operations->readBlocks(iNode, ret->directoryInMemory, 0, iNode->onDevice.availableBlockSize);
     }
 

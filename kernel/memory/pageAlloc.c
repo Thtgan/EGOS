@@ -3,7 +3,7 @@
 #include<kernel.h>
 #include<kit/types.h>
 #include<memory/pageNode.h>
-#include<memory/paging.h>
+#include<memory/paging/paging.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 

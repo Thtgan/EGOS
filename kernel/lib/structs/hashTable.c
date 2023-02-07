@@ -15,7 +15,7 @@ void initHashTable(HashTable* table, size_t hashSize, HASH_FUNC) {
     table->hashSize = hashSize;
     table->hashFunc = hashFunc;
 
-    table->table = kMalloc(hashSize * sizeof(SinglyLinkedList));
+    table->table = kMalloc(hashSize * sizeof(SinglyLinkedList), MEMORY_TYPE_NORMAL);
     for (int i = 0; i < hashSize; i++) {
         initSinglyLinkedList(table->table + i);
     }
@@ -38,7 +38,7 @@ bool hashTableInsert(HashTable* table, Object key, Object value) {
         }
     }
 
-    __HashChainNode* newChainNode = kMalloc(sizeof(__HashChainNode));
+    __HashChainNode* newChainNode = kMalloc(sizeof(__HashChainNode), MEMORY_TYPE_NORMAL);
     newChainNode->key = key, newChainNode->value = value;
     initSinglyLinkedListNode(&newChainNode->node);
     singlyLinkedListInsertNext(list, &newChainNode->node);

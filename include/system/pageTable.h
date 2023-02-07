@@ -7,6 +7,13 @@
 //Reference: https://wiki.osdev.org/Paging
 //https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html#three-volume
 
+typedef enum {
+    PAGING_LEVEL_PML4,
+    PAGING_LEVEL_PDPT,
+    PAGING_LEVEL_PAGE_DIRECTORY,
+    PAGING_LEVEL_PAGE_TABLE
+} PagingLevel;
+
 /**
  * 48-bit virtual address --> 52-bit physical address
  * Constitute of virtual address
@@ -60,8 +67,10 @@ typedef uint64_t PML4Entry;
     CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                 \
 )
 
-#define PDPT_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY) ((PDPTable*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 12, 52))
-#define FLAGS_FROM_PML4_ENTRY(__PML4_ENTRY)     (CLEAR_VAL_RANGLE((__PML4_ENTRY), 64, 12, 52))
+#define PDPT_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY)         ((PDPtable*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 12, 52))
+#define FLAGS_FROM_PML4_ENTRY(__PML4_ENTRY)             (CLEAR_VAL_RANGLE((__PML4_ENTRY), 64, 12, 52))
+#define PS_BASE_FROM_PML4_ENTRY(__PML4_ENTRY)           ((void*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52))
+#define PS_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 39)))
 
 #define PML4_ENTRY_FLAG_PRESENT FLAG64(0)
 #define PML4_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
@@ -104,7 +113,7 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                                |
  * +---------+-----------+----------------------------------------------------+
  */
-typedef uint64_t PDPTEntry;
+typedef uint64_t PDPtableEntry;
 
 #define EMPTY_PDPT_ENTRY    0
 
@@ -122,6 +131,8 @@ typedef uint64_t PDPTEntry;
 
 #define PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY)   ((PageDirectory*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 12, 52))
 #define FLAGS_FROM_PDPT_ENTRY(__PDPT_ENTRY)                 (CLEAR_VAL_RANGLE((__PDPT_ENTRY), 64, 12, 52))
+#define PS_BASE_FROM_PDPT_ENTRY(__PDPT_ENTRY)               ((void*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52))
+#define PS_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY, __VADDR)      ((void*)(TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 30)))
 
 #define PDPT_ENTRY_FLAG_PRESENT FLAG64(0)
 #define PDPT_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
@@ -133,11 +144,11 @@ typedef uint64_t PDPTEntry;
 #define PDPT_ENTRY_FLAG_R       FLAG64(11)  //HALT paging restart
 #define PDPT_ENTRY_FLAG_XD      FLAG64(63)  //Execute Disable
 
-#define PDP_TABLE_SIZE          (PAGE_SIZE / sizeof(PDPTEntry))
+#define PDP_TABLE_SIZE          (PAGE_SIZE / sizeof(PDPtableEntry))
 
 typedef struct {
-    PDPTEntry tableEntries[PDP_TABLE_SIZE];
-} __attribute__((packed)) PDPTable;
+    PDPtableEntry tableEntries[PDP_TABLE_SIZE];
+} __attribute__((packed)) PDPtable;
 
 /**
  * @brief Page Directory entry
@@ -176,8 +187,10 @@ typedef uint64_t PageDirectoryEntry;
 )
 
 
-#define PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)   ((PageTable*)TRIM_VAL_RANGE(__PAGE_DIRECTORY_ENTRY, 64, 12, 52))
+#define PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)   ((PageTable*)TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
 #define FLAGS_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
+#define PS_BASE_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)           ((void*)TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52))
+#define PS_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 21)))
 
 #define PAGE_DIRECTORY_ENTRY_FLAG_PRESENT   FLAG64(0)
 #define PAGE_DIRECTORY_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
@@ -240,8 +253,9 @@ typedef uint64_t PageTableEntry;
     CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                   \
 )
 
-#define PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY) ((void*)TRIM_VAL_RANGE(__PAGE_TABLE_ENTRY, 64, 12, 52))
-#define FLAGS_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)     (CLEAR_VAL_RANGLE((__PAGE_TABLE_ENTRY), 64, 12, 52))
+#define PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)         ((void*)TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52))
+#define FLAGS_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_TABLE_ENTRY), 64, 12, 52))
+#define ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY, __VADDR)     ((void*)(TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 12)))
 
 #define PAGE_TABLE_ENTRY_FLAG_PRESENT   FLAG64(0)
 #define PAGE_TABLE_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
@@ -259,9 +273,9 @@ typedef struct {
     PageTableEntry tableEntries[PAGE_TABLE_SIZE];
 } __attribute__((packed)) PageTable;
 
-#define PAGE_ENTRY_PUBLIC_FLAG_SHARE    FLAG64(52)  //Share page between directories
-#define PAGE_ENTRY_PUBLIC_FLAG_IGNORE   FLAG64(53)  //Ignore this entry in copying
-//TODO: Add COW support in multitask
-#define PAGE_ENTRY_PUBLIC_FLAG_COW      FLAG64(54)  //Copy On Write
+#define PAGE_ENTRY_PUBLIC_FLAG_DEBUG    FLAG64(52)
+#define PAGE_ENTRY_PUBLIC_FLAG_SHARE    FLAG64(53)  //Share page between directories
+#define PAGE_ENTRY_PUBLIC_FLAG_IGNORE   FLAG64(54)  //Ignore this entry in copying
+#define PAGE_ENTRY_PUBLIC_FLAG_COW      FLAG64(55)  //Copy On Write
 
 #endif // __PAGE_TABLE_H

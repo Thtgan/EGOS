@@ -37,7 +37,7 @@ bool phospherusCheckFileSystem(BlockDevice* device) {
 }
 
 FileSystem* phospherusOpenFileSystem(BlockDevice* device) {
-    FileSystem* ret = kMalloc(sizeof(FileSystem));
+    FileSystem* ret = kMalloc(sizeof(FileSystem), MEMORY_TYPE_NORMAL);
 
     strcpy(ret->name, "phospherus");
     ret->type = FILE_SYSTEM_TYPE_PHOSPHERUS;

@@ -35,7 +35,7 @@ void schedule(ProcessStatus newStatus) {
     while (!isQueueEmpty(&statusQueues[PROCESS_STATUS_DYING])) {
         Process* dyingProcess = getStatusQueueHead(PROCESS_STATUS_DYING);
         __removeProcessFromQueue(dyingProcess);
-        destroyProcess(dyingProcess);
+        releaseProcess(dyingProcess);
     }
 }
 
@@ -63,15 +63,15 @@ void setProcessStatus(Process* process, ProcessStatus status) {
 
     process->status = status;
 
-    initQueueNode(&process->node);
-    queuePush(&statusQueues[status], &process->node);
+    initQueueNode(&process->statusQueueNode);
+    queuePush(&statusQueues[status], &process->statusQueueNode);
 
     spinlockUnlock(&_queueLock);
 }
 
 Process* getStatusQueueHead(ProcessStatus status) {
     spinlockLock(&_queueLock);
-    Process* ret = isQueueEmpty(&statusQueues[status]) ? NULL : HOST_POINTER(queueFront(&statusQueues[status]), Process, node);
+    Process* ret = isQueueEmpty(&statusQueues[status]) ? NULL : HOST_POINTER(queueFront(&statusQueues[status]), Process, statusQueueNode);
     spinlockUnlock(&_queueLock);
 
     return ret;
@@ -80,9 +80,18 @@ Process* getStatusQueueHead(ProcessStatus status) {
 static bool __removeProcessFromQueue(Process* process) {
     ProcessStatus status = process->status;
 
-    QueueNode* nodeAddr = &process->node;
-    for (QueueNode* i = &statusQueues[status].q; i->next != &statusQueues[status].q; i = i->next) {
+    QueueNode* nodeAddr = &process->statusQueueNode;
+    //MARK_PRINT(MARK);
+    //for (QueueNode* i = &statusQueues[status].q; i->next != &statusQueues[status].q; i = i->next) {
+    for (QueueNode* i = &statusQueues[status].q;; i = i->next) {
+        //MARK_PRINT(MARK);
+        //printf(TERMINAL_LEVEL_DEV, "%p-%u-I: %p\n", statusQueues, status, i);
         void* next = i->next;
+        //printf(TERMINAL_LEVEL_DEV, "NEXT %p\n", i->next);
+        if (next == &statusQueues[status].q) {
+            break;
+        }
+        //MARK_PRINT(MARK);
         if (next == nodeAddr) {
             singlyLinkedListDeleteNext(i);
 
@@ -90,7 +99,7 @@ static bool __removeProcessFromQueue(Process* process) {
                 statusQueues[status].qTail = i;
             }
 
-            initQueueNode(&process->node);
+            initQueueNode(&process->statusQueueNode);
 
             return true;
         }

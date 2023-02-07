@@ -1,11 +1,12 @@
 #include<memory/kMalloc.h>
 
 #include<algorithms.h>
+#include<kernel.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/pageAlloc.h>
-#include<memory/paging.h>
+#include<memory/paging/paging.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
@@ -22,7 +23,8 @@ typedef struct {
 
 typedef struct {
     size_t size;
-    uint8_t padding[8];     //Fill size to 16 for alignment
+    MemoryType type;
+    uint8_t padding[4];     //Fill size to 16 for alignment
 } __attribute__((packed)) __RegionHeader;
 
 #define MIN_REGION_LENGTH_BIT       5
@@ -34,15 +36,16 @@ typedef struct {
 #define MIN_NUN_PAGE_REGION_KEEP    8
 #define FREE_BEFORE_TIDY_UP         32
 
-static __PhysicalRegionList _regionLists[REGION_LIST_NUM];
+static __PhysicalRegionList _regionLists[MEMORY_TYPE_NUM][REGION_LIST_NUM];
 
 /**
  * @brief Get region at the given level, if the region list is empty, get regions from higher level region list
  * 
  * @param level Level of the region list
+ * @param type Type of the memory
  * @return void* Beginning of the region
  */
-static void* __getRegion(size_t level);
+static void* __getRegion(size_t level, MemoryType type);
 
 /**
  * @brief Get a region from the region list
@@ -50,7 +53,7 @@ static void* __getRegion(size_t level);
  * @param level Region list level
  * @return void* Beginning of the region
  */
-static void* __getRegionFromList(size_t level);
+static void* __getRegionFromList(size_t level, MemoryType type);
 
 /**
  * @brief Add the region to the region list
@@ -58,81 +61,98 @@ static void* __getRegionFromList(size_t level);
  * @param regionBegin Begining of the region
  * @param level Level of the region list to add to
  */
-static void __addRegionToList(void* regionBegin, size_t level);
+static void __addRegionToList(void* regionBegin, size_t level, MemoryType type);
 
 /**
  * @brief Tidy up the region list, combine unnecessary regions and handle it back to the higher level region list
  * 
  * @param level Level of the region list
  */
-static void __regionListTidyUp(size_t level);
+static void __regionListTidyUp(size_t level, MemoryType type);
+
+static void __setPageFlags(void* vAddr, size_t n, MemoryType type);
 
 void initKmalloc() {
-    for (int i = 0; i < REGION_LIST_NUM; ++i) {
-        __PhysicalRegionList* rList = &_regionLists[i];
-        initSinglyLinkedList(&rList->list);
-        rList->length = 1 << (i + MIN_REGION_LENGTH_BIT); //Length = 2^level
-        rList->regionNum = 0;
-        rList->freeCnt = 0;
+    for (int i = 0; i < MEMORY_TYPE_NUM; ++i) {
+        __PhysicalRegionList* regionLists = _regionLists[i];
+        for (int j = 0; j < REGION_LIST_NUM; ++j) {
+            __PhysicalRegionList* regionList = regionLists + j;
+            initSinglyLinkedList(&regionList->list);
+            regionList->length = 1 << (j + MIN_REGION_LENGTH_BIT); //Length = 2^level
+            regionList->regionNum = 0;
+            regionList->freeCnt = 0;
+        }
     }
 }
 
-void* kMalloc(size_t n) {
+void* kMalloc(size_t n, MemoryType type) {
     if (n == 0) {
         return NULL;
     }
 
     size_t realSize = n + sizeof(__RegionHeader), regionLevel = 0;
 
-    void* ret = NULL;
-
-    bool isMultiPage = realSize > _regionLists[REGION_LIST_NUM - 1].length;
-    if (isMultiPage) {                                                      //Required size is greater than maximum region size
-        ret = pageAlloc((realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT);    //Specially allocated
+    __PhysicalRegionList* regionLists = _regionLists[type];
+    bool isMultiPage = realSize > regionLists[REGION_LIST_NUM - 1].length;
+    void* pAddr = NULL;
+    if (isMultiPage) {                                                          //Required size is greater than maximum region size
+        realSize = ((realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT) << PAGE_SIZE_SHIFT;
+        pAddr = pageAlloc(realSize >> PAGE_SIZE_SHIFT);       //Specially allocated
+        if (pAddr != NULL) {
+            __setPageFlags((void*)((uintptr_t)pAddr | KERNEL_VIRTUAL_BEGIN), (realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT, type);
+        }
     } else {
         for (; regionLevel < REGION_LIST_NUM; ++regionLevel) {
-            if (realSize <= _regionLists[regionLevel].length) {  //Fit the smallest region
-                ret = __getRegion(regionLevel);
+            if (realSize <= regionLists[regionLevel].length) {  //Fit the smallest region
+                pAddr = __getRegion(regionLevel, type);
                 break;
             }
         }
     }
 
-    if (ret == NULL) {
+    if (pAddr == NULL) {
         return NULL;
     }
 
-    __RegionHeader* header = ret;                           //Header contains only one field, size of the region
-    header->size = isMultiPage ? realSize : regionLevel;    //If size greater than REGION_LIST_NUM, it must be pages
+    __RegionHeader* header = pAddr; //Header contains only one field, size of the region
+    header->size = isMultiPage ? realSize : regionLevel; //If size greater than REGION_LIST_NUM, it must be pages
+    header->type = type;
 
-    return (void*)(header + 1);
-
-    return NULL;
+    return (void*)((uintptr_t)(header + 1) | KERNEL_VIRTUAL_BEGIN);
 }
 
 void kFree(void* ptr) {
+    if ((uintptr_t)ptr < KERNEL_VIRTUAL_BEGIN) {
+        return;
+    }
+    ptr = (void*)((uintptr_t)ptr ^ KERNEL_VIRTUAL_BEGIN);
+
     __RegionHeader* header = ptr - sizeof(__RegionHeader);
+    MemoryType type = header->type;
     size_t n = header->size;
 
     if (n >= REGION_LIST_NUM) { //Release the specially allocated pages
-        pageFree(header, n >> PAGE_SIZE_SHIFT);
+        n = n >> PAGE_SIZE_SHIFT;
+        __setPageFlags(header, n, MEMORY_TYPE_NORMAL);
+        pageFree(header, n);
     } else {
-        __addRegionToList(header, n);
+        __PhysicalRegionList* regionLists = _regionLists[type];
+        __addRegionToList(header, n, type);
 
-        if (++_regionLists[n].freeCnt == FREE_BEFORE_TIDY_UP) {  //If an amount of free are called on this region list
-            __regionListTidyUp(n);                              //Tidy up
-            _regionLists[n].freeCnt = 0;                         //Counter roll back to 0
+        if (++regionLists[n].freeCnt == FREE_BEFORE_TIDY_UP) {  //If an amount of free are called on this region list
+            __regionListTidyUp(n, type);                        //Tidy up
+            regionLists[n].freeCnt = 0;                         //Counter roll back to 0
         }
     }
 }
 
-void* kCalloc(size_t num, size_t size) {
+void* kCalloc(size_t num, size_t size, MemoryType type) {
     if (num == 0 || size == 0) {
         return NULL;
     }
 
     size_t s = num * size;
-    void* ret = kMalloc(s);
+    void* ret = kMalloc(s, type);
     memset(ret, 0, s);
 
     return ret;
@@ -146,12 +166,12 @@ void* kRealloc(void *ptr, size_t newSize) {
         __RegionHeader* header = (ptr - sizeof(__RegionHeader));
         size_t size = header->size;
         if (size < REGION_LIST_NUM) {
-            size = _regionLists[size].length - sizeof(__RegionHeader);
+            size = _regionLists[header->type][size].length - sizeof(__RegionHeader);
         }
 
         size_t copySize = min64(size, newSize);
 
-        ret = kMalloc(newSize);
+        ret = kMalloc(newSize, header->type);
         memcpy(ret, ptr, copySize);
     }
 
@@ -160,81 +180,111 @@ void* kRealloc(void *ptr, size_t newSize) {
     return ret;
 }
 
-static void* __getRegion(size_t level) {
-    __PhysicalRegionList* rList = &_regionLists[level];
+static void* __getRegion(size_t level, MemoryType type) {
+    __PhysicalRegionList* regionList = _regionLists[type] + level;
 
-    if (rList->regionNum == 0) { //If region list is empty
+    if (regionList->regionNum == 0) { //If region list is empty
+        void* newRegionBase = NULL;
         bool needMorePage = level == REGION_LIST_NUM - 1;
-        void* newRegionBase = needMorePage ? pageAlloc(PAGE_ALLOCATE_BATCH_SIZE) : __getRegion(level + 1); //Allocate new pages or get region from higher level region list
+        if (needMorePage) {
+            newRegionBase = pageAlloc(PAGE_ALLOCATE_BATCH_SIZE);    //Allocate new pages or get region from higher level region list
+            if (newRegionBase != NULL) {
+                __setPageFlags((void*)(((uintptr_t)newRegionBase) | KERNEL_VIRTUAL_BEGIN), PAGE_ALLOCATE_BATCH_SIZE, type);
+            }
+        } else {
+            newRegionBase = __getRegion(level + 1, type);
+        }
 
         if (newRegionBase == NULL) {
             return NULL;
         }
 
-        size_t split = needMorePage ? PAGE_ALLOCATE_BATCH_SIZE : 2, regionLength = rList->length;
+        size_t split = needMorePage ? PAGE_ALLOCATE_BATCH_SIZE : 2;
         for (size_t i = 0; i < split; ++i) { //Split new region
-            __addRegionToList(newRegionBase + i * regionLength, level);
+            __addRegionToList(newRegionBase + i * regionList->length, level, type);
         }
     }
 
-    return __getRegionFromList(level);
+    return __getRegionFromList(level, type);
 }
 
-static void* __getRegionFromList(size_t level) {
+static void* __getRegionFromList(size_t level, MemoryType type) {
     void* ret = NULL;
 
-    __PhysicalRegionList* rList = &_regionLists[level];
-    if (rList->regionNum > 0) {
-        ret = (void*)rList->list.next;
-        singlyLinkedListDeleteNext(&rList->list);
-        --rList->regionNum;
+    __PhysicalRegionList* regionList = _regionLists[type] + level;
+    if (regionList->regionNum > 0) {
+        ret = (void*)regionList->list.next;
+        singlyLinkedListDeleteNext(&regionList->list);
+        --regionList->regionNum;
     }
     return ret;
 }
 
-static void __addRegionToList(void* regionBegin, size_t level) {
+static void __addRegionToList(void* regionBegin, size_t level, MemoryType type) {
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)regionBegin;
     initSinglyLinkedListNode(node);
 
-    __PhysicalRegionList* rList = &_regionLists[level];
-    singlyLinkedListInsertNext(&rList->list, node);
-    ++rList->regionNum;
+    __PhysicalRegionList* regionList = _regionLists[type] + level;
+    singlyLinkedListInsertNext(&regionList->list, node);
+    ++regionList->regionNum;
 }
 
-static void __regionListTidyUp(size_t level) {
-    __PhysicalRegionList* rList = &_regionLists[level];
+static void __regionListTidyUp(size_t level, MemoryType type) {
+    __PhysicalRegionList* regionList = _regionLists[type] + level;
     
     if (level == REGION_LIST_NUM - 1) { //Just reduce to a limitation, no need to sort
-        while (rList->regionNum > PAGE_ALLOCATE_BATCH_SIZE) {
-            void* pagesBegin = __getRegionFromList(REGION_LIST_NUM - 1);
+        while (regionList->regionNum > PAGE_ALLOCATE_BATCH_SIZE) {
+            void* pagesBegin = __getRegionFromList(REGION_LIST_NUM - 1, type);
+            __setPageFlags(pagesBegin, 1, MEMORY_TYPE_NORMAL);
             pageFree(pagesBegin, 1);
         }
     } else { //Sort before combination
-        singlyLinkedListMergeSort(&rList->list, rList->regionNum, 
+        singlyLinkedListMergeSort(&regionList->list, regionList->regionNum, 
             LAMBDA(int, (const SinglyLinkedListNode* node1, const SinglyLinkedListNode* node2) {
                 if (node1 == node2) {
                     return 0;
                 }
-                return (uint64_t)node1 < (uint64_t)node2 ? -1 : 1;
+                return (uintptr_t)node1 < (uintptr_t)node2 ? -1 : 1;
             })
         );
         for (
-            SinglyLinkedListNode* prev = &rList->list, * node = prev->next;
-            node != &rList->list && rList->regionNum >= MIN_NUN_PAGE_REGION_KEEP + 2;
+            SinglyLinkedListNode* prev = &regionList->list, * node = prev->next;
+            node != &regionList->list && regionList->regionNum >= MIN_NUN_PAGE_REGION_KEEP + 2;
             node = prev->next
         ) {    
             if (
-                ((uint64_t)node & rList->length) == 0 && 
-                ((void*)node) + rList->length == (void*)node->next
+                ((uintptr_t)node & regionList->length) == 0 && 
+                ((void*)node) + regionList->length == (void*)node->next
             ) { //Two node may combine and handle to higher level region list
                 singlyLinkedListDeleteNext(prev);
                 singlyLinkedListDeleteNext(prev);
-                rList->regionNum -= 2;
+                regionList->regionNum -= 2;
 
-                __addRegionToList((void*)node, level + 1);
+                __addRegionToList((void*)node, level + 1, type);
             } else {
                 prev = node;
             }
         }
+    }
+}
+
+static void __setPageFlags(void* vAddr, size_t n, MemoryType type) {
+    uint64_t flags = PAGE_TABLE_ENTRY_FLAG_RW | PAGE_TABLE_ENTRY_FLAG_PRESENT;
+
+    switch (type) {
+        case MEMORY_TYPE_NORMAL: {
+            SET_FLAG_BACK(flags, PAGE_ENTRY_PUBLIC_FLAG_COW);
+            break;
+        }
+        case MEMORY_TYPE_SHARE: {
+            SET_FLAG_BACK(flags, PAGE_ENTRY_PUBLIC_FLAG_SHARE);
+            break;
+        }
+        default:
+            break;
+    }
+
+    for (int i = 0; i < n; ++i) {
+        pageTableSetFlag(currentPageTable, vAddr + i * PAGE_SIZE, PAGING_LEVEL_PAGE_TABLE, flags);
     }
 }

@@ -23,7 +23,7 @@ BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t av
         return (BlockDevice*)obj;
     }
 
-    BlockDevice* ret = kMalloc(sizeof(BlockDevice));
+    BlockDevice* ret = kMalloc(sizeof(BlockDevice), MEMORY_TYPE_NORMAL);
     memset(ret, 0, sizeof(BlockDevice));
 
     strcpy(ret->name, name);

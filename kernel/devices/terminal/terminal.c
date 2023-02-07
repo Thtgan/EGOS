@@ -5,7 +5,6 @@
 #include<devices/terminal/inputBuffer.h>
 #include<devices/vga/textmode.h>
 #include<kit/types.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<multitask/semaphore.h>
 #include<string.h>

@@ -43,13 +43,13 @@ postBuild:
 buildDir:
 	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
 
-$(BUILD_BIN_NAME): $(OBJ_FILES_C)
+$(BUILD_BIN_NAME): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
 	@$(LD) $(BUILD_OBJ_FILES) -T linker.ld -o $(BUILD_BIN_NAME)
 
 $(OBJ_FILES_C):%.o:%.c
 	@$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@
 
-$(OBJ_FILES_ASM):%.o:%.c
+$(OBJ_FILES_ASM):%.o:%.asm
 	@$(NASM) $< -f elf64 -o $(BUILD_DIR)/$@
 
 clean:

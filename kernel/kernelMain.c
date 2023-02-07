@@ -16,8 +16,8 @@
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/paging.h>
 #include<memory/pageAlloc.h>
+#include<memory/paging/paging.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
 #include<multitask/semaphore.h>
@@ -32,6 +32,8 @@ SystemInfo* sysInfo;
 
 Semaphore sema;
 char str[128];
+
+int* arr1, * arr2;
 
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
@@ -51,8 +53,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initTerminalSwitch();
 
-    switchTerminalLevel(TERMINAL_LEVEL_OUTPUT);
-
     printf(TERMINAL_LEVEL_OUTPUT, "EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
 
     initIDT();      //Initialize the interrupt
@@ -67,18 +67,18 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initBlockDeviceManager();
 
+    initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
+
+    initSchedule();
+
+    initTimer();
+
     initHardDisk();
 
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
         blowup("Hda not found\n");
     }
-
-    initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
-
-    initSchedule();
-
-    initTimer();
 
     if (checkFileSystem(hda) == FILE_SYSTEM_TYPE_PHOSPHERUS) {
         printf(TERMINAL_LEVEL_DEBUG, "File system check passed\n");
@@ -117,6 +117,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initSemaphore(&sema, -1);
 
+    arr1 = kMalloc(1 * sizeof(int), MEMORY_TYPE_NORMAL), arr2 = kMalloc(1 * sizeof(int), MEMORY_TYPE_SHARE);
+    arr1[0] = 1, arr2[0] = 114514;
     if (forkFromCurrentProcess("Forked") != NULL) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", getCurrentProcess()->name);
     } else {
@@ -125,9 +127,10 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     if (getCurrentProcess()->pid == 0) {
         down(&sema);
-        printf(TERMINAL_LEVEL_OUTPUT, "DONE 0\n");
+        printf(TERMINAL_LEVEL_OUTPUT, "DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
     } else {
-        printf(TERMINAL_LEVEL_OUTPUT, "DONE 1\n");
+        arr1[0] = 2, arr2[0] = 1919810;
+        printf(TERMINAL_LEVEL_OUTPUT, "DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
         up(&sema);
         while (true) {
             int len = terminalGetline(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), str);
@@ -137,10 +140,14 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
             }
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
+        MARK_PRINT(MARK);
         up(&sema);
         
         exitProcess();
     }
+
+    kFree(arr1);
+    kFree(arr2);
 
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);
 

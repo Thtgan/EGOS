@@ -71,6 +71,7 @@ static uint64_t __findTickLoop() {
     uint64_t l = 1, r = 1;
 
     while (!__testLoop(r)) {
+        l = r;
         r <<= 1;
     }
 

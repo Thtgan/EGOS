@@ -5,8 +5,8 @@
 #include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
-#include<memory/paging.h>
 #include<memory/pageAlloc.h>
+#include<memory/paging/paging.h>
 #include<print.h>
 #include<system/address.h>
 #include<system/memoryMap.h>
@@ -28,7 +28,7 @@ void initMemory() {
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
     printf(TERMINAL_LEVEL_DEBUG, "Page table takes %u pages\n", mMap->pagingEnd - mMap->pagingBegin);
-    printf(TERMINAL_LEVEL_DEBUG, "Full page space: %u pages\n", mMap->freePageEnd - mMap->freePageBegin);
+    printf(TERMINAL_LEVEL_DEBUG, "Free page space: %u pages\n", mMap->freePageEnd - mMap->freePageBegin);
 
     initPageAlloc();
 

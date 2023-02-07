@@ -6,6 +6,6 @@
 #include<system/systemInfo.h>
 
 extern SystemInfo* sysInfo;
-extern PML4Table* currentTable;
+extern PML4Table* currentPageTable;
 
 #endif // __KERNEL_H

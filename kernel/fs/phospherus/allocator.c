@@ -172,10 +172,10 @@ PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
         return ret;
     }
 
-    PhospherusAllocator* ret = kMalloc(sizeof(PhospherusAllocator));
-    __DeviceInfo* deviceInfo = kMalloc(sizeof(__DeviceInfo));
-    __SuperNodeInfo* firstFreeSuperNode = kMalloc(sizeof(__SuperNode));
-    __BlockStack * firstFreeBlockStack = kMalloc(sizeof(__BlockStack));
+    PhospherusAllocator* ret = kMalloc(sizeof(PhospherusAllocator), MEMORY_TYPE_NORMAL);
+    __DeviceInfo* deviceInfo = kMalloc(sizeof(__DeviceInfo), MEMORY_TYPE_NORMAL);
+    __SuperNodeInfo* firstFreeSuperNode = kMalloc(sizeof(__SuperNode), MEMORY_TYPE_NORMAL);
+    __BlockStack * firstFreeBlockStack = kMalloc(sizeof(__BlockStack), MEMORY_TYPE_NORMAL);
 
     THIS_ARG_APPEND_CALL(device, operations->readBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
     if (deviceInfo->firstFreeSuperNode != PHOSPHERUS_NULL) {

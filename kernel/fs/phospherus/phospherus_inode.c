@@ -325,7 +325,7 @@ static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
         ret = (iNode*)obj;
         ++ret->openCnt;
     } else {
-        ret = kMalloc(sizeof(iNode));
+        ret = kMalloc(sizeof(iNode), MEMORY_TYPE_NORMAL);
 
         BlockDevice* devicePtr = getBlockDeviceByID(this->device);
         ret->device = devicePtr;

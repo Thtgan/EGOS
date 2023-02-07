@@ -28,7 +28,7 @@ BlockDevice* createMemoryBlockDevice(size_t size) {
 
     size_t blockSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    void* region = kMalloc(blockSize * BLOCK_SIZE);
+    void* region = kMalloc(blockSize * BLOCK_SIZE, MEMORY_TYPE_NORMAL);
     if (region == NULL) {
         return NULL;
     }

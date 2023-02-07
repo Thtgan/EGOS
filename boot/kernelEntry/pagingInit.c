@@ -14,7 +14,7 @@ __attribute__((aligned(PAGE_SIZE)))
 static PML4Table _PML4Table;
 
 __attribute__((aligned(PAGE_SIZE)))
-static PDPTable _firstPDPTable;
+static PDPtable _firstPDPtable;
 
 void initPaging(SystemInfo* sysInfo) {
     writeRegister_CR0_32(CLEAR_FLAG(readRegister_CR0_32(), CR0_PG));    //Disable paging
@@ -26,13 +26,13 @@ void initPaging(SystemInfo* sysInfo) {
     for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
         _PML4Table.tableEntries[i] = EMPTY_PML4_ENTRY;
     }
-    _PML4Table.tableEntries[0] = _PML4Table.tableEntries[KERNEL_VIRTUAL_BEGIN / PDPT_SPAN] = BUILD_PML4_ENTRY((uint32_t)&_firstPDPTable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+    _PML4Table.tableEntries[0] = _PML4Table.tableEntries[KERNEL_VIRTUAL_BEGIN / PDPT_SPAN] = BUILD_PML4_ENTRY((uint32_t)&_firstPDPtable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
 
     //Setting up PDP table
     for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
-        _firstPDPTable.tableEntries[i] = EMPTY_PDPT_ENTRY;
+        _firstPDPtable.tableEntries[i] = EMPTY_PDPT_ENTRY;
     }
-    _firstPDPTable.tableEntries[0] = BUILD_PDPT_ENTRY(0, PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PS | PDPT_ENTRY_FLAG_PRESENT);
+    _firstPDPtable.tableEntries[0] = BUILD_PDPT_ENTRY(0, PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PS | PDPT_ENTRY_FLAG_PRESENT);
 
     //Store the base PML4 table for memory manager initialization
     sysInfo->kernelTable = (uint32_t)&_PML4Table;

@@ -10,12 +10,12 @@
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 
-void (*ISRhandlers[256]) (uint8_t vec, InterruptFrame* interruptFrame) = {};
+void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame) = {};
 
 IDTentry IDTtable[256];
 IDTdesc idtDesc;
 
-extern void (*stubs[256])(InterruptFrame* interruptFrame);
+extern void (*stubs[256])(HandlerStackFrame* handlerStackFrame);
 
 /**
  * @brief Assign an IDT entry to the 
@@ -29,8 +29,8 @@ static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     printf(TERMINAL_LEVEL_DEBUG, "%#04X Interrupt triggered!\n", vec);
     printf(TERMINAL_LEVEL_DEBUG, "%#018X\n", readRegister_RSP_64());
-    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", interruptFrame, interruptFrame->ip, interruptFrame->cs);
-    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", interruptFrame->eflags, interruptFrame->sp, interruptFrame->ss);
+    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", handlerStackFrame, handlerStackFrame->ip, handlerStackFrame->cs);
+    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", handlerStackFrame->eflags, handlerStackFrame->sp, handlerStackFrame->ss);
     cli();
     die();
 }
@@ -40,8 +40,8 @@ void initIDT() {
     idtDesc.tablePtr = (uint64_t)IDTtable;
 
     for (int vec = 0; vec < 256; ++vec) {
-        ISRhandlers[vec] = __defaultISRHalt;
-        __setIDTentry(vec, stubs[vec], IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+        handlers[vec] = __defaultISRHalt;
+        __setIDTentry(vec, stubs[vec], IDT_FLAGS_PRESENT | (vec < 0x20 ? IDT_FLAGS_TYPE_TRAP_GATE32 : IDT_FLAGS_TYPE_INTERRUPT_GATE32));
     }
 
     remapPIC(REMAP_BASE_1, REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
@@ -71,7 +71,7 @@ void registerISR(uint8_t vector, void* isr, uint8_t attributes) {
     setPICMask(mask1, mask2);
 
     __setIDTentry(vector, stubs[vector], attributes);
-    ISRhandlers[vector] = isr;
+    handlers[vector] = isr;
 }
 
 static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes) {

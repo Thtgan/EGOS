@@ -48,7 +48,7 @@ typedef struct {
     uint64_t eflags;
     uint64_t sp;
     uint64_t ss;
-} __attribute__((packed)) InterruptFrame;
+} __attribute__((packed)) HandlerStackFrame;
 
 /**
  * @brief Initialize the IDT

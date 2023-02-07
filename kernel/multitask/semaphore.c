@@ -1,15 +1,8 @@
 #include<multitask/semaphore.h>
 
-#include<memory/kMalloc.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
 #include<structs/queue.h>
-//#include<structs/waitList.h>
-
-typedef struct {
-    QueueNode node;
-    Process* process;
-} __SemaWaitQueueNode;
 
 __attribute__((regparm(1)))
 /**
@@ -68,16 +61,15 @@ void up(Semaphore* sema) {
 
 __attribute__((regparm(1)))
 void __down_handler(Semaphore* sema) {
-    __SemaWaitQueueNode* node = kMalloc(sizeof(__SemaWaitQueueNode));
-    initQueueNode(&node->node);
-    node->process = getCurrentProcess();
-
     spinlockLock(&sema->queueLock);
+
+    QueueNode* node = &getCurrentProcess()->semaWaitQueueNode;
+    initQueueNode(node);
 
     bool loop = true;
     do {
         //Add current process to wait list
-        queuePush(&sema->waitQueue, &node->node);
+        queuePush(&sema->waitQueue, node);
 
         spinlockUnlock(&sema->queueLock);
         schedule(PROCESS_STATUS_WAITING);
@@ -94,8 +86,6 @@ void __down_handler(Semaphore* sema) {
     } while (loop);
 
     spinlockUnlock(&sema->queueLock);
-
-    kFree(node);
 }
 
 __attribute__((regparm(1)))
@@ -103,9 +93,11 @@ void __up_handler(Semaphore* sema) {
     spinlockLock(&sema->queueLock);
 
     if (!isQueueEmpty(&sema->waitQueue)) {
-        __SemaWaitQueueNode* node = HOST_POINTER(queueFront(&sema->waitQueue), __SemaWaitQueueNode, node);
+        Process* p = HOST_POINTER(queueFront(&sema->waitQueue), Process, semaWaitQueueNode);
         queuePop(&sema->waitQueue);
-        setProcessStatus(node->process, PROCESS_STATUS_READY);
+
+        initQueueNode(&p->semaWaitQueueNode);
+        setProcessStatus(p, PROCESS_STATUS_READY);
 
         spinlockUnlock(&sema->queueLock);
         schedule(PROCESS_STATUS_READY);

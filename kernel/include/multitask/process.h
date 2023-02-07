@@ -2,7 +2,7 @@
 #define __PROCESS_H
 
 #include<kit/types.h>
-//#include<structs/singlyLinkedList.h>
+#include<structs/linkedList.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
@@ -24,12 +24,13 @@ typedef enum {
 
 struct _Process {
     uint16_t pid;
+    uint16_t ppid;
     uint16_t remainTick;
     ProcessStatus status;
     PML4Table* pageTable;
     void* stackTop;
-    //SinglyLinkedListNode node;
-    QueueNode node;
+    QueueNode statusQueueNode;
+    QueueNode semaWaitQueueNode;
     char name[32];
 };
 
@@ -65,6 +66,6 @@ Process* forkFromCurrentProcess(const char* processName);
 
 void exitProcess();
 
-void destroyProcess(Process* process);
+void releaseProcess(Process* process);
 
 #endif // __PROCESS_H
