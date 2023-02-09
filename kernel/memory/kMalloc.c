@@ -183,7 +183,7 @@ static void* __getRegion(size_t level, MemoryType type) {
         void* newRegionBase = NULL;
         bool needMorePage = level == REGION_LIST_NUM - 1;
         if (needMorePage) {
-            newRegionBase = pageAlloc(PAGE_ALLOCATE_BATCH_SIZE, type);    //Allocate new pages or get region from higher level region list
+            newRegionBase = pageAlloc(PAGE_ALLOCATE_BATCH_SIZE, __typeConvert(type));    //Allocate new pages or get region from higher level region list
         } else {
             newRegionBase = __getRegion(level + 1, type);
         }
@@ -259,10 +259,11 @@ static void __regionListTidyUp(size_t level, MemoryType type) {
         }
     }
 }
-
+#include<debug.h>
 PhysicalPageType __typeConvert(MemoryType type) {
     switch (type) {
         case MEMORY_TYPE_NORMAL: {
+            MARK_PRINT(MARK);
             return PHYSICAL_PAGE_TYPE_COW;
             break;
         }
