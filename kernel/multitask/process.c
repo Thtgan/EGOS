@@ -21,6 +21,8 @@
 
 static Process* _currentProcess = NULL;
 
+static Process* __createProcess(uint16_t pid, ConstCstring name);
+
 static void __handleSwitch(Process* from, Process* to);
 
 static uint16_t __allocatePID();
@@ -35,27 +37,18 @@ static uint16_t _lastGeneratePID = 0;
 static Bitmap _pidBitmap;
 static uint8_t _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
 
-static char* _mainProcessName = "Kernel Process";
-
 Process* initProcess() {
     memset(&_pidBitmapBits, 0, sizeof(_pidBitmapBits));
     initBitmap(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
     setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
 
-    Process* mainProcess = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
-
-    memset(mainProcess, 0, sizeof(Process));
-
-    mainProcess->pid = mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
-    mainProcess->remainTick = PROCESS_TICK;
+    Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Kernel Process");
+    mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
     mainProcess->pageTable = currentPageTable;
-    initQueueNode(&mainProcess->statusQueueNode);
-    initQueueNode(&mainProcess->semaWaitQueueNode);
-    memcpy(mainProcess->name, _mainProcessName, strlen(_mainProcessName));
 
-    //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
     switchProcess(mainProcess, mainProcess);
 
+    //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
     PhysicalPage* stackPhysicalPageStruct = getPhysicalPageStruct(translateVaddr(currentPageTable, (void*)(KERNEL_PHYSICAL_END | KERNEL_VIRTUAL_BEGIN)));
     for (int i = 0; i < __STACK_PAGE_NUM; ++i) {
         (stackPhysicalPageStruct + i)->flags = PHYSICAL_PAGE_TYPE_NORMAL;
@@ -107,7 +100,7 @@ Process* forkFromCurrentProcess(const char* processName) {
         return NULL;
     }
 
-    Process* newProcess = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+    //Process* newProcess = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
 
     switchProcess(_currentProcess, _currentProcess);    //Mark the current process's stack here, forked process will take the stack address and starts from here
     char* source = (char*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE;
@@ -117,12 +110,8 @@ Process* forkFromCurrentProcess(const char* processName) {
 
     uint32_t currentPID = _currentProcess->pid;
     if (currentPID == oldPID) {   //The parent process is forking new process, forked process will execute this statement too but will not pass
-        memset(newProcess, 0, sizeof(Process));
-
-        newProcess->pid = newPID;
+        Process* newProcess = __createProcess(newPID, processName);
         newProcess->ppid = oldPID;
-        newProcess->remainTick = PROCESS_TICK;
-        memcpy(newProcess->name, processName, strlen(processName));
         newProcess->pageTable = copyPML4Table(_currentProcess->pageTable);
         newProcess->stackTop = _currentProcess->stackTop;
 
@@ -135,9 +124,6 @@ Process* forkFromCurrentProcess(const char* processName) {
         for (int i = 0; i < KERNEL_STACK_SIZE; ++i) {
             des[i] = _tmpStack[i];
         }
-
-        initQueueNode(&newProcess->statusQueueNode);
-        initQueueNode(&newProcess->semaWaitQueueNode);
 
         setProcessStatus(newProcess, PROCESS_STATUS_READY);
 
@@ -164,6 +150,24 @@ void releaseProcess(Process* process) {
     __releasePID(process->pid);
     memset(process, 0, PAGE_SIZE);
     pageFree(process, 1);
+}
+
+static Process* __createProcess(uint16_t pid, ConstCstring name) {
+    Process* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+    memset(ret, 0, PAGE_SIZE);
+
+    ret->pid = pid, ret->ppid = 0;
+    memcpy(ret->name, name, strlen(name));
+
+    ret->remainTick = PROCESS_TICK;
+    ret->status = PROCESS_STATUS_UNKNOWN;
+
+    ret->pageTable = ret->stackTop = NULL;
+
+    initQueueNode(&ret->statusQueueNode);
+    initQueueNode(&ret->semaWaitQueueNode);
+
+    return ret;
 }
 
 static uint16_t __allocatePID() {

@@ -27,13 +27,16 @@ typedef enum {
 struct _Process {
     uint16_t pid;
     uint16_t ppid;
+    char name[32];
+    
     uint16_t remainTick;
     ProcessStatus status;
+
     PML4Table* pageTable;
     void* stackTop;
+    
     QueueNode statusQueueNode;
     QueueNode semaWaitQueueNode;
-    char name[32];
 };
 
 /**

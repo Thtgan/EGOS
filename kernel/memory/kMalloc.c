@@ -259,11 +259,10 @@ static void __regionListTidyUp(size_t level, MemoryType type) {
         }
     }
 }
-#include<debug.h>
+
 PhysicalPageType __typeConvert(MemoryType type) {
     switch (type) {
         case MEMORY_TYPE_NORMAL: {
-            MARK_PRINT(MARK);
             return PHYSICAL_PAGE_TYPE_COW;
             break;
         }
