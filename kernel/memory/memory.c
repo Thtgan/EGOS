@@ -6,6 +6,7 @@
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/pageAlloc.h>
+#include<memory/physicalPages.h>
 #include<memory/paging/paging.h>
 #include<print.h>
 #include<system/address.h>
@@ -26,8 +27,11 @@ void initMemory() {
 
     initPaging();
 
+    initPhysicalPage();
+
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    printf(TERMINAL_LEVEL_DEBUG, "Page table takes %u pages\n", mMap->pagingEnd - mMap->pagingBegin);
+    printf(TERMINAL_LEVEL_DEBUG, "Direct Page table takes %u pages\n", mMap->directPageTableEnd - mMap->directPageTableBegin);
+    printf(TERMINAL_LEVEL_DEBUG, "Physical page structs takes %u pages\n", mMap->physicalPageStructEnd - mMap->physicalPageStructBegin);
     printf(TERMINAL_LEVEL_DEBUG, "Free page space: %u pages\n", mMap->freePageEnd - mMap->freePageBegin);
 
     initPageAlloc();

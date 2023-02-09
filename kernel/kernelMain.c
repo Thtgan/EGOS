@@ -30,7 +30,7 @@
 
 SystemInfo* sysInfo;
 
-Semaphore sema;
+Semaphore sema1, sema2;
 char str[128];
 
 int* arr1, * arr2;
@@ -53,7 +53,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initTerminalSwitch();
 
-    printf(TERMINAL_LEVEL_OUTPUT, "EGOS start booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
 
     initIDT();      //Initialize the interrupt
 
@@ -115,7 +115,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     closeFileSystem(fs);
 
-    initSemaphore(&sema, -1);
+    initSemaphore(&sema1, 0);
+    initSemaphore(&sema2, -1);
 
     arr1 = kMalloc(1 * sizeof(int), MEMORY_TYPE_NORMAL), arr2 = kMalloc(1 * sizeof(int), MEMORY_TYPE_SHARE);
     arr1[0] = 1, arr2[0] = 114514;
@@ -126,12 +127,15 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     }
 
     if (getCurrentProcess()->pid == 0) {
-        down(&sema);
+        arr1[0] = 3;
+        up(&sema1);
+        down(&sema2);
         printf(TERMINAL_LEVEL_OUTPUT, "DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
     } else {
+        down(&sema1);
         arr1[0] = 2, arr2[0] = 1919810;
         printf(TERMINAL_LEVEL_OUTPUT, "DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
-        up(&sema);
+        up(&sema2);
         while (true) {
             int len = terminalGetline(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), str);
 
@@ -140,8 +144,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
             }
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
-        MARK_PRINT(MARK);
-        up(&sema);
+        up(&sema2);
         
         exitProcess();
     }

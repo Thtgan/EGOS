@@ -20,7 +20,9 @@ typedef enum {
     PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
 } ProcessStatus;
 
-#define PROCESS_TICK    5
+#define PROCESS_TICK                5
+#define MAIN_PROCESS_RESERVE_PID    0
+#define INVALID_PID                 -1
 
 struct _Process {
     uint16_t pid;

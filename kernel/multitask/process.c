@@ -10,6 +10,7 @@
 #include<memory/paging/paging.h>
 #include<memory/paging/pagingCopy.h>
 #include<memory/paging/pagingRelease.h>
+#include<memory/physicalPages.h>
 #include<multitask/schedule.h>
 #include<string.h>
 #include<structs/bitmap.h>
@@ -26,7 +27,9 @@ static uint16_t __allocatePID();
 
 static void __releasePID(uint16_t pid);
 
-#define CLOBBER_REGISTERS   "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
+#define __STACK_PAGE_NUM    ((KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE)
+
+#define __CLOBBER_REGISTERS   "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 
 static uint16_t _lastGeneratePID = 0;
 static Bitmap _pidBitmap;
@@ -37,13 +40,13 @@ static char* _mainProcessName = "Kernel Process";
 Process* initProcess() {
     memset(&_pidBitmapBits, 0, sizeof(_pidBitmapBits));
     initBitmap(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
-    setBit(&_pidBitmap, 0);
+    setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
 
-    Process* mainProcess = pageAlloc(1);
+    Process* mainProcess = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
 
     memset(mainProcess, 0, sizeof(Process));
 
-    mainProcess->pid = mainProcess->ppid = 0;
+    mainProcess->pid = mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
     mainProcess->remainTick = PROCESS_TICK;
     mainProcess->pageTable = currentPageTable;
     initQueueNode(&mainProcess->statusQueueNode);
@@ -52,6 +55,12 @@ Process* initProcess() {
 
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
     switchProcess(mainProcess, mainProcess);
+
+    PhysicalPage* stackPhysicalPageStruct = getPhysicalPageStruct(translateVaddr(currentPageTable, (void*)(KERNEL_PHYSICAL_END | KERNEL_VIRTUAL_BEGIN)));
+    for (int i = 0; i < __STACK_PAGE_NUM; ++i) {
+        (stackPhysicalPageStruct + i)->flags = PHYSICAL_PAGE_TYPE_NORMAL;
+        referPhysicalPage(stackPhysicalPageStruct + i);
+    }
 
     setProcessStatus(mainProcess, PROCESS_STATUS_RUNNING);
 
@@ -70,7 +79,7 @@ void switchProcess(Process* from, Process* to) {
         "popfq;"
         :
         : "i"(__handleSwitch), "D"(from), "S"(to)//, "i" (offsetof(Process, stackTop))
-        : "memory", "cc", CLOBBER_REGISTERS
+        : "memory", "cc", __CLOBBER_REGISTERS
     );
 }
 
@@ -92,12 +101,14 @@ Process* getCurrentProcess() {
 
 static char _tmpStack[KERNEL_STACK_SIZE];
 
-#define __STACK_PAGE_NUM    ((KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE)
-
 Process* forkFromCurrentProcess(const char* processName) {
-    Process* newProcess = pageAlloc(1);
-
     uint32_t oldPID = _currentProcess->pid, newPID = __allocatePID();
+    if (newPID == INVALID_PID) {
+        return NULL;
+    }
+
+    Process* newProcess = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+
     switchProcess(_currentProcess, _currentProcess);    //Mark the current process's stack here, forked process will take the stack address and starts from here
     char* source = (char*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE;
     for (int i = 0; i < KERNEL_STACK_SIZE; ++i) {
@@ -115,8 +126,7 @@ Process* forkFromCurrentProcess(const char* processName) {
         newProcess->pageTable = copyPML4Table(_currentProcess->pageTable);
         newProcess->stackTop = _currentProcess->stackTop;
 
-        void* newStackBottom = pageAlloc(__STACK_PAGE_NUM) + KERNEL_STACK_SIZE;
-
+        void* newStackBottom = pageAlloc(__STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL) + KERNEL_STACK_SIZE;
         for (uintptr_t i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
             mapAddr(newProcess->pageTable, (void*)KERNEL_STACK_BOTTOM - i, newStackBottom - i);
         }
@@ -157,8 +167,8 @@ void releaseProcess(Process* process) {
 }
 
 static uint16_t __allocatePID() {
-    size_t pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
-    if (pid != -1) {
+    uint16_t pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
+    if (pid != INVALID_PID) {
         setBit(&_pidBitmap, pid);
         _lastGeneratePID = pid;
     }

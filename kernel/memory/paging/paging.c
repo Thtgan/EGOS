@@ -9,11 +9,23 @@
 #include<memory/memory.h>
 #include<memory/pageAlloc.h>
 #include<memory/paging/pagingSetup.h>
+#include<memory/physicalPages.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
 PML4Table* currentPageTable = NULL;
+
+#define __PAGE_FAULT_ERROR_CODE_FLAG_P      FLAG32(0)   //Caused by non-present(0) or page-level protect violation(1) ?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_WR     FLAG32(1)   //Caused by read(0) or write(1) ?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_US     FLAG32(2)   //Caused by supervisor(0) or user(1) access?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_RSVD   FLAG32(3)   //Caused by reserved bit set to 1?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_ID     FLAG32(4)   //Caused by instruction fetch?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_PK     FLAG32(5)   //Caused by protection-key violation?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_SS     FLAG32(6)   //Caused by shadow-stack access?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_HLAT   FLAG32(7)   //Occurred during ordinary(0) or HALT(1) paging?
+#define __PAGE_FAULT_ERROR_CODE_FLAG_SGX    FLAG32(15)  //Fault related to SGX?
+
 
 ISR_FUNC_HEADER(__pageFaultHandler) {
     void* vAddr = (void*)readRegister_CR2_64();
@@ -26,49 +38,32 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
     bool copy = false;
     PML4Table* PML4TablePtr = currentPageTable;
     PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
-    if (copy || TEST_FLAGS(PML4Entry, PAGE_ENTRY_PUBLIC_FLAG_COW)) {
-        if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {    //Theoretically, this branch is impossible (And impossible to execute properly)
-            void* copy = pageAlloc(PDPT_SPAN >> PAGE_SIZE_SHIFT);
-            memcpy(copy, PS_BASE_FROM_PML4_ENTRY(PML4Entry), PDPT_SPAN);
-            PML4TablePtr->tableEntries[PML4Index] = BUILD_PML4_ENTRY(copy, FLAGS_FROM_PML4_ENTRY(PML4Entry) | PML4_ENTRY_FLAG_RW);
-            return;
-        } else {
-            copy = true;
-        }
-    }
 
     PDPtable* PDPtablePtr = PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry);
     PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
-    if (copy || TEST_FLAGS(PDPtableEntry, PAGE_ENTRY_PUBLIC_FLAG_COW)) {
-        if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
-            void* copy = pageAlloc(PAGE_DIRECTORY_SPAN >> PAGE_SIZE_SHIFT);
-            memcpy(copy, PS_BASE_FROM_PDPT_ENTRY(PDPtableEntry), PAGE_DIRECTORY_SPAN);
-            PDPtablePtr->tableEntries[PDPTindex] = BUILD_PDPT_ENTRY(copy, FLAGS_FROM_PDPT_ENTRY(PDPtableEntry) | PDPT_ENTRY_FLAG_RW);
-            return;
-        } else {
-            copy = true;
-        }
-    }
 
     PageDirectory* pageDirectoryPtr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry);
     PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
-    if (copy || TEST_FLAGS(pageDirectoryEntry, PAGE_ENTRY_PUBLIC_FLAG_COW)) {
-        if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
-            void* copy = pageAlloc(PAGE_TABLE_SPAN >> PAGE_SIZE_SHIFT);
-            memcpy(copy, PS_BASE_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry), PAGE_TABLE_SPAN);
-            pageDirectoryPtr->tableEntries[pageDirectoryIndex] = BUILD_PAGE_DIRECTORY_ENTRY(copy, FLAGS_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry) | PAGE_DIRECTORY_ENTRY_FLAG_RW);
-            return;
-        } else {
-            copy = true;
-        }
-    }
 
     PageTable* pageTablePtr = PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry);
     PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    if (copy || TEST_FLAGS(pageTableEntry, PAGE_ENTRY_PUBLIC_FLAG_COW)) {
-        void* copy = pageAlloc(1);
-        memcpy(copy, PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), PAGE_SIZE);
-        pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(copy, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW);
+
+    void* pAddr = PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry);
+    PhysicalPage* oldPhysicalPageStruct = getPhysicalPageStruct(pAddr);
+    if (TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_COW)) {
+        void* copyTo = pageAlloc(1, PHYSICAL_PAGE_FLAG_IGNORE);
+        PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
+        referPhysicalPage(physicalPageStruct);
+        memcpy(copyTo, PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), PAGE_SIZE);
+
+        pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(copyTo, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW);
+        
+        cancelReferPhysicalPage(oldPhysicalPageStruct);
+        if (oldPhysicalPageStruct->processReferenceCnt == 0) {
+            oldPhysicalPageStruct->flags = PHYSICAL_PAGE_TYPE_NORMAL;
+            pageFree(pAddr, 1);
+        }
+
         return;
     }
 
@@ -82,9 +77,9 @@ void initPaging() {
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
 
-    mMap->pagingBegin = mMap->pagingEnd = mMap->freePageBegin;
+    mMap->directPageTableBegin = mMap->directPageTableEnd = mMap->freePageBegin;
     sysInfo->kernelTable = (uintptr_t)setupPML4Table();
-    mMap->freePageBegin = mMap->pagingEnd;
+    mMap->freePageBegin = mMap->directPageTableEnd;
 
     SWITCH_TO_TABLE((PML4Table*)sysInfo->kernelTable);
 

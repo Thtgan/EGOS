@@ -2,10 +2,9 @@
 
 #include<memory/memory.h>
 #include<memory/pageAlloc.h>
+#include<memory/physicalPages.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
-
-#include<debug.h>
 
 #define __NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(uint16_t) - 16) //-16 for kMalloc padding
 
@@ -104,7 +103,7 @@ int bufferGetLine(InputBuffer* buffer, char* writeTo) {
 }
 
 static __InputBufferNode* __allocateNode() {
-    __InputBufferNode* ret = pageAlloc(1);
+    __InputBufferNode* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PUBLIC);
 
     initQueueNode(&ret->node);
     ret->begin = ret->end = 0;

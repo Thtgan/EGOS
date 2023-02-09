@@ -81,17 +81,8 @@ static bool __removeProcessFromQueue(Process* process) {
     ProcessStatus status = process->status;
 
     QueueNode* nodeAddr = &process->statusQueueNode;
-    //MARK_PRINT(MARK);
-    //for (QueueNode* i = &statusQueues[status].q; i->next != &statusQueues[status].q; i = i->next) {
-    for (QueueNode* i = &statusQueues[status].q;; i = i->next) {
-        //MARK_PRINT(MARK);
-        //printf(TERMINAL_LEVEL_DEV, "%p-%u-I: %p\n", statusQueues, status, i);
+    for (QueueNode* i = &statusQueues[status].q; i->next != &statusQueues[status].q; i = i->next) {
         void* next = i->next;
-        //printf(TERMINAL_LEVEL_DEV, "NEXT %p\n", i->next);
-        if (next == &statusQueues[status].q) {
-            break;
-        }
-        //MARK_PRINT(MARK);
         if (next == nodeAddr) {
             singlyLinkedListDeleteNext(i);
 
@@ -104,7 +95,6 @@ static bool __removeProcessFromQueue(Process* process) {
             return true;
         }
     }
-
     return false;
 }
 

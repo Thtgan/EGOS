@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<memory/pageNode.h>
 #include<memory/paging/paging.h>
+#include<memory/physicalPages.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
@@ -56,12 +57,27 @@ void initPageAlloc() {
     __initPagePool(&_pool, (void*)((uintptr_t)mMap->freePageBegin << PAGE_SIZE_SHIFT), mMap->freePageEnd - mMap->freePageBegin);
 }
 
-void* pageAlloc(size_t n) {
-    return __poolAllocatePages(&_pool, n);
+void* pageAlloc(size_t n, PhysicalPageType type) {
+    void* ret = __poolAllocatePages(&_pool, n);
+    if (ret == NULL) {
+        return NULL;
+    }
+    
+    PhysicalPage* physicalPageStruct = getPhysicalPageStruct(ret);
+    for (int i = 0; i < n; ++i) {
+        (physicalPageStruct + i)->flags = type;
+        referPhysicalPage(physicalPageStruct + i);
+    }
+    return ret;
 }
 
 void pageFree(void* pPageBegin, size_t n) {
     __poolReleasePages(&_pool, pPageBegin, n);
+    PhysicalPage* physicalPageStruct = getPhysicalPageStruct(pPageBegin);
+    for (int i = 0; i < n; ++i) {
+        (physicalPageStruct + i)->flags = PHYSICAL_PAGE_TYPE_NORMAL;
+        cancelReferPhysicalPage(physicalPageStruct + i);
+    }
 }
 
 static void __initPagePool(_PagePool* p, void* areaBegin, size_t areaPageSize) {

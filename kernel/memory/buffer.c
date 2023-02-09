@@ -3,6 +3,7 @@
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<memory/pageAlloc.h>
+#include<memory/physicalPages.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 
@@ -60,7 +61,7 @@ void __addPage(BufferSizes size) {
     _bufferNums[size] += PAGE_SIZE / _bufferSizes[size];
     _freeBufferNums[size] += PAGE_SIZE / _bufferSizes[size];
 
-    void* page = pageAlloc(1);
+    void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_NORMAL);
     for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[size]) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)(page + j);
         initSinglyLinkedListNode(node);

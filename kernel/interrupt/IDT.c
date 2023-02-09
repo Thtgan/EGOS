@@ -1,5 +1,6 @@
 #include<interrupt/IDT.h>
 
+#include<debug.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
@@ -27,12 +28,11 @@ extern void (*stubs[256])(HandlerStackFrame* handlerStackFrame);
 static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
-    printf(TERMINAL_LEVEL_DEBUG, "%#04X Interrupt triggered!\n", vec);
-    printf(TERMINAL_LEVEL_DEBUG, "%#018X\n", readRegister_RSP_64());
-    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", handlerStackFrame, handlerStackFrame->ip, handlerStackFrame->cs);
-    printf(TERMINAL_LEVEL_DEBUG, "%#018X %#018X %#018X\n", handlerStackFrame->eflags, handlerStackFrame->sp, handlerStackFrame->ss);
-    cli();
-    die();
+    printf(TERMINAL_LEVEL_DEV, "%#04X Interrupt triggered!\n", vec);
+    printf(TERMINAL_LEVEL_DEV, "%#018llX\n", readRegister_RSP_64());
+    printf(TERMINAL_LEVEL_DEV, "%#018llX %#018llX %#018llX\n", handlerStackFrame, handlerStackFrame->ip, handlerStackFrame->cs);
+    printf(TERMINAL_LEVEL_DEV, "%#018llX %#018llX %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->sp, handlerStackFrame->ss);
+    blowup("DEAD\n");
 }
 
 void initIDT() {

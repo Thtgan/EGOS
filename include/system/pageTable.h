@@ -273,9 +273,4 @@ typedef struct {
     PageTableEntry tableEntries[PAGE_TABLE_SIZE];
 } __attribute__((packed)) PageTable;
 
-#define PAGE_ENTRY_PUBLIC_FLAG_DEBUG    FLAG64(52)
-#define PAGE_ENTRY_PUBLIC_FLAG_SHARE    FLAG64(53)  //Share page between directories
-#define PAGE_ENTRY_PUBLIC_FLAG_IGNORE   FLAG64(54)  //Ignore this entry in copying
-#define PAGE_ENTRY_PUBLIC_FLAG_COW      FLAG64(55)  //Copy On Write
-
 #endif // __PAGE_TABLE_H

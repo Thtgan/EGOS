@@ -2,6 +2,7 @@
 #define __PAGE_ALLOC
 
 #include<kit/types.h>
+#include<memory/physicalPages.h>
 #include<system/systemInfo.h>
 
 /**
@@ -13,9 +14,10 @@ void initPageAlloc();
  * @brief Allocate continous physical pages
  * 
  * @param n Number of page
+ * @param type Type of the phisical pages allocated
  * @return void* Physical address of the pages
  */
-void* pageAlloc(size_t n);
+void* pageAlloc(size_t n, PhysicalPageType type);
 
 /**
  * @brief Free continous physical pages

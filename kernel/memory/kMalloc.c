@@ -7,6 +7,7 @@
 #include<memory/memory.h>
 #include<memory/pageAlloc.h>
 #include<memory/paging/paging.h>
+#include<memory/physicalPages.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
@@ -70,7 +71,7 @@ static void __addRegionToList(void* regionBegin, size_t level, MemoryType type);
  */
 static void __regionListTidyUp(size_t level, MemoryType type);
 
-static void __setPageFlags(void* vAddr, size_t n, MemoryType type);
+PhysicalPageType __typeConvert(MemoryType type);
 
 void initKmalloc() {
     for (int i = 0; i < MEMORY_TYPE_NUM; ++i) {
@@ -97,10 +98,7 @@ void* kMalloc(size_t n, MemoryType type) {
     void* pAddr = NULL;
     if (isMultiPage) {                                                          //Required size is greater than maximum region size
         realSize = ((realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT) << PAGE_SIZE_SHIFT;
-        pAddr = pageAlloc(realSize >> PAGE_SIZE_SHIFT);       //Specially allocated
-        if (pAddr != NULL) {
-            __setPageFlags((void*)((uintptr_t)pAddr | KERNEL_VIRTUAL_BEGIN), (realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT, type);
-        }
+        pAddr = pageAlloc((realSize + PAGE_SIZE - 1) >> PAGE_SIZE_SHIFT, __typeConvert(type));       //Specially allocated
     } else {
         for (; regionLevel < REGION_LIST_NUM; ++regionLevel) {
             if (realSize <= regionLists[regionLevel].length) {  //Fit the smallest region
@@ -132,9 +130,7 @@ void kFree(void* ptr) {
     size_t n = header->size;
 
     if (n >= REGION_LIST_NUM) { //Release the specially allocated pages
-        n = n >> PAGE_SIZE_SHIFT;
-        __setPageFlags(header, n, MEMORY_TYPE_NORMAL);
-        pageFree(header, n);
+        pageFree(header, n >> PAGE_SIZE_SHIFT);
     } else {
         __PhysicalRegionList* regionLists = _regionLists[type];
         __addRegionToList(header, n, type);
@@ -187,10 +183,7 @@ static void* __getRegion(size_t level, MemoryType type) {
         void* newRegionBase = NULL;
         bool needMorePage = level == REGION_LIST_NUM - 1;
         if (needMorePage) {
-            newRegionBase = pageAlloc(PAGE_ALLOCATE_BATCH_SIZE);    //Allocate new pages or get region from higher level region list
-            if (newRegionBase != NULL) {
-                __setPageFlags((void*)(((uintptr_t)newRegionBase) | KERNEL_VIRTUAL_BEGIN), PAGE_ALLOCATE_BATCH_SIZE, type);
-            }
+            newRegionBase = pageAlloc(PAGE_ALLOCATE_BATCH_SIZE, type);    //Allocate new pages or get region from higher level region list
         } else {
             newRegionBase = __getRegion(level + 1, type);
         }
@@ -235,8 +228,7 @@ static void __regionListTidyUp(size_t level, MemoryType type) {
     if (level == REGION_LIST_NUM - 1) { //Just reduce to a limitation, no need to sort
         while (regionList->regionNum > PAGE_ALLOCATE_BATCH_SIZE) {
             void* pagesBegin = __getRegionFromList(REGION_LIST_NUM - 1, type);
-            __setPageFlags(pagesBegin, 1, MEMORY_TYPE_NORMAL);
-            pageFree(pagesBegin, 1);
+            pageFree(translateVaddr(currentPageTable, pagesBegin), 1);
         }
     } else { //Sort before combination
         singlyLinkedListMergeSort(&regionList->list, regionList->regionNum, 
@@ -268,23 +260,18 @@ static void __regionListTidyUp(size_t level, MemoryType type) {
     }
 }
 
-static void __setPageFlags(void* vAddr, size_t n, MemoryType type) {
-    uint64_t flags = PAGE_TABLE_ENTRY_FLAG_RW | PAGE_TABLE_ENTRY_FLAG_PRESENT;
-
+PhysicalPageType __typeConvert(MemoryType type) {
     switch (type) {
         case MEMORY_TYPE_NORMAL: {
-            SET_FLAG_BACK(flags, PAGE_ENTRY_PUBLIC_FLAG_COW);
+            return PHYSICAL_PAGE_TYPE_COW;
             break;
         }
         case MEMORY_TYPE_SHARE: {
-            SET_FLAG_BACK(flags, PAGE_ENTRY_PUBLIC_FLAG_SHARE);
+            return PHYSICAL_PAGE_TYPE_PUBLIC;
             break;
         }
         default:
             break;
     }
-
-    for (int i = 0; i < n; ++i) {
-        pageTableSetFlag(currentPageTable, vAddr + i * PAGE_SIZE, PAGING_LEVEL_PAGE_TABLE, flags);
-    }
+    return PHYSICAL_PAGE_TYPE_NORMAL;
 }
