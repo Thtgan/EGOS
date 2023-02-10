@@ -46,12 +46,3 @@ void initPhysicalPage() {
 PhysicalPage* getPhysicalPageStruct(void* pAddr) {
     return &_pageStructs[(uintptr_t)pAddr >> PAGE_SIZE_SHIFT];
 }
-
-void referPhysicalPage(PhysicalPage* page) {
-    ++page->processReferenceCnt;
-}
-
-void cancelReferPhysicalPage(PhysicalPage* page) {
-    --page->processReferenceCnt;
-    ASSERT(page->processReferenceCnt != -1, "Cannot release a released page.");
-}

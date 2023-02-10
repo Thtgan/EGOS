@@ -26,16 +26,12 @@ PML4Table* currentPageTable = NULL;
 #define __PAGE_FAULT_ERROR_CODE_FLAG_HLAT   FLAG32(7)   //Occurred during ordinary(0) or HALT(1) paging?
 #define __PAGE_FAULT_ERROR_CODE_FLAG_SGX    FLAG32(15)  //Fault related to SGX?
 
-
 ISR_FUNC_HEADER(__pageFaultHandler) {
-    void* vAddr = (void*)readRegister_CR2_64();
-
-    Index16 PML4Index = PML4_INDEX(vAddr),
+    void* vAddr = (void*)readRegister_CR2_64();Index16 PML4Index = PML4_INDEX(vAddr),
             PDPTindex = PDPT_INDEX(vAddr),
             pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
             pageTableIndex = PAGE_TABLE_INDEX(vAddr);
 
-    bool copy = false;
     PML4Table* PML4TablePtr = currentPageTable;
     PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
 
@@ -51,18 +47,16 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
     void* pAddr = PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry);
     PhysicalPage* oldPhysicalPageStruct = getPhysicalPageStruct(pAddr);
     if (TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_COW)) {
-        void* copyTo = pageAlloc(1, PHYSICAL_PAGE_FLAG_IGNORE);
-        PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
-        referPhysicalPage(physicalPageStruct);
-        memcpy(copyTo, PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), PAGE_SIZE);
-
-        pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(copyTo, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW);
-        
-        cancelReferPhysicalPage(oldPhysicalPageStruct);
-        if (oldPhysicalPageStruct->processReferenceCnt == 0) {
-            oldPhysicalPageStruct->flags = PHYSICAL_PAGE_TYPE_NORMAL;
-            pageFree(pAddr, 1);
+        if (oldPhysicalPageStruct->processReferenceCnt == 1) {
+            SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_RW);
+            return;
         }
+
+        void* copyTo = pageAlloc(1, PHYSICAL_PAGE_TYPE_COW);
+        PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
+        memcpy(copyTo, PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), PAGE_SIZE);
+        pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(copyTo, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW);
+        cancelReferPhysicalPage(oldPhysicalPageStruct);
 
         return;
     }

@@ -1,6 +1,7 @@
 #if !defined(PHYSICAL_PAGE_H)
 #define PHYSICAL_PAGE_H
 
+#include<debug.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 
@@ -26,8 +27,13 @@ void initPhysicalPage();
 
 PhysicalPage* getPhysicalPageStruct(void* pAddr);
 
-void referPhysicalPage(PhysicalPage* page);
+static inline void referPhysicalPage(PhysicalPage* page) {
+    ++page->processReferenceCnt;
+}
 
-void cancelReferPhysicalPage(PhysicalPage* page);
+static inline void cancelReferPhysicalPage(PhysicalPage* page) {
+    --page->processReferenceCnt;
+    ASSERT(page->processReferenceCnt != -1, "Cannot release a released page.");
+}
 
 #endif // PHYSICAL_PAGE_H
