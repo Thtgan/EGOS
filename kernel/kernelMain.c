@@ -90,27 +90,28 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     {
         Index64 iNodeIndex = -1;
-        iNode* rootDirInode = THIS_ARG_APPEND_CALL(fs, opearations->iNodeGlobalOperations->openInode, fs->rootDirectoryInode);
-        Directory* rootDir = fs->opearations->directoryGlobalOperations->openDirectory(rootDirInode);
+        iNode* rootDirInode = fileSystemOpenInode(fs, fs->rootDirectoryInode);
+        Directory* rootDir = fileSystemOpenDirectory(fs, rootDirInode);
 
-        Index64 entryIndex = THIS_ARG_APPEND_CALL(rootDir, operations->lookupEntry, "LOGO.bin", INODE_TYPE_FILE);
-        DirectoryEntry* entry = THIS_ARG_APPEND_CALL(rootDir, operations->getEntry, entryIndex);
+        Index64 entryIndex = directoryLookupEntry(rootDir, "LOGO.bin", INODE_TYPE_FILE);
+        DirectoryEntry* entry = directoryGetEntry(rootDir, entryIndex);
+
         iNodeIndex = entry->iNodeIndex;
         kFree(entry);
 
-        fs->opearations->directoryGlobalOperations->closeDirectory(rootDir);
-        fs->opearations->iNodeGlobalOperations->closeInode(rootDirInode);
+        fileSystemCloseDirectory(fs, rootDir);
+        fileSystemCloseInode(fs, rootDirInode);
 
-        iNode* fileInode = THIS_ARG_APPEND_CALL(fs, opearations->iNodeGlobalOperations->openInode, iNodeIndex);
-        File* logoFile = fs->opearations->fileGlobalOperations->openFile(fileInode);
+        iNode* fileInode = fileSystemOpenInode(fs, iNodeIndex);
+        File* logoFile = fileSystemOpenFile(fs, fileInode);
 
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        THIS_ARG_APPEND_CALL(logoFile, operations->seek, 0);
-        THIS_ARG_APPEND_CALL(logoFile, operations->read, buffer, logoFile->iNode->onDevice.dataSize);
+        fileSeek(logoFile, 0);
+        fileRead(logoFile, buffer, logoFile->iNode->onDevice.dataSize);
         printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
 
-        fs->opearations->fileGlobalOperations->closeFile(logoFile);
-        fs->opearations->iNodeGlobalOperations->closeInode(fileInode);
+        fileSystemCloseFile(fs, logoFile);
+        fileSystemCloseInode(fs, fileInode);
     }
 
     closeFileSystem(fs);

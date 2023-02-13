@@ -8,7 +8,7 @@
 RECURSIVE_REFER_STRUCT(HashTable) {
     size_t size, hashSize;
     SinglyLinkedList* chains;
-    size_t (*hashFunc)(THIS_ARG_APPEND(HashTable, Object key));
+    size_t (*hashFunc)(HashTable* this, Object key);
 };
 
 typedef struct {
@@ -16,7 +16,7 @@ typedef struct {
     Object key;
 } HashChainNode;
 
-#define HASH_FUNC size_t (*hashFunc)(THIS_ARG_APPEND(HashTable, Object key))
+#define HASH_FUNC size_t (*hashFunc)(HashTable* this, Object key)
 
 void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, HASH_FUNC);
 

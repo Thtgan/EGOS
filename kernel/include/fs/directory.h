@@ -21,10 +21,26 @@ typedef struct {
 } DirectoryEntry;
 
 STRUCT_PRIVATE_DEFINE(DirectoryOperations) {
-    int (*addEntry)(THIS_ARG_APPEND(Directory, iNode* entryInode, ConstCstring name));
-    int (*removeEntry)(THIS_ARG_APPEND(Directory, Index64 entryIndex));
-    Index64 (*lookupEntry)(THIS_ARG_APPEND(Directory, ConstCstring name, iNodeType type));
-    DirectoryEntry* (*getEntry)(THIS_ARG_APPEND(Directory, Index64 entryIndex));
+    int (*addEntry)(Directory* directory, iNode* entryInode, ConstCstring name);
+    int (*removeEntry)(Directory* directory, Index64 entryIndex);
+    Index64 (*lookupEntry)(Directory* directory, ConstCstring name, iNodeType type);
+    DirectoryEntry* (*getEntry)(Directory* directory, Index64 entryIndex);
 };
+
+static inline int directoryAddEntry(Directory* directory, iNode* entryInode, ConstCstring name) {
+    return directory->operations->addEntry(directory, entryInode, name);
+}
+
+static inline int directoryRemoveEntry(Directory* directory, Index64 entryIndex) {
+    return directory->operations->removeEntry(directory, entryIndex);
+}
+
+static inline Index64 directoryLookupEntry(Directory* directory, ConstCstring name, iNodeType type) {
+    return directory->operations->lookupEntry(directory, name, type);
+}
+
+static inline DirectoryEntry* directoryGetEntry(Directory* directory, Index64 entryIndex) {
+    return directory->operations->getEntry(directory, entryIndex);
+}
 
 #endif // __DIRECTORY_H

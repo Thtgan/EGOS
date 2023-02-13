@@ -108,7 +108,7 @@ typedef struct {
  * @param type type of the iNode
  * @return Index64 The index of the block where the iNode is located
  */
-static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type));
+static Index64 __createInode(FileSystem* this, iNodeType type);
 
 /**
  * @brief Delete iNode from device
@@ -116,7 +116,7 @@ static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type));
  * @param iNodeBlock Block index where the inode is located
  * @return Status of the operation
  */
-static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
+static int __deleteInode(FileSystem* this, Index64 iNodeBlock);
 
 /**
  * @brief Open a inode through on the given block
@@ -124,7 +124,7 @@ static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
  * @param iNodeBlock Block where the inode is located
  * @return iNode* Opened iNode
  */
-static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
+static iNode* __openInode(FileSystem* this, Index64 iNodeBlock);
 
 /**
  * @brief Close the inode opened
@@ -255,7 +255,7 @@ static HashTable _hashTable;    //Opened iNodes
 static SinglyLinkedList _hashChains[67];
 
 iNodeGlobalOperations* phospherusInitInode() {
-    initHashTable(&_hashTable, 67, _hashChains, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
+    initHashTable(&_hashTable, 67, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
         return (size_t)key % this->hashSize;
     }));
 
@@ -274,12 +274,12 @@ void makeInode(BlockDevice* device, Index64 blockIndex, iNodeType type) {
     __PhospherusInodeData* data = (__PhospherusInodeData*)record->data;
     memset(data, PHOSPHERUS_NULL, sizeof(__PhospherusInodeData));
 
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, blockIndex, record, 1);
+    blockDeviceWriteBlocks(device, blockIndex, record, 1);
 
     releaseBuffer(record, BUFFER_SIZE_512);
 }
 
-static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type)) {
+static Index64 __createInode(FileSystem* this, iNodeType type) {
     BlockDevice* devicePtr = getBlockDeviceByID(this->device);
     PhospherusAllocator* allocator = phospherusOpenAllocator(devicePtr);
     block_index_t ret = phospherusAllocateBlock(allocator);
@@ -293,7 +293,7 @@ static Index64 __createInode(THIS_ARG_APPEND(FileSystem, iNodeType type)) {
     return ret;
 }
 
-static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
+static int __deleteInode(FileSystem* this, Index64 iNodeBlock) {
     if (hashTableFind(&_hashTable, __INODE_ID(this->device, iNodeBlock)) != NULL) {    //If opened, cannt be deleted
         return -1;
     }
@@ -301,7 +301,7 @@ static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
     BlockDevice* devicePtr = getBlockDeviceByID(this->device);
 
     RecordOnDevice* record = allocateBuffer(BUFFER_SIZE_512);
-    THIS_ARG_APPEND_CALL(devicePtr, operations->readBlocks, iNodeBlock, record, 1);
+    blockDeviceReadBlocks(devicePtr, iNodeBlock, record, 1);
     if (record->signature != SYSTEM_INFO_MAGIC64) {  //Validation failed
         releaseBuffer(record, BUFFER_SIZE_512);
         return -1;
@@ -312,13 +312,13 @@ static int __deleteInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
     __resizeClusterTables(allocator, data, (record->availableBlockSize + CLUSTER_BLOCK_SIZE - 1) / CLUSTER_BLOCK_SIZE, 0);
 
     memset(record, 0, BLOCK_SIZE);
-    THIS_ARG_APPEND_CALL(devicePtr, operations->writeBlocks, iNodeBlock, record, 1);
+    blockDeviceWriteBlocks(devicePtr, iNodeBlock, record, 1);
     releaseBuffer(record, BUFFER_SIZE_512);
 
     return 0;
 }
 
-static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
+static iNode* __openInode(FileSystem* this, Index64 iNodeBlock) {
     Object iNodeID = __INODE_ID(this->device, iNodeBlock);
     iNode* ret = NULL;
     HashChainNode* node = NULL;
@@ -336,7 +336,7 @@ static iNode* __openInode(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock)) {
         ret->entryReference = NULL;
         initHashChainNode(&ret->hashChainNode);
 
-        THIS_ARG_APPEND_CALL(devicePtr, operations->readBlocks, iNodeBlock, &ret->onDevice, 1);
+        blockDeviceReadBlocks(devicePtr, iNodeBlock, &ret->onDevice, 1);
 
         hashTableInsert(&_hashTable, iNodeID, &ret->hashChainNode);
     }
@@ -387,7 +387,7 @@ static int __resize(iNode* iNode, size_t newBlockSize) {
     record->blockTaken = newBlockTaken;
     record->availableBlockSize = newClusterSize * CLUSTER_BLOCK_SIZE;
     record->dataSize = umin64(record->availableBlockSize, record->dataSize);
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, iNode->blockIndex, &iNode->onDevice, 1);
+    blockDeviceWriteBlocks(device, iNode->blockIndex, &iNode->onDevice, 1);
 
     return 0;
 }
@@ -557,7 +557,7 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
 
         __ClusterTable* table = allocateBuffer(BUFFER_SIZE_512);
         BlockDevice* device = allocator->device;
-        THIS_ARG_APPEND_CALL(device, operations->readBlocks, *clusterTable, table, 1);
+        blockDeviceReadBlocks(device, *clusterTable, table, 1);
 
         size_t lowerLevelTableSize = _levelTableSizes[level - 1];
         size_t clusterSum = (lowBound / lowerLevelTableSize) * lowerLevelTableSize, currentSize = oldSize;
@@ -573,7 +573,7 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
             }
 
             if (__resizeClusterTable(allocator, table->indexes + i, subTableOldSize, subTableNewSize, level - 1) == -1) {
-                THIS_ARG_APPEND_CALL(device, operations->writeBlocks, *clusterTable, table, 1);
+                blockDeviceWriteBlocks(device, *clusterTable, table, 1);
                 releaseBuffer(table, BUFFER_SIZE_512);
 
                 return -1;
@@ -583,7 +583,7 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
             clusterSum = afterSum;
         }
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, *clusterTable, table, 1);
+        blockDeviceWriteBlocks(device, *clusterTable, table, 1);
         releaseBuffer(table, BUFFER_SIZE_512);
 
         if (currentSize != newSize) {
@@ -606,12 +606,12 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
 
 static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
-        THIS_ARG_APPEND_CALL(device, operations->readBlocks, tableIndex + blockIndexInTable, buffer, blockSize);
+        blockDeviceReadBlocks(device, tableIndex + blockIndexInTable, buffer, blockSize);
         return 0;
     }
 
     __ClusterTable* table = allocateBuffer(BUFFER_SIZE_512);
-    THIS_ARG_APPEND_CALL(device, operations->readBlocks, tableIndex, table, 1);
+    blockDeviceReadBlocks(device, tableIndex, table, 1);
 
     void* currentBuffer = buffer;
     size_t levelTableSize = _levelTableSizes[level - 1] * CLUSTER_BLOCK_SIZE, blockSum = blockIndexInTable / levelTableSize * levelTableSize, remainBlockToRead = blockSize, currentIndex = blockIndexInTable;
@@ -639,12 +639,12 @@ static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 
 
 static int __writeToSubClusterTable(BlockDevice* device, const void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, tableIndex + blockIndexInTable, buffer, blockSize);
+        blockDeviceWriteBlocks(device, tableIndex + blockIndexInTable, buffer, blockSize);
         return 0;
     }
 
     __ClusterTable* table = allocateBuffer(BUFFER_SIZE_512);
-    THIS_ARG_APPEND_CALL(device, operations->readBlocks, tableIndex, table, 1);
+    blockDeviceReadBlocks(device, tableIndex, table, 1);
 
     const void* currentBuffer = buffer;
     size_t levelTableSize = _levelTableSizes[level - 1] * CLUSTER_BLOCK_SIZE, blockSum = blockIndexInTable / levelTableSize * levelTableSize, remainBlockToWrite = blockSize, currentIndex = blockIndexInTable;

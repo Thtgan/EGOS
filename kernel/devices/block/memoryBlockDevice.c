@@ -11,9 +11,9 @@
 
 static bool _created = false;
 
-static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
+static void __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n);
 
-static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
+static void __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n);
 
 static BlockDeviceOperation _operations = {
     .readBlocks = __readBlocks,
@@ -43,10 +43,10 @@ void deleteMemoryBlockDevice(BlockDevice* blockDevice) {
     _created = false;
 }
 
-static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
+static void __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
     memcpy(buffer, (void*)this->additionalData + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE);  //Just simple memcpy
 }
 
-static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
+static void __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
     memcpy((void*)this->additionalData + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE);  //Just simple memcpy
 }

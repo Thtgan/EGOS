@@ -32,7 +32,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
      * @param buffer Buffer to storage the read data
      * @param n Num of blocks to read
      */
-    void (*readBlocks)(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
+    void (*readBlocks)(BlockDevice* device, block_index_t blockIndex, void* buffer, size_t n);
 
     /**
      * @brief Write blocks to the block device
@@ -42,7 +42,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
      * @param buffer Buffer contains the data to write
      * @param n Num of blocks to write
      */
-    void (*writeBlocks)(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
+    void (*writeBlocks)(BlockDevice* device, block_index_t blockIndex, const void* buffer, size_t n);
 };
 
 /**
@@ -99,5 +99,13 @@ BlockDevice* getBlockDeviceByName(const char* name);
  * @return BlockDevice* Block device found, NULL if not exist
  */
 BlockDevice* getBlockDeviceByID(ID id);
+
+static inline int blockDeviceReadBlocks(BlockDevice* device, block_index_t blockIndex, void* buffer, size_t n) {
+    device->operations->readBlocks(device, blockIndex, buffer, n);
+} 
+
+static inline int blockDeviceWriteBlocks(BlockDevice* device, block_index_t blockIndex, const void* buffer, size_t n) {
+    device->operations->writeBlocks(device, blockIndex, buffer, n);
+} 
 
 #endif // __BLOCK_DEVICE_H

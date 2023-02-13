@@ -16,7 +16,7 @@ void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, 
 }
 
 bool hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
-    size_t hashKey = THIS_ARG_APPEND_CALL(table, hashFunc, key);
+    size_t hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
     for (SinglyLinkedListNode* node = chain->next; node != chain; node = node->next) {
@@ -42,7 +42,7 @@ void initHashChainNode(HashChainNode* node) {
 }
 
 HashChainNode* hashTableDelete(HashTable* table, Object key) {
-    size_t hashKey = THIS_ARG_APPEND_CALL(table, hashFunc, key);
+    size_t hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
     for (SinglyLinkedListNode* node = chain->next, *last = chain; node != chain; last = node, node = node->next) {
@@ -61,7 +61,7 @@ HashChainNode* hashTableDelete(HashTable* table, Object key) {
 }
 
 HashChainNode* hashTableFind(HashTable* table, Object key) {
-    size_t hashKey = THIS_ARG_APPEND_CALL(table, hashFunc, key);
+    size_t hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
     for (SinglyLinkedListNode* node = chain->next, *last = chain; node != chain; last = node, node = node->next) {

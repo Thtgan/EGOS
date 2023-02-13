@@ -11,10 +11,10 @@
 static HashTable _hashTable;
 static SinglyLinkedList _hashChains[17];
 
-static size_t __hashFunc(THIS_ARG_APPEND(HashTable, Object key));
-
 void initBlockDeviceManager() {
-    initHashTable(&_hashTable, 17, _hashChains, __hashFunc);
+    initHashTable(&_hashTable, 17, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
+        return (size_t)key % this->hashSize;
+    }));
 }
 
 BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
@@ -75,8 +75,4 @@ BlockDevice* getBlockDeviceByID(ID id) {
     }
 
     return NULL;
-}
-
-static size_t __hashFunc(THIS_ARG_APPEND(HashTable, Object key)) {
-    return (size_t)key % this->hashSize;
 }

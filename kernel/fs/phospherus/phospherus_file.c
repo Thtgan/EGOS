@@ -10,11 +10,11 @@
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 
-int __seek(THIS_ARG_APPEND(File, size_t seekTo));
+int __seek(File* this, size_t seekTo);
 
-int __read(THIS_ARG_APPEND(File, void* buffer, size_t n));
+int __read(File* this, void* buffer, size_t n);
 
-int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n));
+int __write(File* this, const void* buffer, size_t n);
 
 FileOperations fileOperations = {
     .seek = __seek,
@@ -35,7 +35,7 @@ FileGlobalOperations* phospherusInitFiles() {
     return &fileGlobalOperations;
 }
 
-int __seek(THIS_ARG_APPEND(File, size_t seekTo)) {
+int __seek(File* this, size_t seekTo) {
     if (seekTo == PHOSPHERUS_NULL) {
         return PHOSPHERUS_NULL;
     }
@@ -43,7 +43,7 @@ int __seek(THIS_ARG_APPEND(File, size_t seekTo)) {
     return this->pointer = seekTo >= fileSize ? PHOSPHERUS_NULL : seekTo;
 }
 
-int __read(THIS_ARG_APPEND(File, void* buffer, size_t n)) {
+int __read(File* this, void* buffer, size_t n) {
     Index64 pointer = this->pointer;
     if (pointer == PHOSPHERUS_NULL) {
         return -1;
@@ -57,7 +57,7 @@ int __read(THIS_ARG_APPEND(File, void* buffer, size_t n)) {
 
     Index64 flooredReadPointer = currentReadPointer / BLOCK_SIZE * BLOCK_SIZE;
     if (flooredReadPointer < currentReadPointer) {
-        iNode->operations->readBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
+        iNodeReadBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
 
         Index64 indexInBlock = currentReadPointer - flooredReadPointer, frontByteNum = umin64(BLOCK_SIZE - indexInBlock, remainByteToRead);
         memcpy(currentBuffer, tmpBuffer + indexInBlock, frontByteNum);
@@ -69,14 +69,14 @@ int __read(THIS_ARG_APPEND(File, void* buffer, size_t n)) {
 
     size_t midBlockNum = remainByteToRead / BLOCK_SIZE;
     if (midBlockNum > 0) {
-        iNode->operations->readBlocks(iNode, currentBuffer, currentReadPointer / BLOCK_SIZE, midBlockNum);
+        iNodeReadBlocks(iNode, currentBuffer, currentReadPointer / BLOCK_SIZE, midBlockNum);
         currentBuffer += midBlockNum * BLOCK_SIZE;
         currentReadPointer += midBlockNum * BLOCK_SIZE;
         remainByteToRead -= midBlockNum * BLOCK_SIZE;
     }
 
     if (remainByteToRead > 0) {
-        iNode->operations->readBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
+        iNodeReadBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
         size_t tailByteNum = umin64(remainByteToRead, BLOCK_SIZE);
         memcpy(currentBuffer, tmpBuffer, tailByteNum);
 
@@ -94,7 +94,7 @@ int __read(THIS_ARG_APPEND(File, void* buffer, size_t n)) {
     return 0;
 }
 
-int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n)) {
+int __write(File* this, const void* buffer, size_t n) {
     iNode* iNode = this->iNode;
 
     size_t pointer = this->pointer;
@@ -102,7 +102,7 @@ int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n)) {
 
     size_t blockNum = iNode->onDevice.availableBlockSize, leastBlockNumAfterWrite = (pointer + n + BLOCK_SIZE - 1) / BLOCK_SIZE;
     if (leastBlockNumAfterWrite > blockNum) {
-        if (iNode->operations->resize(iNode, leastBlockNumAfterWrite) == -1) {
+        if (iNodeResize(iNode, leastBlockNumAfterWrite) == -1) {
             return -1;
         }
     }
@@ -113,11 +113,11 @@ int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n)) {
 
     size_t flooredWritePointer = currentWritePointer / BLOCK_SIZE * BLOCK_SIZE;
     if (flooredWritePointer < currentWritePointer) {
-        iNode->operations->readBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
+        iNodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
 
         size_t indexInBlock = currentWritePointer - flooredWritePointer, frontByteNum = umin64(BLOCK_SIZE - indexInBlock, remainByteToWrite);
         memcpy(tmpBuffer + indexInBlock, currentBuffer, frontByteNum);
-        if (iNode->operations->writeBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
+        if (iNodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
             return -1;
         }
 
@@ -128,17 +128,17 @@ int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n)) {
 
     size_t midBlockNum = remainByteToWrite / BLOCK_SIZE;
     if (midBlockNum > 0) {
-        iNode->operations->writeBlocks(iNode, currentBuffer, currentWritePointer / BLOCK_SIZE, midBlockNum);
+        iNodeWriteBlocks(iNode, currentBuffer, currentWritePointer / BLOCK_SIZE, midBlockNum);
         currentBuffer += midBlockNum * BLOCK_SIZE;
         currentWritePointer += midBlockNum * BLOCK_SIZE;
         remainByteToWrite -= midBlockNum * BLOCK_SIZE;
     }
     
     if (remainByteToWrite > 0) {
-        iNode->operations->readBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
+        iNodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
         size_t tailByteNum = umin64(remainByteToWrite, BLOCK_SIZE);
         memcpy(tmpBuffer, currentBuffer, tailByteNum);
-        if (iNode->operations->writeBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
+        if (iNodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
             return -1;
         }
 
@@ -153,7 +153,7 @@ int __write(THIS_ARG_APPEND(File, const void* buffer, size_t n)) {
     }
 
     iNode->onDevice.dataSize = umax64(iNode->onDevice.dataSize, pointer + n);
-    THIS_ARG_APPEND_CALL(iNode->device, operations->writeBlocks, iNode->blockIndex, &iNode->onDevice, 1);
+    blockDeviceWriteBlocks(iNode->device, iNode->blockIndex, &iNode->onDevice, 1);
 
     __seek(this, currentWritePointer);
     return 0;

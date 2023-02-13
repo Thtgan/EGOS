@@ -69,4 +69,16 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
     int (*writeBlocks)(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
 };
 
+static inline int iNodeResize(iNode* iNode, size_t newBlockSize) {
+    iNode->operations->resize(iNode, newBlockSize);
+}
+
+static inline int iNodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
+    iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
+}
+
+static inline int iNodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
+    iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
+}
+
 #endif // __INODE_H

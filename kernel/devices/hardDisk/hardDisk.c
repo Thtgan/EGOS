@@ -141,9 +141,9 @@ static void __registerDiskBlockDevice(Disk* d);
  */
 static bool __checkBootDisk(Disk* d);
 
-static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
+static void __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n);
 
-static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
+static void __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n);
 
 static BlockDeviceOperation _operations = {
     .readBlocks = __readBlocks,
@@ -372,12 +372,12 @@ static bool __checkBootDisk(Disk* d) {
     return ret;
 }
 
-static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
+static void __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
 }
 
-static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
+static void __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
 }

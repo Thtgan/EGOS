@@ -30,7 +30,7 @@ typedef struct {
      * @param type type of the iNode
      * @return Index64 The index of the block where the iNode is located
      */
-    Index64 (*createInode)(THIS_ARG_APPEND(FileSystem, iNodeType type));
+    Index64 (*createInode)(FileSystem* fs, iNodeType type);
 
     /**
      * @brief Delete iNode from device
@@ -38,7 +38,7 @@ typedef struct {
      * @param iNodeBlock Block index where the inode is located
      * @return int Status of the operation
      */
-    int (*deleteInode)(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
+    int (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
 
     /**
      * @brief Open a inode through on the given block
@@ -46,7 +46,7 @@ typedef struct {
      * @param iNodeBlock Block where the inode is located
      * @return iNode* Opened iNode
      */
-    iNode* (*openInode)(THIS_ARG_APPEND(FileSystem, Index64 iNodeBlock));
+    iNode* (*openInode)(FileSystem* fs, Index64 iNodeBlock);
 
     /**
      * @brief Close the inode opened
@@ -111,5 +111,37 @@ FileSystem* openFileSystem(BlockDevice* device, FileSystemType type);
  * @param system File system
  */
 void closeFileSystem(FileSystem* system);
+
+static inline File* fileSystemOpenFile(FileSystem* fs, iNode* iNode) {
+    return fs->opearations->fileGlobalOperations->openFile(iNode);
+}
+
+static inline int fileSystemCloseFile(FileSystem* fs, File* file) {
+    return fs->opearations->fileGlobalOperations->closeFile(file);
+}
+
+static inline Directory* fileSystemOpenDirectory(FileSystem* fs, iNode* iNode) {
+    return fs->opearations->directoryGlobalOperations->openDirectory(iNode);
+}
+
+static inline int fileSystemCloseDirectory(FileSystem* fs, Directory* directory) {
+    return fs->opearations->directoryGlobalOperations->closeDirectory(directory);
+}
+
+static inline Index64 fileSystemCreateInode(FileSystem* fs, iNodeType type) {
+    return fs->opearations->iNodeGlobalOperations->createInode(fs, type);
+}
+
+static inline int fileSystemDeleteInode(FileSystem* fs, Index64 iNodeBlock) {
+    return fs->opearations->iNodeGlobalOperations->deleteInode(fs, iNodeBlock);
+}
+
+static inline iNode* fileSystemOpenInode(FileSystem* fs, Index64 iNodeBlock) {
+    return fs->opearations->iNodeGlobalOperations->openInode(fs, iNodeBlock);
+}
+
+static inline int fileSystemCloseInode(FileSystem* fs, iNode* iNode) {
+    return fs->opearations->iNodeGlobalOperations->closeInode(iNode);
+}
 
 #endif // __FILESYSTEM_H
