@@ -31,5 +31,5 @@ void jumpToKernel(SystemInfo* sysInfo) {
     //ANCHOR[id=arch_boot_sys_pm_c_cli]
     cli();//Clear interrupt flag
 
-    jumpToProtectedMode(SEGMENT_CODE32, SEGMENT_DATA32, (uint32_t)sysInfo);
+    jumpToProtectedMode(SEGMENT_KERNEL_CODE, SEGMENT_KERNEL_DATA, (uint32_t)sysInfo);
 }

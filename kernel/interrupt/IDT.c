@@ -77,7 +77,7 @@ void registerISR(uint8_t vector, void* isr, uint8_t attributes) {
 static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes) {
     IDTtable[vector] = (IDTentry) {
         EXTRACT_VAL((uint64_t)isr, 64, 0, 16),
-        SEGMENT_CODE32,
+        SEGMENT_KERNEL_CODE,
         0,
         attributes,
         EXTRACT_VAL((uint64_t)isr, 64, 16, 32),

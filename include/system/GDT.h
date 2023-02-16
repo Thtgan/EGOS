@@ -5,11 +5,15 @@
 #include<kit/types.h>
 
 #define GDT_ENTRY_INDEX_NULL        0
-#define GDT_ENTRY_INDEX_CODE        1
-#define GDT_ENTRY_INDEX_DATA        2
+#define GDT_ENTRY_INDEX_KERNEL_CODE 1
+#define GDT_ENTRY_INDEX_KERNEL_DATA 2
+#define GDT_ENTRY_INDEX_USER_CODE   3
+#define GDT_ENTRY_INDEX_USER_DATA   4
 
-#define SEGMENT_CODE32              GDT_ENTRY_INDEX_CODE * 8
-#define SEGMENT_DATA32              GDT_ENTRY_INDEX_DATA * 8
+#define SEGMENT_KERNEL_CODE         (GDT_ENTRY_INDEX_KERNEL_CODE << 3) | 0
+#define SEGMENT_KERNEL_DATA         (GDT_ENTRY_INDEX_KERNEL_DATA << 3) | 0
+#define SEGMENT_USER_CODE           (GDT_ENTRY_INDEX_USER_CODE << 3) | 3
+#define SEGMENT_USER_DATA           (GDT_ENTRY_INDEX_USER_DATA << 3) | 3
 
 //Access
 #define GDT_ACCESS                  FLAG8(0)
@@ -34,7 +38,7 @@
 // +---------------+--------------+-------------+
 // | Range(in bit) | Size(in bit) | Description |
 // +---------------+--------------+-------------+
-// |     00-15     |      16      | Limit 0:15  |
+// |     00-15     |      16      | Limit 0:15  | 
 // |     16-31     |      16      | Base 0:15   |
 // |     32-39     |      8       | Base 16:23  |
 // |     40-47     |      8       | Access Byte |
@@ -42,6 +46,8 @@
 // |     52-55     |      4       | Flags       |
 // |     56-63     |      8       | Base 24:31  |
 // +---------------+--------------+-------------+
+//In 64-bit mode, the processor DOES NOT perform runtime limit checking on code or data segments. However, the processor does check descriptor-table limits.
+//<<Intel® 64 and IA-32 Architectures Software Developer’s Manual>> 5.3.1
 
 /**
  * @brief GDT table entry
