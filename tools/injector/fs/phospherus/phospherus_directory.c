@@ -140,7 +140,7 @@ DirectoryEntry* __getEntry(Directory* directory, Index64 entryIndex) {
     }
 
     DirectoryEntry* ret = malloc(sizeof(DirectoryEntry));
-    __DirectoryEntry* entry = directory->directoryInMemory + entryIndex;
+    __DirectoryEntry* entry = ((__DirectoryEntry*)directory->directoryInMemory) + entryIndex;
     ret->name = entry->name;
     ret->iNodeIndex = entry->inodeBlockIndex;
     ret->type = entry->type;
