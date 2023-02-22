@@ -43,10 +43,10 @@ typedef struct {
  */
 typedef struct {
     uint64_t errorCode;
-    uint64_t ip;
+    uint64_t rip;
     uint64_t cs;        //Padded to doubleword
     uint64_t eflags;
-    uint64_t sp;
+    uint64_t rsp;
     uint64_t ss;
 } __attribute__((packed)) HandlerStackFrame;
 

@@ -24,7 +24,7 @@ STRUCT_PRIVATE_DEFINE(DirectoryOperations) {
     int (*addEntry)(Directory* directory, iNode* entryInode, ConstCstring name);
     int (*removeEntry)(Directory* directory, Index64 entryIndex);
     Index64 (*lookupEntry)(Directory* directory, ConstCstring name, iNodeType type);
-    DirectoryEntry* (*getEntry)(Directory* directory, Index64 entryIndex);
+    int (*readEntry)(Directory* directory, DirectoryEntry* entry, Index64 entryIndex);
 };
 
 static inline int directoryAddEntry(Directory* directory, iNode* entryInode, ConstCstring name) {
@@ -39,8 +39,8 @@ static inline Index64 directoryLookupEntry(Directory* directory, ConstCstring na
     return directory->operations->lookupEntry(directory, name, type);
 }
 
-static inline DirectoryEntry* directoryGetEntry(Directory* directory, Index64 entryIndex) {
-    return directory->operations->getEntry(directory, entryIndex);
+static inline int directoryReadEntry(Directory* directory, DirectoryEntry* entry, Index64 entryIndex) {
+    return directory->operations->readEntry(directory, entry, entryIndex);
 }
 
 #endif // __DIRECTORY_H

@@ -6,29 +6,33 @@
 
 //TODO: REMAP THIS MESS
 
-#define B                               (1ull)
-#define KB                              (1024ull)
-#define MB                              (1024ull * 1024)
-#define GB                              (1024ull * 1024 * 1024)
-#define TB                              (1024ull * 1024 * 1024 * 1024)
+#define DATA_UNIT_B                     (1ull)
+#define DATA_UNIT_KB                    (1024ull)
+#define DATA_UNIT_MB                    (1024ull * 1024)
+#define DATA_UNIT_GB                    (1024ull * 1024 * 1024)
+#define DATA_UNIT_TB                    (1024ull * 1024 * 1024 * 1024)
 
 #define MBR_BEGIN                       0x7C00
 #define MBR_END                         0x7E00
 
 #define REAL_MODE_CODE_BEGIN            MBR_END
 
-#define INIT_PAGING_DIRECT_MAP_SIZE     (64ull * MB)    //Before entering the kernel, some memory at the beginning will be directly mapped
+#define INIT_PAGING_DIRECT_MAP_SIZE     (64ull * DATA_UNIT_MB)      //Before entering the kernel, some memory at the beginning will be directly mapped
 
-#define KERNEL_PHYSICAL_BEGIN           (128ull * KB)   //128KB
+#define KERNEL_PHYSICAL_BEGIN           (128ull * DATA_UNIT_KB)     //128KB
 #define KERNEL_STACK_BOTTOM             ((KERNEL_PHYSICAL_END + KERNEL_STACK_SIZE) | KERNEL_VIRTUAL_BEGIN)
-#define KERNEL_PHYSICAL_END             (16ull * MB)    //16MB in current design
-
-#define KERNEL_STACK_SIZE               (16ull * KB)
+#define KERNEL_PHYSICAL_END             (16ull * DATA_UNIT_MB)      //16MB in current design
+#define KERNEL_STACK_SIZE               (16ull * DATA_UNIT_KB)
+#define KERNEL_STACK_PAGE_NUM           ((KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE)
 
 #define FREE_PAGE_BEGIN                 (KERNEL_PHYSICAL_END + KERNEL_STACK_SIZE)
 
-#define BOOT_DISK_FREE_BEGIN            (1ull * MB) //IO to boot disk start at this address is guaranteed will not affect the kernel
+#define USER_STACK_BOTTOM               KERNEL_VIRTUAL_BEGIN
+#define USER_STACK_SIZE                 (16ull * DATA_UNIT_KB)
+#define USER_STACK_PAGE_NUM             ((USER_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE)
 
-#define KERNEL_VIRTUAL_BEGIN            (1ull * TB)
+#define BOOT_DISK_FREE_BEGIN            (1ull * DATA_UNIT_MB)   //IO to boot disk start at this address is guaranteed will not affect the kernel
+
+#define KERNEL_VIRTUAL_BEGIN            (1ull * DATA_UNIT_TB)
 
 #endif // __ADDRESS_H

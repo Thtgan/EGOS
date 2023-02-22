@@ -21,13 +21,13 @@ int __removeEntry(Directory* this, Index64 entryIndex);
 
 Index64 __lookupEntry(Directory* this, ConstCstring name, iNodeType type);
 
-DirectoryEntry* __getEntry(Directory* this, Index64 entryIndex);
+int __readEntry(Directory* this, DirectoryEntry* entry, Index64 entryIndex);
 
 DirectoryOperations directoryOperations = {
     .addEntry = __addEntry,
     .removeEntry = __removeEntry,
     .lookupEntry = __lookupEntry,
-    .getEntry = __getEntry
+    .readEntry = __readEntry
 };
 
 Directory* __openDirectory(iNode* iNode);
@@ -134,18 +134,17 @@ Index64 __lookupEntry(Directory* this, ConstCstring name, iNodeType type) {
     return PHOSPHERUS_NULL;
 }
 
-DirectoryEntry* __getEntry(Directory* this, Index64 entryIndex) {
+int __readEntry(Directory* this, DirectoryEntry* entry, Index64 entryIndex) {
     if (entryIndex >= this->size) {
-        return NULL;
+        return -1;
     }
 
-    DirectoryEntry* ret = kMalloc(sizeof(DirectoryEntry), MEMORY_TYPE_NORMAL);
-    __DirectoryEntry* entry = this->directoryInMemory + entryIndex;
-    ret->name = entry->name;
-    ret->iNodeIndex = entry->inodeBlockIndex;
-    ret->type = entry->type;
+    __DirectoryEntry* diectoryEntry = ((__DirectoryEntry*)this->directoryInMemory) + entryIndex;
+    entry->name = diectoryEntry->name;
+    entry->iNodeIndex = diectoryEntry->inodeBlockIndex;
+    entry->type = diectoryEntry->type;
 
-    return ret;
+    return 0;
 }
 
 Directory* __openDirectory(iNode* iNode) {

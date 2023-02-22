@@ -4,7 +4,6 @@
 #include<kit/bit.h>
 #include<kit/macro.h>
 #include<kit/types.h>
-#include<real/registers.h>
 
 #define INSTRUCTION_LENGTH_SUFFIX8  b
 #define INSTRUCTION_LENGTH_SUFFIX16 w
@@ -399,12 +398,22 @@ static inline void rdmsr(uint32_t addr, uint32_t* edx, uint32_t* eax) {
     );
 }
 
+static inline uint64_t rdmsrl(uint32_t addr) {
+    uint32_t edx, eax;
+    rdmsr(addr, &edx, &eax);
+    return ((uint64_t)edx << 32) | eax;
+}
+
 static inline void wrmsr(uint32_t addr, uint32_t edx, uint32_t eax) {
     asm volatile (
         "wrmsr"
         :
         : "c" (addr), "d" (edx), "a" (eax)
     );
+}
+
+static inline void wrmsrl(uint32_t addr, uint64_t value) {
+    wrmsr(addr, (uint32_t)(value >> 32), (uint32_t)value);
 }
 
 static inline uint32_t readEFlags32() {

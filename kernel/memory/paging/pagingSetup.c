@@ -26,7 +26,7 @@ PML4Table* setupPML4Table() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
     void* pAddr = (void*)0, * pAddrEnd = (void*)((uintptr_t)mMap->freePageEnd << PAGE_SIZE_SHIFT);
     for (int i = 0; i < PML4_TABLE_SIZE && pAddr < pAddrEnd; ++i, pAddr += PDPT_SPAN) {
-        ret->tableEntries[i] = BUILD_PML4_ENTRY(__setupPDPtable(pAddr), PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+        ret->tableEntries[i] = BUILD_PML4_ENTRY(__setupPDPtable(pAddr), PML4_ENTRY_FLAG_US | PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
     }
 
     pAddr = (void*)0;
@@ -60,7 +60,7 @@ static PDPtable* __setupPDPtable(void* pAddr) {
 
     int i = 0;
     for (; i < PDP_TABLE_SIZE && pAddr < pAddrEnd; ++i, pAddr += PAGE_DIRECTORY_SPAN) {
-        ret->tableEntries[i] = BUILD_PDPT_ENTRY(__setupPageDirectoryTable(pAddr), PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PRESENT);
+        ret->tableEntries[i] = BUILD_PDPT_ENTRY(__setupPageDirectoryTable(pAddr), PDPT_ENTRY_FLAG_US | PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PRESENT);
     }
 
     for (; i < PDP_TABLE_SIZE; ++i) {
@@ -78,7 +78,7 @@ static PageDirectory* __setupPageDirectoryTable(void* pAddr) {
 
     int i = 0;
     for (; i < PAGE_DIRECTORY_SIZE && pAddr < pAddrEnd; ++i, pAddr += PAGE_TABLE_SPAN) {
-        ret->tableEntries[i] = BUILD_PAGE_DIRECTORY_ENTRY(__setupPageTable(pAddr), PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
+        ret->tableEntries[i] = BUILD_PAGE_DIRECTORY_ENTRY(__setupPageTable(pAddr), PAGE_DIRECTORY_ENTRY_FLAG_US | PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
     }
 
     for (; i < PAGE_DIRECTORY_SIZE; ++i) {

@@ -15,23 +15,22 @@
 #include<string.h>
 #include<structs/bitmap.h>
 #include<structs/queue.h>
+#include<structs/registerSet.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
+#include<system/GDT.h>
+#include<system/TSS.h>
 #include<real/simpleAsmLines.h>
+
+static TSS _tss;
 
 static Process* _currentProcess = NULL;
 
 static Process* __createProcess(uint16_t pid, ConstCstring name);
 
-static void __handleSwitch(Process* from, Process* to);
-
 static uint16_t __allocatePID();
 
 static void __releasePID(uint16_t pid);
-
-#define __STACK_PAGE_NUM    ((KERNEL_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE)
-
-#define __CLOBBER_REGISTERS   "rax", "rbx", "rcx", "rdx", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"
 
 static uint16_t _lastGeneratePID = 0;
 static Bitmap _pidBitmap;
@@ -50,7 +49,7 @@ Process* initProcess() {
 
     //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
     PhysicalPage* stackPhysicalPageStruct = getPhysicalPageStruct(translateVaddr(currentPageTable, (void*)(KERNEL_PHYSICAL_END | KERNEL_VIRTUAL_BEGIN)));
-    for (int i = 0; i < __STACK_PAGE_NUM; ++i) {
+    for (int i = 0; i < KERNEL_STACK_PAGE_NUM; ++i) {
         (stackPhysicalPageStruct + i)->flags = PHYSICAL_PAGE_TYPE_NORMAL;
         referPhysicalPage(stackPhysicalPageStruct + i);
     }
@@ -60,32 +59,41 @@ Process* initProcess() {
     return mainProcess;
 }
 
-__attribute__((optimize("O0")))
-void switchProcess(Process* from, Process* to) {
-    asm volatile(
-        "pushfq;"
-        "pushq %%rbp;"
-        // "movq %%rsp, %P3(%1);"   //TODO: It is weird that swapping stacks here causes unknown error, must be corrupted somewhere, nail it in future
-        // "movq %P3(%2), %%rsp;"
-        "call %P0;"
-        "popq %%rbp;"
-        "popfq;"
-        :
-        : "i"(__handleSwitch), "D"(from), "S"(to)//, "i" (offsetof(Process, stackTop))
-        : "memory", "cc", __CLOBBER_REGISTERS
-    );
+void initTSS() {
+    memset(&_tss, 0, sizeof(TSS));
+    _tss.ist[0] = (uintptr_t)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
+    _tss.rsp[0] = (uintptr_t)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
+    _tss.ioMapBaseAddress = 0x8000;  //Invalid
+    
+    GDTDesc64* desc = (GDTDesc64*)sysInfo->gdtDesc;
+    GDTEntryTSS_LDT* gdtEntryTSS = (GDTEntryTSS_LDT*)((GDTEntry*)desc->table + GDT_ENTRY_INDEX_TSS);
+
+    *gdtEntryTSS = BUILD_GDT_ENTRY_TSS_LDT(((uintptr_t)&_tss), sizeof(TSS), GDT_TSS_LDT_TSS | GDT_TSS_LDT_PRIVIEGE_0 | GDT_TSS_LDT_PRESENT, 0);
+
+    asm volatile("ltr %w0" :: "r"(SEGMENT_TSS));
 }
 
-//WARNING: DO NOT MAKE ANY FUNCTION CALL BETWEEN STACK SWAP AND PAGE TABLE SWITCH, IT WILL CAUSE UNKNOWN RESULTS
-static void __handleSwitch(Process* from, Process* to) {
-    from->stackTop = (void*)readRegister_RSP_64();
-    //Switch the stack, the stack contains the return address
-    writeRegister_RSP_64((uint64_t)to->stackTop);
+__attribute__((naked))
+void switchProcess(Process* from, Process* to) {
+    asm volatile(
+        SAVE_ALL
+    );
+    asm volatile(
+        "mov %%rsp, %0;"
+        "mov %1, %%rsp"
+        : "=m"(from->registers)
+        : "m"(to->registers)
+    );
 
     //Switch the page table
     SWITCH_TO_TABLE(to->pageTable);
     
     _currentProcess = to;
+
+    asm volatile(
+        RESTORE_ALL
+        "retq;"
+    );
 }
 
 Process* getCurrentProcess() {
@@ -100,8 +108,6 @@ Process* forkFromCurrentProcess(const char* processName) {
         return NULL;
     }
 
-    //Process* newProcess = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
-
     switchProcess(_currentProcess, _currentProcess);    //Mark the current process's stack here, forked process will take the stack address and starts from here
     char* source = (char*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE;
     for (int i = 0; i < KERNEL_STACK_SIZE; ++i) {
@@ -113,9 +119,9 @@ Process* forkFromCurrentProcess(const char* processName) {
         Process* newProcess = __createProcess(newPID, processName);
         newProcess->ppid = oldPID;
         newProcess->pageTable = copyPML4Table(_currentProcess->pageTable);
-        newProcess->stackTop = _currentProcess->stackTop;
+        newProcess->registers = _currentProcess->registers;
 
-        void* newStackBottom = pageAlloc(__STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL) + KERNEL_STACK_SIZE;
+        void* newStackBottom = pageAlloc(KERNEL_STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL) + KERNEL_STACK_SIZE;
         for (uintptr_t i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
             mapAddr(newProcess->pageTable, (void*)KERNEL_STACK_BOTTOM - i, newStackBottom - i);
         }
@@ -143,7 +149,17 @@ void exitProcess() {
 void releaseProcess(Process* process) {
     void* pAddr = translateVaddr(process->pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
     memset(pAddr, 0, KERNEL_STACK_SIZE);
-    pageFree(pAddr, __STACK_PAGE_NUM);
+    pageFree(pAddr, KERNEL_STACK_PAGE_NUM);
+
+    if (process->userStackTop != NULL) {
+        for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+            pageFree(translateVaddr(process->pageTable, (void*)USER_STACK_BOTTOM - i), 1);
+        }
+    }
+
+    if (process->userProgramBegin != NULL) {
+        pageFree(process->userProgramBegin, process->userProgramPageSize);
+    }
 
     releasePML4Table(process->pageTable);
 
@@ -162,7 +178,11 @@ static Process* __createProcess(uint16_t pid, ConstCstring name) {
     ret->remainTick = PROCESS_TICK;
     ret->status = PROCESS_STATUS_UNKNOWN;
 
-    ret->pageTable = ret->stackTop = NULL;
+    ret->pageTable = NULL;
+    ret->registers = NULL;
+
+    ret->userStackTop = ret->userProgramBegin = NULL;
+    ret->userProgramPageSize = 0;
 
     initQueueNode(&ret->statusQueueNode);
     initQueueNode(&ret->semaWaitQueueNode);

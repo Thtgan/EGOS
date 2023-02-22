@@ -11,7 +11,7 @@ static PageDirectory* __copyPageDirectory(PageDirectory* source);
 static PageTable* __copyPageTable(PageTable* source);
 
 PML4Table* copyPML4Table(PML4Table* source) {
-    PML4Table* ret = pageAlloc(1, PHYSICAL_PAGE_FLAG_IGNORE);
+    PML4Table* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
 
     for (int i = 0; i < KERNEL_VIRTUAL_BEGIN / PDPT_SPAN; ++i) {
         ret->tableEntries[i] = source->tableEntries[i];
@@ -31,7 +31,7 @@ PML4Table* copyPML4Table(PML4Table* source) {
 }
 
 static PDPtable* __copyPDPtable(PDPtable* source) {
-    PDPtable* ret = pageAlloc(1, PHYSICAL_PAGE_FLAG_IGNORE);
+    PDPtable* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
 
     for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
         if (TEST_FLAGS_FAIL(source->tableEntries[i], PDPT_ENTRY_FLAG_PRESENT)) {
@@ -47,7 +47,7 @@ static PDPtable* __copyPDPtable(PDPtable* source) {
 }
 
 static PageDirectory* __copyPageDirectory(PageDirectory* source) {
-    PageDirectory* ret = pageAlloc(1, PHYSICAL_PAGE_FLAG_IGNORE);
+    PageDirectory* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
 
     for (int i = 0; i < PAGE_DIRECTORY_SIZE; ++i) {
         if (TEST_FLAGS_FAIL(source->tableEntries[i], PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
@@ -63,7 +63,7 @@ static PageDirectory* __copyPageDirectory(PageDirectory* source) {
 }
 
 static PageTable* __copyPageTable(PageTable* source) {
-    PageTable* ret = pageAlloc(1, PHYSICAL_PAGE_FLAG_IGNORE);
+    PageTable* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
 
     for (int i = 0; i < PAGE_TABLE_SIZE; ++i) {
         PhysicalPage* physicalPageStruct = getPhysicalPageStruct(PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(source->tableEntries[i]));

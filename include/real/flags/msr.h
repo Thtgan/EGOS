@@ -4,7 +4,15 @@
 #include<kit/bit.h>
 
 //Extended Feature Enable Register
-#define MSR_ADDR_EFER   0xC0000080
+#define MSR_ADDR_EFER           0xC0000080  //Extended Feature Enables
+#define MSR_ADDR_STAR           0xC0000081  //System Call Target Address
+#define MSR_ADDR_LSTAR          0xC0000082  //System Call Target Address(Long Mode)
+#define MSR_ADDR_CSTAR          0xC0000083  //System Call Target Address(Compatibility Mode)
+#define MSR_ADDR_FMASK          0xC0000084  //System Call Flag Mask
+#define MSR_ADDR_FS_BASE        0xC0000100  //Map of BASE Address of FS
+#define MSR_ADDR_GS_BASE        0xC0000101  //Map of BASE Address of GS
+#define MSR_ADDR_KERNEL_GS_BASE 0xC0000102  //Swap Target of BASE Address of GS
+#define MSR_ADDR_TSC_AUX        0xC0000103  //Auxiliary TSC
 
 //System Call Extensions
 #define MSR_EFER_SCE_INDEX      0

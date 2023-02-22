@@ -31,14 +31,6 @@ ISR_FUNC_HEADER(__timerHandler) {
 static void __loopWait(uint64_t loop);
 
 /**
- * @brief Test if num of loop could take a tick's time
- * 
- * @param loop Num of loop to test
- * @return If the num of loop is enough for a tick
- */
-static bool __testLoop(uint64_t loop);
-
-/**
  * @brief Test out the num of loop per tick could take, no more than a whole tick;
  * 
  * @return uint64_t Num of loop a tick takes
@@ -67,27 +59,6 @@ static bool __testLoop(uint64_t loop) {
     return cnt > 2;
 }
 
-static uint64_t __findTickLoop() {
-    uint64_t l = 1, r = 1;
-
-    while (!__testLoop(r)) {
-        l = r;
-        r <<= 1;
-    }
-
-    while (l != r) {    //Binary search
-        uint64_t mid = (l + r + 1) >> 1;
-
-        if (__testLoop(mid)) {
-            r = mid - 1;
-        } else {
-            l = mid;
-        }
-    }
-
-    return l;
-}
-
 void initPIT() {
     _tick = 0;
 
@@ -96,18 +67,16 @@ void initPIT() {
     configureChannel(0, 3, TICK_FREQUENCY);
     setInterrupt(interruptEnabled);
 
-    printf(TERMINAL_LEVEL_DEBUG, "Adjusting timer, please wait... ");
-    _loopPerTick = __findTickLoop();
-    printf(TERMINAL_LEVEL_DEBUG, "done, a tick takes %llu loops\n", _loopPerTick);
+    _loopPerTick = 3800000; //TODO: NO, No magic number here
 }
 
 void configureChannel(uint8_t channel, uint8_t mode, uint32_t frequency) {
     uint16_t count;
 
-    if (frequency <= 18) {  //Min frequency PIT could reach is 18.2065Hz
-        count = 0;  //Means 65536 to PIT
+    if (frequency <= 18) {                      //Minimum frequency PIT could reach is 18.2065Hz
+        count = 0;                              //Means 65536 to PIT
     } else if (frequency > PIT_MAX_FREQUENCY) {
-        count = 2;  //1 is illegal
+        count = 2;                              //1 is illegal
     } else {
         count = (PIT_MAX_FREQUENCY + (frequency >> 1)) / frequency;
     }

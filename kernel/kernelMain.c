@@ -9,6 +9,7 @@
 #include<fs/fileSystem.h>
 #include<fs/directory.h>
 #include<fs/file.h>
+#include<fs/fsutil.h>
 #include<fs/inode.h>
 #include<interrupt/IDT.h>
 #include<kit/oop.h>
@@ -24,8 +25,8 @@
 #include<multitask/spinlock.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
-#include<SSE.h>
 #include<string.h>
+#include<syscall.h>
 #include<system/systemInfo.h>
 
 SystemInfo* sysInfo;
@@ -43,12 +44,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         blowup("Magic not match\n");
     }
 
-    if (!checkSSE()) {
-        blowup("SSE not supported\n");
-    }
-
-    enableSSE();
-
     initVGATextMode(); //Initialize text mode
 
     initTerminalSwitch();
@@ -60,6 +55,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     initMemory();
 
     initKeyboard();
+
+    initTSS();
 
     //Set interrupt flag
     //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
@@ -75,6 +72,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initHardDisk();
 
+    initSyscall();
+
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
         blowup("Hda not found\n");
@@ -89,32 +88,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     FileSystem* fs = openFileSystem(hda, FILE_SYSTEM_TYPE_PHOSPHERUS);
 
     {
-        Index64 iNodeIndex = -1;
-        iNode* rootDirInode = fileSystemOpenInode(fs, fs->rootDirectoryInode);
-        Directory* rootDir = fileSystemOpenDirectory(fs, rootDirInode);
-
-        Index64 entryIndex = directoryLookupEntry(rootDir, "LOGO.bin", INODE_TYPE_FILE);
-        DirectoryEntry* entry = directoryGetEntry(rootDir, entryIndex);
-
-        iNodeIndex = entry->iNodeIndex;
-        kFree(entry);
-
-        fileSystemCloseDirectory(fs, rootDir);
-        fileSystemCloseInode(fs, rootDirInode);
-
-        iNode* fileInode = fileSystemOpenInode(fs, iNodeIndex);
-        File* logoFile = fileSystemOpenFile(fs, fileInode);
-
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        fileSeek(logoFile, 0);
-        fileRead(logoFile, buffer, logoFile->iNode->onDevice.dataSize);
-        printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
-
-        fileSystemCloseFile(fs, logoFile);
-        fileSystemCloseInode(fs, fileInode);
+        size_t read = loadFile(fs, "/LOGO.bin", buffer, 0, -1);
+        printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
+        releaseBuffer(buffer, BUFFER_SIZE_512);
     }
-
-    closeFileSystem(fs);
 
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
@@ -146,8 +124,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
         up(&sema2);
-        
-        exitProcess();
+
+        execute(fs, "/test");
     }
 
     kFree(arr1);

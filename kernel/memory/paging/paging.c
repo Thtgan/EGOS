@@ -11,6 +11,7 @@
 #include<memory/paging/pagingSetup.h>
 #include<memory/physicalPages.h>
 #include<real/simpleAsmLines.h>
+#include<system/address.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
@@ -27,7 +28,8 @@ PML4Table* currentPageTable = NULL;
 #define __PAGE_FAULT_ERROR_CODE_FLAG_SGX    FLAG32(15)  //Fault related to SGX?
 
 ISR_FUNC_HEADER(__pageFaultHandler) {
-    void* vAddr = (void*)readRegister_CR2_64();Index16 PML4Index = PML4_INDEX(vAddr),
+    void* vAddr = (void*)readRegister_CR2_64();
+    Index16 PML4Index = PML4_INDEX(vAddr),
             PDPTindex = PDPT_INDEX(vAddr),
             pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
             pageTableIndex = PAGE_TABLE_INDEX(vAddr);
@@ -46,7 +48,11 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
 
     void* pAddr = PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry);
     PhysicalPage* oldPhysicalPageStruct = getPhysicalPageStruct(pAddr);
-    if (TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_COW)) {
+    if (
+        TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
+        TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_COW) && 
+        TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_RW)
+        ) {
         if (oldPhysicalPageStruct->processReferenceCnt == 1) {
             SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_RW);
             return;
@@ -61,7 +67,17 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
         return;
     }
 
-    blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (uint64_t)vAddr, handlerStackFrame->errorCode, handlerStackFrame->ip); //Not allowed since malloc is implemented
+    if (
+        TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_US) && 
+        TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_USER) &&
+        TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_US)
+        ) {
+        SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_US);
+
+        return;
+    }
+
+    blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (uint64_t)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 
 void initPaging() {
@@ -88,24 +104,40 @@ void* translateVaddr(PML4Table* pageTable, void* vAddr) {
 
     PML4Table* PML4TablePtr = pageTable;
     PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
+    if (TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
+        return NULL;
+    }
+
     if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {
         return PS_ADDR_FROM_PML4_ENTRY(PML4Entry, vAddr);
     }
 
     PDPtable* PDPtablePtr = PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry);
     PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
+    if (TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
+        return NULL;
+    }
+
     if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
         return PS_ADDR_FROM_PDPT_ENTRY(PDPtableEntry, vAddr);
     }
 
     PageDirectory* pageDirectoryPtr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry);
     PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
+    if (TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
+        return NULL;
+    }
+
     if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
         return PS_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry, vAddr);
     }
 
     PageTable* pageTablePtr = PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry);
     PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
+    if (TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_PRESENT)) {
+        return NULL;
+    }
+
     return ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry, vAddr);
 }
 
@@ -117,6 +149,13 @@ bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
 
     PML4Table* PML4TablePtr = pageTable;
     PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
+    if (TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
+        void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+        memset(page, 0, PAGE_SIZE);
+        PML4Entry = PML4TablePtr->tableEntries[PML4Index] = 
+        BUILD_PML4_ENTRY(page, ((uintptr_t)vAddr >= KERNEL_VIRTUAL_BEGIN ? 0 : PML4_ENTRY_FLAG_US) | PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+    }
+
     if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {
         if ((uintptr_t)pAddr & (PDPT_SPAN - 1) != 0) {
             return false;
@@ -128,6 +167,13 @@ bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
 
     PDPtable* PDPtablePtr = PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry);
     PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
+    if (TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
+        void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+        memset(page, 0, PAGE_SIZE);
+        PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex] =
+        BUILD_PDPT_ENTRY(page, PDPT_ENTRY_FLAG_US | PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PRESENT);
+    }
+
     if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
         if ((uintptr_t)pAddr & (PAGE_DIRECTORY_SPAN - 1) != 0) {
             return false;
@@ -139,6 +185,13 @@ bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
 
     PageDirectory* pageDirectoryPtr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry);
     PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
+    if (TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
+        void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+        memset(page, 0, PAGE_SIZE);
+        pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex] =
+        BUILD_PAGE_DIRECTORY_ENTRY(page, PAGE_DIRECTORY_ENTRY_FLAG_US | PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
+    }
+
     if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
         if ((uintptr_t)pAddr & (PAGE_TABLE_SPAN - 1) != 0) {
             return false;
@@ -150,7 +203,7 @@ bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
 
     PageTable* pageTablePtr = PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry);
     PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(pAddr, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry));
+    pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(pAddr, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW | PAGE_TABLE_ENTRY_FLAG_PRESENT);
     
     return true;
 }

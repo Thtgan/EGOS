@@ -9,9 +9,10 @@
 #include<real/flags/eflags.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
+#include<structs/registerSet.h>
 #include<system/GDT.h>
 
-void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame) = {};
+void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, RegisterSet* registers) = {};
 
 IDTentry IDTtable[256];
 IDTdesc idtDesc;
@@ -29,9 +30,11 @@ static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     printf(TERMINAL_LEVEL_DEV, "%#04X Interrupt triggered!\n", vec);
-    printf(TERMINAL_LEVEL_DEV, "%#018llX\n", readRegister_RSP_64());
-    printf(TERMINAL_LEVEL_DEV, "%#018llX %#018llX %#018llX\n", handlerStackFrame, handlerStackFrame->ip, handlerStackFrame->cs);
-    printf(TERMINAL_LEVEL_DEV, "%#018llX %#018llX %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->sp, handlerStackFrame->ss);
+    printf(TERMINAL_LEVEL_DEV, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
+    printf(TERMINAL_LEVEL_DEV, "FRAME: %#018llX\n", handlerStackFrame);
+    printf(TERMINAL_LEVEL_DEV, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
+    printf(TERMINAL_LEVEL_DEV, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
+    printRegisters(TERMINAL_LEVEL_DEV, registers);
     blowup("DEAD\n");
 }
 

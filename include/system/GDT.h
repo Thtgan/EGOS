@@ -7,13 +7,17 @@
 #define GDT_ENTRY_INDEX_NULL        0
 #define GDT_ENTRY_INDEX_KERNEL_CODE 1
 #define GDT_ENTRY_INDEX_KERNEL_DATA 2
-#define GDT_ENTRY_INDEX_USER_CODE   3
+#define GDT_ENTRY_INDEX_USER_CODE32 3
 #define GDT_ENTRY_INDEX_USER_DATA   4
+#define GDT_ENTRY_INDEX_USER_CODE   5   //Magic design by syscall
+#define GDT_ENTRY_INDEX_TSS         6
 
-#define SEGMENT_KERNEL_CODE         (GDT_ENTRY_INDEX_KERNEL_CODE << 3) | 0
-#define SEGMENT_KERNEL_DATA         (GDT_ENTRY_INDEX_KERNEL_DATA << 3) | 0
-#define SEGMENT_USER_CODE           (GDT_ENTRY_INDEX_USER_CODE << 3) | 3
-#define SEGMENT_USER_DATA           (GDT_ENTRY_INDEX_USER_DATA << 3) | 3
+#define SEGMENT_KERNEL_CODE         ((GDT_ENTRY_INDEX_KERNEL_CODE << 3) | 0)
+#define SEGMENT_KERNEL_DATA         ((GDT_ENTRY_INDEX_KERNEL_DATA << 3) | 0)
+#define SEGMENT_USER_CODE32         ((GDT_ENTRY_INDEX_USER_CODE32 << 3) | 3)
+#define SEGMENT_USER_DATA           ((GDT_ENTRY_INDEX_USER_DATA << 3) | 3)
+#define SEGMENT_USER_CODE           ((GDT_ENTRY_INDEX_USER_CODE << 3) | 3)
+#define SEGMENT_TSS                 ((GDT_ENTRY_INDEX_TSS << 3) | 0)
 
 //Access
 #define GDT_ACCESS                  FLAG8(0)
@@ -57,7 +61,7 @@ typedef struct {
     uint16_t    base0_15;
     uint8_t     base16_23;
     uint8_t     access;
-    uint8_t     l_limit16_19_h_flags;
+    uint8_t     limit16_19 : 4, flags : 4;
     uint8_t     base24_31;
 } __attribute__((packed)) GDTEntry;
 
@@ -67,10 +71,62 @@ typedef struct {
     (uint16_t)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
     (uint16_t)  EXTRACT_VAL(__BASE, 32, 0, 16),                                         \
     (uint8_t)   EXTRACT_VAL(__BASE, 32, 16, 24),                                        \
-    (uint8_t)   __ACCESS,                                                               \
-    (uint8_t)   VAL_OR(VAL_LEFT_SHIFT(__FLAGS, 4), EXTRACT_VAL(__LIMIT, 32, 16, 20)),   \
+    (uint8_t)   (__ACCESS),                                                             \
+    EXTRACT_VAL(__LIMIT, 32, 16, 20),                                                   \
+    (__FLAGS),                                                                          \
     (uint8_t)   EXTRACT_VAL(__BASE, 32, 24, 32),                                        \
-}                                                                                       \
+}
+
+// +---------------+--------------+-------------+
+// | Range(in bit) | Size(in bit) | Description |
+// +---------------+--------------+-------------+
+// |     00-15     |      16      | Limit 0:15  | 
+// |     16-31     |      16      | Base 0:15   |
+// |     32-39     |      8       | Base 16:23  |
+// |     40-47     |      8       | Access Byte |
+// |     48-51     |      4       | Limit 16:19 |
+// |     52-55     |      4       | Flags       |
+// |     56-63     |      8       | Base 24:31  |
+// |     64-95     |      32      | Base 32:63  |
+// |     96-127    |      32      | Reserved    |
+// +---------------+--------------+-------------+
+
+//Access
+#define GDT_TSS_LDT_LDT         0b0010
+#define GDT_TSS_LDT_TSS         0b1001
+#define GDT_TSS_LDT_TSS_BUSY    0b1011
+#define GDT_TSS_LDT_PRIVIEGE_0  VAL_LEFT_SHIFT(0, 5)
+#define GDT_TSS_LDT_PRIVIEGE_1  VAL_LEFT_SHIFT(1, 5)
+#define GDT_TSS_LDT_PRIVIEGE_2  VAL_LEFT_SHIFT(2, 5)
+#define GDT_TSS_LDT_PRIVIEGE_3  VAL_LEFT_SHIFT(3, 5)
+#define GDT_TSS_LDT_PRESENT     FLAG8(7)
+
+//Flags
+#define GDT_TSS_LDT_AVL         FLAG8(0)
+#define GDT_TSS_LDT_BUSY        FLAG8(3)
+
+typedef struct {
+    uint16_t    limit0_15;
+    uint16_t    base0_15;
+    uint8_t     base16_23;
+    uint8_t     access;
+    uint8_t     limit16_19 : 4, flags : 4;
+    uint8_t     base24_31;
+    uint32_t    base32_63;
+    uint32_t    reserved;
+} __attribute__((packed)) GDTEntryTSS_LDT;
+
+#define BUILD_GDT_ENTRY_TSS_LDT(__BASE, __LIMIT, __ACCESS, __FLAGS) (GDTEntryTSS_LDT) { \
+    (uint16_t)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
+    (uint16_t)  EXTRACT_VAL(__BASE, 64, 0, 16),                                         \
+    (uint8_t)   EXTRACT_VAL(__BASE, 64, 16, 24),                                        \
+    (uint8_t)   (__ACCESS),                                                             \
+    EXTRACT_VAL(__LIMIT, 32, 16, 20),                                                   \
+    (__FLAGS),                                                                          \
+    (uint8_t)   EXTRACT_VAL(__BASE, 64, 24, 32),                                        \
+    (uint32_t)  EXTRACT_VAL(__BASE, 64, 32, 64),                                        \
+    0                                                                                   \
+}
 
 typedef struct {
     uint16_t    size;

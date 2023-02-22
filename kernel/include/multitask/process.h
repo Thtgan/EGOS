@@ -1,9 +1,11 @@
 #if !defined(__PROCESS_H)
 #define __PROCESS_H
 
+#include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<structs/linkedList.h>
 #include<structs/queue.h>
+#include<structs/registerSet.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
@@ -33,7 +35,10 @@ struct _Process {
     ProcessStatus status;
 
     PML4Table* pageTable;
-    void* stackTop;
+    RegisterSet* registers;
+
+    void* userStackTop, * userProgramBegin;
+    size_t userProgramPageSize;
     
     QueueNode statusQueueNode;
     QueueNode semaWaitQueueNode;
@@ -45,6 +50,8 @@ struct _Process {
  * @return Process* 
  */
 Process* initProcess();
+
+void initTSS();
 
 /**
  * @brief Switch process

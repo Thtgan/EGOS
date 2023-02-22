@@ -44,6 +44,7 @@ void initSchedule() {
         initQueue(&statusQueues[i]);
     }
 
+    initTSS();
     initProcess();
     if (forkFromCurrentProcess("Idle") == NULL) {
         idle();
