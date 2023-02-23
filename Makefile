@@ -5,7 +5,7 @@ BUILD_RES					=	1
 
 .PHONY: all clean
 
-all: buildDir toolsBuild OSbuild injectFiles
+all: buildDir toolsBuild OSbuild userPrograms injectFiles
 	@echo BUILD COMPLETE
 
 OSbuild: boot.bin kernel.bin
@@ -43,6 +43,11 @@ kernel.bin:
 	@echo KERNEL BUILD COMPLETE
 	@mv ./kernel/build/kernel.bin $(BUILD_DIR)
 
+userPrograms:
+	@echo BUILDING USER PROGRAMS
+	@cd userprogs && $(MAKE) > /dev/null
+	@echo USER PROGRAMS BUILD COMPLETE
+
 injectFiles:
 	@if [ "$(BUILD_RES)" -eq "1" ] ; then echo INJECTING FILES ; ./fileInject.sh ./kernel/files ./tools/injector/build/injector ./build/EGOS.img hda 0x800 > /dev/null ; fi
 
@@ -50,4 +55,5 @@ clean:
 	@cd boot && $(MAKE) clean > /dev/null
 	@cd kernel && $(MAKE) clean > /dev/null
 	@cd tools && $(MAKE) clean > /dev/null
+	@cd userprogs && $(MAKE) clean > /dev/null
 	@rm -rf $(BUILD_DIR)
