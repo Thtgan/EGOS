@@ -2,7 +2,6 @@
 #define __INODE_H
 
 #include<devices/block/blockDevice.h>
-#include<fs/directory.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
 
@@ -70,15 +69,15 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
 };
 
 static inline int iNodeResize(iNode* iNode, size_t newBlockSize) {
-    iNode->operations->resize(iNode, newBlockSize);
+    return iNode->operations->resize(iNode, newBlockSize);
 }
 
 static inline int iNodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
-    iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
+    return iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 
 static inline int iNodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
-    iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
+    return iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 
 #endif // __INODE_H

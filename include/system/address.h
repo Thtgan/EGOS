@@ -17,6 +17,8 @@
 
 #define REAL_MODE_CODE_BEGIN            MBR_END
 
+#define MAX_PHYSICAL_MEMORY_SIZE        (8 * GB)
+
 #define INIT_PAGING_DIRECT_MAP_SIZE     (64ull * DATA_UNIT_MB)      //Before entering the kernel, some memory at the beginning will be directly mapped
 
 #define KERNEL_PHYSICAL_BEGIN           (128ull * DATA_UNIT_KB)     //128KB

@@ -37,7 +37,7 @@ struct _Process {
     PML4Table* pageTable;
     RegisterSet* registers;
 
-    void* userStackTop, * userProgramBegin;
+    void* userExitStackTop, * userStackTop, * userProgramBegin;
     size_t userProgramPageSize;
     
     QueueNode statusQueueNode;

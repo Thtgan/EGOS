@@ -7,10 +7,7 @@
 #include<devices/timer/timer.h>
 #include<devices/vga/textmode.h>
 #include<fs/fileSystem.h>
-#include<fs/directory.h>
-#include<fs/file.h>
 #include<fs/fsutil.h>
-#include<fs/inode.h>
 #include<interrupt/IDT.h>
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -26,8 +23,8 @@
 #include<print.h>
 #include<real/simpleAsmLines.h>
 #include<string.h>
-#include<syscall.h>
 #include<system/systemInfo.h>
+#include<usermode/usermode.h>
 
 SystemInfo* sysInfo;
 
@@ -72,7 +69,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initHardDisk();
 
-    initSyscall();
+    initUsermode();
 
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
@@ -125,7 +122,10 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         }
         up(&sema2);
 
-        execute(fs, "/test");
+        int ret = execute(fs, "/test");
+        printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
+
+        exitProcess();
     }
 
     kFree(arr1);

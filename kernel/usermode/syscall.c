@@ -1,4 +1,4 @@
-#include<syscall.h>
+#include<usermode/syscall.h>
 
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
@@ -13,14 +13,11 @@
 
 static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
 
-static void __exitSyscall();
-
 __attribute__((naked))
 static void __syscallHandler();
 
-void* syscallFuncs[SYSCALL_TYPE_NUM] = {
-    [SYSCALL_TYPE_EXIT]     = __exitSyscall,
-    [SYSCALL_TYPE_TEST]     = __testSyscall,
+static void* _syscallHandlers[SYSCALL_TYPE_NUM] = {
+    [0 ... SYSCALL_TYPE_NUM - 1] = NULL
 };
 
 void initSyscall() {
@@ -31,15 +28,17 @@ void initSyscall() {
     uint64_t flags = rdmsrl(MSR_ADDR_EFER);
     SET_FLAG_BACK(flags, MSR_EFER_SCE);
     wrmsrl(MSR_ADDR_EFER, flags);
+
+    registerSyscallHandler(SYSCALL_TYPE_TEST, __testSyscall);
+}
+
+void registerSyscallHandler(SyscallType type, void* handler) {
+    _syscallHandlers[type] = handler;
 }
 
 static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
     printf(TERMINAL_LEVEL_OUTPUT, "TEST SYSCALL-%d %d %d %d %d %d\n", arg1, arg2, arg3, arg4, arg5, arg6);
     return 114514;
-}
-
-static void __exitSyscall() {
-    exitProcess();
 }
 
 __attribute__((naked))
@@ -54,7 +53,7 @@ static void __syscallHandler() {
         : "r"(SEGMENT_KERNEL_DATA)
     );
 
-    register void* handler asm ("r10") = syscallFuncs[registers->rax];
+    register void* handler asm ("r10") = _syscallHandlers[registers->rax];
 
     asm volatile(
         "mov %6, %%r8;"

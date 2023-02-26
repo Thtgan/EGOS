@@ -62,6 +62,34 @@ typedef struct {
 "push %r14;"            \
 "push %r15;"
 
+#define SAVE_ALL_NO_FRAME   \
+"pushfq;"                   \
+"push %rbp;"                \
+"sub $8, %rsp;"             \
+"mov %rsp, (%rsp);"         \
+"addq $24, (%rsp);"         \
+"push %rbx;"                \
+"push %rdx;"                \
+"push %rcx;"                \
+"push %rax;"                \
+"push %rdi;"                \
+"push %rsi;"                \
+"sub $12, %rsp;"            \
+"mov %gs, 10(%rsp);"        \
+"mov %fs, 8(%rsp);"         \
+"mov %es, 6(%rsp);"         \
+"mov %ss, 4(%rsp);"         \
+"mov %ds, 2(%rsp);"         \
+"mov %cs, 0(%rsp);"         \
+"push %r8;"                 \
+"push %r9;"                 \
+"push %r10;"                \
+"push %r11;"                \
+"push %r12;"                \
+"push %r13;"                \
+"push %r14;"                \
+"push %r15;"
+
 #define RESTORE_ALL     \
 "pop %r15;"             \
 "pop %r14;"             \
