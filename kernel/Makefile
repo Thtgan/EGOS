@@ -19,6 +19,9 @@ LD 							= 	x86_64-elf-ld
 BUILD_DIR 					= 	./build
 BUILD_NAME					=	kernel.bin
 BUILD_BIN_NAME				=	$(BUILD_DIR)/$(BUILD_NAME)
+BUILD_TMP_NAME				=	$(BUILD_DIR)/tmp
+
+MAP_NAME					= map.txt
 
 C_FILES 					:= 	$(shell find ./ -type f -name '*.c' | sort)
 ASM_FILES					:=	$(shell find ./ -type f -name '*.asm' | sort)
@@ -44,7 +47,9 @@ buildDir:
 	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
 
 $(BUILD_BIN_NAME): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
-	@$(LD) $(BUILD_OBJ_FILES) -T linker.ld -o $(BUILD_BIN_NAME)
+	@$(LD) $(BUILD_OBJ_FILES) -T linker.ld -o $(BUILD_TMP_NAME)
+	@objdump -d $(BUILD_TMP_NAME) > $(MAP_NAME)
+	@objcopy -O binary $(BUILD_TMP_NAME) $(BUILD_BIN_NAME)
 
 $(OBJ_FILES_C):%.o:%.c
 	@$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@
@@ -53,4 +58,5 @@ $(OBJ_FILES_ASM):%.o:%.asm
 	@$(NASM) $< -f elf64 -o $(BUILD_DIR)/$@
 
 clean:
+	@rm -f	$(MAP_NAME)
 	@rm -rf $(BUILD_DIR)
