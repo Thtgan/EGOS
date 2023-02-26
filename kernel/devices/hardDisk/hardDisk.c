@@ -141,9 +141,9 @@ static void __registerDiskBlockDevice(Disk* d);
  */
 static bool __checkBootDisk(Disk* d);
 
-static void __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n);
+static int __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n);
 
-static void __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n);
+static int __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n);
 
 static BlockDeviceOperation _operations = {
     .readBlocks = __readBlocks,
@@ -256,9 +256,7 @@ void initHardDisk() {
 
         for (int j = 0; j < 2; ++j) {
             Disk* d = &_channels[i].disks[j];
-            
-            memcpy(d->name, _nameTemplate, sizeof(_nameTemplate));  //TODO: replace this with sprintf
-            d->name[2] = 'a' + (i << 1) + j;
+            sprintf(d->name, "hd%c", 'a' + (i << 1) + j);
 
             d->channel = &_channels[i];
 
@@ -327,7 +325,7 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
             nop();
         }   //TODO: Replace this with semaphore implementation
 
-        uint8_t status = __waitChannelClear(c, HDC_STATUS_BUSY);
+        __waitChannelClear(c, HDC_STATUS_BUSY);
 
         insw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
         buffer += SECTOR_SIZE;
@@ -344,7 +342,7 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
 
     while (n--) {
         c->waitingForInterrupt = true;
-        uint8_t status = __waitChannelClear(c, HDC_STATUS_BUSY);
+        __waitChannelClear(c, HDC_STATUS_BUSY);
 
         outsw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
 
@@ -372,12 +370,14 @@ static bool __checkBootDisk(Disk* d) {
     return ret;
 }
 
-static void __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
+static int __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+    return 0;
 }
 
-static void __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
+static int __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+    return 0;
 }

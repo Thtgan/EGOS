@@ -34,7 +34,7 @@ static inline bool spinlockTryLock(Spinlock* lock) {
     asm volatile(
         "lock;"
         "xchgb %0, %1"
-        : "=" (ret), "=m" (lock->counter)
+        : "=g" (ret), "=m" (lock->counter)
         :
         : "memory"
     );

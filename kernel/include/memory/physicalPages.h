@@ -36,7 +36,7 @@ static inline void referPhysicalPage(PhysicalPage* page) {
 
 static inline void cancelReferPhysicalPage(PhysicalPage* page) {
     --page->processReferenceCnt;
-    ASSERT(page->processReferenceCnt != -1, "Cannot release a released page.");
+    ASSERT(page->processReferenceCnt != (uint16_t)-1, "Cannot release a released page.");
 }
 
 #endif // PHYSICAL_PAGE_H
