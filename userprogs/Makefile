@@ -10,6 +10,7 @@ CC_OPTIONS 					= 	-nostdlib			\
 LD 							= 	x86_64-elf-ld
 
 BUILD_DIR 					= 	./build
+TARGET_DIR					= 	../kernel/files/bin
 
 C_FILES 					:= 	$(shell find ./ -type f -name '*.c' | sort)
 ASM_FILES					:=	$(shell find ./ -type f -name '*.asm' | sort)
@@ -24,11 +25,12 @@ BUILD_LIB_OBJ_FILES			:=	$(filter $(BUILD_DIR)/lib/%, $(BUILD_OBJ_FILES))
 all: buildDir $(PROGRAMS)
 
 buildDir:
+	@mkdir -p $(TARGET_DIR)
 	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
 
 $(PROGRAMS): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
 	$(foreach i, $(PROGRAMS), @$(LD) $(BUILD_LIB_OBJ_FILES) $(filter $(BUILD_DIR)/$(i)/%, $(BUILD_OBJ_FILES)) -T ./lib/linker.ld -o $(BUILD_DIR)/$(i)/$(i))
-	$(foreach i, $(PROGRAMS), @mv $(BUILD_DIR)/$(i)/$(i) ../kernel/files)
+	$(foreach i, $(PROGRAMS), @mv $(BUILD_DIR)/$(i)/$(i) $(TARGET_DIR))
 
 $(OBJ_FILES_C):%.o:%.c
 	@$(CC) $(CC_OPTIONS) -I./$(firstword $(subst /, ,$<)) -c $< -o $(BUILD_DIR)/$@
@@ -38,3 +40,4 @@ $(OBJ_FILES_ASM):%.o:%.asm
 
 clean:
 	@rm -rf $(BUILD_DIR)
+	@rm -rf $(TARGET_DIR)

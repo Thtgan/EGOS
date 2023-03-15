@@ -53,8 +53,6 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initKeyboard();
 
-    initTSS();
-
     //Set interrupt flag
     //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
     sti();
@@ -122,7 +120,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         }
         up(&sema2);
 
-        int ret = execute(fs, "/test");
+        int ret = execute(fs, "/bin/test");
         printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
         exitProcess();
