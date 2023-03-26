@@ -71,7 +71,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     {
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        size_t read = loadFile("/LOGO.bin", buffer, 0, -1);
+        size_t read = loadFile("/LOGO.txt", buffer, 0, -1);
         printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
         releaseBuffer(buffer, BUFFER_SIZE_512);
     }
