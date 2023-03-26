@@ -80,7 +80,7 @@ BlockDevice* getBlockDeviceByID(ID id) {
 }
 
 static size_t __hashFunc(THIS_ARG_APPEND(HashTable, Object key)) {
-    return (size_t)key % this->hashSize;
+    return (size_t)key % 13;
 }
 
 static size_t __strhash(const char* str, size_t p, size_t mod) {

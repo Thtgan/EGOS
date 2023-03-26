@@ -4,11 +4,11 @@
 #include<structs/hashTable.h>
 
 static HashTable _hashTable;
-static SinglyLinkedList _hashChains[37];
+static SinglyLinkedList _hashChains[32];
 
 void initFSManager() {
-    initHashTable(&_hashTable, 37, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
-        return (size_t)key % 37;
+    initHashTable(&_hashTable, 32, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
+        return (size_t)key % 31;
     }));
 }
 

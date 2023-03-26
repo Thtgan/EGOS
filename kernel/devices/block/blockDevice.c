@@ -9,11 +9,11 @@
 #include<structs/singlyLinkedList.h>
 
 static HashTable _hashTable;
-static SinglyLinkedList _hashChains[17];
+static SinglyLinkedList _hashChains[16];
 
 void initBlockDeviceManager() {
-    initHashTable(&_hashTable, 17, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
-        return (size_t)key % this->hashSize;
+    initHashTable(&_hashTable, 16, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
+        return (size_t)key % 13;
     }));
 }
 

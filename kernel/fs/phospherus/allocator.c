@@ -97,11 +97,11 @@ typedef struct {
 #define __BLOCK_STACK_SIZE  (sizeof(__BlockStack) / BLOCK_SIZE)
 
 static HashTable _hashTable;
-static SinglyLinkedList _hashChains[37];
+static SinglyLinkedList _hashChains[32];
 
 void phospherusInitAllocator() {
-    initHashTable(&_hashTable, 37, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
-        return (size_t)key % this->hashSize;
+    initHashTable(&_hashTable, 32, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
+        return (size_t)key % 31;
     }));
 }
 

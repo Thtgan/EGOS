@@ -99,8 +99,8 @@ typedef struct {
 static HashTable _hashTable;
 
 void phospherusInitAllocator() {
-    initHashTable(&_hashTable, 37, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
-        return (size_t)key % this->hashSize;
+    initHashTable(&_hashTable, 32, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
+        return (size_t)key % 31;
     }));
 }
 

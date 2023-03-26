@@ -252,11 +252,11 @@ static size_t __estimateiNodeBlockTaken(size_t clusterSize);
 static size_t __estimateiNodeSubBlockTaken(size_t level, size_t clusterSize);
 
 static HashTable _hashTable;    //Opened iNodes
-static SinglyLinkedList _hashChains[67];
+static SinglyLinkedList _hashChains[64];
 
 iNodeGlobalOperations* phospherusInitInode() {
-    initHashTable(&_hashTable, 67, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
-        return (size_t)key % this->hashSize;
+    initHashTable(&_hashTable, 64, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
+        return (size_t)key % 61;
     }));
 
     return &globalOperations;
