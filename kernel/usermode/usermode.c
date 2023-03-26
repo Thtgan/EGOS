@@ -30,14 +30,14 @@ void initUsermode() {
     registerSyscallHandler(SYSCALL_TYPE_EXIT, __syscallHandlerExit);
 }
 
-int execute(FileSystem* fs, ConstCstring path) {
+int execute(ConstCstring path) {
     DirectoryEntry entry;
-    if (tracePath(fs, &entry, path, INODE_TYPE_FILE) == -1) {
+    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
         return 0x80000000;
     }
 
-    iNode* inode = fileSystemOpenInode(fs, entry.iNodeIndex);
-    File* file = fileSystemOpenFile(fs, inode);
+    iNode* inode = openInode(entry.iNodeIndex);
+    File* file = openFile(inode);
 
     ELF64Header header;
     if (readELF64Header(file, &header) != 0) {
@@ -96,8 +96,8 @@ int execute(FileSystem* fs, ConstCstring path) {
         pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
     }
 
-    fileSystemCloseFile(fs, file);
-    fileSystemCloseInode(fs, inode);
+    closeFile(file);
+    closeInode(inode);
 
     register int ret asm("rax");
     asm volatile("pop %rax");

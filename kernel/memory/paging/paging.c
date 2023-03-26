@@ -76,8 +76,7 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
 
         return;
     }
-
-    printf(TERMINAL_LEVEL_DEV, "ENTRY LEVEL 1-4:\n%#018llX %#018llX %#018llX %#018llX\n", PML4Entry, PDPtableEntry, pageDirectoryEntry, pageTableEntry);
+    
     blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (uint64_t)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 

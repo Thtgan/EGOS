@@ -5,9 +5,11 @@
 #include<fs/file.h>
 #include<fs/inode.h>
 #include<kit/types.h>
+#include<structs/hashTable.h>
 
 typedef enum {
     FILE_SYSTEM_TYPE_PHOSPHERUS,
+    FILE_SYSTEM_TYPE_NUM,
     FILE_SYSTEM_TYPE_UNKNOWN
 } FileSystemType;
 
@@ -67,6 +69,7 @@ STRUCT_PRIVATE_DEFINE(FileSystem) {
     char name[32];
     FileSystemType type;
     FileSystemOperations* opearations;
+    HashChainNode managerNode;
     ID device;
     Index64 rootDirectoryInode;
     void* data;
@@ -74,10 +77,8 @@ STRUCT_PRIVATE_DEFINE(FileSystem) {
 
 /**
  * @brief Initialize the file system
- * 
- * @param type File system type to initialize
  */
-void initFileSystem(FileSystemType type);
+void initFileSystem();
 
 /**
  * @brief Deploy file system on device
@@ -100,48 +101,31 @@ FileSystemType checkFileSystem(BlockDevice* device);
  * @brief Open file system on device
  * 
  * @param device Device to open
- * @param type File system type
  * @return FileSystem* File system
  */
-FileSystem* openFileSystem(BlockDevice* device, FileSystemType type);
+FileSystem* openFileSystem(BlockDevice* device);
 
 /**
  * @brief Close a opened file system, cannot close a closed file system
  * 
  * @param system File system
  */
-void closeFileSystem(FileSystem* system);
+bool closeFileSystem(BlockDevice* device);
 
-static inline File* fileSystemOpenFile(FileSystem* fs, iNode* iNode) {
-    return fs->opearations->fileGlobalOperations->openFile(iNode);
-}
+File* openFile(iNode* iNode);
 
-static inline int fileSystemCloseFile(FileSystem* fs, File* file) {
-    return fs->opearations->fileGlobalOperations->closeFile(file);
-}
+int closeFile(File* file);
 
-static inline Directory* fileSystemOpenDirectory(FileSystem* fs, iNode* iNode) {
-    return fs->opearations->directoryGlobalOperations->openDirectory(iNode);
-}
+Directory* openDirectory(iNode* iNode);
 
-static inline int fileSystemCloseDirectory(FileSystem* fs, Directory* directory) {
-    return fs->opearations->directoryGlobalOperations->closeDirectory(directory);
-}
+int closeDirectory(Directory* directory);
 
-static inline Index64 fileSystemCreateInode(FileSystem* fs, iNodeType type) {
-    return fs->opearations->iNodeGlobalOperations->createInode(fs, type);
-}
+Index64 createInode(iNodeType type);
 
-static inline int fileSystemDeleteInode(FileSystem* fs, Index64 iNodeBlock) {
-    return fs->opearations->iNodeGlobalOperations->deleteInode(fs, iNodeBlock);
-}
+int deleteInode(Index64 iNodeBlock);
 
-static inline iNode* fileSystemOpenInode(FileSystem* fs, Index64 iNodeBlock) {
-    return fs->opearations->iNodeGlobalOperations->openInode(fs, iNodeBlock);
-}
+iNode* openInode(Index64 iNodeBlock);
 
-static inline int fileSystemCloseInode(FileSystem* fs, iNode* iNode) {
-    return fs->opearations->iNodeGlobalOperations->closeInode(iNode);
-}
+int closeInode(iNode* iNode);
 
 #endif // __FILESYSTEM_H

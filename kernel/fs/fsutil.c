@@ -3,6 +3,7 @@
 #include<fs/directory.h>
 #include<fs/fileSystem.h>
 #include<fs/inode.h>
+#include<kernel.h>
 #include<memory/memory.h>
 #include<string.h>
 
@@ -10,7 +11,7 @@ static bool __pathCheck(ConstCstring path);
 
 static char _tmpStr[128];
 
-int tracePath(FileSystem* fs, DirectoryEntry* entry, ConstCstring path, iNodeType type) {
+int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
     if (!__pathCheck(path)) {
         return -1;
     }
@@ -20,10 +21,10 @@ int tracePath(FileSystem* fs, DirectoryEntry* entry, ConstCstring path, iNodeTyp
     }
 
     DirectoryEntry directoryEntry;
-    directoryEntry.iNodeIndex = fs->rootDirectoryInode;
+    directoryEntry.iNodeIndex = rootFileSystem->rootDirectoryInode;
     while (*path != '\0') {
-        iNode* inode = fileSystemOpenInode(fs, directoryEntry.iNodeIndex);
-        Directory* directory = fileSystemOpenDirectory(fs, inode);
+        iNode* inode = openInode(directoryEntry.iNodeIndex);
+        Directory* directory = openDirectory(inode);
         int i = 0;
         for (; *path != '\0' && *path != '/'; ++i, ++path) {
             _tmpStr[i] = *path;
@@ -32,14 +33,14 @@ int tracePath(FileSystem* fs, DirectoryEntry* entry, ConstCstring path, iNodeTyp
 
         Index64 index = directoryLookupEntry(directory, _tmpStr, *path == '\0' ? type : INODE_TYPE_DIRECTORY);
         if (index == -1) {
-            fileSystemCloseDirectory(fs, directory);
-            fileSystemCloseInode(fs, inode);
+            closeDirectory(directory);
+            closeInode(inode);
             return -1;
         }
         directoryReadEntry(directory, &directoryEntry, index);
 
-        fileSystemCloseDirectory(fs, directory);
-        fileSystemCloseInode(fs, inode);
+        closeDirectory(directory);
+        closeInode(inode);
 
         if (*path == '/') {
             ++path;
@@ -50,22 +51,22 @@ int tracePath(FileSystem* fs, DirectoryEntry* entry, ConstCstring path, iNodeTyp
     return 0;
 }
 
-size_t loadFile(FileSystem* fs, ConstCstring path, void* buffer, Index64 begin, size_t n) {
+size_t loadFile(ConstCstring path, void* buffer, Index64 begin, size_t n) {
     DirectoryEntry entry;
-    if (tracePath(fs, &entry, path, INODE_TYPE_FILE) == -1) {
+    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
         return -1;
     }
 
-    iNode* inode = fileSystemOpenInode(fs, entry.iNodeIndex);
-    File* file = fileSystemOpenFile(fs, inode);
+    iNode* inode = openInode(entry.iNodeIndex);
+    File* file = openFile(inode);
 
     fileSeek(file, begin);
     Index64 before = file->pointer, after = 0;
     fileRead(file, buffer, n == -1 ? inode->onDevice.dataSize : n);
     after = file->pointer == -1 ? inode->onDevice.dataSize : file->pointer;
 
-    fileSystemCloseFile(fs, file);
-    fileSystemCloseInode(fs, inode);
+    closeFile(file);
+    closeInode(inode);
 
     return after - before;
 }

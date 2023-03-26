@@ -6,6 +6,6 @@
 
 void initUsermode();
 
-int execute(FileSystem* fs, ConstCstring path);
+int execute(ConstCstring path);
 
 #endif // __USERMODE_H

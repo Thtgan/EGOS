@@ -59,32 +59,19 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initBlockDeviceManager();
 
-    initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
-
     initSchedule();
 
     initTimer();
 
     initHardDisk();
 
+    initFileSystem();
+
     initUsermode();
-
-    BlockDevice* hda = getBlockDeviceByName("hda");
-    if (hda == NULL) {
-        blowup("Hda not found\n");
-    }
-
-    if (checkFileSystem(hda) == FILE_SYSTEM_TYPE_PHOSPHERUS) {
-        printf(TERMINAL_LEVEL_DEBUG, "File system check passed\n");
-    } else {
-        blowup("File system check failed\n");
-    }
-
-    FileSystem* fs = openFileSystem(hda, FILE_SYSTEM_TYPE_PHOSPHERUS);
 
     {
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        size_t read = loadFile(fs, "/LOGO.bin", buffer, 0, -1);
+        size_t read = loadFile("/LOGO.bin", buffer, 0, -1);
         printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
         releaseBuffer(buffer, BUFFER_SIZE_512);
     }
@@ -120,7 +107,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         }
         up(&sema2);
 
-        int ret = execute(fs, "/bin/test");
+        int ret = execute("/bin/test");
         printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
         exitProcess();
