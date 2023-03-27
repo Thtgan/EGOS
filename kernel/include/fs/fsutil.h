@@ -5,7 +5,7 @@
 #include<fs/fileSystem.h>
 #include<kit/types.h>
 
-int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);
+ReturnValue tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);
 
 size_t loadFile(ConstCstring path, void* buffer, Index64 begin, size_t n);
 

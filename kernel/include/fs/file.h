@@ -4,6 +4,7 @@
 #include<fs/inode.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<returnValue.h>
 
 STRUCT_PRE_DEFINE(FileOperations);
 
@@ -14,20 +15,20 @@ typedef struct {
 } File;
 
 STRUCT_PRIVATE_DEFINE(FileOperations) {
-    int (*seek)(File* file, size_t seekTo);
-    int (*read)(File* file, void* buffer, size_t n);
-    int (*write)(File* file, const void* buffer, size_t n);
+    Index64 (*seek)(File* file, size_t seekTo);
+    ReturnValue (*read)(File* file, void* buffer, size_t n);
+    ReturnValue (*write)(File* file, const void* buffer, size_t n);
 };
 
-static inline int fileSeek(File* file, size_t seekTo) {
+static inline Index64 fileSeek(File* file, size_t seekTo) {
     return file->operations->seek(file, seekTo);
 } 
 
-static inline int fileRead(File* file, void* buffer, size_t n) {
+static inline ReturnValue fileRead(File* file, void* buffer, size_t n) {
     return file->operations->read(file, buffer, n);
 } 
 
-static inline int fileWrite(File* file, const void* buffer, size_t n) {
+static inline ReturnValue fileWrite(File* file, const void* buffer, size_t n) {
     return file->operations->write(file, buffer, n);
 } 
 

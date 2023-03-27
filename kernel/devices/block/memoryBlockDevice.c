@@ -6,6 +6,7 @@
 #include<kit/types.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
+#include<returnValue.h>
 #include<string.h>
 #include<structs/singlyLinkedList.h>
 
@@ -43,12 +44,12 @@ void deleteMemoryBlockDevice(BlockDevice* blockDevice) {
     _created = false;
 }
 
-static int __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
+static ReturnValue __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
     memcpy(buffer, (void*)this->additionalData + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE);  //Just simple memcpy
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
+static ReturnValue __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
     memcpy((void*)this->additionalData + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE);  //Just simple memcpy
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }

@@ -4,6 +4,7 @@
 #include<devices/block/blockDeviceTypes.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<returnValue.h>
 #include<structs/hashTable.h>
 
 #define BLOCK_SIZE 512
@@ -32,7 +33,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
      * @param buffer Buffer to storage the read data
      * @param n Num of blocks to read
      */
-    int (*readBlocks)(BlockDevice* device, block_index_t blockIndex, void* buffer, size_t n);
+    ReturnValue (*readBlocks)(BlockDevice* device, block_index_t blockIndex, void* buffer, size_t n);
 
     /**
      * @brief Write blocks to the block device
@@ -42,7 +43,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
      * @param buffer Buffer contains the data to write
      * @param n Num of blocks to write
      */
-    int (*writeBlocks)(BlockDevice* device, block_index_t blockIndex, const void* buffer, size_t n);
+    ReturnValue (*writeBlocks)(BlockDevice* device, block_index_t blockIndex, const void* buffer, size_t n);
 };
 
 /**
@@ -100,11 +101,11 @@ BlockDevice* getBlockDeviceByName(const char* name);
  */
 BlockDevice* getBlockDeviceByID(ID id);
 
-static inline int blockDeviceReadBlocks(BlockDevice* device, block_index_t blockIndex, void* buffer, size_t n) {
+static inline ReturnValue blockDeviceReadBlocks(BlockDevice* device, block_index_t blockIndex, void* buffer, size_t n) {
     return device->operations->readBlocks(device, blockIndex, buffer, n);
 } 
 
-static inline int blockDeviceWriteBlocks(BlockDevice* device, block_index_t blockIndex, const void* buffer, size_t n) {
+static inline ReturnValue blockDeviceWriteBlocks(BlockDevice* device, block_index_t blockIndex, const void* buffer, size_t n) {
     return device->operations->writeBlocks(device, blockIndex, buffer, n);
 } 
 

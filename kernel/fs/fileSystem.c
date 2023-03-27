@@ -5,6 +5,7 @@
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/fsManager.h>
 #include<fs/phospherus/phospherus.h>
+#include<returnValue.h>
 #include<print.h>
 
 FileSystem* rootFileSystem = NULL;
@@ -13,7 +14,7 @@ static void (*_initFuncs[FILE_SYSTEM_TYPE_NUM])() = {
     [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusInitFileSystem
 };
 
-static bool (*_checkers[FILE_SYSTEM_TYPE_NUM])(BlockDevice*) = {
+static ReturnValue (*_checkers[FILE_SYSTEM_TYPE_NUM])(BlockDevice*) = {
     [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusCheckFileSystem
 };
 
@@ -33,8 +34,8 @@ void initFileSystem() {
     rootFileSystem = openFileSystem(hda);
 }
 
-bool deployFileSystem(BlockDevice* device, FileSystemType type) {
-    bool ret = false;
+ReturnValue deployFileSystem(BlockDevice* device, FileSystemType type) {
+    ReturnValue ret = RETURN_VALUE_RETURN_NORMALLY;
     switch (type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
             ret = phospherusDeployFileSystem(device);
@@ -45,7 +46,7 @@ bool deployFileSystem(BlockDevice* device, FileSystemType type) {
 
 FileSystemType checkFileSystem(BlockDevice* device) {
     for (FileSystemType i = 0; i < FILE_SYSTEM_TYPE_NUM; ++i) {
-        if (_checkers[i](device)) {
+        if (!RETURN_VALUE_IS_ERROR(_checkers[i](device))) {
             return i;
         }
     }
@@ -94,7 +95,7 @@ File* openFile(iNode* iNode) {
     return rootFileSystem->opearations->fileGlobalOperations->openFile(iNode);
 }
 
-int closeFile(File* file) {
+ReturnValue closeFile(File* file) {
     return rootFileSystem->opearations->fileGlobalOperations->closeFile(file);
 }
 
@@ -102,7 +103,7 @@ Directory* openDirectory(iNode* iNode) {
     return rootFileSystem->opearations->directoryGlobalOperations->openDirectory(iNode);
 }
 
-int closeDirectory(Directory* directory) {
+ReturnValue closeDirectory(Directory* directory) {
     return rootFileSystem->opearations->directoryGlobalOperations->closeDirectory(directory);
 }
 
@@ -110,7 +111,7 @@ Index64 createInode(iNodeType type) {
     return rootFileSystem->opearations->iNodeGlobalOperations->createInode(rootFileSystem, type);
 }
 
-int deleteInode(Index64 iNodeBlock) {
+ReturnValue deleteInode(Index64 iNodeBlock) {
     return rootFileSystem->opearations->iNodeGlobalOperations->deleteInode(rootFileSystem, iNodeBlock);
 }
 
@@ -118,6 +119,6 @@ iNode* openInode(Index64 iNodeBlock) {
     return rootFileSystem->opearations->iNodeGlobalOperations->openInode(rootFileSystem, iNodeBlock);
 }
 
-int closeInode(iNode* iNode) {
+ReturnValue closeInode(iNode* iNode) {
     return rootFileSystem->opearations->iNodeGlobalOperations->closeInode(iNode);
 }

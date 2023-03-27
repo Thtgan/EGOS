@@ -15,12 +15,12 @@ typedef enum {
 
 typedef struct {
     File* (*openFile)(iNode* iNode);
-    int (*closeFile)(File* file);
+    ReturnValue (*closeFile)(File* file);
 } FileGlobalOperations;
 
 typedef struct {
     Directory* (*openDirectory)(iNode* iNode);
-    int (*closeDirectory)(Directory* directory);
+    ReturnValue (*closeDirectory)(Directory* directory);
 } DirectoryGlobalOperations;
 
 STRUCT_PRE_DEFINE(FileSystem);
@@ -40,7 +40,7 @@ typedef struct {
      * @param iNodeBlock Block index where the inode is located
      * @return int Status of the operation
      */
-    int (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
+    ReturnValue (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
 
     /**
      * @brief Open a inode through on the given block
@@ -56,7 +56,7 @@ typedef struct {
      * @param iNode iNode to close
      * @return int Status of the operation
      */
-    int (*closeInode)(iNode* iNode);
+    ReturnValue (*closeInode)(iNode* iNode);
 } iNodeGlobalOperations;
 
 typedef struct {
@@ -87,7 +87,7 @@ void initFileSystem();
  * @param type File system type to deploy
  * @return Is deployment succeeded
  */
-bool deployFileSystem(BlockDevice* device, FileSystemType type);
+ReturnValue deployFileSystem(BlockDevice* device, FileSystemType type);
 
 /**
  * @brief Check type of file system on device
@@ -114,18 +114,18 @@ bool closeFileSystem(BlockDevice* device);
 
 File* openFile(iNode* iNode);
 
-int closeFile(File* file);
+ReturnValue closeFile(File* file);
 
 Directory* openDirectory(iNode* iNode);
 
-int closeDirectory(Directory* directory);
+ReturnValue closeDirectory(Directory* directory);
 
 Index64 createInode(iNodeType type);
 
-int deleteInode(Index64 iNodeBlock);
+ReturnValue deleteInode(Index64 iNodeBlock);
 
 iNode* openInode(Index64 iNodeBlock);
 
-int closeInode(iNode* iNode);
+ReturnValue closeInode(iNode* iNode);
 
 #endif // __FILESYSTEM_H

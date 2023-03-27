@@ -3,6 +3,7 @@
 
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
+#include<returnValue.h>
 #include<structs/hashTable.h>
 
 #define ROOT_SUPER_NODE_INDEX   0
@@ -32,7 +33,7 @@ void phospherusInitAllocator();
  * @param device Block device
  * @return If the device has super node deployed
  */
-bool phospherusCheckBlockDevice(BlockDevice* device);
+ReturnValue phospherusCheckBlockDevice(BlockDevice* device);
 
 /**
  * @brief Deploy the essential data to the device, the block device must have at least one cluster free
@@ -40,7 +41,7 @@ bool phospherusCheckBlockDevice(BlockDevice* device);
  * @param device Block device to deploy
  * @return Does the deploy succeeded
  */
-bool phospherusDeployAllocator(BlockDevice* device);
+ReturnValue phospherusDeployAllocator(BlockDevice* device);
 
 /**
  * @brief Open the allocator from the disk

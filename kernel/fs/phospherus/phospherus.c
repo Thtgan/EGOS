@@ -6,6 +6,7 @@
 #include<fs/phospherus/phospherus_file.h>
 #include<fs/phospherus/phospherus_directory.h>
 #include<memory/kMalloc.h>
+#include<returnValue.h>
 #include<string.h>
 
 FileSystemOperations fileSystemOperations;
@@ -17,22 +18,26 @@ void phospherusInitFileSystem() {
     fileSystemOperations.directoryGlobalOperations = phospherusInitDirectories();
 }
 
-bool phospherusDeployFileSystem(BlockDevice* device) {
-    if (phospherusCheckBlockDevice(device)) {
-        return false;
+ReturnValue phospherusDeployFileSystem(BlockDevice* device) {
+    ReturnValue res;
+    if (RETURN_VALUE_IS_ERROR(res = phospherusCheckBlockDevice(device))) {
+        return res;
     }
 
-    phospherusDeployAllocator(device);
-    if (!phospherusCheckBlockDevice(device)) {
-        return false;
+    if (RETURN_VALUE_IS_ERROR(res = phospherusDeployAllocator(device))) {
+        return res;
+    }
+
+    if (!RETURN_VALUE_IS_ERROR(res = phospherusCheckBlockDevice(device))) {
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
     }
 
     makeInode(device, RESERVED_BLOCK_ROOT_DIRECTORY, INODE_TYPE_DIRECTORY);
 
-    return true;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-bool phospherusCheckFileSystem(BlockDevice* device) {
+ReturnValue phospherusCheckFileSystem(BlockDevice* device) {
     return phospherusCheckBlockDevice(device);
 }
 

@@ -13,13 +13,19 @@
 #include<system/address.h>
 #include<system/pageTable.h>
 
-int readELF64Header(File* file, ELF64Header* header) {
+ReturnValue readELF64Header(File* file, ELF64Header* header) {
     fileSeek(file, 0);
-    if (fileRead(file, header, sizeof(ELF64Header)) != 0 || header->identification.magic != ELF_IDENTIFICATION_MAGIC) {
-        return -1;
+
+    ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+    if (RETURN_VALUE_IS_ERROR(res = fileRead(file, header, sizeof(ELF64Header)))) {
+        return res;
     }
 
-    return 0;
+    if (header->identification.magic != ELF_IDENTIFICATION_MAGIC) {
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_FILE, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
+    }
+
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
 void printELF64Header(TerminalLevel level, ELF64Header* header) {
@@ -44,17 +50,23 @@ void printELF64Header(TerminalLevel level, ELF64Header* header) {
     printf(level, "NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
 }
 
-int readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
-    if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader) || index >= elfHeader->programHeaderEntryNum) {
-        return -1;
+ReturnValue readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
+    if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DATA, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
+    }
+
+    if (index >= elfHeader->programHeaderEntryNum) {
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_INDEX, RETURN_VALUE_STATUS_OUT_OF_BOUND);
     }
 
     fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader));
-    if (fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) != 0) {
+
+    ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+    if (RETURN_VALUE_IS_ERROR(res = fileRead(file, programHeader, sizeof(ELF64ProgramHeader)))) {
         return -1;
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
 void printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header) {
@@ -85,7 +97,7 @@ bool checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     return true;
 }
 
-int loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
+ReturnValue loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     uintptr_t
         pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT),
         fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
@@ -111,7 +123,10 @@ int loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
         size_t readN = min64(readRemain, to - from);
         if (readN > 0) {
-            fileRead(file, (void*)from, readN);
+            ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+            if (RETURN_VALUE_IS_ERROR(res = fileRead(file, (void*)from, readN))) {
+                return res;
+            }
             readRemain -= readN;
         }
 
@@ -126,7 +141,7 @@ int loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, to + PAGE_SIZE);
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
 void unloadELF64Program(ELF64ProgramHeader* programHeader) {

@@ -10,9 +10,9 @@
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
+#include<returnValue.h>
 #include<structs/hashTable.h>
 #include<system/systemInfo.h>
-
 
 #define LEVEL_0_CLUSTER_TABLE_NUM   8llu
 #define LEVEL_1_CLUSTER_TABLE_NUM   4llu
@@ -116,7 +116,7 @@ static Index64 __createInode(FileSystem* this, iNodeType type);
  * @param iNodeBlock Block index where the inode is located
  * @return Status of the operation
  */
-static int __deleteInode(FileSystem* this, Index64 iNodeBlock);
+static ReturnValue __deleteInode(FileSystem* this, Index64 iNodeBlock);
 
 /**
  * @brief Open a inode through on the given block
@@ -132,7 +132,7 @@ static iNode* __openInode(FileSystem* this, Index64 iNodeBlock);
  * @param iNode iNode to close
  * @return int Status of the operation
  */
-static int __closeInode(iNode* iNode);
+static ReturnValue __closeInode(iNode* iNode);
 
 iNodeGlobalOperations globalOperations = {
     .createInode    = __createInode,
@@ -148,7 +148,7 @@ iNodeGlobalOperations globalOperations = {
  * @param newBlockSize New size to resize to
  * @return int Status of the operation
  */
-static int __resize(iNode* iNode, size_t newBlockSize);
+static ReturnValue __resize(iNode* iNode, size_t newBlockSize);
 
 /**
  * @brief Read the data inside the iNode
@@ -159,7 +159,7 @@ static int __resize(iNode* iNode, size_t newBlockSize);
  * @param blockSize How many block(s) to read
  * @return int Status of the operation
  */
-static int __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize);
+static ReturnValue __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize);
 
 /**
  * @brief Write the data inside the iNode
@@ -170,7 +170,7 @@ static int __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, siz
  * @param blockSize How many block(s) to write
  * @return int Status of the operation
  */
-static int __writeBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
+static ReturnValue __writeBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
 
 iNodeOperations phospherusInodeOperations = {
     .resize = __resize,
@@ -188,7 +188,7 @@ iNodeOperations phospherusInodeOperations = {
  * @param level Level of the table
  * @return int Status of the operation
  */
-static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* clusterTable, size_t oldSize, size_t newSize, int level);
+static ReturnValue __resizeClusterTable(PhospherusAllocator* allocator, Index64* clusterTable, size_t oldSize, size_t newSize, int level);
 
 /**
  * @brief Deatroy a table connected to the blocks
@@ -208,7 +208,7 @@ static void __destoryBlockTable(PhospherusAllocator* allocator, Index64 tableBlo
  * @param newClusterSize New size to resize to
  * @return int Status of the operation
  */
-static int __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusInodeData* clusterTables, size_t oldClusterSize, size_t newClusterSize);
+static ReturnValue __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusInodeData* clusterTables, size_t oldClusterSize, size_t newClusterSize);
 
 /**
  * @brief Read the blocks
@@ -220,7 +220,7 @@ static int __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusIno
  * @param blockIndexInTable First block to read, start from the beginning of the table
  * @param blockSize How many block(s) to read
  */
-static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize);
+static ReturnValue __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize);
 
 /**
  * @brief Write the blocks
@@ -232,7 +232,7 @@ static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 
  * @param blockIndexInTable First block to write, start from the beginning of the table
  * @param blockSize How many block(s) to write
  */
-static int __writeToSubClusterTable(BlockDevice* device, const void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize);
+static ReturnValue __writeToSubClusterTable(BlockDevice* device, const void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize);
 
 /**
  * @brief Estimate a inode in given size will take how many blocks
@@ -272,7 +272,7 @@ void makeInode(BlockDevice* device, Index64 blockIndex, iNodeType type) {
     record->linkCnt = 0;
 
     __PhospherusInodeData* data = (__PhospherusInodeData*)record->data;
-    memset(data, PHOSPHERUS_NULL, sizeof(__PhospherusInodeData));
+    memset(data, INVALID_INDEX, sizeof(__PhospherusInodeData));
 
     blockDeviceWriteBlocks(device, blockIndex, record, 1);
 
@@ -284,8 +284,8 @@ static Index64 __createInode(FileSystem* this, iNodeType type) {
     PhospherusAllocator* allocator = phospherusOpenAllocator(devicePtr);
     block_index_t ret = phospherusAllocateBlock(allocator);
 
-    if (ret == PHOSPHERUS_NULL) {
-        return PHOSPHERUS_NULL;
+    if (ret == INVALID_INDEX) {
+        return INVALID_INDEX;
     }
 
     makeInode(devicePtr, ret, type);
@@ -293,9 +293,9 @@ static Index64 __createInode(FileSystem* this, iNodeType type) {
     return ret;
 }
 
-static int __deleteInode(FileSystem* this, Index64 iNodeBlock) {
+static ReturnValue __deleteInode(FileSystem* this, Index64 iNodeBlock) {
     if (hashTableFind(&_hashTable, __INODE_ID(this->device, iNodeBlock)) != NULL) {    //If opened, cannt be deleted
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_ACCESS_DENIED);
     }
 
     BlockDevice* devicePtr = getBlockDeviceByID(this->device);
@@ -304,7 +304,7 @@ static int __deleteInode(FileSystem* this, Index64 iNodeBlock) {
     blockDeviceReadBlocks(devicePtr, iNodeBlock, record, 1);
     if (record->signature != SYSTEM_INFO_MAGIC64) {  //Validation failed
         releaseBuffer(record, BUFFER_SIZE_512);
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DEVICE, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
     }
 
     PhospherusAllocator* allocator = phospherusOpenAllocator(devicePtr);
@@ -315,7 +315,7 @@ static int __deleteInode(FileSystem* this, Index64 iNodeBlock) {
     blockDeviceWriteBlocks(devicePtr, iNodeBlock, record, 1);
     releaseBuffer(record, BUFFER_SIZE_512);
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
 static iNode* __openInode(FileSystem* this, Index64 iNodeBlock) {
@@ -344,29 +344,29 @@ static iNode* __openInode(FileSystem* this, Index64 iNodeBlock) {
     return ret;
 }
 
-static int __closeInode(iNode* iNode) {
+static ReturnValue __closeInode(iNode* iNode) {
     if (iNode->openCnt == 0) {
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
     }
 
     --iNode->openCnt;
     if (iNode->openCnt == 0) {
         if (hashTableDelete(&_hashTable, __INODE_ID(iNode->device->deviceID, iNode->blockIndex)) == NULL) {
-            return -1;
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
         }
         kFree(iNode);
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __resize(iNode* iNode, size_t newBlockSize) {
+static ReturnValue __resize(iNode* iNode, size_t newBlockSize) {
     size_t 
         oldClusterSize = (iNode->onDevice.availableBlockSize + CLUSTER_BLOCK_SIZE - 1) / CLUSTER_BLOCK_SIZE, 
         newClusterSize = (newBlockSize + CLUSTER_BLOCK_SIZE - 1) / CLUSTER_BLOCK_SIZE;
     
     if (oldClusterSize == newClusterSize) {
-        return 0;
+        return RETURN_VALUE_RETURN_NORMALLY;
     }
 
     BlockDevice* device = iNode->device;
@@ -375,13 +375,15 @@ static int __resize(iNode* iNode, size_t newBlockSize) {
     RecordOnDevice* record = &iNode->onDevice;
     size_t oldBlockTaken = record->blockTaken, newBlockTaken = __estimateiNodeBlockTaken(newClusterSize);
     //This is a rough approximation, but it is fast and guaranteed to be safe
-    if (!(oldBlockTaken >= newBlockTaken || (newBlockTaken - oldBlockTaken + CLUSTER_BLOCK_SIZE - 1) / CLUSTER_BLOCK_SIZE < phospherusGetFreeClusterNum(allocator))) {
-        return -1;
+    //if (!(oldBlockTaken >= newBlockTaken || (newBlockTaken - oldBlockTaken + CLUSTER_BLOCK_SIZE - 1) / CLUSTER_BLOCK_SIZE < phospherusGetFreeClusterNum(allocator))) {
+    if (oldBlockTaken < newBlockTaken && (newBlockTaken - oldBlockTaken + CLUSTER_BLOCK_SIZE - 1) / CLUSTER_BLOCK_SIZE > phospherusGetFreeClusterNum(allocator)) {
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DEVICE, RETURN_VALUE_STATUS_NO_FREE_SPACE);
     }
 
     __PhospherusInodeData* data = (__PhospherusInodeData*)record->data;
-    if (__resizeClusterTables(allocator, data, oldClusterSize, newClusterSize) == -1) {
-        return -1;
+    ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+    if (RETURN_VALUE_IS_ERROR(res = __resizeClusterTables(allocator, data, oldClusterSize, newClusterSize))) {
+        return res;
     }
 
     record->blockTaken = newBlockTaken;
@@ -389,12 +391,12 @@ static int __resize(iNode* iNode, size_t newBlockSize) {
     record->dataSize = umin64(record->availableBlockSize, record->dataSize);
     blockDeviceWriteBlocks(device, iNode->blockIndex, &iNode->onDevice, 1);
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static ReturnValue __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
     if (iNode->onDevice.availableBlockSize < blockIndexInNode + blockSize) {
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_INDEX, RETURN_VALUE_STATUS_OUT_OF_BOUND);
     }
     
     BlockDevice* device = iNode->device;
@@ -408,8 +410,8 @@ static int __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, siz
         size_t levelTableSize = _levelTableSizes[level] * CLUSTER_BLOCK_SIZE;   //How many blocks does this cluster cover
         for (int i = 0; i < _levelTableNums[level] && remainBlocksToRead > 0; ++i) {
             Index64 tableIndex = ((Index64*)(((void*)data) + _levelTableOffsets[level]))[i];
-            if (tableIndex == PHOSPHERUS_NULL) {
-                return -1;
+            if (tableIndex == INVALID_INDEX) {
+                return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_ITEM, RETURN_VALUE_STATUS_NOT_FOUND);
             }
 
             size_t afterSum = blockSum + levelTableSize;
@@ -431,15 +433,15 @@ static int __readBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, siz
     }
     
     if (remainBlocksToRead > 0) {  //Not expected
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __writeBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static ReturnValue __writeBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
     if (iNode->onDevice.availableBlockSize < blockIndexInNode + blockSize) {
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_INDEX, RETURN_VALUE_STATUS_OUT_OF_BOUND);
     }
 
     BlockDevice* device = iNode->device;
@@ -453,8 +455,8 @@ static int __writeBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNo
         size_t levelTableSize = _levelTableSizes[level] * CLUSTER_BLOCK_SIZE;   //How many blocks does this cluster cover
         for (int i = 0; i < _levelTableNums[level] && remainBlocksToWrite > 0; ++i) {
             Index64 tableIndex = ((Index64*)(((void*)data) + _levelTableOffsets[level]))[i];
-            if (tableIndex == PHOSPHERUS_NULL) {
-                return -1;
+            if (tableIndex == INVALID_INDEX) {
+                return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_ITEM, RETURN_VALUE_STATUS_NOT_FOUND);
             }
 
             size_t afterSum = blockSum + levelTableSize;
@@ -476,15 +478,15 @@ static int __writeBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNo
     }
 
     if (remainBlocksToWrite > 0) {  //Not expected
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusInodeData* clusterTables, size_t oldClusterSize, size_t newClusterSize) {
+static ReturnValue __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusInodeData* clusterTables, size_t oldClusterSize, size_t newClusterSize) {
     if (oldClusterSize == newClusterSize) {
-        return 0;
+        return RETURN_VALUE_RETURN_NORMALLY;
     }
     bool isExpand = oldClusterSize < newClusterSize;
 
@@ -514,8 +516,9 @@ static int __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusIno
                 swap64(&clusterTableOldSize, &clusterTableNewSize);
             }
 
-            if (__resizeClusterTable(allocator, indexPtr, clusterTableOldSize, clusterTableNewSize, level) == -1) {
-                return -1;
+            ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+            if (RETURN_VALUE_IS_ERROR(res = __resizeClusterTable(allocator, indexPtr, clusterTableOldSize, clusterTableNewSize, level))) {
+                return res;
             }
 
             currentSize += (clusterTableNewSize - clusterTableOldSize);
@@ -524,15 +527,15 @@ static int __resizeClusterTables(PhospherusAllocator* allocator, __PhospherusIno
     }
 
     if (currentSize != newClusterSize) {
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* clusterTable, size_t oldSize, size_t newSize, int level) {
+static ReturnValue __resizeClusterTable(PhospherusAllocator* allocator, Index64* clusterTable, size_t oldSize, size_t newSize, int level) {
     if (oldSize == newSize) {
-        return 0;
+        return RETURN_VALUE_RETURN_NORMALLY;
     }
 
     bool isExpand = oldSize < newSize;
@@ -544,8 +547,8 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
             *clusterTable = phospherusAllocateBlock(allocator);
         }
 
-        if (*clusterTable == PHOSPHERUS_NULL) {
-            return -1;
+        if (*clusterTable == INVALID_INDEX) {
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DEVICE, RETURN_VALUE_STATUS_NO_FREE_SPACE);
         }
     }
 
@@ -572,11 +575,12 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
                 swap64(&subTableOldSize, &subTableNewSize);
             }
 
-            if (__resizeClusterTable(allocator, table->indexes + i, subTableOldSize, subTableNewSize, level - 1) == -1) {
+            ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+            if (RETURN_VALUE_IS_ERROR(res = __resizeClusterTable(allocator, table->indexes + i, subTableOldSize, subTableNewSize, level - 1))) {
                 blockDeviceWriteBlocks(device, *clusterTable, table, 1);
                 releaseBuffer(table, BUFFER_SIZE_512);
 
-                return -1;
+                return res;
             }
 
             currentSize += (subTableNewSize - subTableOldSize);
@@ -587,7 +591,7 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
         releaseBuffer(table, BUFFER_SIZE_512);
 
         if (currentSize != newSize) {
-            return -1;
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_EXECUTION, RETURN_VALUE_STATUS_OPERATION_FAIL);
         }
     }
 
@@ -598,16 +602,16 @@ static int __resizeClusterTable(PhospherusAllocator* allocator, Index64* cluster
             phospherusReleaseBlock(allocator, *clusterTable);
         }
 
-        *clusterTable = PHOSPHERUS_NULL;
+        *clusterTable = INVALID_INDEX;
     }
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
+static ReturnValue __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
         blockDeviceReadBlocks(device, tableIndex + blockIndexInTable, buffer, blockSize);
-        return 0;
+        return RETURN_VALUE_RETURN_NORMALLY;
     }
 
     __ClusterTable* table = allocateBuffer(BUFFER_SIZE_512);
@@ -616,8 +620,8 @@ static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 
     void* currentBuffer = buffer;
     size_t levelTableSize = _levelTableSizes[level - 1] * CLUSTER_BLOCK_SIZE, blockSum = blockIndexInTable / levelTableSize * levelTableSize, remainBlockToRead = blockSize, currentIndex = blockIndexInTable;
     for (int i = blockIndexInTable / levelTableSize; remainBlockToRead > 0; ++i) {
-        if (table->indexes[i] == PHOSPHERUS_NULL) {
-            return -1;
+        if (table->indexes[i] == INVALID_INDEX) {
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_ITEM, RETURN_VALUE_STATUS_NOT_FOUND);
         }
 
         size_t afterSum = blockSum + levelTableSize;
@@ -634,13 +638,13 @@ static int __readFromSubClusterTable(BlockDevice* device, void* buffer, Index64 
 
     releaseBuffer(table, BUFFER_SIZE_512);
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __writeToSubClusterTable(BlockDevice* device, const void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
+static ReturnValue __writeToSubClusterTable(BlockDevice* device, const void* buffer, Index64 tableIndex, size_t level, size_t blockIndexInTable, size_t blockSize) {
     if (level == 0) {
         blockDeviceWriteBlocks(device, tableIndex + blockIndexInTable, buffer, blockSize);
-        return 0;
+        return RETURN_VALUE_RETURN_NORMALLY;
     }
 
     __ClusterTable* table = allocateBuffer(BUFFER_SIZE_512);
@@ -649,8 +653,8 @@ static int __writeToSubClusterTable(BlockDevice* device, const void* buffer, Ind
     const void* currentBuffer = buffer;
     size_t levelTableSize = _levelTableSizes[level - 1] * CLUSTER_BLOCK_SIZE, blockSum = blockIndexInTable / levelTableSize * levelTableSize, remainBlockToWrite = blockSize, currentIndex = blockIndexInTable;
     for (int i = blockIndexInTable / levelTableSize; remainBlockToWrite > 0; ++i) {
-        if (table->indexes[i] == PHOSPHERUS_NULL) {
-            return -1;
+        if (table->indexes[i] == INVALID_INDEX) {
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_ITEM, RETURN_VALUE_STATUS_NOT_FOUND);
         }
 
         size_t afterSum = blockSum + levelTableSize;
@@ -667,7 +671,7 @@ static int __writeToSubClusterTable(BlockDevice* device, const void* buffer, Ind
 
     releaseBuffer(table, BUFFER_SIZE_512);
 
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
 static size_t __estimateiNodeBlockTaken(size_t clusterSize) {

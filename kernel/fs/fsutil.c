@@ -5,15 +5,16 @@
 #include<fs/inode.h>
 #include<kernel.h>
 #include<memory/memory.h>
+#include<returnValue.h>
 #include<string.h>
 
 static bool __pathCheck(ConstCstring path);
 
 static char _tmpStr[128];
 
-int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
+ReturnValue tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
     if (!__pathCheck(path)) {
-        return -1;
+        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_ARGUMENT, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
     }
 
     if (*path == '/') {
@@ -35,7 +36,7 @@ int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
         if (index == -1) {
             closeDirectory(directory);
             closeInode(inode);
-            return -1;
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_FILE, RETURN_VALUE_STATUS_NOT_FOUND);
         }
         directoryReadEntry(directory, &directoryEntry, index);
 
@@ -48,13 +49,14 @@ int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
     }
 
     memcpy(entry, &directoryEntry, sizeof(DirectoryEntry));
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
 size_t loadFile(ConstCstring path, void* buffer, Index64 begin, size_t n) {
     DirectoryEntry entry;
-    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
-        return -1;
+    ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
+    if (RETURN_VALUE_IS_ERROR(res = tracePath(&entry, path, INODE_TYPE_FILE))) {
+        return res;
     }
 
     iNode* inode = openInode(entry.iNodeIndex);

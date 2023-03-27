@@ -3,9 +3,10 @@
 
 #include<fs/fileSystem.h>
 #include<kit/types.h>
+#include<returnValue.h>
 
 void initUsermode();
 
-int execute(ConstCstring path);
+ReturnValue execute(ConstCstring path);
 
 #endif // __USERMODE_H

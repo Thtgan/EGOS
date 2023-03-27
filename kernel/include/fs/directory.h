@@ -4,6 +4,7 @@
 #include<fs/inode.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<returnValue.h>
 
 STRUCT_PRE_DEFINE(DirectoryOperations);
 
@@ -21,17 +22,17 @@ typedef struct {
 } DirectoryEntry;
 
 STRUCT_PRIVATE_DEFINE(DirectoryOperations) {
-    int (*addEntry)(Directory* directory, iNode* entryInode, ConstCstring name);
-    int (*removeEntry)(Directory* directory, Index64 entryIndex);
+    ReturnValue (*addEntry)(Directory* directory, iNode* entryInode, ConstCstring name);
+    ReturnValue (*removeEntry)(Directory* directory, Index64 entryIndex);
     Index64 (*lookupEntry)(Directory* directory, ConstCstring name, iNodeType type);
-    int (*readEntry)(Directory* directory, DirectoryEntry* entry, Index64 entryIndex);
+    ReturnValue (*readEntry)(Directory* directory, DirectoryEntry* entry, Index64 entryIndex);
 };
 
-static inline int directoryAddEntry(Directory* directory, iNode* entryInode, ConstCstring name) {
+static inline ReturnValue directoryAddEntry(Directory* directory, iNode* entryInode, ConstCstring name) {
     return directory->operations->addEntry(directory, entryInode, name);
 }
 
-static inline int directoryRemoveEntry(Directory* directory, Index64 entryIndex) {
+static inline ReturnValue directoryRemoveEntry(Directory* directory, Index64 entryIndex) {
     return directory->operations->removeEntry(directory, entryIndex);
 }
 
@@ -39,7 +40,7 @@ static inline Index64 directoryLookupEntry(Directory* directory, ConstCstring na
     return directory->operations->lookupEntry(directory, name, type);
 }
 
-static inline int directoryReadEntry(Directory* directory, DirectoryEntry* entry, Index64 entryIndex) {
+static inline ReturnValue directoryReadEntry(Directory* directory, DirectoryEntry* entry, Index64 entryIndex) {
     return directory->operations->readEntry(directory, entry, entryIndex);
 }
 

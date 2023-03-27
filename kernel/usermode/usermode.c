@@ -11,6 +11,7 @@
 #include<memory/paging/paging.h>
 #include<multitask/process.h>
 #include<real/simpleAsmLines.h>
+#include<returnValue.h>
 #include<structs/registerSet.h>
 #include<system/address.h>
 #include<system/GDT.h>
@@ -30,24 +31,27 @@ void initUsermode() {
     registerSyscallHandler(SYSCALL_TYPE_EXIT, __syscallHandlerExit);
 }
 
-int execute(ConstCstring path) {
+ReturnValue execute(ConstCstring path) {
     DirectoryEntry entry;
-    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
-        return 0x80000000;
+    ReturnValue res;
+    if (RETURN_VALUE_IS_ERROR(res = tracePath(&entry, path, INODE_TYPE_FILE))) {
+        return res;
     }
 
     iNode* inode = openInode(entry.iNodeIndex);
     File* file = openFile(inode);
 
     ELF64Header header;
-    if (readELF64Header(file, &header) != 0) {
-        return 0x80000000;
+    if (RETURN_VALUE_IS_ERROR(res = readELF64Header(file, &header))) {
+        return res;
     }
 
     ELF64ProgramHeader programHeader;
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (readELF64ProgramHeader(file, &header, &programHeader, i) != 0) {
-            return 0x80000000;  //TODO: DO RELEASE MEMORY
+        if (RETURN_VALUE_IS_ERROR(res = readELF64ProgramHeader(file, &header, &programHeader, i))) {
+            closeFile(file);
+            closeInode(inode);
+            return res;
         }
 
         if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
@@ -55,10 +59,16 @@ int execute(ConstCstring path) {
         }
 
         if (!checkELF64ProgramHeader(&programHeader)) {
-            return 0x80000000;  //TODO: DO RELEASE MEMORY
+            closeFile(file);
+            closeInode(inode);
+            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_FILE, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
         }
 
-        loadELF64Program(file, &programHeader);
+        if (RETURN_VALUE_IS_ERROR(res = loadELF64Program(file, &programHeader))) {
+            closeFile(file);
+            closeInode(inode);
+            return res;
+        }
     }
 
     Process* process = getCurrentProcess();

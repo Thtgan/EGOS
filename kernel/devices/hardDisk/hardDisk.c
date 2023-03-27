@@ -16,6 +16,7 @@
 #include<print.h>
 #include<real/ports/HDC.h>
 #include<real/simpleAsmLines.h>
+#include<returnValue.h>
 #include<string.h>
 #include<system/address.h>
 #include<system/deviceIdentify.h>
@@ -370,14 +371,14 @@ static bool __checkBootDisk(Disk* d) {
     return ret;
 }
 
-static int __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
+static ReturnValue __readBlocks(BlockDevice* this, block_index_t blockIndex, void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
 
-static int __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
+static ReturnValue __writeBlocks(BlockDevice* this, block_index_t blockIndex, const void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-    return 0;
+    return RETURN_VALUE_RETURN_NORMALLY;
 }
