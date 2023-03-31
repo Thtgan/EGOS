@@ -1,5 +1,6 @@
 #include<fs/phospherus/phospherus.h>
 
+#include<error.h>
 #include<fs/fileSystem.h>
 #include<fs/phospherus/allocator.h>
 #include<fs/phospherus/phospherus_inode.h>
@@ -17,22 +18,27 @@ void phospherusInitFileSystem() {
     fileSystemOperations.directoryGlobalOperations = phospherusInitDirectories();
 }
 
-bool phospherusDeployFileSystem(BlockDevice* device) {
-    if (phospherusCheckBlockDevice(device)) {
-        return false;
+int phospherusDeployFileSystem(BlockDevice* device) {
+    if (phospherusCheckBlockDevice(device) == 0) {
+        SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
+        return -1;
     }
 
-    phospherusDeployAllocator(device);
-    if (!phospherusCheckBlockDevice(device)) {
-        return false;
+    if (phospherusDeployAllocator(device) == -1) {
+        return -1;
+    }
+
+    if (phospherusCheckBlockDevice(device) == -1) {
+        SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+        return -1;
     }
 
     makeInode(device, RESERVED_BLOCK_ROOT_DIRECTORY, INODE_TYPE_DIRECTORY);
 
-    return true;
+    return 0;
 }
 
-bool phospherusCheckFileSystem(BlockDevice* device) {
+int phospherusCheckFileSystem(BlockDevice* device) {
     return phospherusCheckBlockDevice(device);
 }
 
@@ -44,7 +50,7 @@ FileSystem* phospherusOpenFileSystem(BlockDevice* device) {
     ret->opearations = &fileSystemOperations;
     ret->device = device->deviceID;
     ret->data = phospherusOpenAllocator(device);    //Open allocator to keep it in buffer, other operations can access it more quickly
-    ret->rootDirectoryInode = RESERVED_BLOCK_ROOT_DIRECTORY;
+    ret->rootDirectoryInodeIndex = RESERVED_BLOCK_ROOT_DIRECTORY;
 
     return ret;
 }

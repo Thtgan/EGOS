@@ -3,6 +3,7 @@
 
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
+#include<structs/hashTable.h>
 
 #define ROOT_SUPER_NODE_INDEX   0
 #define CLUSTER_BLOCK_SIZE      8
@@ -17,6 +18,7 @@ typedef struct {
     void* firstFreeSuperNode;
     void* firstFreeBlockStack;
     uint8_t openCnt;
+    HashChainNode hashChainNode;
 } PhospherusAllocator;
 
 /**
@@ -30,7 +32,7 @@ void phospherusInitAllocator();
  * @param device Block device
  * @return If the device has super node deployed
  */
-bool phospherusCheckBlockDevice(BlockDevice* device);
+int phospherusCheckBlockDevice(BlockDevice* device);
 
 /**
  * @brief Deploy the essential data to the device, the block device must have at least one cluster free
@@ -38,7 +40,7 @@ bool phospherusCheckBlockDevice(BlockDevice* device);
  * @param device Block device to deploy
  * @return Does the deploy succeeded
  */
-bool phospherusDeployAllocator(BlockDevice* device);
+int phospherusDeployAllocator(BlockDevice* device);
 
 /**
  * @brief Open the allocator from the disk

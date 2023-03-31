@@ -18,10 +18,9 @@ void initBlockDeviceManager() {
 }
 
 BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
-    ID deviceID = strhash(name, 13, 65536);
-    HashChainNode* node = NULL;
-    if ((node = hashTableFind(&_hashTable, (Object)deviceID)) != NULL) {
-        return HOST_POINTER(node, BlockDevice, hashChainNode);
+    ID deviceID = (uint16_t)strhash(name, 13, 65536);
+    while (hashTableFind(&_hashTable, (Object)deviceID) != NULL) {
+        ++deviceID;
     }
 
     BlockDevice* ret = kMalloc(sizeof(BlockDevice), MEMORY_TYPE_NORMAL);
@@ -54,12 +53,12 @@ bool registerBlockDevice(BlockDevice* device) {
 }
 
 BlockDevice* unregisterBlockDeviceByName(ConstCstring name) {
-    size_t deviceID = strhash(name, 13, 65536);
+    size_t deviceID = (uint16_t)strhash(name, 13, 65536);
     return HOST_POINTER(hashTableDelete(&_hashTable, (Object)deviceID), BlockDevice, hashChainNode);
 }
 
 BlockDevice* getBlockDeviceByName(ConstCstring name) {
-    size_t deviceID = strhash(name, 13, 65536);
+    size_t deviceID = (uint16_t)strhash(name, 13, 65536);
     HashChainNode* node = NULL;
     if ((node = hashTableFind(&_hashTable, (Object)deviceID)) != NULL) {
         return HOST_POINTER(node, BlockDevice, hashChainNode);

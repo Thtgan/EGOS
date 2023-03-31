@@ -1,11 +1,13 @@
 #if !defined(__PROCESS_H)
 #define __PROCESS_H
 
+#include<error.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<structs/linkedList.h>
 #include<structs/queue.h>
 #include<structs/registerSet.h>
+#include<structs/vector.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
@@ -42,6 +44,8 @@ struct _Process {
     
     QueueNode statusQueueNode;
     QueueNode semaWaitQueueNode;
+
+    int errorCode;
 };
 
 /**

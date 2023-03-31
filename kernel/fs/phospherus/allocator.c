@@ -1,14 +1,13 @@
 #include<fs/phospherus/allocator.h>
 
 #include<devices/block/blockDevice.h>
-#include<fs/phospherus/phospherus.h>
+#include<error.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<returnValue.h>
 #include<structs/hashTable.h>
 #include<system/systemInfo.h>
 
@@ -106,25 +105,27 @@ void phospherusInitAllocator() {
     }));
 }
 
-ReturnValue phospherusCheckBlockDevice(BlockDevice* device) {
+int phospherusCheckBlockDevice(BlockDevice* device) {
     __SuperNodeInfo* rootSuperNodeInfo = allocateBuffer(BUFFER_SIZE_512);
     blockDeviceReadBlocks(device, ROOT_SUPER_NODE_INDEX, rootSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
 
     if (rootSuperNodeInfo->signature1 != SYSTEM_INFO_MAGIC64 || rootSuperNodeInfo->signature2 != SYSTEM_INFO_MAGIC64) {
-        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DEVICE, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
+        return -1;
     }
 
     releaseBuffer(rootSuperNodeInfo, BUFFER_SIZE_512);
 
-    return RETURN_VALUE_RETURN_NORMALLY;
+    return 0;
 }
 
-ReturnValue phospherusDeployAllocator(BlockDevice* device) {
+int phospherusDeployAllocator(BlockDevice* device) {
     size_t deviceSize = device->availableBlockNum;
     size_t nodeNum = deviceSize / __SUPER_NODE_SPAN;
 
     if (nodeNum < 1) {   //The block device must have at least one node length free (1MB)
-        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DEVICE, RETURN_VALUE_STATUS_NO_FREE_SPACE);
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NO_FREE_SPACE);
+        return -1;
     }
 
     __DeviceInfo* info = allocateBuffer(BUFFER_SIZE_512);
@@ -165,7 +166,7 @@ ReturnValue phospherusDeployAllocator(BlockDevice* device) {
 
     releaseBuffer(node, BUFFER_SIZE_4096);
 
-    return RETURN_VALUE_RETURN_NORMALLY;
+    return 0;
 }
 
 PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {

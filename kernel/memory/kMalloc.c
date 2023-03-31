@@ -25,7 +25,7 @@ typedef struct {
 typedef struct {
     size_t size;
     MemoryType type;
-    uint8_t padding[4];     //Fill size to 16 for alignment
+    uint8_t padding[KMALLOC_HEADER_SIZE - sizeof(size_t) - sizeof(MemoryType)];  //Fill size to 16 for alignment
 } __attribute__((packed)) __RegionHeader;
 
 #define MIN_REGION_LENGTH_BIT       5

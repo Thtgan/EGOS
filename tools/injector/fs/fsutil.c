@@ -6,8 +6,8 @@
 #include<fs/file.h>
 #include<fs/fileSystem.h>
 #include<fs/inode.h>
-#include<kernel.h>
-#include<memory/memory.h>
+#include<injector.h>
+#include<memory.h>
 #include<string.h>
 
 static bool __pathCheck(ConstCstring path);

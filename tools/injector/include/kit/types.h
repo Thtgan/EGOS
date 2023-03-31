@@ -44,6 +44,8 @@ typedef uint32_t    Index32;
 typedef uint16_t    Index16;
 typedef uint8_t     Index8;
 
+#define INVALID_INDEX   -1
+
 typedef char*       Cstring;
 typedef const char* ConstCstring;
 

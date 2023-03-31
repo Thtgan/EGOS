@@ -5,7 +5,6 @@
 #include<fs/fileSystem.h>
 #include<fs/phospherus/allocator.h>
 #include<kit/types.h>
-#include<returnValue.h>
 
 /**
  * @brief Initialize the phospherus file system
@@ -18,7 +17,7 @@ void phospherusInitFileSystem();
  * @param device Device to mount the phospherus file system
  * @return Is deployment succeeded
  */
-ReturnValue phospherusDeployFileSystem(BlockDevice* device);
+int phospherusDeployFileSystem(BlockDevice* device);
 
 /**
  * @brief Check if the device has phospherus deployed
@@ -26,7 +25,7 @@ ReturnValue phospherusDeployFileSystem(BlockDevice* device);
  * @param device Device to check
  * @return Is the device has phospherus deployed
  */
-ReturnValue phospherusCheckFileSystem(BlockDevice* device);
+int phospherusCheckFileSystem(BlockDevice* device);
 
 /**
  * @brief Open phospherus file system on device

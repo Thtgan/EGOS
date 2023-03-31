@@ -15,12 +15,12 @@ typedef enum {
 
 typedef struct {
     File* (*openFile)(iNode* iNode);
-    ReturnValue (*closeFile)(File* file);
+    int (*closeFile)(File* file);
 } FileGlobalOperations;
 
 typedef struct {
     Directory* (*openDirectory)(iNode* iNode);
-    ReturnValue (*closeDirectory)(Directory* directory);
+    int (*closeDirectory)(Directory* directory);
 } DirectoryGlobalOperations;
 
 STRUCT_PRE_DEFINE(FileSystem);
@@ -40,7 +40,7 @@ typedef struct {
      * @param iNodeBlock Block index where the inode is located
      * @return int Status of the operation
      */
-    ReturnValue (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
+    int (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
 
     /**
      * @brief Open a inode through on the given block
@@ -56,7 +56,7 @@ typedef struct {
      * @param iNode iNode to close
      * @return int Status of the operation
      */
-    ReturnValue (*closeInode)(iNode* iNode);
+    int (*closeInode)(iNode* iNode);
 } iNodeGlobalOperations;
 
 typedef struct {
@@ -71,7 +71,7 @@ STRUCT_PRIVATE_DEFINE(FileSystem) {
     FileSystemOperations* opearations;
     HashChainNode managerNode;
     ID device;
-    Index64 rootDirectoryInode;
+    Index64 rootDirectoryInodeIndex;
     void* data;
 };
 
@@ -87,7 +87,7 @@ void initFileSystem();
  * @param type File system type to deploy
  * @return Is deployment succeeded
  */
-ReturnValue deployFileSystem(BlockDevice* device, FileSystemType type);
+int deployFileSystem(BlockDevice* device, FileSystemType type);
 
 /**
  * @brief Check type of file system on device
@@ -110,22 +110,6 @@ FileSystem* openFileSystem(BlockDevice* device);
  * 
  * @param system File system
  */
-bool closeFileSystem(BlockDevice* device);
-
-File* openFile(iNode* iNode);
-
-ReturnValue closeFile(File* file);
-
-Directory* openDirectory(iNode* iNode);
-
-ReturnValue closeDirectory(Directory* directory);
-
-Index64 createInode(iNodeType type);
-
-ReturnValue deleteInode(Index64 iNodeBlock);
-
-iNode* openInode(Index64 iNodeBlock);
-
-ReturnValue closeInode(iNode* iNode);
+int closeFileSystem(FileSystem* fs);
 
 #endif // __FILESYSTEM_H

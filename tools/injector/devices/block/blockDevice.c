@@ -1,86 +1,81 @@
 #include<devices/block/blockDevice.h>
 
+#include<devices/block/blockDeviceTypes.h>
 #include<kit/types.h>
 #include<malloc.h>
 #include<memory.h>
-#include<stdio.h>
 #include<string.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
 
 static HashTable _hashTable;
+static SinglyLinkedList _hashChains[16];
 
-static size_t __hashFunc(THIS_ARG_APPEND(HashTable, Object key));
+void initBlockDeviceManager() {
+    initHashTable(&_hashTable, 16, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
+        return (size_t)key % 13;
+    }));
+}
 
 static size_t __strhash(const char* str, size_t p, size_t mod);
 
-void initBlockDeviceManager() {
-    initHashTable(&_hashTable, 16, __hashFunc);
-}
-
-BlockDevice* createBlockDevice(const char* name, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
-    ID deviceID = __strhash(name, 13, 65536);
-    Object obj;
-    if (hashTableFind(&_hashTable, (Object)deviceID, &obj)) {
-        return (BlockDevice*)obj;
+BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
+    ID deviceID = (uint16_t)__strhash(name, 13, 65536);
+    while (hashTableFind(&_hashTable, (Object)deviceID) != NULL) {
+        ++deviceID;
     }
 
     BlockDevice* ret = malloc(sizeof(BlockDevice));
     memset(ret, 0, sizeof(BlockDevice));
 
     strcpy(ret->name, name);
+
+    ret->type = type;
     ret->deviceID = deviceID;
     ret->availableBlockNum = availableBlockNum;
     ret->operations = operations;
     ret->additionalData = additionalData;
+    initHashChainNode(&ret->hashChainNode);
 
     return ret;
 }
 
-void deleteBlockDevice(BlockDevice* device) {
+void releaseBlockDevice(BlockDevice* device) {
     free(device);
 }
 
-BlockDevice* registerBlockDevice(BlockDevice* device) {
-    Object obj;
-    if (hashTableFind(&_hashTable, (Object)device->deviceID, &obj)) {
-        return device;
+bool registerBlockDevice(BlockDevice* device) {
+    if (hashTableFind(&_hashTable, (Object)device->deviceID) != NULL) {
+        return false;
     }
 
-    hashTableInsert(&_hashTable, (Object)device->deviceID, (Object)device);
+    hashTableInsert(&_hashTable, (Object)device->deviceID, &device->hashChainNode);
 
-    return device;
+    return true;
 }
 
-BlockDevice* unregisterBlockDeviceByName(const char* name) {
-    size_t deviceID = __strhash(name, 13, 65536);
-    Object obj;
-    hashTableDelete(&_hashTable, (Object)deviceID, &obj);
-
-    return (BlockDevice*)obj;
+BlockDevice* unregisterBlockDeviceByName(ConstCstring name) {
+    size_t deviceID = (uint16_t)__strhash(name, 13, 65536);
+    return HOST_POINTER(hashTableDelete(&_hashTable, (Object)deviceID), BlockDevice, hashChainNode);
 }
 
-BlockDevice* getBlockDeviceByName(const char* name) {
-    size_t deviceID = __strhash(name, 13, 65536);
-    Object obj;
-    if (!hashTableFind(&_hashTable, (Object)deviceID, &obj)) {
-        return NULL;
+BlockDevice* getBlockDeviceByName(ConstCstring name) {
+    size_t deviceID = (uint16_t)__strhash(name, 13, 65536);
+    HashChainNode* node = NULL;
+    if ((node = hashTableFind(&_hashTable, (Object)deviceID)) != NULL) {
+        return HOST_POINTER(node, BlockDevice, hashChainNode);
     }
 
-    return (BlockDevice*)obj;
+    return NULL;
 }
 
 BlockDevice* getBlockDeviceByID(ID id) {
-    Object obj;
-    if (!hashTableFind(&_hashTable, (Object)id, &obj)) {
-        return NULL;
+    HashChainNode* node = NULL;
+    if ((node = hashTableFind(&_hashTable, (Object)id)) != NULL) {
+        return HOST_POINTER(node, BlockDevice, hashChainNode);
     }
 
-    return (BlockDevice*)obj;
-}
-
-static size_t __hashFunc(THIS_ARG_APPEND(HashTable, Object key)) {
-    return (size_t)key % 13;
+    return NULL;
 }
 
 static size_t __strhash(const char* str, size_t p, size_t mod) {

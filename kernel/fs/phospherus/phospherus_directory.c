@@ -1,28 +1,28 @@
 #include<fs/phospherus/phospherus_directory.h>
 
 #include<devices/block/blockDevice.h>
+#include<error.h>
 #include<fs/inode.h>
 #include<fs/phospherus/phospherus.h>
 #include<kit/types.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<returnValue.h>
 #include<string.h>
 
 typedef struct {
-    Index64 inodeBlockIndex;
+    ID iNodeID;
     iNodeType type;
     char reserved[52];
     char name[PHOSPHERUS_MAX_NAME_LENGTH + 1];
 } __attribute__((packed)) __DirectoryEntry;
 
-static ReturnValue __addEntry(Directory* this, iNode* entryInode, ConstCstring name);
+static int __addEntry(Directory* this, ID iNodeID, iNodeType type, ConstCstring name);
 
-static ReturnValue __removeEntry(Directory* this, Index64 entryIndex);
+static int __removeEntry(Directory* this, Index64 entryIndex);
 
 static Index64 __lookupEntry(Directory* this, ConstCstring name, iNodeType type);
 
-static ReturnValue __readEntry(Directory* this, DirectoryEntry* entry, Index64 entryIndex);
+static int __readEntry(Directory* this, DirectoryEntry* entry, Index64 entryIndex);
 
 DirectoryOperations directoryOperations = {
     .addEntry = __addEntry,
@@ -33,7 +33,7 @@ DirectoryOperations directoryOperations = {
 
 static Directory* __openDirectory(iNode* iNode);
 
-static ReturnValue __closeDirectory(Directory* directory);
+static int __closeDirectory(Directory* directory);
 
 DirectoryGlobalOperations directoryGlobalOperations = {
     .openDirectory = __openDirectory,
@@ -44,9 +44,10 @@ DirectoryGlobalOperations* phospherusInitDirectories() {
     return &directoryGlobalOperations;
 }
 
-static ReturnValue __addEntry(Directory* this, iNode* entryInode, ConstCstring name) {
-    if (__lookupEntry(this, name, entryInode->onDevice.type) != INVALID_INDEX) {
-        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_ITEM, RETURN_VALUE_STATUS_ALREADY_EXIST);
+static int __addEntry(Directory* this, ID iNodeID, iNodeType type, ConstCstring name) {
+    if (__lookupEntry(this, name, type) != INVALID_INDEX) {
+        SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
+        return -1;
     }
 
     iNode* directoryInode = this->iNode;
@@ -63,7 +64,8 @@ static ReturnValue __addEntry(Directory* this, iNode* entryInode, ConstCstring n
     }
 
     if (newDirectoryInMemory == NULL) {
-        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_MEMORY, RETURN_VALUE_STATUS_NO_FREE_SPACE);
+        SET_ERROR_CODE(ERROR_OBJECT_MEMORY, ERROR_STATUS_NO_FREE_SPACE);
+        return -1;
     }
 
     this->directoryInMemory = newDirectoryInMemory;
@@ -72,26 +74,25 @@ static ReturnValue __addEntry(Directory* this, iNode* entryInode, ConstCstring n
     memset(newEntry, 0, sizeof(__DirectoryEntry));
     ++this->size;
 
-    newEntry->inodeBlockIndex = entryInode->blockIndex;
-    newEntry->type = entryInode->onDevice.type;
+    newEntry->iNodeID = iNodeID;
+    newEntry->type = type;
     strcpy(newEntry->name, name);
 
-    ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
-    if (newBlockSize != oldBlockSize && RETURN_VALUE_IS_ERROR(res = iNodeResize(directoryInode, newBlockSize))) {
-        return res;
+    if (newBlockSize != oldBlockSize && iNodeResize(directoryInode, newBlockSize) == -1) {
+        return -1;
     }
 
-    if (RETURN_VALUE_IS_ERROR(res = iNodeWriteBlocks(directoryInode, this->directoryInMemory + (newBlockSize - 1) * BLOCK_SIZE, newBlockSize - 1, 1))) {
-        return res;
+    if (iNodeWriteBlocks(directoryInode, this->directoryInMemory + (newBlockSize - 1) * BLOCK_SIZE, newBlockSize - 1, 1) == -1) {
+        return -1;
     }
 
     directoryInode->onDevice.dataSize = this->size * sizeof(__DirectoryEntry);
     blockDeviceWriteBlocks(directoryInode->device, directoryInode->blockIndex, &directoryInode->onDevice, 1);
 
-    return RETURN_VALUE_RETURN_NORMALLY;
+    return 0;
 }
 
-static ReturnValue __removeEntry(Directory* this, Index64 entryIndex) {
+static int __removeEntry(Directory* this, Index64 entryIndex) {
     iNode* directoryInode = this->iNode;
 
     size_t 
@@ -112,19 +113,18 @@ static ReturnValue __removeEntry(Directory* this, Index64 entryIndex) {
     }
     --this->size;
 
-    ReturnValue res = RETURN_VALUE_RETURN_NORMALLY;
-    if (newBlockSize != oldBlockSize && RETURN_VALUE_IS_ERROR(res = iNodeResize(directoryInode, newBlockSize))) {
-        return res;
+    if (newBlockSize != oldBlockSize && iNodeResize(directoryInode, newBlockSize) == -1) {
+        return -1;
     }
 
-    if (newBlockSize > 0 && RETURN_VALUE_IS_ERROR(res = iNodeWriteBlocks(directoryInode, this->directoryInMemory, 0, newBlockSize))) {
-        return res;
+    if (newBlockSize > 0 && iNodeWriteBlocks(directoryInode, this->directoryInMemory, 0, newBlockSize) == -1) {
+        return -1;
     }
 
     directoryInode->onDevice.dataSize = this->size * sizeof(__DirectoryEntry);
     blockDeviceWriteBlocks(directoryInode->device, directoryInode->blockIndex, &directoryInode->onDevice, 1);
 
-    return RETURN_VALUE_RETURN_NORMALLY;
+    return 0;
 }
 
 static Index64 __lookupEntry(Directory* this, ConstCstring name, iNodeType type) {
@@ -138,17 +138,18 @@ static Index64 __lookupEntry(Directory* this, ConstCstring name, iNodeType type)
     return INVALID_INDEX;
 }
 
-static ReturnValue __readEntry(Directory* this, DirectoryEntry* entry, Index64 entryIndex) {
+static int __readEntry(Directory* this, DirectoryEntry* entry, Index64 entryIndex) {
     if (entryIndex >= this->size) {
-        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_INDEX, RETURN_VALUE_STATUS_OUT_OF_BOUND);
+        SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
+        return -1;
     }
 
     __DirectoryEntry* diectoryEntry = ((__DirectoryEntry*)this->directoryInMemory) + entryIndex;
     entry->name = diectoryEntry->name;
-    entry->iNodeIndex = diectoryEntry->inodeBlockIndex;
+    entry->iNodeID = diectoryEntry->iNodeID;
     entry->type = diectoryEntry->type;
 
-    return RETURN_VALUE_RETURN_NORMALLY;
+    return 0;
 }
 
 static Directory* __openDirectory(iNode* iNode) {
@@ -174,10 +175,11 @@ static Directory* __openDirectory(iNode* iNode) {
     return ret;
 }
 
-static ReturnValue __closeDirectory(Directory* directory) {
+static int __closeDirectory(Directory* directory) {
     iNode* iNode = directory->iNode;
     if (iNode->entryReference == NULL) {
-        return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_DATA, RETURN_VALUE_STATUS_NOT_FOUND);
+        SET_ERROR_CODE(ERROR_OBJECT_DATA, ERROR_STATUS_NOT_FOUND);
+        return -1;
     }
 
     if (--iNode->referenceCnt == 0) {
@@ -187,5 +189,5 @@ static ReturnValue __closeDirectory(Directory* directory) {
         kFree(directory);
     }
 
-    return RETURN_VALUE_RETURN_NORMALLY;
+    return 0;
 }

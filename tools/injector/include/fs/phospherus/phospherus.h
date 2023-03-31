@@ -6,9 +6,6 @@
 #include<fs/phospherus/allocator.h>
 #include<kit/types.h>
 
-//TODO: Move this to independent header as a null index pointer
-#define PHOSPHERUS_NULL             -1
-
 /**
  * @brief Initialize the phospherus file system
  */
@@ -20,7 +17,7 @@ void phospherusInitFileSystem();
  * @param device Device to mount the phospherus file system
  * @return Is deployment succeeded
  */
-bool phospherusDeployFileSystem(BlockDevice* device);
+int phospherusDeployFileSystem(BlockDevice* device);
 
 /**
  * @brief Check if the device has phospherus deployed
@@ -28,7 +25,7 @@ bool phospherusDeployFileSystem(BlockDevice* device);
  * @param device Device to check
  * @return Is the device has phospherus deployed
  */
-bool phospherusCheckFileSystem(BlockDevice* device);
+int phospherusCheckFileSystem(BlockDevice* device);
 
 /**
  * @brief Open phospherus file system on device

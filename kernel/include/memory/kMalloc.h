@@ -9,6 +9,8 @@ typedef enum {
     MEMORY_TYPE_NUM,    //DO NOT USE THIS
 } MemoryType;
 
+#define KMALLOC_HEADER_SIZE 16
+
 /**
  * @brief Initialize the virtual malloc
  */

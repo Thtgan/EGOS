@@ -1,12 +1,12 @@
 #include<fs/phospherus/allocator.h>
 
 #include<devices/block/blockDevice.h>
-#include<fs/phospherus/phospherus.h>
+#include<error.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<memory/buffer.h>
 #include<malloc.h>
+#include<memory/buffer.h>
 #include<memory.h>
 #include<structs/hashTable.h>
 #include<system/systemInfo.h>
@@ -97,30 +97,35 @@ typedef struct {
 #define __BLOCK_STACK_SIZE  (sizeof(__BlockStack) / BLOCK_SIZE)
 
 static HashTable _hashTable;
+static SinglyLinkedList _hashChains[32];
 
 void phospherusInitAllocator() {
-    initHashTable(&_hashTable, 32, LAMBDA(size_t, (THIS_ARG_APPEND(HashTable, Object key)) {
+    initHashTable(&_hashTable, 32, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
         return (size_t)key % 31;
     }));
 }
 
-bool phospherusCheckBlockDevice(BlockDevice* device) {
+int phospherusCheckBlockDevice(BlockDevice* device) {
     __SuperNodeInfo* rootSuperNodeInfo = allocateBuffer(BUFFER_SIZE_512);
-    THIS_ARG_APPEND_CALL(device, operations->readBlocks, ROOT_SUPER_NODE_INDEX, rootSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
+    blockDeviceReadBlocks(device, ROOT_SUPER_NODE_INDEX, rootSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
 
-    bool ret = (rootSuperNodeInfo->signature1 == SYSTEM_INFO_MAGIC64 && rootSuperNodeInfo->signature2 == SYSTEM_INFO_MAGIC64);   //Check by reading the signature
+    if (rootSuperNodeInfo->signature1 != SYSTEM_INFO_MAGIC64 || rootSuperNodeInfo->signature2 != SYSTEM_INFO_MAGIC64) {
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
+        return -1;
+    }
 
     releaseBuffer(rootSuperNodeInfo, BUFFER_SIZE_512);
 
-    return ret;
+    return 0;
 }
 
-bool phospherusDeployAllocator(BlockDevice* device) {
+int phospherusDeployAllocator(BlockDevice* device) {
     size_t deviceSize = device->availableBlockNum;
     size_t nodeNum = deviceSize / __SUPER_NODE_SPAN;
 
     if (nodeNum < 1) {   //The block device must have at least one node length free (1MB)
-        return false;
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NO_FREE_SPACE);
+        return -1;
     }
 
     __DeviceInfo* info = allocateBuffer(BUFFER_SIZE_512);
@@ -128,8 +133,8 @@ bool phospherusDeployAllocator(BlockDevice* device) {
     info->signature = SYSTEM_INFO_MAGIC64;
     info->deviceFreeClusterNum = deviceSize / CLUSTER_BLOCK_SIZE - nodeNum - 1;
     info->firstFreeBlockStack = 0, info->firstFreeBlockStack = (nodeNum - 1) * __SUPER_NODE_SPAN;
-    info->firstFreeBlockStack = info->lastFreeBlockStack = PHOSPHERUS_NULL;
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, RESERVED_BLOCK_DEVICE_INFO, info, __DEVICE_INFO_SIZE);
+    info->firstFreeBlockStack = info->lastFreeBlockStack = INVALID_INDEX;
+    blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, info, __DEVICE_INFO_SIZE);
     releaseBuffer(info, BUFFER_SIZE_512);
     
     __SuperNode* node = allocateBuffer(BUFFER_SIZE_4096);
@@ -142,7 +147,7 @@ bool phospherusDeployAllocator(BlockDevice* device) {
 
     for (int i = 0; i < nodeNum; ++i) {
         nodeInfo->blockIndex = i * __SUPER_NODE_SPAN;
-        nodeInfo->nextFreeSuperNode = i + 1 == nodeNum ? PHOSPHERUS_NULL : (i + 1) * __SUPER_NODE_SPAN;
+        nodeInfo->nextFreeSuperNode = i + 1 == nodeNum ? INVALID_INDEX : (i + 1) * __SUPER_NODE_SPAN;
 
         if (i == ROOT_SUPER_NODE_INDEX) {
             stack->stackTop = 253;
@@ -156,34 +161,35 @@ bool phospherusDeployAllocator(BlockDevice* device) {
             }
         }
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, nodeInfo->blockIndex, node, __SUPER_NODE_SIZE);
+        blockDeviceWriteBlocks(device, nodeInfo->blockIndex, node, __SUPER_NODE_SIZE);
     }
 
     releaseBuffer(node, BUFFER_SIZE_4096);
 
-    return true;
+    return 0;
 }
 
 PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
-    Object found;
-    if (hashTableFind(&_hashTable, (Object)device->deviceID, &found)) { //If allocator opened, give a reference
-        PhospherusAllocator* ret = (PhospherusAllocator*)found;
+    PhospherusAllocator* ret = NULL;
+    HashChainNode* node = NULL;
+    if ((node = hashTableFind(&_hashTable, (Object)device->deviceID)) != NULL) { //If allocator opened, give a reference
+        ret = HOST_POINTER(node, PhospherusAllocator, hashChainNode);
         ++ret->openCnt;
         return ret;
     }
 
-    PhospherusAllocator* ret = malloc(sizeof(PhospherusAllocator));
+    ret = malloc(sizeof(PhospherusAllocator));
     __DeviceInfo* deviceInfo = malloc(sizeof(__DeviceInfo));
     __SuperNodeInfo* firstFreeSuperNode = malloc(sizeof(__SuperNode));
     __BlockStack * firstFreeBlockStack = malloc(sizeof(__BlockStack));
 
-    THIS_ARG_APPEND_CALL(device, operations->readBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
-    if (deviceInfo->firstFreeSuperNode != PHOSPHERUS_NULL) {
-        THIS_ARG_APPEND_CALL(device, operations->readBlocks, deviceInfo->firstFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE);
+    blockDeviceReadBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+    if (deviceInfo->firstFreeSuperNode != INVALID_INDEX) {
+        blockDeviceReadBlocks(device, deviceInfo->firstFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE);
     }
     
-    if (deviceInfo->firstFreeBlockStack != PHOSPHERUS_NULL) {
-        THIS_ARG_APPEND_CALL(device, operations->readBlocks, deviceInfo->firstFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+    if (deviceInfo->firstFreeBlockStack != INVALID_INDEX) {
+        blockDeviceReadBlocks(device, deviceInfo->firstFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
     }
 
     ret->device = device;
@@ -191,8 +197,9 @@ PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
     ret->firstFreeSuperNode = firstFreeSuperNode;
     ret->firstFreeBlockStack = firstFreeBlockStack;
     ret->openCnt = 1;
+    initHashChainNode(&ret->hashChainNode);
 
-    hashTableInsert(&_hashTable, (Object)device->deviceID, (Object)ret);
+    hashTableInsert(&_hashTable, (Object)device->deviceID, &ret->hashChainNode);
 
     return ret;
 }
@@ -204,8 +211,7 @@ void phospherusCloseAllocator(PhospherusAllocator* allocator) {
 
     BlockDevice* device = allocator->device;
 
-    Object obj;
-    hashTableDelete(&_hashTable, (Object)device->deviceID, &obj);
+    hashTableDelete(&_hashTable, (Object)device->deviceID);
 
     free(allocator->deviceInfo);
     free(allocator->firstFreeSuperNode);
@@ -219,33 +225,33 @@ Index64 phospherusAllocateCluster(PhospherusAllocator* allocator) {
     __DeviceInfo* deviceInfo = allocator->deviceInfo;
     __SuperNode* firstFreeSuperNode = allocator->firstFreeSuperNode;
 
-    if (deviceInfo->deviceFreeClusterNum == 0 || deviceInfo->firstFreeSuperNode == PHOSPHERUS_NULL) {    //Theoretically, these two can be true iff at the same time
-        return PHOSPHERUS_NULL;
+    if (deviceInfo->deviceFreeClusterNum == 0 || deviceInfo->firstFreeSuperNode == INVALID_INDEX) {    //Theoretically, these two can be true iff at the same time
+        return INVALID_INDEX;
     }
 
     __ClusterStack* stack = &firstFreeSuperNode->stack;
     __SuperNodeInfo* info = &firstFreeSuperNode->info;
     Index64 ret = POP_CLUSTER(stack);   //Pop one cluster from super node in memory
 
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, info->blockIndex + __SUPER_NODE_STACK_OFFSET, stack, __SUPER_NODE_STACK_SIZE);    //Save back the stack
+    blockDeviceWriteBlocks(device, info->blockIndex + __SUPER_NODE_STACK_OFFSET, stack, __SUPER_NODE_STACK_SIZE);   //Save back the stack
 
     if (CLUSTER_STACK_EMPTY(stack)) {                                                                                                       //If the stack is empty now, replace with new free super node
         deviceInfo->firstFreeSuperNode = info->nextFreeSuperNode;                                                                           //Will be wrote in in updating
-        if (info->nextFreeSuperNode == PHOSPHERUS_NULL) {
+        if (info->nextFreeSuperNode == INVALID_INDEX) {
             memset(firstFreeSuperNode, 0, sizeof(__SuperNode));                                                                             //Destroy the invalid data
-            deviceInfo->lastFreeSuperNode = PHOSPHERUS_NULL;
-        } else {
-            THIS_ARG_APPEND_CALL(device, operations->readBlocks, info->nextFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE);           //Read new free super block, no need to modify old free super block's info
+            deviceInfo->lastFreeSuperNode = INVALID_INDEX;
+        } else {          
+            blockDeviceReadBlocks(device, info->nextFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE);  //Read new free super block, no need to modify old free super block's info
         }
     }
 
     --deviceInfo->deviceFreeClusterNum;  //Save root super node
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+    blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
     return ret;
 }
 
 void phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster) {
-    if (cluster == PHOSPHERUS_NULL) {    //Well, just in case
+    if (cluster == INVALID_INDEX) {     //Well, just in case
         return;
     }
 
@@ -256,38 +262,38 @@ void phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster) {
     Index64 superNodeIndex = (cluster / __SUPER_NODE_SPAN) * __SUPER_NODE_SPAN;  //Which super node does this cluster belongs to
     if (superNodeIndex == firstFreeSuperNode->info.blockIndex) {
         PUSH_CLUSTER(&firstFreeSuperNode->stack, cluster);          //It belongs to first free super block, which is already in memory, just save in
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, superNodeIndex + __SUPER_NODE_STACK_OFFSET, &firstFreeSuperNode->stack, __SUPER_NODE_STACK_SIZE);
+        blockDeviceWriteBlocks(device, superNodeIndex + __SUPER_NODE_STACK_OFFSET, &firstFreeSuperNode->stack, __SUPER_NODE_STACK_SIZE);
     } else {    //It belongs to normal super node, not in memory
         __SuperNode* superNode = allocateBuffer(BUFFER_SIZE_4096);
-        THIS_ARG_APPEND_CALL(device, operations->readBlocks, superNodeIndex, superNode, __SUPER_NODE_SIZE);
+        blockDeviceReadBlocks(device, superNodeIndex, superNode, __SUPER_NODE_SIZE);
 
         bool needInsert = CLUSTER_STACK_EMPTY(&superNode->stack);
         PUSH_CLUSTER(&superNode->stack, cluster);
 
         if (needInsert) {   //The release make a super block free, need to be inserted back to the list
-            if (deviceInfo->lastFreeSuperNode == PHOSPHERUS_NULL) {  //When deivce has no free super node
+            if (deviceInfo->lastFreeSuperNode == INVALID_INDEX) {  //When deivce has no free super node
                 deviceInfo->firstFreeSuperNode = superNodeIndex;
             } else if (deviceInfo->lastFreeSuperNode == firstFreeSuperNode->info.blockIndex) {
                 firstFreeSuperNode->info.nextFreeSuperNode = superNodeIndex;
-                THIS_ARG_APPEND_CALL(device, operations->writeBlocks, deviceInfo->lastFreeSuperNode, &firstFreeSuperNode->info, __SUPER_NODE_INFO_SIZE);
+                blockDeviceWriteBlocks(device, deviceInfo->lastFreeSuperNode, &firstFreeSuperNode->info, __SUPER_NODE_INFO_SIZE);
             } else {
                 __SuperNodeInfo* lastFreeSuperNodeInfo = allocateBuffer(BUFFER_SIZE_512);  //Update linked list tail
-                THIS_ARG_APPEND_CALL(device, operations->readBlocks, deviceInfo->lastFreeSuperNode, lastFreeSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
+                blockDeviceReadBlocks(device, deviceInfo->lastFreeSuperNode, lastFreeSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
                 lastFreeSuperNodeInfo->nextFreeSuperNode = superNodeIndex;
-                THIS_ARG_APPEND_CALL(device, operations->writeBlocks, deviceInfo->lastFreeSuperNode, lastFreeSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
+                blockDeviceWriteBlocks(device, deviceInfo->lastFreeSuperNode, lastFreeSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
                 releaseBuffer(lastFreeSuperNodeInfo, BUFFER_SIZE_512);
             }
             
-            superNode->info.nextFreeSuperNode = PHOSPHERUS_NULL;    //Make tail a tail, and update the root super block
+            superNode->info.nextFreeSuperNode = INVALID_INDEX;    //Make tail a tail, and update the root super block
             deviceInfo->lastFreeSuperNode = superNodeIndex;
         }
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, superNodeIndex, superNode, __SUPER_NODE_SIZE);
+        blockDeviceWriteBlocks(device, superNodeIndex, superNode, __SUPER_NODE_SIZE);
         releaseBuffer(superNode, BUFFER_SIZE_4096);
     }
 
     ++deviceInfo->deviceFreeClusterNum;  //Save root super node
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+    blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
 }
 
 size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator) {
@@ -300,45 +306,45 @@ Index64 phospherusAllocateBlock(PhospherusAllocator* allocator) {
     __DeviceInfo* deviceInfo = allocator->deviceInfo;
     __BlockStack* firstFreeBlockStack = allocator->firstFreeBlockStack;
 
-    if (deviceInfo->firstFreeBlockStack == PHOSPHERUS_NULL) {
+    if (deviceInfo->firstFreeBlockStack == INVALID_INDEX) {
         Index64 cluster = phospherusAllocateCluster(allocator);
 
-        if (cluster == PHOSPHERUS_NULL) {
-            return PHOSPHERUS_NULL;
+        if (cluster == INVALID_INDEX) {
+            return INVALID_INDEX;
         }
 
         __BlockStack* blockStack = (__BlockStack*)allocateBuffer(BUFFER_SIZE_512);
         memset(blockStack, 0, sizeof(__BlockStack));
 
-        blockStack->nextFreeBlockStack = PHOSPHERUS_NULL;
+        blockStack->nextFreeBlockStack = INVALID_INDEX;
         blockStack->blockIndex = cluster;
         blockStack->stackTop = 6;
         for (int i = 0; i < CLUSTER_BLOCK_SIZE - 1; ++i) {
             blockStack->blockStack[i] = cluster + i + 1;
         }
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, cluster, blockStack, __BLOCK_STACK_SIZE);
+        blockDeviceWriteBlocks(device, cluster, blockStack, __BLOCK_STACK_SIZE);
 
         memcpy(firstFreeBlockStack, blockStack, sizeof(__BlockStack));
         deviceInfo->firstFreeBlockStack = deviceInfo->lastFreeBlockStack = blockStack->blockIndex;
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+        blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
 
         releaseBuffer(blockStack, BUFFER_SIZE_512);
     }
 
     Index64 ret = POP_BLOCK(firstFreeBlockStack);
-    THIS_ARG_APPEND_CALL(device, operations->writeBlocks, firstFreeBlockStack->blockIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+    blockDeviceWriteBlocks(device, firstFreeBlockStack->blockIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE);
 
     if (BLOCK_STACK_EMPTY(firstFreeBlockStack)) {
         deviceInfo->firstFreeBlockStack = firstFreeBlockStack->nextFreeBlockStack;
-        if (firstFreeBlockStack->nextFreeBlockStack == PHOSPHERUS_NULL) {
-            deviceInfo->lastFreeBlockStack = PHOSPHERUS_NULL;
+        if (firstFreeBlockStack->nextFreeBlockStack == INVALID_INDEX) {
+            deviceInfo->lastFreeBlockStack = INVALID_INDEX;
             memset(firstFreeBlockStack, 0, sizeof(__BlockStack));
         } else {
-            THIS_ARG_APPEND_CALL(device, operations->readBlocks, firstFreeBlockStack->nextFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+            blockDeviceReadBlocks(device, firstFreeBlockStack->nextFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
         }
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+        blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
     }
 
     return ret;
@@ -353,35 +359,35 @@ void phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block) {
 
     if (blockStackIndex == deviceInfo->firstFreeBlockStack) {
         PUSH_BLOCK(firstFreeBlockStack, block);
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, blockStackIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+        blockDeviceWriteBlocks(device, blockStackIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE);
     } else {
         __BlockStack* stack = allocateBuffer(BUFFER_SIZE_512);
-        THIS_ARG_APPEND_CALL(device, operations->readBlocks, blockStackIndex, stack, __BLOCK_STACK_SIZE);
+        blockDeviceReadBlocks(device, blockStackIndex, stack, __BLOCK_STACK_SIZE);
         bool needInsert = BLOCK_STACK_EMPTY(stack);
         PUSH_BLOCK(stack, block);
 
         if (needInsert) {
-            if (deviceInfo->lastFreeBlockStack == PHOSPHERUS_NULL) {
+            if (deviceInfo->lastFreeBlockStack == INVALID_INDEX) {
                 deviceInfo->firstFreeBlockStack = blockStackIndex;
                 memcpy(firstFreeBlockStack, stack, sizeof(__BlockStack));
             } else if (deviceInfo->lastFreeBlockStack == firstFreeBlockStack->blockIndex) {
                 firstFreeBlockStack->nextFreeBlockStack = blockStackIndex;
-                THIS_ARG_APPEND_CALL(device, operations->writeBlocks, deviceInfo->lastFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+                blockDeviceWriteBlocks(device, deviceInfo->lastFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
             } else {
                 __BlockStack* lastFreeBlockStack = allocateBuffer(BUFFER_SIZE_512);
-                THIS_ARG_APPEND_CALL(device, operations->readBlocks, deviceInfo->lastFreeBlockStack, lastFreeBlockStack, __BLOCK_STACK_SIZE);
+                blockDeviceReadBlocks(device, deviceInfo->lastFreeBlockStack, lastFreeBlockStack, __BLOCK_STACK_SIZE);
                 lastFreeBlockStack->nextFreeBlockStack = blockStackIndex;
-                THIS_ARG_APPEND_CALL(device, operations->writeBlocks, deviceInfo->lastFreeBlockStack, lastFreeBlockStack, __BLOCK_STACK_SIZE);
+                blockDeviceWriteBlocks(device, deviceInfo->lastFreeBlockStack, lastFreeBlockStack, __BLOCK_STACK_SIZE);
                 releaseBuffer(lastFreeBlockStack, BUFFER_SIZE_512);
             }
 
-            stack->nextFreeBlockStack = PHOSPHERUS_NULL;
+            stack->nextFreeBlockStack = INVALID_INDEX;
             deviceInfo->lastFreeBlockStack = blockStackIndex;
         }
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, blockStackIndex, stack, __BLOCK_STACK_SIZE);
+        blockDeviceWriteBlocks(device, blockStackIndex, stack, __BLOCK_STACK_SIZE);
         releaseBuffer(stack, BUFFER_SIZE_512);
 
-        THIS_ARG_APPEND_CALL(device, operations->writeBlocks, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+        blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
     }
 }

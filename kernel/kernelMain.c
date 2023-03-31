@@ -59,20 +59,22 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initBlockDeviceManager();
 
-    initSchedule();
-
-    initTimer();
-
     initHardDisk();
 
     initFileSystem();
+
+    initSchedule();
+
+    initTimer();
 
     initUsermode();
 
     {
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        size_t read = loadFile("/LOGO.txt", buffer, 0, -1);
+        File* file = openFile("/LOGO.txt");
+        size_t read = readFile(file, buffer, file->iNode->onDevice.dataSize);
         printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
+        closeFile(file);
         releaseBuffer(buffer, BUFFER_SIZE_512);
     }
 

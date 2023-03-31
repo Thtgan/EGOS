@@ -16,6 +16,7 @@
 #include<structs/bitmap.h>
 #include<structs/queue.h>
 #include<structs/registerSet.h>
+#include<structs/vector.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 #include<system/GDT.h>

@@ -3,9 +3,9 @@
 #include<debug.h>
 #include<devices/block/blockDevice.h>
 #include<devices/terminal/terminalSwitch.h>
+#include<error.h>
 #include<fs/fsManager.h>
 #include<fs/phospherus/phospherus.h>
-#include<returnValue.h>
 #include<print.h>
 
 FileSystem* rootFileSystem = NULL;
@@ -14,7 +14,7 @@ static void (*_initFuncs[FILE_SYSTEM_TYPE_NUM])() = {
     [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusInitFileSystem
 };
 
-static ReturnValue (*_checkers[FILE_SYSTEM_TYPE_NUM])(BlockDevice*) = {
+static int (*_checkers[FILE_SYSTEM_TYPE_NUM])(BlockDevice*) = {
     [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusCheckFileSystem
 };
 
@@ -34,8 +34,8 @@ void initFileSystem() {
     rootFileSystem = openFileSystem(hda);
 }
 
-ReturnValue deployFileSystem(BlockDevice* device, FileSystemType type) {
-    ReturnValue ret = RETURN_VALUE_RETURN_NORMALLY;
+int deployFileSystem(BlockDevice* device, FileSystemType type) {
+    int ret = 0;
     switch (type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
             ret = phospherusDeployFileSystem(device);
@@ -46,7 +46,7 @@ ReturnValue deployFileSystem(BlockDevice* device, FileSystemType type) {
 
 FileSystemType checkFileSystem(BlockDevice* device) {
     for (FileSystemType i = 0; i < FILE_SYSTEM_TYPE_NUM; ++i) {
-        if (!RETURN_VALUE_IS_ERROR(_checkers[i](device))) {
+        if (_checkers[i](device) == 0) {
             return i;
         }
     }
@@ -54,7 +54,7 @@ FileSystemType checkFileSystem(BlockDevice* device) {
 }
 
 FileSystem* openFileSystem(BlockDevice* device) {
-    FileSystem* ret = getDeviceFS(device);
+    FileSystem* ret = getDeviceFS(device->deviceID);
     if (ret != NULL) {
         return ret;
     }
@@ -68,17 +68,14 @@ FileSystem* openFileSystem(BlockDevice* device) {
     }
 
     if (ret != NULL) {
-        registerDeviceFS(device, ret);
+        registerDeviceFS(ret);
     }
 
     return ret;
 }
 
-bool closeFileSystem(BlockDevice* device) {
-    FileSystem* fs = unregisterDeviceFS(device);
-    if (fs == NULL) {
-        return false;
-    }
+int closeFileSystem(FileSystem* fs) {
+    unregisterDeviceFS(fs->device);
 
     switch (fs->type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
@@ -86,39 +83,9 @@ bool closeFileSystem(BlockDevice* device) {
             break;
         default:
             printf(TERMINAL_LEVEL_DEBUG, "Closing unknown file system\n");
+            SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+            return -1;
     }
 
-    return true;
-}
-
-File* openFile(iNode* iNode) {
-    return rootFileSystem->opearations->fileGlobalOperations->openFile(iNode);
-}
-
-ReturnValue closeFile(File* file) {
-    return rootFileSystem->opearations->fileGlobalOperations->closeFile(file);
-}
-
-Directory* openDirectory(iNode* iNode) {
-    return rootFileSystem->opearations->directoryGlobalOperations->openDirectory(iNode);
-}
-
-ReturnValue closeDirectory(Directory* directory) {
-    return rootFileSystem->opearations->directoryGlobalOperations->closeDirectory(directory);
-}
-
-Index64 createInode(iNodeType type) {
-    return rootFileSystem->opearations->iNodeGlobalOperations->createInode(rootFileSystem, type);
-}
-
-ReturnValue deleteInode(Index64 iNodeBlock) {
-    return rootFileSystem->opearations->iNodeGlobalOperations->deleteInode(rootFileSystem, iNodeBlock);
-}
-
-iNode* openInode(Index64 iNodeBlock) {
-    return rootFileSystem->opearations->iNodeGlobalOperations->openInode(rootFileSystem, iNodeBlock);
-}
-
-ReturnValue closeInode(iNode* iNode) {
-    return rootFileSystem->opearations->iNodeGlobalOperations->closeInode(iNode);
+    return 0;
 }

@@ -1,15 +1,19 @@
 #include<algorithms.h>
+#include<blowup.h>
+#include<devices/block/blockDevice.h>
+#include<devices/block/imageDevice.h>
+#include<error.h>
+#include<fs/directory.h>
+#include<fs/fileSystem.h>
+#include<fs/fsutil.h>
+#include<fs/inode.h>
+#include<fs/phospherus/phospherus.h>
+#include<injector.h>
+#include<kit/types.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 #include<unistd.h>
-#include<blowup.h>
-#include<devices/block/blockDevice.h>
-#include<devices/block/imageDevice.h>
-#include<fs/fileSystem.h>
-#include<fs/inode.h>
-#include<fs/phospherus/phospherus.h>
-#include<kit/types.h>
 
 typedef enum {
     ADD_FILE,
@@ -20,25 +24,25 @@ typedef enum {
     DEPLOY
 } Mode;
 
-static Directory* __navigateDirectory(FileSystem* fs, Directory* rootDir, char* path);
+int errorCode = 0;
 
-static bool __addFile(FileSystem* fs, Directory* rootDir, char* path, char* filePath);
+static int __addFile(ConstCstring path, ConstCstring filePath);
 
-static bool __addDirectory(FileSystem* fs, Directory* rootDir, char* path, char* directoryName);
+static int __addDirectory(ConstCstring path, ConstCstring directoryName);
 
-static bool __list(FileSystem* fs, Directory* rootDir, char* path);
+static int __list(ConstCstring path);
 
-static bool __removeFile(FileSystem* fs, Directory* rootDir, char* path);
+static int __removeFile(ConstCstring path);
 
-static bool __removeDirectory(FileSystem* fs, Directory* rootDir, char* path);
+static int __removeDirectory(ConstCstring path);
 
 //Yes, I know, THIS IS TOTALLY A MESS, but whatever, as long as it works
 
 int main(int argc, char** argv) {
     char option;
-    char* imgFile = NULL, * injectFile = NULL, * path = NULL, * deviceName = NULL, * modeStr = NULL;
+    char* imgFile = NULL, * injectFile = NULL, * path = NULL, * modeStr = NULL;
     size_t base = 0, size = -1;
-    while ((option = getopt(argc, argv, "i:f:p:d:m:b:s:")) != -1) {
+    while ((option = getopt(argc, argv, "i:f:p:m:b:s:")) != -1) {
         switch (option) {
             case 'i':
                 imgFile = optarg;
@@ -48,9 +52,6 @@ int main(int argc, char** argv) {
                 break;
             case 'p':
                 path = optarg;
-                break;
-            case 'd':
-                deviceName = optarg;
                 break;
             case 'm':
                 modeStr = optarg;
@@ -104,8 +105,8 @@ int main(int argc, char** argv) {
         } while (false);
     }
 
-    if (imgFile == NULL || deviceName == NULL) {
-        blowup("Image name and device name must be given");
+    if (imgFile == NULL) {
+        blowup("Image name must be given");
     }
 
     if (mode != DEPLOY && path == NULL) {
@@ -118,8 +119,7 @@ int main(int argc, char** argv) {
 
     initBlockDeviceManager();
 
-    initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
-    BlockDevice* device = createImageDevice(imgFile, deviceName, base, size);
+    BlockDevice* device = createImageDevice(imgFile, "hda", base, size);
     if (device == NULL) {
         blowup("Device create failed");
     }
@@ -127,46 +127,50 @@ int main(int argc, char** argv) {
     printf("Device %s: %lu blocks contained\n", device->name, device->availableBlockNum);
 
     if (mode == DEPLOY) {
-        if (!deployFileSystem(device, FILE_SYSTEM_TYPE_PHOSPHERUS)) {
+        if (deployFileSystem(device, FILE_SYSTEM_TYPE_PHOSPHERUS) == -1) {
+            printf("Return value: %#010X\n", errorCode);
             blowup("Deploy failed");
         }
         return 0;
     }
 
+    initFileSystem(FILE_SYSTEM_TYPE_PHOSPHERUS);
     if (checkFileSystem(device) != FILE_SYSTEM_TYPE_PHOSPHERUS) {
         blowup("Disk has no phospherus file system");
     }
-    FileSystem* fs = openFileSystem(device, FILE_SYSTEM_TYPE_PHOSPHERUS);
-    if (fs == NULL) {
+    
+    if (rootFileSystem == NULL) {
         blowup("Couldn't open phospherus file system");
     }
 
-    iNode* rootDirInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, fs->rootDirectoryInode);
-    Directory* rootDir = fs->opearations->directoryGlobalOperations->openDirectory(rootDirInode);
-
     switch(mode) {
         case ADD_FILE:
-            if (!__addFile(fs, rootDir, path, injectFile)) {
+            if (__addFile(path, injectFile) == -1) {
+                printf("Return value: %#010X\n", errorCode);
                 blowup("Add file failed");
             }
             break;
         case ADD_DIRECTORY:
-            if (!__addDirectory(fs, rootDir, path, injectFile)) {
+            if (__addDirectory(path, injectFile) == -1) {
+                printf("Return value: %#010X\n", errorCode);
                 blowup("Add directory failed");
             }
             break;
         case LIST:
-            if (!__list(fs, rootDir, path)) {
+            if (__list(path) == -1) {
+                printf("Return value: %#010X\n", errorCode);
                 blowup("List failed");
             }
             break;
         case REMOVE_FILE:
-            if (!__removeFile(fs, rootDir, path)) {
+            if (__removeFile(path) == -1) {
+                printf("Return value: %#010X\n", errorCode);
                 blowup("Remove file failed");
             }
             break;
         case REMOVE_DIRECTORY:
-            if (!__removeDirectory(fs, rootDir, path)) {
+            if (__removeDirectory(path) == -1) {
+                printf("Return value: %#010X\n", errorCode);
                 blowup("Remove directory failed");
             }
             break;
@@ -174,304 +178,239 @@ int main(int argc, char** argv) {
             blowup("Unknown operation");
     }
 
-    fs->opearations->directoryGlobalOperations->closeDirectory(rootDir);
-    fs->opearations->iNodeGlobalOperations->closeInode(rootDirInode);
-
-    closeFileSystem(fs);
+    closeFileSystem(rootFileSystem);
     deleteImageDevice(device);
     printf("Done\n");
 }
 
-const char* sep = "/";
-static Directory* __navigateDirectory(FileSystem* fs, Directory* rootDir, char* path) {
-    if (path[0] == '\0' || strcmp(path, "/") == 0) {
-        return rootDir;
-    }
-
-    if (path[0] != '/') {
-        return NULL;
-    }
-
-    Directory* currentDir = rootDir;
-    const char* next = strtok(path + 1, sep);
-    while (next != NULL) {
-        Index64 entryIndex = currentDir->operations->lookupEntry(currentDir, next, INODE_TYPE_DIRECTORY);
-        if (entryIndex == PHOSPHERUS_NULL) {
-            return NULL;
-        }
-        Directory* copy = currentDir;
-
-        DirectoryEntry* entry = currentDir->operations->getEntry(currentDir, entryIndex);
-        iNode* nextDirectoryInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, entry->iNodeIndex);
-        free(entry);
-
-        currentDir = fs->opearations->directoryGlobalOperations->openDirectory(nextDirectoryInode);
-
-        if (copy != rootDir) {
-            iNode* iNodeToClose = copy->iNode;
-            fs->opearations->directoryGlobalOperations->closeDirectory(copy);
-            fs->opearations->iNodeGlobalOperations->closeInode(iNodeToClose);
-        }
-
-        next = strtok(NULL, sep);
-    }
-
-    return currentDir;
-}
-
 #define TRANSFER_BUFFER_SIZE (1llu << 20)
 
-static bool __addFile(FileSystem* fs, Directory* rootDir, char* path, char* filePath) {
-    Directory* directory = __navigateDirectory(fs, rootDir, path);
-    if (directory == NULL) {
-        return false;
+static int __addFile(ConstCstring path, ConstCstring filePath) {
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
     }
 
-    bool ret = true;
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
+
+    int ret = 0;
+    FILE* file = fopen(filePath, "rb");
     do {
-        FILE* file = fopen(filePath, "rb");
         if (file == NULL) {
-            ret = false;
+            SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_NOT_FOUND);
+            ret = -1;
             break;
         }
         
-        char* fileName = strrchr(filePath, '/');
+        ConstCstring fileName = strrchr(filePath, '/');
         if (fileName == NULL) {
             fileName = filePath;
         } else {
-            *fileName = '\0';
             ++fileName;
         }
-        
-        if (directory->operations->lookupEntry(directory, fileName, INODE_TYPE_FILE) != PHOSPHERUS_NULL) {
-            printf("File already existed\n");
-            fclose(file);
 
-            ret = false;
+        if (directoryLookupEntry(directory, fileName, INODE_TYPE_FILE) != INVALID_INDEX) {
+            SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_ALREADY_EXIST);
+            ret = -1;
             break;
         }
 
         printf("Inserting file %s\n", fileName);
 
-        Index64 newFileInodeIndex = fs->opearations->iNodeGlobalOperations->createInode(fs->device, INODE_TYPE_FILE);
-        if (newFileInodeIndex == PHOSPHERUS_NULL) {
-            fclose(file);
-
-            ret = false;
+        Index64 newFileInodeIndex = iNodeCreate(rootFileSystem->device, INODE_TYPE_FILE);
+        if (newFileInodeIndex == INVALID_INDEX) {
+            SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+            ret = -1;
             break;
         }
 
-        void* buffer = malloc(TRANSFER_BUFFER_SIZE);
-        
-        iNode* fileInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, newFileInodeIndex);
-        File* fileInside = fs->opearations->fileGlobalOperations->openFile(fileInode);
+        ID iNodeID = BUILD_INODE_ID(rootFileSystem->device, newFileInodeIndex);
+        iNode* fileInode = iNodeOpen(iNodeID);
+        File* fileInside = fileOpen(fileInode);
 
         fseek(file, 0L, SEEK_END);
-        size_t fileSize = ftell(file), currentPointer = 0;
-        while (fileSize > 0) {
-            size_t batchSize = umin64(fileSize, TRANSFER_BUFFER_SIZE);
+        size_t remainToWrite = ftell(file), currentPointer = 0;
+
+        void* buffer = malloc(TRANSFER_BUFFER_SIZE);
+        while (remainToWrite > 0) {
+            size_t batchSize = umin64(remainToWrite, TRANSFER_BUFFER_SIZE);
             fseek(file, currentPointer, SEEK_SET);
-            fileInside->operations->seek(fileInside, currentPointer);
+            fileSeek(fileInside, currentPointer);
 
-            if (fread(buffer, batchSize, 1, file) != 1) {
-                fclose(file);
-                free(buffer);
-                fs->opearations->iNodeGlobalOperations->deleteInode(fs->device, newFileInodeIndex);
-
-                ret = false;
+            if (fread(buffer, 1, batchSize, file) != batchSize) {
+                SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+                ret = -1;
                 break;
             }
 
-            fileInside->operations->write(fileInside, buffer, batchSize);
-            fileSize -= batchSize;
+            fileWrite(fileInside, buffer, batchSize);
+            remainToWrite -= batchSize;
             currentPointer += batchSize;
         }
-
-        if (!ret) {
-            break;
-        }
-
         free(buffer);
-        fclose(file);
         
-        if (directory->operations->addEntry(directory, fileInode, fileName) == -1) {
-            fs->opearations->iNodeGlobalOperations->deleteInode(fs->device, newFileInodeIndex);
-            ret = false;
+        fileClose(fileInside);
+        iNodeClose(fileInode);
+        if (ret == -1 || directoryAddEntry(directory, iNodeID, INODE_TYPE_FILE, fileName) == -1) {
+            iNodeDelete(iNodeID);
+            ret = -1;
         }
-
-        fs->opearations->fileGlobalOperations->closeFile(fileInside);
-        fs->opearations->iNodeGlobalOperations->closeInode(fileInode);
     } while (0);
+    fclose(file);
 
-    if (directory != rootDir) {
-        iNode* iNodeToClose = directory->iNode;
-        fs->opearations->directoryGlobalOperations->closeDirectory(directory);
-        fs->opearations->iNodeGlobalOperations->closeInode(iNodeToClose);
-    }
+    directoryClose(directory);
+    iNodeClose(directoryInode);
     
     return ret;
 }
 
-static bool __addDirectory(FileSystem* fs, Directory* rootDir, char* path, char* directoryName) {
-    Directory* directory = __navigateDirectory(fs, rootDir, path);
-    if (directory == NULL || strchr(directoryName, '/') != NULL) {
-        return false;
+static int __addDirectory(ConstCstring path, ConstCstring directoryName) {
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
     }
 
-    bool ret = true;
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
+
+    int ret = 0;
     do {
-        if (directory->operations->lookupEntry(directory, directoryName, INODE_TYPE_DIRECTORY) != PHOSPHERUS_NULL) {
-            printf("Directory already existed\n");
-            ret = false;
+        if (directoryLookupEntry(directory, directoryName, INODE_TYPE_DIRECTORY) != INVALID_INDEX) {
+            SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
+            ret = -1;
             break;
         }
 
         printf("Inserting directory %s\n", directoryName);
 
-        Index64 newDirectoryInodeIndex = fs->opearations->iNodeGlobalOperations->createInode(fs->device, INODE_TYPE_DIRECTORY);
-        if (newDirectoryInodeIndex == PHOSPHERUS_NULL) {
-            ret = false;
+        Index64 newDirectoryInodeIndex = iNodeCreate(rootFileSystem->device, INODE_TYPE_DIRECTORY);
+        if (newDirectoryInodeIndex == INVALID_INDEX) {
+            SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+            ret = -1;
             break;
         }
 
-        iNode* directoryInode = fs->opearations->iNodeGlobalOperations->openInode(fs->device, newDirectoryInodeIndex);
-
-        if (directory->operations->addEntry(directory, directoryInode, directoryName) == -1) {
-            fs->opearations->iNodeGlobalOperations->deleteInode(fs->device, newDirectoryInodeIndex);
-            ret = false;
+        ID iNodeID = BUILD_INODE_ID(rootFileSystem->device, newDirectoryInodeIndex);
+        if (directoryAddEntry(directory, iNodeID, INODE_TYPE_DIRECTORY, directoryName) == -1) {
+            iNodeDelete(iNodeID);
+            ret = -1;
         }
-
-        fs->opearations->iNodeGlobalOperations->closeInode(directoryInode);
-
     } while (0);
 
-    if (directory != rootDir) {
-        iNode* iNodeToClose = directory->iNode;
-        fs->opearations->directoryGlobalOperations->closeDirectory(directory);
-        fs->opearations->iNodeGlobalOperations->closeInode(iNodeToClose);
-    }
+    directoryClose(directory);
+    iNodeClose(directoryInode);
 
     return ret;
 }
 
-static bool __list(FileSystem* fs, Directory* rootDir, char* path) {
-    Directory* directory = __navigateDirectory(fs, rootDir, path);
-    if (directory == NULL) {
-        return false;
+static int __list(ConstCstring path) {
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
     }
+
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
 
     printf("%lu items found in %s:\n", directory->size, path);
     for (int i = 0; i < directory->size; ++i) {
-        DirectoryEntry* entry = directory->operations->getEntry(directory, i);
-        if (strlen(entry->name) > 61) {
-            printf("%61s...  ", entry->name);
-        } else {
-            printf("%-64s  ", entry->name);
+        if (directoryReadEntry(directory, &entry, i) == -1) {
+            return -1;
         }
 
-        if (entry->type == INODE_TYPE_DIRECTORY) {
+        if (strlen(entry.name) > 61) {
+            printf("%61s...  ", entry.name);
+        } else {
+            printf("%-64s  ", entry.name);
+        }
+
+        if (entry.type == INODE_TYPE_DIRECTORY) {
             printf("Directory\n");
         } else {
             printf("File\n");
         }
-
-        free(entry);
     }
 
-    if (directory != rootDir) {
-        iNode* iNodeToClose = directory->iNode;
-        fs->opearations->directoryGlobalOperations->closeDirectory(directory);
-        fs->opearations->iNodeGlobalOperations->closeInode(iNodeToClose);
-    }
+    directoryClose(directory);
+    iNodeClose(directoryInode);
 
-    return true;
+    return 0;
 }
 
-static bool __removeFile(FileSystem* fs, Directory* rootDir, char* path) {
+static int __removeFile(ConstCstring path) {
     size_t len = strlen(path);
-    char* copy = malloc(len + 1);
+    Cstring copy = malloc(len + 1);
     strcpy(copy, path);
 
-    char* sep = strrchr(copy, '/'), * fileName = NULL;
-    Directory* directory = NULL;
-    if (sep != NULL) {
-        *sep = '\0';
-        directory = __navigateDirectory(fs, rootDir, copy);
-        fileName = sep + 1;
+    char* sep = strrchr(copy, '/');
+    ConstCstring dir = NULL, fileName = NULL;
+    *(sep + (sep == copy)) = '\0';
+    dir = copy;
+    fileName = path + (sep - copy) + 1;
+
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
+    }
+
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
+
+    int ret = 0;
+    Index64 entryIndex = directoryLookupEntry(directory, fileName, INODE_TYPE_FILE);
+
+    if (entryIndex == INVALID_INDEX) {
+        SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_NOT_FOUND);
+        ret = -1;
     } else {
-        directory = rootDir;
-        fileName = copy;
+        directoryReadEntry(directory, &entry, entryIndex);
+        directoryRemoveEntry(directory, entryIndex);
+        iNodeDelete(entry.iNodeID);
     }
 
-    bool ret = true;
-
-    do {
-        if (directory == NULL) {
-            ret = false;
-            break;
-        }
-
-        Index64 entryIndex = directory->operations->lookupEntry(directory, fileName, INODE_TYPE_FILE);
-        if (entryIndex == PHOSPHERUS_NULL) {
-            printf("File not exist\n");
-        } else {
-            DirectoryEntry* entry = directory->operations->getEntry(directory, entryIndex);
-            fs->opearations->iNodeGlobalOperations->deleteInode(fs->device, entry->iNodeIndex);
-            free(entry);
-            directory->operations->removeEntry(directory, entryIndex);
-        }
-    } while (0);
-
+    directoryClose(directory);
+    iNodeClose(directoryInode);
     free(copy);
-    if (directory != rootDir) {
-        iNode* iNodeToClose = directory->iNode;
-        fs->opearations->directoryGlobalOperations->closeDirectory(directory);
-        fs->opearations->iNodeGlobalOperations->closeInode(iNodeToClose);
-    }
 
     return ret;
 }
 
-static bool __removeDirectory(FileSystem* fs, Directory* rootDir, char* path) {
+static int __removeDirectory(ConstCstring path) {
     size_t len = strlen(path);
     char* copy = malloc(len + 1);
     strcpy(copy, path);
 
-    char* sep = strrchr(copy, '/'), * directoryName = NULL;
-    Directory* directory = NULL;
-    if (sep != NULL) {
-        *sep = '\0';
-        directory = __navigateDirectory(fs, rootDir, copy);
-        directoryName = sep + 1;
-    } else {
-        directory = rootDir;
-        directoryName = copy;
-    }
+    char* sep = strrchr(copy, '/');
+    ConstCstring dir = NULL, directoryName = NULL;
+    *(sep + (sep == copy)) = '\0';
+    dir = copy;
+    directoryName = path + (sep - copy) + 1;
     
-    bool ret = true;
-    do {
-        if (directory == NULL) {
-            ret = false;
-            break;
-        }
-
-        Index64 entryIndex = directory->operations->lookupEntry(directory, directoryName, INODE_TYPE_DIRECTORY);
-        if (entryIndex == PHOSPHERUS_NULL) {
-            printf("Directory not exist\n");
-        } else {
-            DirectoryEntry* entry = directory->operations->getEntry(directory, entryIndex);
-            fs->opearations->iNodeGlobalOperations->deleteInode(fs->device, entry->iNodeIndex);
-            free(entry);
-            directory->operations->removeEntry(directory, entryIndex);
-        }
-    } while (0);
-
-    free(copy);
-    if (directory != rootDir) {
-        iNode* iNodeToClose = directory->iNode;
-        fs->opearations->directoryGlobalOperations->closeDirectory(directory);
-        fs->opearations->iNodeGlobalOperations->closeInode(iNodeToClose);
+    DirectoryEntry entry;
+    int res = 0;
+    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
     }
 
-    return true;
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
+
+    int ret = 0;
+
+    Index64 entryIndex = directoryLookupEntry(directory, directoryName, INODE_TYPE_DIRECTORY);
+    if (entryIndex == INVALID_INDEX) {
+        SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_NOT_FOUND);
+        ret = -1;
+    } else {
+        directoryReadEntry(directory, &entry, entryIndex);
+        directoryRemoveEntry(directory, entryIndex);
+        iNodeDelete(entry.iNodeID);
+    }
+
+    directoryClose(directory);
+    iNodeClose(directoryInode);
+    free(copy);
+
+    return ret;
 }

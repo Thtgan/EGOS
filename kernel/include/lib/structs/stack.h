@@ -27,16 +27,24 @@ static inline bool stackPush(Stack* stack, Object obj) {
     return true;
 }
 
-static inline Object stackTop(Stack* stack) {
+static inline bool stackTop(Stack* stack, Object* retPtr) {
     if (stack->size == 0) {
-        return OBJECT_NULL;
+        return false;
     }
 
-    return stack->stack[stack->size - 1];
+    *retPtr = stack->stack[stack->size - 1];
+
+    return true;
 }
 
-static inline void stackPop(Stack* stack) {
+static inline bool stackPop(Stack* stack) {
+    if (isStackEmpty(stack)) {
+        return false;
+    }
+
     stack->stack[--stack->size] = OBJECT_NULL;
+    
+    return true;
 }
 
 #endif // STACK_H

@@ -12,10 +12,10 @@
             "intelliSenseMode": "linux-gcc-x64"
         },
         {
-            "name": "phospherusInjector",
+            "name": "injector",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/root/EGOS/tools/phospherusInjector/include"
+                "/root/EGOS/tools/injector/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

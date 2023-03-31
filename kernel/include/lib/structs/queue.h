@@ -29,11 +29,16 @@ static inline void queuePush(Queue* q, QueueNode* newNode) {
     q->qTail = newNode;
 }
 
-static inline void queuePop(Queue* q) {
+static inline bool queuePop(Queue* q) {
+    if (isSinglyListEmpty(&q->q)) {
+        return false;
+    }
     singlyLinkedListDeleteNext(&q->q);
     if (isSinglyListEmpty(&q->q)) {
         q->qTail = &q->q;
     }
+
+    return true;
 }
 
 static inline QueueNode* queueFront(Queue* q) {

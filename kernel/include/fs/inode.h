@@ -2,6 +2,7 @@
 #define __INODE_H
 
 #include<devices/block/blockDevice.h>
+#include<kit/bit.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
 
@@ -10,6 +11,10 @@ typedef enum {
     INODE_TYPE_DIRECTORY,
     INODE_TYPE_FILE
 } iNodeType;
+
+#define BUILD_INODE_ID(__DEVICE_ID, __INODE_INDEX)  VAL_OR(VAL_LEFT_SHIFT((ID)(__DEVICE_ID), 48), (ID)__INODE_INDEX)
+#define INODE_ID_GET_DEVICE_ID(__INODE_ID)          EXTRACT_VAL(__INODE_ID, 64, 48, 64)
+#define INODE_ID_GET_INODE_INDEX(__INODE_ID)        EXTRACT_VAL(__INODE_ID, 64, 0, 48)
 
 STRUCT_PRE_DEFINE(iNodeOperations);
 

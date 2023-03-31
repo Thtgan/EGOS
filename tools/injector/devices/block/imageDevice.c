@@ -1,16 +1,17 @@
 #include<devices/block/imageDevice.h>
 
 #include<algorithms.h>
+#include<blowup.h>
+#include<devices/block/blockDevice.h>
+#include<devices/block/blockDeviceTypes.h>
+#include<kit/types.h>
 #include<malloc.h>
 #include<memory.h>
 #include<stdio.h>
 #include<string.h>
-#include<blowup.h>
-#include<devices/block/blockDevice.h>
-#include<kit/types.h>
 
-static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n));
-static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n));
+static int __readBlocks(THIS_ARG_APPEND(BlockDevice, Index64 blockIndex, void* buffer, size_t n));
+static int __writeBlocks(THIS_ARG_APPEND(BlockDevice, Index64 blockIndex, const void* buffer, size_t n));
 
 static BlockDeviceOperation operations = {
     .readBlocks = __readBlocks,
@@ -39,7 +40,7 @@ BlockDevice* createImageDevice(const char* filePath, const char* deviceName, siz
     additionalData->file = file;
     additionalData->base = base;
 
-    return createBlockDevice(deviceName, umin64(fileSize - base, size), &operations, (Object)additionalData);
+    return createBlockDevice(deviceName, HDD, umin64(fileSize - base, size), &operations, (Object)additionalData);
 }
 
 void deleteImageDevice(BlockDevice* device) {
@@ -49,20 +50,24 @@ void deleteImageDevice(BlockDevice* device) {
     free(device);
 }
 
-static void __readBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, void* buffer, size_t n)) {
+static int __readBlocks(THIS_ARG_APPEND(BlockDevice, Index64 blockIndex, void* buffer, size_t n)) {
     __AdditionalData* additional = (__AdditionalData*)this->additionalData;
     FILE* file = additional->file;
     fseek(file, (additional->base + blockIndex) * BLOCK_SIZE, SEEK_SET);
     if (fread(buffer, BLOCK_SIZE, n, file) != n) {
         blowup("Read failed");
     }
+
+    return 0;
 }
 
-static void __writeBlocks(THIS_ARG_APPEND(BlockDevice, block_index_t blockIndex, const void* buffer, size_t n)) {
+static int __writeBlocks(THIS_ARG_APPEND(BlockDevice, Index64 blockIndex, const void* buffer, size_t n)) {
     __AdditionalData* additional = (__AdditionalData*)this->additionalData;
     FILE* file = additional->file;
     fseek(file, (additional->base + blockIndex) * BLOCK_SIZE, SEEK_SET);
     if (fwrite(buffer, BLOCK_SIZE, n, file) != n) {
         blowup("Write failed");
     }
+
+    return 0;
 }

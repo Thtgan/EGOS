@@ -1,8 +1,8 @@
 #include<usermode/usermode.h>
 
+#include<error.h>
 #include<fs/directory.h>
 #include<fs/file.h>
-#include<fs/fileSystem.h>
 #include<fs/fsutil.h>
 #include<fs/inode.h>
 #include<kit/types.h>
@@ -11,7 +11,6 @@
 #include<memory/paging/paging.h>
 #include<multitask/process.h>
 #include<real/simpleAsmLines.h>
-#include<returnValue.h>
 #include<structs/registerSet.h>
 #include<system/address.h>
 #include<system/GDT.h>
@@ -31,27 +30,26 @@ void initUsermode() {
     registerSyscallHandler(SYSCALL_TYPE_EXIT, __syscallHandlerExit);
 }
 
-ReturnValue execute(ConstCstring path) {
+int execute(ConstCstring path) {
     DirectoryEntry entry;
-    ReturnValue res;
-    if (RETURN_VALUE_IS_ERROR(res = tracePath(&entry, path, INODE_TYPE_FILE))) {
-        return res;
+    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
+        return -1;
     }
 
-    iNode* inode = openInode(entry.iNodeIndex);
-    File* file = openFile(inode);
+    iNode* iNode = iNodeOpen(entry.iNodeID);
+    File* file = fileOpen(iNode);
 
     ELF64Header header;
-    if (RETURN_VALUE_IS_ERROR(res = readELF64Header(file, &header))) {
-        return res;
+    if (readELF64Header(file, &header) == -1) {
+        return -1;
     }
 
     ELF64ProgramHeader programHeader;
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (RETURN_VALUE_IS_ERROR(res = readELF64ProgramHeader(file, &header, &programHeader, i))) {
-            closeFile(file);
-            closeInode(inode);
-            return res;
+        if (readELF64ProgramHeader(file, &header, &programHeader, i) == -1) {
+            fileClose(file);
+            iNodeClose(iNode);
+            return -1;
         }
 
         if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
@@ -59,15 +57,16 @@ ReturnValue execute(ConstCstring path) {
         }
 
         if (!checkELF64ProgramHeader(&programHeader)) {
-            closeFile(file);
-            closeInode(inode);
-            return BUILD_ERROR_RETURN_VALUE(RETURN_VALUE_OBJECT_FILE, RETURN_VALUE_STATUS_VERIFIVCATION_FAIL);
+            fileClose(file);
+            iNodeClose(iNode);
+            SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_VERIFIVCATION_FAIL);
+            return -1;
         }
 
-        if (RETURN_VALUE_IS_ERROR(res = loadELF64Program(file, &programHeader))) {
-            closeFile(file);
-            closeInode(inode);
-            return res;
+        if (loadELF64Program(file, &programHeader) == -1) {
+            fileClose(file);
+            iNodeClose(iNode);
+            return -1;
         }
     }
 
@@ -106,8 +105,8 @@ ReturnValue execute(ConstCstring path) {
         pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
     }
 
-    closeFile(file);
-    closeInode(inode);
+    fileClose(file);
+    iNodeClose(iNode);
 
     register int ret asm("rax");
     asm volatile("pop %rax");

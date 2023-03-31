@@ -5,7 +5,6 @@
 #include<fs/file.h>
 #include<fs/fileSystem.h>
 #include<fs/inode.h>
-#include<kernel.h>
 #include<kit/types.h>
 
 int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);

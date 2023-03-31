@@ -2,14 +2,19 @@
 #define __INODE_H
 
 #include<devices/block/blockDevice.h>
-#include<fs/directory.h>
+#include<kit/bit.h>
 #include<kit/types.h>
+#include<structs/hashTable.h>
 
 typedef enum {
     INODE_TYPE_UNKNOWN,
     INODE_TYPE_DIRECTORY,
     INODE_TYPE_FILE
 } iNodeType;
+
+#define BUILD_INODE_ID(__DEVICE_ID, __INODE_INDEX)  VAL_OR(VAL_LEFT_SHIFT((ID)(__DEVICE_ID), 48), (ID)__INODE_INDEX)
+#define INODE_ID_GET_DEVICE_ID(__INODE_ID)          EXTRACT_VAL(__INODE_ID, 64, 48, 64)
+#define INODE_ID_GET_INODE_INDEX(__INODE_ID)        EXTRACT_VAL(__INODE_ID, 64, 0, 48)
 
 STRUCT_PRE_DEFINE(iNodeOperations);
 
@@ -30,6 +35,7 @@ typedef struct {
     iNodeOperations* operations;
     void* entryReference;
     uint32_t referenceCnt;
+    HashChainNode hashChainNode;
 } iNode;
 
 typedef struct __RecordOnDevice RecordOnDevice;
@@ -66,5 +72,17 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
      */
     int (*writeBlocks)(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
 };
+
+static inline int iNodeResize(iNode* iNode, size_t newBlockSize) {
+    return iNode->operations->resize(iNode, newBlockSize);
+}
+
+static inline int iNodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
+    return iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
+}
+
+static inline int iNodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
+    return iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
+}
 
 #endif // __INODE_H

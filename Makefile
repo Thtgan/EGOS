@@ -49,7 +49,7 @@ userPrograms:
 	@echo USER PROGRAMS BUILD COMPLETE
 
 injectFiles:
-	@if [ "$(BUILD_RES)" -eq "1" ] ; then echo INJECTING FILES ; ./fileInject.sh ./kernel/files ./tools/injector/build/injector ./build/EGOS.img hda 0x800 > /dev/null ; fi
+	@if [ "$(BUILD_RES)" -eq "1" ] ; then echo INJECTING FILES ; ./fileInject.sh ./kernel/files ./tools/injector/build/injector ./build/EGOS.img 0x800 > /dev/null ; fi
 
 clean:
 	@cd boot && $(MAKE) clean > /dev/null

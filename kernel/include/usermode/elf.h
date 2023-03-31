@@ -4,7 +4,6 @@
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/file.h>
 #include<kit/types.h>
-#include<returnValue.h>
 
 #define ELF_IDENTIFICATION_MAGIC            0x464C457F  //0x7F + "ELF"
 
@@ -182,17 +181,17 @@ typedef struct {
     uint64_t align;
 } __attribute__((packed)) ELF64ProgramHeader;
 
-ReturnValue readELF64Header(File* file, ELF64Header* header);
+int readELF64Header(File* file, ELF64Header* header);
 
 void printELF64Header(TerminalLevel level, ELF64Header* header);
 
-ReturnValue readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
+int readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
 
 void printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header);
 
 bool checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
 
-ReturnValue loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
+int loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
 
 void unloadELF64Program(ELF64ProgramHeader* programHeader);
 

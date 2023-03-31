@@ -3,9 +3,8 @@
 #$1: Root directory of inject files
 #$2: Path to inject tool
 #$3: Path to image to inject
-#$4: Device name of image
-#$5: Base of device
-INJECT_TOOL_OPTION="-i $3 -d $4 -b $5"
+#$4: Base of device
+INJECT_TOOL_OPTION="-i $3 -b $4"
 INJECT_DIRS=$(find $1 -type d | sort)
 INJECT_FILES=$(find $1 -type f | sort)
 
