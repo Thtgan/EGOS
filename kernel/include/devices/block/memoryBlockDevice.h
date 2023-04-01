@@ -11,13 +11,6 @@
  * 
  * @return Memory blovk device created, NULL if create failed
  */
-BlockDevice* createMemoryBlockDevice(size_t size);
-
-/**
- * @brief Delete created memory block device
- * 
- * @param blockDevice Block device to delete, be sure it is unregistered
- */
-void deleteMemoryBlockDevice(BlockDevice* blockDevice);
+BlockDevice* createMemoryBlockDevice(void* region, size_t size, ConstCstring name);
 
 #endif // MEMORY_BLOCK_DEVICE_H

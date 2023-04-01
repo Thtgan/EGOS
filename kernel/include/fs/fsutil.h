@@ -24,6 +24,10 @@ size_t readFile(File* file, void* buffer, size_t n);
 
 size_t writeFile(File* file, const void* buffer, size_t n);
 
+int createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type);
+
+int deleteEntry(ConstCstring path, iNodeType type);
+
 File* fileOpen(iNode* iNode);
 
 int fileClose(File* file);

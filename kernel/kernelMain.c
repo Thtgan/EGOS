@@ -6,6 +6,7 @@
 #include<devices/terminal/terminalSwitch.h>
 #include<devices/timer/timer.h>
 #include<devices/vga/textmode.h>
+#include<devices/virtualDevice.h>
 #include<fs/fileSystem.h>
 #include<fs/fsutil.h>
 #include<interrupt/IDT.h>
@@ -61,11 +62,13 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     initHardDisk();
 
-    initFileSystem();
-
     initSchedule();
 
     initTimer();
+
+    initFileSystem();
+
+    initVirtualDevices();
 
     initUsermode();
 
@@ -76,6 +79,11 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
         closeFile(file);
         releaseBuffer(buffer, BUFFER_SIZE_512);
+    }
+
+    DirectoryEntry entry;
+    if (tracePath(&entry, "/dev", INODE_TYPE_DIRECTORY) == 0) {
+        printf(TERMINAL_LEVEL_OUTPUT, "Virtual device installed\n");
     }
 
     initSemaphore(&sema1, 0);

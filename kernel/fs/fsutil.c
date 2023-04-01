@@ -7,6 +7,7 @@
 #include<fs/fileSystem.h>
 #include<fs/inode.h>
 #include<kernel.h>
+#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<string.h>
 
@@ -123,6 +124,71 @@ size_t writeFile(File* file, const void* buffer, size_t n) {
     }
 
     return file->pointer - before;
+}
+
+int createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type) {
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
+    }
+
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
+
+    int ret = 0;
+    do {
+        if (directoryLookupEntry(directory, name, type) != INVALID_INDEX) {
+            SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
+            ret = -1;
+            break;
+        }
+
+        if (directoryAddEntry(directory, iNodeID, INODE_TYPE_DIRECTORY, name) == -1) {
+            iNodeDelete(iNodeID);
+            ret = -1;
+        }
+    } while (0);
+
+    directoryClose(directory);
+    iNodeClose(directoryInode);
+
+    return ret;
+}
+
+int deleteEntry(ConstCstring path, iNodeType type) {
+    size_t len = strlen(path);
+    Cstring copy = kMalloc(len + 1, MEMORY_TYPE_NORMAL);
+    strcpy(copy, path);
+
+    char* sep = strrchr(copy, '/');
+    ConstCstring dir = NULL, entryName = NULL;
+    *(sep + (sep == copy)) = '\0';
+    dir = copy;
+    entryName = path + (sep - copy) + 1;
+
+    DirectoryEntry entry;
+    if (tracePath(&entry, dir, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
+    }
+
+    iNode* directoryInode = iNodeOpen(entry.iNodeID);
+    Directory* directory = directoryOpen(directoryInode);
+
+    int ret = 0;
+    Index64 entryIndex = directoryLookupEntry(directory, entryName, type);
+
+    if (entryIndex == INVALID_INDEX) {
+        SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_NOT_FOUND);
+        ret = -1;
+    } else {
+        directoryRemoveEntry(directory, entryIndex);
+    }
+
+    directoryClose(directory);
+    iNodeClose(directoryInode);
+    kFree(copy);
+
+    return ret;
 }
 
 File* fileOpen(iNode* iNode) {

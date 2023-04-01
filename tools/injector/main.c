@@ -350,7 +350,7 @@ static int __removeFile(ConstCstring path) {
     fileName = path + (sep - copy) + 1;
 
     DirectoryEntry entry;
-    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+    if (tracePath(&entry, dir, INODE_TYPE_DIRECTORY) == -1) {
         return -1;
     }
 
@@ -389,7 +389,7 @@ static int __removeDirectory(ConstCstring path) {
     
     DirectoryEntry entry;
     int res = 0;
-    if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+    if (tracePath(&entry, dir, INODE_TYPE_DIRECTORY) == -1) {
         return -1;
     }
 

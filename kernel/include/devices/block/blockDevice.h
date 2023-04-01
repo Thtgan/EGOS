@@ -64,7 +64,7 @@ BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t av
  * 
  * @param device Block device to delete
  */
-void deleteBlockDevice(BlockDevice* device);
+void releaseBlockDevice(BlockDevice* device);
 
 /**
  * @brief Register the block device, duplicated name not allowed
@@ -80,7 +80,7 @@ bool registerBlockDevice(BlockDevice* device);
  * @param name Name of the block device to unregister
  * @return BlockDevice* If successed, return the unregistered device, otherwise NULL
  */
-BlockDevice* unregisterBlockDeviceByName(const char* name);
+BlockDevice* unregisterBlockDevice(ID deviceID);
 
 /**
  * @brief Search the block device by name

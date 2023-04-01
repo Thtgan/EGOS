@@ -52,8 +52,7 @@ bool registerBlockDevice(BlockDevice* device) {
     return true;
 }
 
-BlockDevice* unregisterBlockDeviceByName(ConstCstring name) {
-    size_t deviceID = (uint16_t)strhash(name, 13, 65536);
+BlockDevice* unregisterBlockDevice(ID deviceID) {
     return HOST_POINTER(hashTableDelete(&_hashTable, (Object)deviceID), BlockDevice, hashChainNode);
 }
 
