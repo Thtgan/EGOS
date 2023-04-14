@@ -19,9 +19,20 @@
 #include<usermode/syscall.h>
 
 __attribute__((naked))
+/**
+ * @brief Jump to user mode
+ * 
+ * @param programBegin Beginning of user mode program
+ * @param stackBottom Stack bottom of user mode
+ */
 void __jumpToUserMode(void* programBegin, void* stackBottom);
 
 __attribute__((naked))
+/**
+ * @brief System call handler for exit
+ * 
+ * @param ret Return value of user program
+ */
 void __syscallHandlerExit(int ret);
 
 void initUsermode() {

@@ -11,9 +11,35 @@
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
+/**
+ * @brief Allocate a page from initial heap, it will never be released
+ * 
+ * @return void* Allocated heap
+ */
 static void* __allocPage();
+
+/**
+ * @brief Set up PDP table
+ * 
+ * @param pAddr Current physical address to map
+ * @return PDPtable* PDP table set up
+ */
 static PDPtable* __setupPDPtable(void* pAddr);
+
+/**
+ * @brief Set up page directory table
+ * 
+ * @param pAddr Current physical address to map
+ * @return PageDirectory* Page directory table set up
+ */
 static PageDirectory* __setupPageDirectoryTable(void* pAddr);
+
+/**
+ * @brief Set up page table
+ * 
+ * @param pAddr Current physical address to map
+ * @return PageTable* Page table set up
+ */
 static PageTable* __setupPageTable(void* pAddr);
 
 PML4Table* setupPML4Table() {

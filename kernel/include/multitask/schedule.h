@@ -29,6 +29,9 @@ void setProcessStatus(Process* process, ProcessStatus status);
  */
 Process* getStatusQueueHead(ProcessStatus status);
 
+/**
+ * @brief Function reserved for idle process
+ */
 void idle();
 
 #endif // __SCHEDULE_H

@@ -6,13 +6,18 @@
 
 __attribute__((regparm(1)))
 /**
- * @brief Do down handling, it will block current process till semaphore 
+ * @brief Do down handling, may block current process
  * 
- * @param sema 
+ * @param sema Semaphore
  */
 void __down_handler(Semaphore* sema);
 
 __attribute__((regparm(1)))
+/**
+ * @brief Do up handling, may wake the process blocked
+ * 
+ * @param sema Semaphore
+ */
 void __up_handler(Semaphore* sema);
 
 void initSemaphore(Semaphore* sema, int count) {

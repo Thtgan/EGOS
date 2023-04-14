@@ -11,6 +11,12 @@
 #include<memory/memory.h>
 #include<string.h>
 
+/**
+ * @brief Check is path legal, a legal path satisifies: no '\', '//', and not ends with '/'(Unless path itself is "/", path to root directory), path seperated by '/'
+ * 
+ * @param path Path to check
+ * @return bool True if path is legal
+ */
 static bool __pathCheck(ConstCstring path);
 
 int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {

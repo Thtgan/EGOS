@@ -26,14 +26,33 @@ typedef enum {
     PHYSICAL_PAGE_TYPE_USER_STACK       = PHYSICAL_PAGE_FLAG_PRESENT | PHYSICAL_PAGE_FLAG_COW | PHYSICAL_PAGE_FLAG_USER,
 } PhysicalPageType;
 
+/**
+ * @brief Initialize structs to manage physical pages
+ */
 void initPhysicalPage();
 
+/**
+ * @brief Get physical page struct corresponded to physical address
+ * 
+ * @param pAddr Physical address
+ * @return PhysicalPage* Corresponded physical page struct to pAddr
+ */
 PhysicalPage* getPhysicalPageStruct(void* pAddr);
 
+/**
+ * @brief Refer a physical page
+ * 
+ * @param page Physical page struct
+ */
 static inline void referPhysicalPage(PhysicalPage* page) {
     ++page->processReferenceCnt;
 }
 
+/**
+ * @brief cancel reference to a physical page
+ * 
+ * @param page Physical page struct
+ */
 static inline void cancelReferPhysicalPage(PhysicalPage* page) {
     --page->processReferenceCnt;
     ASSERT(page->processReferenceCnt != (uint16_t)-1, "Cannot release a released page.");

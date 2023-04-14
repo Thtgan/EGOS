@@ -20,13 +20,39 @@ umin16(                                                                         
     strlen((__TERMINAL)->buffer + __ROW_INDEX_ADD((__TERMINAL)->loopRowBegin, __BUFFERX, (__TERMINAL)->bufferRowSize) * (__TERMINAL)->windowWidth)  \
 )
 
+/**
+ * @brief Chech is the row of buffer is in window
+ * 
+ * @param terminal Terminal
+ * @param row Index of row
+ * @return bool True if row is in window
+ */
 static bool __checkRowInWindow(Terminal* terminal, Index16 row);
 
+/**
+ * @brief Check is the row of buffer in the range of roll
+ * 
+ * @param terminal Terminal
+ * @param row Index of row
+ * @return bool True if row is in range of roll
+ */
 static bool __checkRowInRoll(Terminal* terminal, Index16 row);
 
+/**
+ * @brief Print a character to buffer, supporting control character
+ * 
+ * @param terminal Terminal
+ * @param ch Character
+ */
 static void __putCharacter(Terminal* terminal, char ch);
 
-static void __scrollWindowToRow(Terminal* terminal, Index16 bufferX);
+/**
+ * @brief Scroll window until row is in window
+ * 
+ * @param terminal Terminal
+ * @param row Index of row
+ */
+static void __scrollWindowToRow(Terminal* terminal, Index16 row);
 
 bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
     if (bufferSize < width * height) {
@@ -118,7 +144,6 @@ void terminalOutputString(Terminal* terminal, ConstCstring str) {
 
     for (; *str != '\0'; ++str) {
         __putCharacter(terminal, *str);
-        
     }
 
     up(&terminal->outputLock);
@@ -344,8 +369,8 @@ static void __putCharacter(Terminal* terminal, char ch) {
     terminal->cursorPosX = nextCursorPosX, terminal->cursorPosY = nextCursorPosY;
 }
 
-static void __scrollWindowToRow(Terminal* terminal, Index16 bufferX) {
-    Index16 nextCursorRow = __ROW_INDEX_ADD(terminal->loopRowBegin, bufferX, terminal->bufferRowSize);
+static void __scrollWindowToRow(Terminal* terminal, Index16 row) {
+    Index16 nextCursorRow = __ROW_INDEX_ADD(terminal->loopRowBegin, row, terminal->bufferRowSize);
     while (!__checkRowInWindow(terminal, nextCursorRow)) {
         Index16 windowEnd = __ROW_INDEX_ADD(terminal->windowRowBegin, terminal->windowHeight, terminal->bufferRowSize);
 

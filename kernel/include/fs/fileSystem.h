@@ -14,12 +14,38 @@ typedef enum {
 } FileSystemType;
 
 typedef struct {
+    /**
+     * @brief Open the file in iNode
+     * 
+     * @param iNode iNode contains the file
+     * @return File* File opened
+     */
     File* (*openFile)(iNode* iNode);
+
+    /**
+     * @brief Close the file opened, be awared that iNode is not closed
+     * 
+     * @param file File to close
+     * @return int 0 if succeeded
+     */
     int (*closeFile)(File* file);
 } FileGlobalOperations;
 
 typedef struct {
+    /**
+     * @brief Open the directory in iNode
+     * 
+     * @param iNode iNode contains the directory
+     * @return Directory* Directory opened
+     */
     Directory* (*openDirectory)(iNode* iNode);
+
+    /**
+     * @brief Close the directory opened, be awared that iNode is not closed
+     * 
+     * @param directory Directory to close
+     * @return int 0 if succeeded
+     */
     int (*closeDirectory)(Directory* directory);
 } DirectoryGlobalOperations;
 
@@ -27,7 +53,7 @@ STRUCT_PRE_DEFINE(FileSystem);
 
 typedef struct {
     /**
-     * @brief Create a iNode with given size on device
+     * @brief Create a iNode with given size on this file system
      * 
      * @param type type of the iNode
      * @return Index64 The index of the block where the iNode is located
@@ -35,7 +61,7 @@ typedef struct {
     Index64 (*createInode)(FileSystem* fs, iNodeType type);
 
     /**
-     * @brief Delete iNode from device
+     * @brief Delete iNode from this file system
      * 
      * @param iNodeBlock Block index where the inode is located
      * @return int Status of the operation
@@ -85,20 +111,20 @@ void initFileSystem();
  * 
  * @param device Device to mount the file system
  * @param type File system type to deploy
- * @return Is deployment succeeded
+ * @return int 0 if succeeded
  */
 int deployFileSystem(BlockDevice* device, FileSystemType type);
 
 /**
  * @brief Check type of file system on device
  * 
- * @param device DEvice to check
+ * @param device Device to check
  * @return FileSystemTypes Type of file system
  */
 FileSystemType checkFileSystem(BlockDevice* device);
 
 /**
- * @brief Open file system on device
+ * @brief Open file system on device, return from buffer if file system is open
  * 
  * @param device Device to open
  * @return FileSystem* File system
@@ -109,6 +135,7 @@ FileSystem* openFileSystem(BlockDevice* device);
  * @brief Close a opened file system, cannot close a closed file system
  * 
  * @param system File system
+ * @return int 0 if succeeded
  */
 int closeFileSystem(FileSystem* fs);
 

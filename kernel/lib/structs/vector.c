@@ -14,7 +14,7 @@ void initVector(Vector* vector) {
     memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
 }
 
-void destroyVector(Vector* vector) {
+void releaseVector(Vector* vector) {
     kFree(vector->storage);
 }
 

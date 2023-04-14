@@ -123,6 +123,12 @@ typedef struct {
 #define REGISTER_ARGUMENTS_5        r8
 #define REGISTER_ARGUMENTS_6        r9
 
+/**
+ * @brief Print registers
+ * 
+ * @param outputLevel Which terminal level to print
+ * @param registers Registers to print
+ */
 void printRegisters(TerminalLevel outputLevel, RegisterSet* registers);
 
 #endif // __REGISTER_SET

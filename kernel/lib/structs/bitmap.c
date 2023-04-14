@@ -1,8 +1,8 @@
 #include<structs/bitmap.h>
 
 #include<kit/bit.h>
+#include<kit/types.h>
 
-//TODO: Make a malloc version?
 void initBitmap(Bitmap* b, size_t bitSize, void* bitPtr) {
     b->bitNum = bitSize;
     b->bitSetNum = 0;
@@ -55,7 +55,7 @@ void clearBits(Bitmap* b, const size_t index, const size_t n) {
 
 size_t findFirstSet(Bitmap* b, size_t begin) {
     if (b->bitSetNum == 0) {
-        return -1;
+        return INVALID_INDEX;
     }
 
     uint64_t* ptr = (void*)&b->bitPtr[begin >> 3];
@@ -80,12 +80,12 @@ size_t findFirstSet(Bitmap* b, size_t begin) {
         }
     }
 
-    return -1;
+    return INVALID_INDEX;
 }
 
 size_t findFirstClear(Bitmap* b, size_t begin) {
     if (b->bitSetNum == b->bitNum) {
-        return -1;
+        return INVALID_INDEX;
     }
 
     uint64_t* ptr = (void*)&b->bitPtr[begin >> 3];
@@ -110,5 +110,5 @@ size_t findFirstClear(Bitmap* b, size_t begin) {
         }
     }
 
-    return -1;
+    return INVALID_INDEX;
 }

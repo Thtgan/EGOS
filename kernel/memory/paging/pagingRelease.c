@@ -5,8 +5,25 @@
 #include<memory/paging/paging.h>
 #include<memory/pageAlloc.h>
 
+/**
+ * @brief Release a PDP table
+ * 
+ * @param table PDP table to release
+ */
 static void __releasePDPtable(PDPtable* table);
+
+/**
+ * @brief Release a page directory table
+ * 
+ * @param table Page directory table to release
+ */
 static void __releasePageDirectory(PageDirectory* table);
+
+/**
+ * @brief Release a page table
+ * 
+ * @param table Page table to release
+ */
 static void __releasePageTable(PageTable* table);
 
 void releasePML4Table(PML4Table* table) {

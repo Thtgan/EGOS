@@ -10,10 +10,24 @@ typedef enum {
     TERMINAL_LEVEL_NUM
 } TerminalLevel;
 
+/**
+ * @brief Initialize the terminal's switch
+ */
 void initTerminalSwitch();
 
+/**
+ * @brief Switch terminal to specific level
+ * 
+ * @param level Terminal level
+ */
 void switchTerminalLevel(TerminalLevel level);
 
+/**
+ * @brief Get corresponded terminal of level
+ * 
+ * @param level Terminal level
+ * @return Terminal* Corresponded terminal
+ */
 Terminal* getLevelTerminal(TerminalLevel level);
 
 #endif // __TERMINAL_SWITCH_H

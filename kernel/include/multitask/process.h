@@ -51,10 +51,13 @@ struct _Process {
 /**
  * @brief Set up the processes, get kernel process ready
  * 
- * @return Process* 
+ * @return Process* Main process initialized
  */
 Process* initProcess();
 
+/**
+ * @brief Initialize TSS
+ */
 void initTSS();
 
 /**
@@ -80,8 +83,16 @@ Process* getCurrentProcess();
  */
 Process* forkFromCurrentProcess(const char* processName);
 
+/**
+ * @brief Exit from process, this function has no return
+ */
 void exitProcess();
 
+/**
+ * @brief Release a process
+ * 
+ * @param process Process to release
+ */
 void releaseProcess(Process* process);
 
 #endif // __PROCESS_H

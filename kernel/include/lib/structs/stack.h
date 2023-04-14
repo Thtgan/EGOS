@@ -8,16 +8,36 @@ typedef struct {
     size_t maxSize, size;
 } Stack;
 
+/**
+ * @brief Initialize stack
+ * 
+ * @param stack Stack struct
+ * @param buffer Buffer of stack
+ * @param maxSize Maximum capacity of stack
+ */
 static inline void initStack(Stack* stack, Object* buffer, size_t maxSize) {
     stack->stack = buffer;
     stack->maxSize = maxSize;
     stack->size = 0;
 }
 
+/**
+ * @brief Is stack empty?
+ * 
+ * @param stack Stack
+ * @return bool True if stack is empty
+ */
 static inline bool isStackEmpty(Stack* stack) {
     return stack->size == 0;
 }
 
+/**
+ * @brief Push an object to stack
+ * 
+ * @param stack Stack
+ * @param obj Object to push
+ * @return bool True if push succeeded
+ */
 static inline bool stackPush(Stack* stack, Object obj) {
     if (stack->size == stack->maxSize) {
         return false;
@@ -27,6 +47,13 @@ static inline bool stackPush(Stack* stack, Object obj) {
     return true;
 }
 
+/**
+ * @brief Get the top Object of stack
+ * 
+ * @param stack Stack
+ * @param retPtr Pointer to object
+ * @return bool True if object is obtained
+ */
 static inline bool stackTop(Stack* stack, Object* retPtr) {
     if (stack->size == 0) {
         return false;
@@ -37,6 +64,12 @@ static inline bool stackTop(Stack* stack, Object* retPtr) {
     return true;
 }
 
+/**
+ * @brief Pop the top object of stack
+ * 
+ * @param stack Stack
+ * @return bool True if top object is popped
+ */
 static inline bool stackPop(Stack* stack) {
     if (isStackEmpty(stack)) {
         return false;

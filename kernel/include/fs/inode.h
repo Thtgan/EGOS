@@ -12,6 +12,7 @@ typedef enum {
     INODE_TYPE_FILE
 } iNodeType;
 
+//iNode ID: Device ID(16 bits) - iNode block index(48 bits)
 #define BUILD_INODE_ID(__DEVICE_ID, __INODE_INDEX)  VAL_OR(VAL_LEFT_SHIFT((ID)(__DEVICE_ID), 48), (ID)__INODE_INDEX)
 #define INODE_ID_GET_DEVICE_ID(__INODE_ID)          EXTRACT_VAL(__INODE_ID, 64, 48, 64)
 #define INODE_ID_GET_INODE_INDEX(__INODE_ID)        EXTRACT_VAL(__INODE_ID, 64, 0, 48)
@@ -73,14 +74,39 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
     int (*writeBlocks)(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
 };
 
+/**
+ * @brief Packed function of iNode operation
+ * 
+ * @param iNode iNode
+ * @param newBlockSize New block size to resize to 
+ * @return int 0 if succeeded
+ */
 static inline int iNodeResize(iNode* iNode, size_t newBlockSize) {
     return iNode->operations->resize(iNode, newBlockSize);
 }
 
+/**
+ * @brief Packed function of iNode operation
+ * 
+ * @param iNode iNode
+ * @param buffer Buffer to write to
+ * @param blockIndexInNode Index of first block to read from
+ * @param blockSize Num of block(s) to read
+ * @return int 0 if succeeded
+ */
 static inline int iNodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
     return iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 
+/**
+ * @brief Packed function of iNode operation
+ * 
+ * @param iNode iNode
+ * @param buffer Buffer to read from
+ * @param blockIndexInNode Index of first block to write to
+ * @param blockSize Num of block(s) to write
+ * @return int 0 if succeeded
+ */
 static inline int iNodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
     return iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }

@@ -11,6 +11,7 @@
 #include<structs/registerSet.h>
 #include<system/GDT.h>
 
+//TODO: REMOVE THIS IN FUTURE
 static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
 
 __attribute__((naked))

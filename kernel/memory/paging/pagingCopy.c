@@ -6,8 +6,28 @@
 #include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
 
+/**
+ * @brief Copy a new PDP table
+ * 
+ * @param source PDP table copy from
+ * @return PDPtable* New PDP table
+ */
 static PDPtable* __copyPDPtable(PDPtable* source);
+
+/**
+ * @brief Copy a new page directory table
+ * 
+ * @param source Page directory copy from
+ * @return PageDirectory* New PDP table
+ */
 static PageDirectory* __copyPageDirectory(PageDirectory* source);
+
+/**
+ * @brief Copy a new page table
+ * 
+ * @param source Page table copy from
+ * @return PageTable* New page table
+ */
 static PageTable* __copyPageTable(PageTable* source);
 
 PML4Table* copyPML4Table(PML4Table* source) {

@@ -60,7 +60,7 @@ void initBlockDeviceManager();
 BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
 
 /**
- * @brief Delete created block device, be sure that this device is NOT REGISTERED
+ * @brief Release created block device, be sure that this device is NOT REGISTERED
  * 
  * @param device Block device to delete
  */
@@ -70,7 +70,7 @@ void releaseBlockDevice(BlockDevice* device);
  * @brief Register the block device, duplicated name not allowed
  * 
  * @param device Block device to register
- * @return BlockDevice* If register successed
+ * @return bool Is the register successed?
  */
 bool registerBlockDevice(BlockDevice* device);
 
@@ -98,10 +98,28 @@ BlockDevice* getBlockDeviceByName(const char* name);
  */
 BlockDevice* getBlockDeviceByID(ID id);
 
+/**
+ * @brief Packed function of block device operation
+ * 
+ * @param device Block device
+ * @param blockIndex Index of block to read
+ * @param buffer Buffer to write to
+ * @param n Num of block(s) to read
+ * @return int 0 if operation succeeded, otherwise -1, error code is set
+ */
 static inline int blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n) {
     return device->operations->readBlocks(device, blockIndex, buffer, n);
 } 
 
+/**
+ * @brief Packed function of block device operation
+ * 
+ * @param device Block device
+ * @param blockIndex Index of block to write
+ * @param buffer Buffer to read from
+ * @param n Num of block(s) to write
+ * @return int 0 if operation succeeded, otherwise -1, error code is set
+ */
 static inline int blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n) {
     return device->operations->writeBlocks(device, blockIndex, buffer, n);
 } 

@@ -14,8 +14,18 @@ typedef struct {
     char buffer[__NODE_BUFFER_SIZE];
 } __InputBufferNode;
 
+/**
+ * @brief Allocate a buffer node
+ * 
+ * @return __InputBufferNode* Buffer node
+ */
 static __InputBufferNode* __allocateNode();
 
+/**
+ * @brief Release a buffer node
+ * 
+ * @param node Buffer node
+ */
 static void __releaseNode(__InputBufferNode* node);
 
 void initInputBuffer(InputBuffer* buffer) {

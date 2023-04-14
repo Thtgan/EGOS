@@ -181,18 +181,64 @@ typedef struct {
     uint64_t align;
 } __attribute__((packed)) ELF64ProgramHeader;
 
+/**
+ * @brief Read ELF header from file
+ * 
+ * @param file ELF file
+ * @param header Header struct
+ * @return int 0 if succeeded
+ */
 int readELF64Header(File* file, ELF64Header* header);
 
+/**
+ * @brief Print ELF header for debug 
+ * 
+ * @param level Terminal level to print to
+ * @param header ELF header to print
+ */
 void printELF64Header(TerminalLevel level, ELF64Header* header);
 
+/**
+ * @brief Read ELF program header from file
+ * 
+ * @param file ELF file
+ * @param elfHeader ELF header
+ * @param programHeader Program header struct
+ * @param index Index of program header
+ * @return int 0 if succeeded
+ */
 int readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
 
+/**
+ * @brief Print ELF program header for debug 
+ * 
+ * @param level Terminal level to print to
+ * @param header ELF program header to print
+ */
 void printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header);
 
+/**
+ * @brief Check is ELF program header leagel?
+ * 
+ * @param programHeader ELF program header
+ * @return bool True if header is leagal
+ */
 bool checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
 
+/**
+ * @brief Load program corresponded to program header from ELF file
+ * 
+ * @param file ELF file
+ * @param programHeader Program header describes program to load
+ * @return int 0 if succeeded
+ */
 int loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
 
+/**
+ * @brief Unload ELF program loaded
+ * 
+ * @param programHeader Program header describes program loaded
+ */
 void unloadELF64Program(ELF64ProgramHeader* programHeader);
 
 #endif // __ELF_H

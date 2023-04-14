@@ -71,6 +71,13 @@ static void __addRegionToList(void* regionBegin, size_t level, MemoryType type);
  */
 static void __regionListTidyUp(size_t level, MemoryType type);
 
+/**
+ * @brief Convert a Memory type to physical page type
+ * TODO: THIS IS A MESS, REMOVE IT IN FUTURE
+ * 
+ * @param type Memory type to allocate
+ * @return PhysicalPageType Converted physical page type
+ */
 PhysicalPageType __typeConvert(MemoryType type);
 
 void initKmalloc() {

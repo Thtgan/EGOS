@@ -64,8 +64,22 @@ void clearBit(Bitmap* b, size_t index);
  */
 void clearBits(Bitmap* b, size_t index, size_t n);
 
-size_t findFirstSet(Bitmap* b, size_t begin);
+/**
+ * @brief Find first bit set
+ * 
+ * @param b Bitmap
+ * @param begin Begin of the search
+ * @return size_t Index of first bit set, INVALID_INDEX if not exist
+ */
+Index64 findFirstSet(Bitmap* b, size_t begin);
 
-size_t findFirstClear(Bitmap* b, size_t begin);
+/**
+ * @brief Find first bit clear
+ * 
+ * @param b Bitmap
+ * @param begin Begin of the search
+ * @return size_t Index of first bit clear, INVALID_INDEX if not exist
+ */
+Index64 findFirstClear(Bitmap* b, size_t begin);
 
 #endif // __BITMAP_H

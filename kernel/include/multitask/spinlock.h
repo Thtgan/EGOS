@@ -10,6 +10,11 @@ typedef struct {
 #define SPINLOCK_UNLOCKED (Spinlock) {1};
 #define SPINLOCK_LOCKED (Spinlock) {0};
 
+/**
+ * @brief Lock a spinlock, spinning if lock is already locked
+ * 
+ * @param lock Spinlock to lock
+ */
 static inline void spinlockLock(Spinlock* lock) {
     asm volatile(
         "1:"
@@ -29,6 +34,12 @@ static inline void spinlockLock(Spinlock* lock) {
     );
 }
 
+/**
+ * @brief Try to lock a spinlock
+ * 
+ * @param lock Spinlock to lock
+ * @return bool True if lock succeeded
+ */
 static inline bool spinlockTryLock(Spinlock* lock) {
     char ret = 0;
     asm volatile(
@@ -42,6 +53,11 @@ static inline bool spinlockTryLock(Spinlock* lock) {
     return ret > 0;
 }
 
+/**
+ * @brief Unlock a spinlock
+ * 
+ * @param lock Spinlock to unlock
+ */
 static inline void spinlockUnlock(Spinlock* lock) {
     asm volatile(
         "lock;"

@@ -21,24 +21,91 @@ typedef struct {
 } DirectoryEntry;
 
 STRUCT_PRIVATE_DEFINE(DirectoryOperations) {
+    /**
+     * @brief Add an entry to the end of directory
+     * 
+     * @param directory Directory
+     * @param iNodeID iNode ID
+     * @param type Type of iNode
+     * @param name Name of entry
+     * @return int 0 if succeeded
+     */
     int (*addEntry)(Directory* directory, ID iNodeID, iNodeType type, ConstCstring name);
+
+    /**
+     * @brief Remove entry from directory
+     * 
+     * @param directory Directory
+     * @param entryIndex Index of entry
+     * @return int 0 if succeeded
+     */
     int (*removeEntry)(Directory* directory, Index64 entryIndex);
+
+    /**
+     * @brief Look up to an entry in a directory
+     * 
+     * @param directory Directory
+     * @param name Name of entry to look up
+     * @param type Type of iNode
+     * @return Index64 Index of entry, INVALID_INDEX if entry not exist
+     */
     Index64 (*lookupEntry)(Directory* directory, ConstCstring name, iNodeType type);
+
+    /**
+     * @brief Read an entry from directory
+     * 
+     * @param directory Directory
+     * @param entry Empty directory entry struct
+     * @param entryIndex Index of entry
+     * @return int 0 if succeeded
+     */
     int (*readEntry)(Directory* directory, DirectoryEntry* entry, Index64 entryIndex);
 };
 
+/**
+ * @brief Packed function of directory operations
+ * 
+ * @param directory Directory
+ * @param iNodeID iNode ID
+ * @param type Type of iNode
+ * @param name Name of entry
+ * @return int 0 if succeeded
+ */
 static inline int directoryAddEntry(Directory* directory, ID iNodeID, iNodeType type, ConstCstring name) {
     return directory->operations->addEntry(directory, iNodeID, type, name);
 }
 
+/**
+ * @brief Packed function of directory operations
+ * 
+ * @param directory Directory
+ * @param entryIndex Index of entry
+ * @return int 0 if succeeded
+ */
 static inline int directoryRemoveEntry(Directory* directory, Index64 entryIndex) {
     return directory->operations->removeEntry(directory, entryIndex);
 }
 
+/**
+ * @brief Packed function of directory operations
+ * 
+ * @param directory Directory
+ * @param name Name of entry to look up
+ * @param type Type of iNode
+ * @return Index64 Index of entry, INVALID_INDEX if entry not exist
+ */
 static inline Index64 directoryLookupEntry(Directory* directory, ConstCstring name, iNodeType type) {
     return directory->operations->lookupEntry(directory, name, type);
 }
 
+/**
+ * @brief Packed function of directory operations
+ * 
+ * @param directory Directory
+ * @param entry Empty directory entry struct
+ * @param entryIndex Index of entry
+ * @return int 0 if succeeded
+ */
 static inline int directoryReadEntry(Directory* directory, DirectoryEntry* entry, Index64 entryIndex) {
     return directory->operations->readEntry(directory, entry, entryIndex);
 }

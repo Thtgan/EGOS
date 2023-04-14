@@ -27,10 +27,27 @@ static TSS _tss;
 
 static Process* _currentProcess = NULL;
 
+/**
+ * @brief Create  process with basic initialization
+ * 
+ * @param pid PID of process
+ * @param name Name of process
+ * @return Process* Created process
+ */
 static Process* __createProcess(uint16_t pid, ConstCstring name);
 
+/**
+ * @brief Allocate a PID
+ * 
+ * @return uint16_t PID allocated
+ */
 static uint16_t __allocatePID();
 
+/**
+ * @brief Release a PID
+ * 
+ * @param pid PID to release
+ */
 static void __releasePID(uint16_t pid);
 
 static uint16_t _lastGeneratePID = 0;
