@@ -132,7 +132,7 @@ int phospherusDeployAllocator(BlockDevice* device) {
     //First free cluster of root super node is reserved for special purpose like root directory
     info->signature = SYSTEM_INFO_MAGIC64;
     info->deviceFreeClusterNum = deviceSize / CLUSTER_BLOCK_SIZE - nodeNum - 1;
-    info->firstFreeBlockStack = 0, info->firstFreeBlockStack = (nodeNum - 1) * __SUPER_NODE_SPAN;
+    info->firstFreeSuperNode = 0, info->lastFreeSuperNode = (nodeNum - 1) * __SUPER_NODE_SPAN;
     info->firstFreeBlockStack = info->lastFreeBlockStack = INVALID_INDEX;
     blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, info, __DEVICE_INFO_SIZE);
     releaseBuffer(info, BUFFER_SIZE_512);
