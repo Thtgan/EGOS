@@ -4,6 +4,7 @@
 #include<debug.h>
 #include<devices/terminal/inputBuffer.h>
 #include<devices/vga/textmode.h>
+#include<devices/virtualDevice.h>
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<multitask/semaphore.h>
@@ -53,6 +54,10 @@ static void __putCharacter(Terminal* terminal, char ch);
  * @param row Index of row
  */
 static void __scrollWindowToRow(Terminal* terminal, Index16 row);
+
+static int __terminalDeviceFileRead(File* this, void* buffer, size_t n);
+
+static int __terminalDeviceFileWrite(File* this, const void* buffer, size_t n);
 
 bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
     if (bufferSize < width * height) {
@@ -232,6 +237,16 @@ int terminalGetChar(Terminal* terminal) {
     return ret;
 }
 
+static FileOperations _terminalDeviceFileOperations = {
+    .seek = NULL,
+    .read = __terminalDeviceFileRead,
+    .write = __terminalDeviceFileWrite
+};
+
+FileOperations* initTerminalDevice() {
+    return &_terminalDeviceFileOperations;
+}
+
 static bool __checkRowInWindow(Terminal* terminal, Index16 row) {
     if (terminal->windowHeight == terminal->bufferRowSize) {
         return true;
@@ -387,4 +402,17 @@ static void __scrollWindowToRow(Terminal* terminal, Index16 row) {
             terminalScrollDown(terminal);
         }
     }
+}
+
+static int __terminalDeviceFileRead(File* this, void* buffer, size_t n) {
+    Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
+    terminalGetline(terminal, buffer);
+    return 0;
+}
+
+static int __terminalDeviceFileWrite(File* this, const void* buffer, size_t n) {
+    Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
+    terminalOutputString(terminal, buffer);
+    displayFlush();
+    return 0;
 }

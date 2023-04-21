@@ -126,6 +126,29 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     kFree(arr1);
     kFree(arr2);
 
+    do {
+        if (tracePath(&entry, "/dev/tty", INODE_TYPE_DEVICE) == -1) {
+            printf(TERMINAL_LEVEL_OUTPUT, "TTY NOT EXIST\n");
+            break;
+        }
+
+        printf(TERMINAL_LEVEL_OUTPUT, "ENTRY: %llX %s %u\n", entry.iNodeID, entry.name, entry.type);
+
+        File* ttyFile = NULL;
+        if ((ttyFile = openDeviceFile("/dev/tty")) == NULL) {
+            printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", getCurrentProcess()->errorCode);
+            break;
+        }
+
+        printf(TERMINAL_LEVEL_OUTPUT, "FILE: %p %p %p\n", ttyFile, ttyFile->iNode, ttyFile->operations);
+        fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
+
+        fileRead(ttyFile, str, -1);
+        printf(TERMINAL_LEVEL_OUTPUT, "TTY READ: %s\n", str);
+
+        closeFile(ttyFile);
+    } while (0);
+
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);
 
     die();

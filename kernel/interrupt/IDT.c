@@ -29,6 +29,7 @@ extern void (*stubs[256])(HandlerStackFrame* handlerStackFrame);
 static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
+    cli();
     printf(TERMINAL_LEVEL_DEV, "%#04X Interrupt triggered!\n", vec);
     printf(TERMINAL_LEVEL_DEV, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
     printf(TERMINAL_LEVEL_DEV, "FRAME: %#018llX\n", handlerStackFrame);

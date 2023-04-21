@@ -9,7 +9,8 @@
 typedef enum {
     INODE_TYPE_UNKNOWN,
     INODE_TYPE_DIRECTORY,
-    INODE_TYPE_FILE
+    INODE_TYPE_FILE,
+    INODE_TYPE_DEVICE
 } iNodeType;
 
 //iNode ID: Device ID(16 bits) - iNode block index(48 bits)

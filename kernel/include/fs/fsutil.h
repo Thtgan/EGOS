@@ -27,6 +27,14 @@ int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);
 File* openFile(ConstCstring path);
 
 /**
+ * @brief Open a device in the form of file
+ * 
+ * @param path Path to device file
+ * @return File* Device in form of file
+ */
+File* openDeviceFile(ConstCstring path);
+
+/**
  * @brief Close file opened
  * 
  * @param file File to close
@@ -69,7 +77,8 @@ size_t readFile(File* file, void* buffer, size_t n);
 size_t writeFile(File* file, const void* buffer, size_t n);
 
 /**
- * @brief Create an entry and insert it into directory, beaware its parent directory must be existed
+ * @brief Create an entry and insert it into directory, be aware its parent directory must be existed, this function cannot be used to create entry with type INODE_TYPE_DEVICE,
+ * try registerVirtualDevice from virtualDevice.h
  * 
  * @param path Path to new entry's parent directory
  * @param name Name of new entry
@@ -121,7 +130,7 @@ Directory* directoryOpen(iNode* iNode);
 int directoryClose(Directory* directory);
 
 /**
- * @brief Create an iNode on device
+ * @brief Create an iNode on device, this function cannot be used to create iNode with type INODE_TYPE_DEVICE
  * 
  * @param deviceID Device to create iNode
  * @param type Type of iNode to create

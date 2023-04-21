@@ -34,7 +34,7 @@ FileSystem* unregisterDeviceFS(ID device) {
 }
 
 FileSystem* getDeviceFS(ID device) {
-    HashChainNode* found = hashTableDelete(&_hashTable, (Object)device);
+    HashChainNode* found = hashTableFind(&_hashTable, (Object)device);
     if (found == NULL) {
         return NULL;
     }

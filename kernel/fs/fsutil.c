@@ -1,6 +1,7 @@
 #include<fs/fsutil.h>
 
 #include<devices/block/blockDevice.h>
+#include<devices/virtualDevice.h>
 #include<error.h>
 #include<fs/directory.h>
 #include<fs/file.h>
@@ -77,6 +78,26 @@ File* openFile(ConstCstring path) {
     return file;
 }
 
+File* openDeviceFile(ConstCstring path) {
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_DEVICE) == -1) {
+        return NULL;
+    }
+
+    iNode* iNode = iNodeOpen(entry.iNodeID);
+    if (iNode == NULL) {
+        return NULL;
+    }
+
+    File* ret = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
+    
+    ret->iNode = iNode;
+    ret->operations = ((VirtualDeviceINodeData*)iNode->onDevice.data)->fileOperations;
+    ret->pointer = 0;
+
+    return ret;
+}
+
 int closeFile(File* file) {
     iNode* iNode = file->iNode;
 
@@ -135,6 +156,11 @@ size_t writeFile(File* file, const void* buffer, size_t n) {
 int createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type) {
     DirectoryEntry entry;
     if (tracePath(&entry, path, INODE_TYPE_DIRECTORY) == -1) {
+        return -1;
+    }
+
+    if (type == INODE_TYPE_DEVICE) {
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_ACCESS_DENIED);
         return -1;
     }
 
@@ -236,6 +262,10 @@ int directoryClose(Directory* directory) {
 }
 
 Index64 iNodeCreate(ID deviceID, iNodeType type) {
+    if (type == INODE_TYPE_DEVICE) {
+        return INVALID_INDEX;
+    }
+
     BlockDevice* device = getBlockDeviceByID(deviceID);
     if (device == NULL) {
         return INVALID_INDEX;
@@ -282,7 +312,7 @@ iNode* iNodeOpen(ID iNodeID) {
         return NULL;
     }
 
-    return fs->opearations->iNodeGlobalOperations->openInode(rootFileSystem, iNodeIndex);
+    return fs->opearations->iNodeGlobalOperations->openInode(fs, iNodeIndex);
 }
 
 int iNodeClose(iNode* iNode) {
