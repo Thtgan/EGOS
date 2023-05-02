@@ -78,11 +78,11 @@ static int __addEntry(Directory* this, ID iNodeID, iNodeType type, ConstCstring 
     newEntry->type = type;
     strcpy(newEntry->name, name);
 
-    if (newBlockSize != oldBlockSize && iNodeResize(directoryInode, newBlockSize) == -1) {
+    if (newBlockSize != oldBlockSize && rawInodeResize(directoryInode, newBlockSize) == -1) {
         return -1;
     }
 
-    if (iNodeWriteBlocks(directoryInode, this->directoryInMemory + (newBlockSize - 1) * BLOCK_SIZE, newBlockSize - 1, 1) == -1) {
+    if (rawInodeWriteBlocks(directoryInode, this->directoryInMemory + (newBlockSize - 1) * BLOCK_SIZE, newBlockSize - 1, 1) == -1) {
         return -1;
     }
 
@@ -113,11 +113,11 @@ static int __removeEntry(Directory* this, Index64 entryIndex) {
     }
     --this->size;
 
-    if (newBlockSize != oldBlockSize && iNodeResize(directoryInode, newBlockSize) == -1) {
+    if (newBlockSize != oldBlockSize && rawInodeResize(directoryInode, newBlockSize) == -1) {
         return -1;
     }
 
-    if (newBlockSize > 0 && iNodeWriteBlocks(directoryInode, this->directoryInMemory, 0, newBlockSize) == -1) {
+    if (newBlockSize > 0 && rawInodeWriteBlocks(directoryInode, this->directoryInMemory, 0, newBlockSize) == -1) {
         return -1;
     }
 
@@ -169,7 +169,7 @@ static Directory* __openDirectory(iNode* iNode) {
     ret->directoryInMemory = NULL;
     if (ret->size > 0) {
         ret->directoryInMemory = kMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE, MEMORY_TYPE_NORMAL);
-        iNodeReadBlocks(iNode, ret->directoryInMemory, 0, iNode->onDevice.availableBlockSize);
+        rawInodeReadBlocks(iNode, ret->directoryInMemory, 0, iNode->onDevice.availableBlockSize);
     }
 
     return ret;

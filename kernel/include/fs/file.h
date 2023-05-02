@@ -51,7 +51,7 @@ STRUCT_PRIVATE_DEFINE(FileOperations) {
  * @param seekTo Seek to position
  * @return Index64 File pointer after seek, not exceed file size
  */
-static inline Index64 fileSeek(File* file, size_t seekTo) {
+static inline Index64 rawFileSeek(File* file, size_t seekTo) {
     return file->operations->seek(file, seekTo);
 } 
 
@@ -63,7 +63,7 @@ static inline Index64 fileSeek(File* file, size_t seekTo) {
  * @param n Num of byte(s) to read
  * @return int 0 if succeeded
  */
-static inline int fileRead(File* file, void* buffer, size_t n) {
+static inline int rawFileRead(File* file, void* buffer, size_t n) {
     return file->operations->read(file, buffer, n);
 } 
 
@@ -75,7 +75,7 @@ static inline int fileRead(File* file, void* buffer, size_t n) {
  * @param n Num of byte(s) to write
  * @return int 0 if succeeded
  */
-static inline int fileWrite(File* file, const void* buffer, size_t n) {
+static inline int rawFileWrite(File* file, const void* buffer, size_t n) {
     return file->operations->write(file, buffer, n);
 } 
 

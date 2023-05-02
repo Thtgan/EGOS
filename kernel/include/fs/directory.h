@@ -71,7 +71,7 @@ STRUCT_PRIVATE_DEFINE(DirectoryOperations) {
  * @param name Name of entry
  * @return int 0 if succeeded
  */
-static inline int directoryAddEntry(Directory* directory, ID iNodeID, iNodeType type, ConstCstring name) {
+static inline int rawDirectoryAddEntry(Directory* directory, ID iNodeID, iNodeType type, ConstCstring name) {
     return directory->operations->addEntry(directory, iNodeID, type, name);
 }
 
@@ -82,7 +82,7 @@ static inline int directoryAddEntry(Directory* directory, ID iNodeID, iNodeType 
  * @param entryIndex Index of entry
  * @return int 0 if succeeded
  */
-static inline int directoryRemoveEntry(Directory* directory, Index64 entryIndex) {
+static inline int rawDirectoryRemoveEntry(Directory* directory, Index64 entryIndex) {
     return directory->operations->removeEntry(directory, entryIndex);
 }
 
@@ -94,7 +94,7 @@ static inline int directoryRemoveEntry(Directory* directory, Index64 entryIndex)
  * @param type Type of iNode
  * @return Index64 Index of entry, INVALID_INDEX if entry not exist
  */
-static inline Index64 directoryLookupEntry(Directory* directory, ConstCstring name, iNodeType type) {
+static inline Index64 rawDirectoryLookupEntry(Directory* directory, ConstCstring name, iNodeType type) {
     return directory->operations->lookupEntry(directory, name, type);
 }
 
@@ -106,7 +106,7 @@ static inline Index64 directoryLookupEntry(Directory* directory, ConstCstring na
  * @param entryIndex Index of entry
  * @return int 0 if succeeded
  */
-static inline int directoryReadEntry(Directory* directory, DirectoryEntry* entry, Index64 entryIndex) {
+static inline int rawDirectoryReadEntry(Directory* directory, DirectoryEntry* entry, Index64 entryIndex) {
     return directory->operations->readEntry(directory, entry, entryIndex);
 }
 

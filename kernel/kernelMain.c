@@ -74,10 +74,13 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     {
         char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        File* file = openFile("/LOGO.txt");
-        size_t read = readFile(file, buffer, file->iNode->onDevice.dataSize);
+        int file = fileOpen("/LOGO.txt");
+        fileSeek(file, 0, FSUTIL_SEEK_END);
+        size_t fileSize = fileGetPointer(file);
+        fileSeek(file, 0, FSUTIL_SEEK_BEGIN);
+        size_t read = fileRead(file, buffer, fileSize);
         printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
-        closeFile(file);
+        fileClose(file);
         releaseBuffer(buffer, BUFFER_SIZE_512);
     }
 
@@ -134,19 +137,20 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
         printf(TERMINAL_LEVEL_OUTPUT, "ENTRY: %llX %s %u\n", entry.iNodeID, entry.name, entry.type);
 
-        File* ttyFile = NULL;
-        if ((ttyFile = openDeviceFile("/dev/tty")) == NULL) {
+        int ttyFile = -1;
+        if ((ttyFile = fileOpen("/dev/tty")) == -1) {
             printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", getCurrentProcess()->errorCode);
             break;
         }
 
-        printf(TERMINAL_LEVEL_OUTPUT, "FILE: %p %p %p\n", ttyFile, ttyFile->iNode, ttyFile->operations);
+        File* filePtr = getFileFromSlot(getCurrentProcess(), ttyFile);
+        printf(TERMINAL_LEVEL_OUTPUT, "FILE: %p %p %p\n", filePtr, filePtr->iNode, filePtr->operations);
         fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
 
         fileRead(ttyFile, str, -1);
         printf(TERMINAL_LEVEL_OUTPUT, "TTY READ: %s\n", str);
 
-        closeFile(ttyFile);
+        fileClose(ttyFile);
     } while (0);
 
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);

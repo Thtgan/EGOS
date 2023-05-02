@@ -47,8 +47,8 @@ int execute(ConstCstring path) {
         return -1;
     }
 
-    iNode* iNode = iNodeOpen(entry.iNodeID);
-    File* file = fileOpen(iNode);
+    iNode* iNode = rawInodeOpen(entry.iNodeID);
+    File* file = rawFileOpen(iNode);
 
     ELF64Header header;
     if (readELF64Header(file, &header) == -1) {
@@ -58,8 +58,8 @@ int execute(ConstCstring path) {
     ELF64ProgramHeader programHeader;
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
         if (readELF64ProgramHeader(file, &header, &programHeader, i) == -1) {
-            fileClose(file);
-            iNodeClose(iNode);
+            rawFileClose(file);
+            rawInodeClose(iNode);
             return -1;
         }
 
@@ -68,15 +68,15 @@ int execute(ConstCstring path) {
         }
 
         if (!checkELF64ProgramHeader(&programHeader)) {
-            fileClose(file);
-            iNodeClose(iNode);
+            rawFileClose(file);
+            rawInodeClose(iNode);
             SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_VERIFIVCATION_FAIL);
             return -1;
         }
 
         if (loadELF64Program(file, &programHeader) == -1) {
-            fileClose(file);
-            iNodeClose(iNode);
+            rawFileClose(file);
+            rawInodeClose(iNode);
             return -1;
         }
     }
@@ -116,8 +116,8 @@ int execute(ConstCstring path) {
         pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
     }
 
-    fileClose(file);
-    iNodeClose(iNode);
+    rawFileClose(file);
+    rawInodeClose(iNode);
 
     register int ret asm("rax");
     asm volatile("pop %rax");

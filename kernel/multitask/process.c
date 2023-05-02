@@ -182,6 +182,11 @@ void releaseProcess(Process* process) {
     releasePML4Table(process->pageTable);
 
     __releasePID(process->pid);
+
+    size_t openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
+    memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    pageFree(process->fileSlots, (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE);
+
     memset(process, 0, PAGE_SIZE);
     pageFree(process, 1);
 }
@@ -205,6 +210,40 @@ static Process* __createProcess(uint16_t pid, ConstCstring name) {
     initQueueNode(&ret->statusQueueNode);
     initQueueNode(&ret->semaWaitQueueNode);
 
+    size_t openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
+    ret->fileSlots = pageAlloc(openedFilePageSize, PHYSICAL_PAGE_TYPE_PRIVATE);
+    memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+
+    return ret;
+}
+
+Index32 allocateFileSlot(Process* process, File* file) {
+    for (Index32 i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+        if (process->fileSlots[i] == NULL) {
+            process->fileSlots[i] = file;
+            return i;
+        }
+    }
+
+    return INVALID_INDEX;
+}
+
+File* getFileFromSlot(Process* process, Index32 index) {
+    if (index >= MAX_OPENED_FILE_NUM) {
+        return NULL;
+    }
+
+    return process->fileSlots[index];
+}
+
+File* releaseFileSlot(Process* process, Index32 index) {
+    if (index >= MAX_OPENED_FILE_NUM) {
+        return NULL;
+    }
+
+    File* ret =  process->fileSlots[index];
+    process->fileSlots[index] = NULL;
+    
     return ret;
 }
 

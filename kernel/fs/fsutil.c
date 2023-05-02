@@ -10,6 +10,7 @@
 #include<kernel.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
+#include<multitask/process.h>
 #include<string.h>
 
 /**
@@ -37,25 +38,25 @@ int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
     
     char tmp[64];
     while (*path != '\0') {
-        iNode* inode = iNodeOpen(directoryEntry.iNodeID);
-        Directory* directory = directoryOpen(inode);
+        iNode* inode = rawInodeOpen(directoryEntry.iNodeID);
+        Directory* directory = rawDirectoryOpen(inode);
         int i = 0;
         for (; *path != '\0' && *path != '/'; ++i, ++path) {
             tmp[i] = *path;
         }
         tmp[i] = '\0';
 
-        Index64 index = directoryLookupEntry(directory, tmp, *path == '\0' ? type : INODE_TYPE_DIRECTORY);
+        Index64 index = rawDirectoryLookupEntry(directory, tmp, *path == '\0' ? type : INODE_TYPE_DIRECTORY);
         if (index == INVALID_INDEX) {
-            directoryClose(directory);
-            iNodeClose(inode);
+            rawDirectoryClose(directory);
+            rawInodeClose(inode);
             SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_NOT_FOUND);
             return -1;
         }
-        directoryReadEntry(directory, &directoryEntry, index);
+        rawDirectoryReadEntry(directory, &directoryEntry, index);
 
-        directoryClose(directory);
-        iNodeClose(inode);
+        rawDirectoryClose(directory);
+        rawInodeClose(inode);
 
         if (*path == '/') {
             ++path;
@@ -66,50 +67,52 @@ int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
     return 0;
 }
 
-File* openFile(ConstCstring path) {
+int fileOpen(ConstCstring path) {
     DirectoryEntry entry;
-    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
-        return NULL;
+    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1 && tracePath(&entry, path, INODE_TYPE_DEVICE) == -1) {
+        return -1;
     }
 
-    iNode* iNode = iNodeOpen(entry.iNodeID);
-    File* file = fileOpen(iNode);
+    iNode* iNode = rawInodeOpen(entry.iNodeID);
 
-    return file;
-}
-
-File* openDeviceFile(ConstCstring path) {
-    DirectoryEntry entry;
-    if (tracePath(&entry, path, INODE_TYPE_DEVICE) == -1) {
-        return NULL;
-    }
-
-    iNode* iNode = iNodeOpen(entry.iNodeID);
-    if (iNode == NULL) {
-        return NULL;
-    }
-
-    File* ret = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
+    File* file = NULL;
+    if (entry.type == INODE_TYPE_FILE) {
+        file = rawFileOpen(iNode);
+    } else {
+        file = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
     
-    ret->iNode = iNode;
-    ret->operations = ((VirtualDeviceINodeData*)iNode->onDevice.data)->fileOperations;
-    ret->pointer = 0;
+        file->iNode = iNode;
+        file->operations = ((VirtualDeviceINodeData*)iNode->onDevice.data)->fileOperations;
+        file->pointer = 0;
+    }
+
+    Index32 ret = allocateFileSlot(getCurrentProcess(), file);
 
     return ret;
 }
 
-int closeFile(File* file) {
-    iNode* iNode = file->iNode;
+int fileClose(int file) {
+    File* filePtr = releaseFileSlot(getCurrentProcess(), file);
+    if (filePtr == NULL) {
+        return -1;
+    }
 
-    if (fileClose(file) == -1 || iNodeClose(iNode) == -1) {
+    iNode* iNode = filePtr->iNode;
+
+    if (rawFileClose(filePtr) == -1 || rawInodeClose(iNode) == -1) {
         return -1;
     }
 
     return 0;
 }
 
-int seekFile(File* file, int64_t offset, uint8_t begin) {
-    Index64 base = file->pointer;
+int fileSeek(int file, int64_t offset, uint8_t begin) {
+    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
+    if (filePtr == NULL) {
+        return -1;
+    }
+
+    Index64 base = filePtr->pointer;
     switch (begin)
     {
         case FSUTIL_SEEK_BEGIN:
@@ -118,39 +121,58 @@ int seekFile(File* file, int64_t offset, uint8_t begin) {
         case FSUTIL_SEEK_CURRENT:
             break;
         case FSUTIL_SEEK_END:
-            base = file->iNode->onDevice.dataSize;
+            base = filePtr->iNode->onDevice.dataSize;
             break;
         default:
             break;
     }
     base += offset;
 
-    if ((int64_t)base < 0 || base > file->iNode->onDevice.dataSize) {
+    if ((int64_t)base < 0 || base > filePtr->iNode->onDevice.dataSize) {
         SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
         return -1;
     }
 
-    fileSeek(file, base);
+    rawFileSeek(filePtr, base);
 
     return 0;
 }
 
-size_t readFile(File* file, void* buffer, size_t n) {
-    Index64 before = file->pointer;
-    if (fileRead(file, buffer, n) == -1) {
-        return -1;
+Index64 fileGetPointer(int file) {
+    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
+    if (filePtr == NULL) {
+        return INVALID_INDEX;
     }
 
-    return file->pointer - before;
+    return filePtr->pointer;
 }
 
-size_t writeFile(File* file, const void* buffer, size_t n) {
-    Index64 before = file->pointer;
-    if (fileWrite(file, buffer, n) == -1) {
+size_t fileRead(int file, void* buffer, size_t n) {
+    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
+    if (filePtr == NULL) {
         return -1;
     }
 
-    return file->pointer - before;
+    Index64 before = filePtr->pointer;
+    if (rawFileRead(filePtr, buffer, n) == -1) {
+        return -1;
+    }
+
+    return filePtr->pointer - before;
+}
+
+size_t fileWrite(int file, const void* buffer, size_t n) {
+    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
+    if (filePtr == NULL) {
+        return -1;
+    }
+
+    Index64 before = filePtr->pointer;
+    if (rawFileWrite(filePtr, buffer, n) == -1) {
+        return -1;
+    }
+
+    return filePtr->pointer - before;
 }
 
 int createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type) {
@@ -164,25 +186,25 @@ int createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type
         return -1;
     }
 
-    iNode* directoryInode = iNodeOpen(entry.iNodeID);
-    Directory* directory = directoryOpen(directoryInode);
+    iNode* directoryInode = rawInodeOpen(entry.iNodeID);
+    Directory* directory = rawDirectoryOpen(directoryInode);
 
     int ret = 0;
     do {
-        if (directoryLookupEntry(directory, name, type) != INVALID_INDEX) {
+        if (rawDirectoryLookupEntry(directory, name, type) != INVALID_INDEX) {
             SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
             ret = -1;
             break;
         }
 
-        if (directoryAddEntry(directory, iNodeID, INODE_TYPE_DIRECTORY, name) == -1) {
-            iNodeDelete(iNodeID);
+        if (rawDirectoryAddEntry(directory, iNodeID, INODE_TYPE_DIRECTORY, name) == -1) {
+            rawInodeDelete(iNodeID);
             ret = -1;
         }
     } while (0);
 
-    directoryClose(directory);
-    iNodeClose(directoryInode);
+    rawDirectoryClose(directory);
+    rawInodeClose(directoryInode);
 
     return ret;
 }
@@ -203,46 +225,46 @@ int deleteEntry(ConstCstring path, iNodeType type) {
         return -1;
     }
 
-    iNode* directoryInode = iNodeOpen(entry.iNodeID);
-    Directory* directory = directoryOpen(directoryInode);
+    iNode* directoryInode = rawInodeOpen(entry.iNodeID);
+    Directory* directory = rawDirectoryOpen(directoryInode);
 
     int ret = 0;
-    Index64 entryIndex = directoryLookupEntry(directory, entryName, type);
+    Index64 entryIndex = rawDirectoryLookupEntry(directory, entryName, type);
 
     if (entryIndex == INVALID_INDEX) {
         SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_NOT_FOUND);
         ret = -1;
     } else {
-        directoryRemoveEntry(directory, entryIndex);
+        rawDirectoryRemoveEntry(directory, entryIndex);
     }
 
-    directoryClose(directory);
-    iNodeClose(directoryInode);
+    rawDirectoryClose(directory);
+    rawInodeClose(directoryInode);
     kFree(copy);
 
     return ret;
 }
 
-File* fileOpen(iNode* iNode) {
+File* rawFileOpen(iNode* iNode) {
     FileSystem* fs = openFileSystem(iNode->device);
     if (fs == NULL) {
         return NULL;
     }
 
-    return fs->opearations->fileGlobalOperations->openFile(iNode);
+    return fs->opearations->fileGlobalOperations->fileOpen(iNode);
 }
 
-int fileClose(File* file) {
+int rawFileClose(File* file) {
     FileSystem* fs = openFileSystem(file->iNode->device);
     if (fs == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
         return -1;
     }
 
-    return fs->opearations->fileGlobalOperations->closeFile(file);
+    return fs->opearations->fileGlobalOperations->fileClose(file);
 }
 
-Directory* directoryOpen(iNode* iNode) {
+Directory* rawDirectoryOpen(iNode* iNode) {
     FileSystem* fs = openFileSystem(iNode->device);
     if (fs == NULL) {
         return NULL;
@@ -251,7 +273,7 @@ Directory* directoryOpen(iNode* iNode) {
     return fs->opearations->directoryGlobalOperations->openDirectory(iNode);
 }
 
-int directoryClose(Directory* directory) {
+int rawDirectoryClose(Directory* directory) {
     FileSystem* fs = openFileSystem(directory->iNode->device);
     if (fs == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
@@ -261,7 +283,7 @@ int directoryClose(Directory* directory) {
     return fs->opearations->directoryGlobalOperations->closeDirectory(directory);
 }
 
-Index64 iNodeCreate(ID deviceID, iNodeType type) {
+Index64 rawInodeCreate(ID deviceID, iNodeType type) {
     if (type == INODE_TYPE_DEVICE) {
         return INVALID_INDEX;
     }
@@ -279,7 +301,7 @@ Index64 iNodeCreate(ID deviceID, iNodeType type) {
     return fs->opearations->iNodeGlobalOperations->createInode(fs, type);
 }
 
-int iNodeDelete(ID iNodeID) {
+int rawInodeDelete(ID iNodeID) {
     ID deviceID = INODE_ID_GET_DEVICE_ID(iNodeID);
     Index64 iNodeIndex = INODE_ID_GET_INODE_INDEX(iNodeID);
 
@@ -298,7 +320,7 @@ int iNodeDelete(ID iNodeID) {
     return fs->opearations->iNodeGlobalOperations->deleteInode(fs, iNodeIndex);
 }
 
-iNode* iNodeOpen(ID iNodeID) {
+iNode* rawInodeOpen(ID iNodeID) {
     ID deviceID = INODE_ID_GET_DEVICE_ID(iNodeID);
     Index64 iNodeIndex = INODE_ID_GET_INODE_INDEX(iNodeID);
 
@@ -315,7 +337,7 @@ iNode* iNodeOpen(ID iNodeID) {
     return fs->opearations->iNodeGlobalOperations->openInode(fs, iNodeIndex);
 }
 
-int iNodeClose(iNode* iNode) {
+int rawInodeClose(iNode* iNode) {
     FileSystem* fs = openFileSystem(iNode->device);
     if (fs == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);

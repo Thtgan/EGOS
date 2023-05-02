@@ -82,7 +82,7 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
  * @param newBlockSize New block size to resize to 
  * @return int 0 if succeeded
  */
-static inline int iNodeResize(iNode* iNode, size_t newBlockSize) {
+static inline int rawInodeResize(iNode* iNode, size_t newBlockSize) {
     return iNode->operations->resize(iNode, newBlockSize);
 }
 
@@ -95,7 +95,7 @@ static inline int iNodeResize(iNode* iNode, size_t newBlockSize) {
  * @param blockSize Num of block(s) to read
  * @return int 0 if succeeded
  */
-static inline int iNodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static inline int rawInodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
     return iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 
@@ -108,7 +108,7 @@ static inline int iNodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexI
  * @param blockSize Num of block(s) to write
  * @return int 0 if succeeded
  */
-static inline int iNodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static inline int rawInodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
     return iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 

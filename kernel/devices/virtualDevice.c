@@ -110,27 +110,27 @@ int registerVirtualDevice(void* device, ConstCstring name, FileOperations* opera
 
     releaseBuffer(onDevice, BUFFER_SIZE_512);
 
-    iNode* directoryInode = iNodeOpen(entry.iNodeID);
-    Directory* directory = directoryOpen(directoryInode);
+    iNode* directoryInode = rawInodeOpen(entry.iNodeID);
+    Directory* directory = rawDirectoryOpen(directoryInode);
 
     ID iNodeID = BUILD_INODE_ID(memDevice->deviceID, iNodeIndex);
 
     int ret = 0;
     do {
-        if (directoryLookupEntry(directory, name, INODE_TYPE_DEVICE) != INVALID_INDEX) {
+        if (rawDirectoryLookupEntry(directory, name, INODE_TYPE_DEVICE) != INVALID_INDEX) {
             SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
             ret = -1;
             break;
         }
 
-        if (directoryAddEntry(directory, iNodeID, INODE_TYPE_DEVICE, name) == -1) {
-            iNodeDelete(iNodeID);
+        if (rawDirectoryAddEntry(directory, iNodeID, INODE_TYPE_DEVICE, name) == -1) {
+            rawInodeDelete(iNodeID);
             ret = -1;
         }
     } while (0);
 
-    directoryClose(directory);
-    iNodeClose(directoryInode);
+    rawDirectoryClose(directory);
+    rawInodeClose(directoryInode);
 
     return ret;
 }

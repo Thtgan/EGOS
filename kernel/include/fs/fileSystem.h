@@ -20,7 +20,7 @@ typedef struct {
      * @param iNode iNode contains the file
      * @return File* File opened
      */
-    File* (*openFile)(iNode* iNode);
+    File* (*fileOpen)(iNode* iNode);
 
     /**
      * @brief Close the file opened, be awared that iNode is not closed
@@ -28,7 +28,7 @@ typedef struct {
      * @param file File to close
      * @return int 0 if succeeded
      */
-    int (*closeFile)(File* file);
+    int (*fileClose)(File* file);
 } FileGlobalOperations;
 
 typedef struct {

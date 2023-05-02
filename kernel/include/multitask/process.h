@@ -2,6 +2,7 @@
 #define __PROCESS_H
 
 #include<error.h>
+#include<fs/file.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<structs/linkedList.h>
@@ -27,6 +28,7 @@ typedef enum {
 #define PROCESS_TICK                5
 #define MAIN_PROCESS_RESERVE_PID    0
 #define INVALID_PID                 -1
+#define MAX_OPENED_FILE_NUM         (PAGE_SIZE / sizeof(File*))
 
 struct _Process {
     uint16_t pid;
@@ -46,6 +48,8 @@ struct _Process {
     QueueNode semaWaitQueueNode;
 
     int errorCode;
+
+    File** fileSlots;
 };
 
 /**
@@ -94,5 +98,32 @@ void exitProcess();
  * @param process Process to release
  */
 void releaseProcess(Process* process);
+
+/**
+ * @brief Allocate a slot for file
+ * 
+ * @param process Process
+ * @param file File pointer
+ * @return Index32 Index of slot for file, INVALID_INDEX if slots are full
+ */
+Index32 allocateFileSlot(Process* process, File* file);
+
+/**
+ * @brief Get file from slot
+ * 
+ * @param process Process
+ * @param index Index of slot
+ * @return File* File pointer in slot, NULL if slot is empty
+ */
+File* getFileFromSlot(Process* process, Index32 index);
+
+/**
+ * @brief Release a file slot
+ * 
+ * @param process Process
+ * @param index Index of slot to release
+ * @return File* File stored in slot, NULL if slot is empty
+ */
+File* releaseFileSlot(Process* process, Index32 index);
 
 #endif // __PROCESS_H

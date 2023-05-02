@@ -22,13 +22,13 @@ FileOperations fileOperations = {
     .write = __write
 };
 
-static File* __openFile(iNode* iNode);
+static File* __fileOpen(iNode* iNode);
 
-static int __closeFile(File* file);
+static int __fileClose(File* file);
 
 FileGlobalOperations fileGlobalOperations = {
-    .openFile = __openFile,
-    .closeFile = __closeFile
+    .fileOpen = __fileOpen,
+    .fileClose = __fileClose
 };
 
 FileGlobalOperations* phospherusInitFiles() {
@@ -59,7 +59,7 @@ static int __read(File* this, void* buffer, size_t n) {
 
     Index64 flooredReadPointer = currentReadPointer / BLOCK_SIZE * BLOCK_SIZE;
     if (flooredReadPointer < currentReadPointer) {
-        iNodeReadBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
+        rawInodeReadBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
 
         Index64 indexInBlock = currentReadPointer - flooredReadPointer, frontByteNum = umin64(BLOCK_SIZE - indexInBlock, remainByteToRead);
         memcpy(currentBuffer, tmpBuffer + indexInBlock, frontByteNum);
@@ -71,14 +71,14 @@ static int __read(File* this, void* buffer, size_t n) {
 
     size_t midBlockNum = remainByteToRead / BLOCK_SIZE;
     if (midBlockNum > 0) {
-        iNodeReadBlocks(iNode, currentBuffer, currentReadPointer / BLOCK_SIZE, midBlockNum);
+        rawInodeReadBlocks(iNode, currentBuffer, currentReadPointer / BLOCK_SIZE, midBlockNum);
         currentBuffer += midBlockNum * BLOCK_SIZE;
         currentReadPointer += midBlockNum * BLOCK_SIZE;
         remainByteToRead -= midBlockNum * BLOCK_SIZE;
     }
 
     if (remainByteToRead > 0) {
-        iNodeReadBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
+        rawInodeReadBlocks(iNode, tmpBuffer, currentReadPointer / BLOCK_SIZE, 1);
         size_t tailByteNum = umin64(remainByteToRead, BLOCK_SIZE);
         memcpy(currentBuffer, tmpBuffer, tailByteNum);
 
@@ -105,7 +105,7 @@ static int __write(File* this, const void* buffer, size_t n) {
 
     size_t blockNum = iNode->onDevice.availableBlockSize, leastBlockNumAfterWrite = (pointer + n + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    if (leastBlockNumAfterWrite > blockNum && iNodeResize(iNode, leastBlockNumAfterWrite) == -1) {
+    if (leastBlockNumAfterWrite > blockNum && rawInodeResize(iNode, leastBlockNumAfterWrite) == -1) {
         return -1;
     }
 
@@ -115,11 +115,11 @@ static int __write(File* this, const void* buffer, size_t n) {
 
     size_t flooredWritePointer = currentWritePointer / BLOCK_SIZE * BLOCK_SIZE;
     if (flooredWritePointer < currentWritePointer) {
-        iNodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
+        rawInodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
 
         size_t indexInBlock = currentWritePointer - flooredWritePointer, frontByteNum = umin64(BLOCK_SIZE - indexInBlock, remainByteToWrite);
         memcpy(tmpBuffer + indexInBlock, currentBuffer, frontByteNum);
-        if (iNodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
+        if (rawInodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
             return -1;
         }
 
@@ -130,18 +130,18 @@ static int __write(File* this, const void* buffer, size_t n) {
 
     size_t midBlockNum = remainByteToWrite / BLOCK_SIZE;
     if (midBlockNum > 0) {
-        iNodeWriteBlocks(iNode, currentBuffer, currentWritePointer / BLOCK_SIZE, midBlockNum);
+        rawInodeWriteBlocks(iNode, currentBuffer, currentWritePointer / BLOCK_SIZE, midBlockNum);
         currentBuffer += midBlockNum * BLOCK_SIZE;
         currentWritePointer += midBlockNum * BLOCK_SIZE;
         remainByteToWrite -= midBlockNum * BLOCK_SIZE;
     }
     
     if (remainByteToWrite > 0) {
-        iNodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
+        rawInodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1);
         size_t tailByteNum = umin64(remainByteToWrite, BLOCK_SIZE);
         memcpy(tmpBuffer, currentBuffer, tailByteNum);
 
-        if (iNodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
+        if (rawInodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == -1) {
             return -1;
         }
 
@@ -163,7 +163,7 @@ static int __write(File* this, const void* buffer, size_t n) {
     return 0;
 }
 
-static File* __openFile(iNode* iNode) {
+static File* __fileOpen(iNode* iNode) {
     if (iNode->onDevice.type != INODE_TYPE_FILE) {
         return NULL;
     }
@@ -176,7 +176,7 @@ static File* __openFile(iNode* iNode) {
     return ret;
 }
 
-static int __closeFile(File* file) {
+static int __fileClose(File* file) {
     file->iNode = NULL;
     kFree(file);
 

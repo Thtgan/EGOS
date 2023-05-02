@@ -15,9 +15,9 @@
 #include<system/pageTable.h>
 
 int readELF64Header(File* file, ELF64Header* header) {
-    fileSeek(file, 0);
+    rawFileSeek(file, 0);
 
-    if (fileRead(file, header, sizeof(ELF64Header)) == -1) {
+    if (rawFileRead(file, header, sizeof(ELF64Header)) == -1) {
         return -1;
     }
 
@@ -62,9 +62,9 @@ int readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeade
         return -1;
     }
 
-    fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader));
+    rawFileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader));
 
-    if (fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) == -1) {
+    if (rawFileRead(file, programHeader, sizeof(ELF64ProgramHeader)) == -1) {
         return -1;
     }
 
@@ -109,7 +109,7 @@ int loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         memoryRemain = programHeader->segmentSizeInMemory;
 
     PML4Table* pageTable = getCurrentProcess()->pageTable;
-    fileSeek(file, fileBegin);
+    rawFileSeek(file, fileBegin);
     uint64_t flags = PAGE_TABLE_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGE_TABLE_ENTRY_FLAG_RW : 0) | PAGE_TABLE_ENTRY_FLAG_PRESENT;
     
     uintptr_t from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
@@ -125,7 +125,7 @@ int loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
         size_t readN = min64(readRemain, to - from);
         if (readN > 0) {
-            if (fileRead(file, (void*)from, readN) == -1) {
+            if (rawFileRead(file, (void*)from, readN) == -1) {
                 return -1;
             }
             readRemain -= readN;
