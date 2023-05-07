@@ -28,8 +28,10 @@ typedef enum {
 
 /**
  * @brief Initialize structs to manage physical pages
+ * 
+ * @return Result Result of the operation
  */
-void initPhysicalPage();
+Result initPhysicalPage();
 
 /**
  * @brief Get physical page struct corresponded to physical address

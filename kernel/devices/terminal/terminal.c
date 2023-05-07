@@ -3,11 +3,12 @@
 #include<algorithms.h>
 #include<debug.h>
 #include<devices/terminal/inputBuffer.h>
-#include<devices/vga/textmode.h>
 #include<devices/virtualDevice.h>
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<multitask/semaphore.h>
+#include<real/ports/CGA.h>
+#include<real/simpleAsmLines.h>
 #include<string.h>
 #include<structs/queue.h>
 
@@ -20,6 +21,27 @@ umin16(                                                                         
     (__TERMINAL)->windowWidth,                                                                                                                      \
     strlen((__TERMINAL)->buffer + __ROW_INDEX_ADD((__TERMINAL)->loopRowBegin, __BUFFERX, (__TERMINAL)->bufferRowSize) * (__TERMINAL)->windowWidth)  \
 )
+
+#define __CURSOR_SCANLINE_BEGIN 14
+#define __CURSOR_SCANLINE_END   15
+
+/**
+ * @brief Enable cursor
+ */
+static void __vgaEnableCursor();
+
+/**
+ * @brief Disable cursor
+ */
+static void __vgaDisableCursor();
+
+/**
+ * @brief Change position of cursor on display
+ * 
+ * @param row The row index, starts with 0
+ * @param col The column index, starts with 0
+ */
+static void __vgaSetCursorPosition(uint8_t row, uint8_t col);
 
 /**
  * @brief Chech is the row of buffer is in window
@@ -76,10 +98,11 @@ Result initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t 
     initSemaphore(&terminal->outputLock, 1);
 
     terminal->cursorLastInWindow = false;
+    terminal->cursorEnabled = true;
     terminal->cursorPosX = terminal->cursorPosY = 0;
 
     terminal->tabStride = 4;
-    terminal->colorPattern = PATTERN_ENTRY(TEXT_MODE_COLOR_BLACK, TEXT_MODE_COLOR_LIGHT_GRAY);
+    terminal->colorPattern = BUILD_PATTERN(TERMINAL_PATTERN_COLOR_BLACK, TERMINAL_PATTERN_COLOR_LIGHT_GRAY);
 
     terminal->inputMode = false;
     terminal->inputLength = 0;
@@ -97,9 +120,33 @@ Terminal* getCurrentTerminal() {
     return _currentTerminal;
 }
 
-void displayFlush() {
-    down(&_currentTerminal->outputLock);
+void switchCursor(Terminal* terminal, bool enable) {
+    terminal->cursorEnabled = enable;
+
+    if (terminal != _currentTerminal) {
+        return;
+    }
+
     ASSERT_SILENT(_currentTerminal != NULL);
+    down(&_currentTerminal->outputLock);
+    Index16 cursorRow = __ROW_INDEX_ADD(_currentTerminal->loopRowBegin, _currentTerminal->cursorPosX, _currentTerminal->bufferRowSize);
+    if (_currentTerminal->cursorEnabled && __checkRowInWindow(_currentTerminal, cursorRow)) {
+        if (!_currentTerminal->cursorLastInWindow) {
+            __vgaEnableCursor();
+            _currentTerminal->cursorLastInWindow = true;
+        }
+
+        __vgaSetCursorPosition(__ROW_INDEX_ADD(cursorRow, _currentTerminal->bufferRowSize - _currentTerminal->windowRowBegin, _currentTerminal->bufferRowSize), _currentTerminal->cursorPosY);
+    } else {
+        __vgaDisableCursor();
+        _currentTerminal->cursorLastInWindow = false;
+    }
+    up(&_currentTerminal->outputLock);
+}
+
+void flushDisplay() {
+    ASSERT_SILENT(_currentTerminal != NULL);
+    down(&_currentTerminal->outputLock);
     for (int i = 0; i < _currentTerminal->windowHeight; ++i) {
         char* src = _currentTerminal->buffer + __ROW_INDEX_ADD(_currentTerminal->windowRowBegin, i, _currentTerminal->bufferRowSize) * _currentTerminal->windowWidth;
         TerminalDisplayUnit* des = _videoMemory + i * _currentTerminal->windowWidth;
@@ -107,20 +154,9 @@ void displayFlush() {
             des[j] = (TerminalDisplayUnit) { src[j], _currentTerminal->colorPattern };
         }
     }
-
-    Index16 cursorRow = __ROW_INDEX_ADD(_currentTerminal->loopRowBegin, _currentTerminal->cursorPosX, _currentTerminal->bufferRowSize);
-    if (__checkRowInWindow(_currentTerminal, cursorRow)) {
-        if (!_currentTerminal->cursorLastInWindow) {
-            vgaEnableCursor();
-            _currentTerminal->cursorLastInWindow = true;
-        }
-
-        vgaSetCursorPosition(__ROW_INDEX_ADD(cursorRow, _currentTerminal->bufferRowSize - _currentTerminal->windowRowBegin, _currentTerminal->bufferRowSize), _currentTerminal->cursorPosY);
-    } else {
-        vgaDisableCursor();
-        _currentTerminal->cursorLastInWindow = false;
-    }
     up(&_currentTerminal->outputLock);
+
+    switchCursor(_currentTerminal, _currentTerminal->cursorEnabled);
 }
 
 Result terminalScrollUp(Terminal* terminal) {
@@ -166,7 +202,7 @@ void terminalOutputChar(Terminal* terminal, char ch) {
 }
 
 void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foreground) {
-    terminal->colorPattern = PATTERN_ENTRY(background, foreground);
+    terminal->colorPattern = BUILD_PATTERN(background, foreground);
 }
 
 void terminalSetTabStride(Terminal* terminal, uint8_t stride) {
@@ -245,6 +281,27 @@ static FileOperations _terminalDeviceFileOperations = {
 
 FileOperations* initTerminalDevice() {
     return &_terminalDeviceFileOperations;
+}
+
+static void __vgaEnableCursor() {
+    outb(CGA_CRT_INDEX, CGA_CURSOR_START);
+	outb(CGA_CRT_DATA, (inb(CGA_CRT_DATA) & 0xC0) | __CURSOR_SCANLINE_BEGIN);
+ 
+	outb(CGA_CRT_INDEX, CGA_CURSOR_END);
+	outb(CGA_CRT_DATA, (inb(CGA_CRT_DATA) & 0xE0) | __CURSOR_SCANLINE_END);
+}
+
+static void __vgaDisableCursor() {
+	outb(CGA_CRT_INDEX, CGA_CURSOR_START);
+	outb(CGA_CRT_DATA, 0x20);
+}
+
+static void __vgaSetCursorPosition(uint8_t row, uint8_t col) {
+    uint16_t pos = row * TEXT_MODE_WIDTH + col;
+	outb(CGA_CRT_INDEX, CGA_CURSOR_LOCATION_LOW);
+	outb(CGA_CRT_DATA, pos & 0xFF);
+	outb(CGA_CRT_INDEX, CGA_CURSOR_LOCATION_HIGH);
+	outb(CGA_CRT_DATA, (pos >> 8) & 0xFF);
 }
 
 static bool __checkRowInWindow(Terminal* terminal, Index16 row) {
@@ -413,6 +470,6 @@ static Result __terminalDeviceFileRead(File* this, void* buffer, size_t n) {
 static Result __terminalDeviceFileWrite(File* this, const void* buffer, size_t n) {
     Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
     terminalOutputString(terminal, buffer);
-    displayFlush();
+    flushDisplay();
     return RESULT_SUCCESS;
 }

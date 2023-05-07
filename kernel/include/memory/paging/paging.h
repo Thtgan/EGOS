@@ -10,8 +10,10 @@
 
 /**
  * @brief Further initialization the paging
+ * 
+ * @return Result Result of the operation
  */
-void initPaging();
+Result initPaging();
 
 /**
  * @brief Translate vAddr to pAddr

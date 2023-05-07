@@ -167,19 +167,18 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
             }
         }
 
-        displayFlush();
+        flushDisplay();
     }
 }
 
-/**
- * @brief Initialize the keyboard
- */
-void initKeyboard() {
+Result initKeyboard() {
     for (int i = 0; i < 128; ++i) {
         _pressed[i] = false;
     }
     _capslock = false;
     registerISR(0x21, __keyboardInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+
+    return RESULT_SUCCESS;
 }
 
 static inline uint8_t __readScancode() {

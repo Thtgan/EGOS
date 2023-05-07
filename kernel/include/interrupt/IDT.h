@@ -52,8 +52,10 @@ typedef struct {
 
 /**
  * @brief Initialize the IDT
+ * 
+ * @return Result Result of the operation
  */
-void initIDT();
+Result initIDT();
 
 /**
  * @brief Bind a interrupt service routine to the mapping from PIC, and unmask the interrupt to enable it

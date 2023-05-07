@@ -1,6 +1,5 @@
 #include<memory/physicalPages.h>
 
-#include<debug.h>
 #include<kernel.h>
 #include<kit/bit.h>
 #include<system/address.h>
@@ -11,11 +10,11 @@
 
 static PhysicalPage* _pageStructs;
 
-void initPhysicalPage() {
+Result initPhysicalPage() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
     size_t physicalPageStructPageNum = (mMap->freePageEnd + (__PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE - 1)) / __PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE;
     if (mMap->freePageBegin + physicalPageStructPageNum >= mMap->freePageEnd) {
-        blowup("No enough memory for physical page structs\n");
+        return RESULT_FAIL;
     }
 
     mMap->physicalPageStructBegin = mMap->freePageBegin, mMap->physicalPageStructEnd = mMap->freePageBegin + physicalPageStructPageNum;
@@ -41,6 +40,8 @@ void initPhysicalPage() {
         _pageStructs[i].flags = flags;
         _pageStructs[i].processReferenceCnt = 0;
     }
+
+    return RESULT_SUCCESS;
 }
 
 PhysicalPage* getPhysicalPageStruct(void* pAddr) {

@@ -5,8 +5,10 @@
 
 /**
  * @brief Initialize user mode
+ * 
+ * @return Result Result of the operation
  */
-void initUsermode();
+Result initUsermode();
 
 /**
  * @brief Execute ELF program at certain path, sets errorcode to indicate error

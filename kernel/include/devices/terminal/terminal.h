@@ -7,9 +7,40 @@
 #include<structs/queue.h>
 #include<multitask/semaphore.h>
 
+#define TEXT_MODE_BUFFER_BEGIN              0xB8000
+#define TEXT_MODE_WIDTH                     80 
+#define TEXT_MODE_HEIGHT                    25
+#define TEXT_MODE_SIZE                      TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT
+
 typedef struct {
     uint8_t character, colorPattern;
 } __attribute__((packed)) TerminalDisplayUnit;
+
+//Bit 7 6 5 4 3 2 1 0
+//    | | | | | | | |
+//    | | | | | ^-^-^-- Foreground color
+//    | | | | ^-------- Foreground color bright bit
+//    | ^-^-^---------- Background color
+//    ^---------------- Background color bright bit or enables blinking
+
+#define TERMINAL_PATTERN_COLOR_BLACK           0
+#define TERMINAL_PATTERN_COLOR_BLUE            1
+#define TERMINAL_PATTERN_COLOR_GREEN           2
+#define TERMINAL_PATTERN_COLOR_CYAN            3
+#define TERMINAL_PATTERN_COLOR_RED             4
+#define TERMINAL_PATTERN_COLOR_MAGENTA         5
+#define TERMINAL_PATTERN_COLOR_BROWN           6
+#define TERMINAL_PATTERN_COLOR_LIGHT_GRAY      7
+#define TERMINAL_PATTERN_COLOR_DARK_GRAY       8
+#define TERMINAL_PATTERN_COLOR_LIGHT_BLUE      9
+#define TERMINAL_PATTERN_COLOR_LIGHT_GREEN     10
+#define TERMINAL_PATTERN_COLOR_LIGHT_CYAN      11
+#define TERMINAL_PATTERN_COLOR_LIGHT_RED       12
+#define TERMINAL_PATTERN_COLOR_LIGHT_MAGNETA   13
+#define TERMINAL_PATTERN_COLOR_YELLOW          14
+#define TERMINAL_PATTERN_COLOR_WHITE           15
+
+#define BUILD_PATTERN(__BACKGROUND_COLOR, __FOREGROUND_COLOR) (uint8_t)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))
 
 /**
  * Window width
@@ -68,7 +99,7 @@ typedef struct {
 
     Semaphore outputLock;                           //Lock for output, used to handle output in multitask sence
 
-    bool cursorLastInWindow;
+    bool cursorLastInWindow, cursorEnabled;
     Index16 cursorPosX, cursorPosY;                 //Cursor position, starts from beginning of loop, (0, 0) means first character in first row of loop
 
     uint8_t colorPattern;
@@ -107,9 +138,17 @@ void setCurrentTerminal(Terminal* terminal);
 Terminal* getCurrentTerminal();
 
 /**
+ * @brief Switch cursor enabled or disabled
+ * 
+ * @param terminal Terminal
+ * @param enable Cursor enabled or disabled
+ */
+void switchCursor(Terminal* terminal, bool enable);
+
+/**
  * @brief Refresh display to current terminal's buffer
  */
-void displayFlush();
+void flushDisplay();
 
 /**
  * @brief Scroll up

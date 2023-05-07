@@ -12,8 +12,10 @@ typedef enum {
 
 /**
  * @brief Initialize the timer
+ * 
+ * @return Result Result of the operation
  */
-void initTimer();
+Result initTimer();
 
 /**
  * @brief Sleep for a period of time

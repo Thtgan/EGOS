@@ -37,10 +37,12 @@ void __syscallHandlerExit(int ret);
 
 static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, int* retPtr);
 
-void initUsermode() {
+Result initUsermode() {
     initSyscall();
 
     registerSyscallHandler(SYSCALL_TYPE_EXIT, __syscallHandlerExit);
+
+    return RESULT_SUCCESS;
 }
 
 int execute(ConstCstring path) {

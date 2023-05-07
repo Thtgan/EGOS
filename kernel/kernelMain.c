@@ -1,26 +1,10 @@
-#include<debug.h>
-#include<devices/block/blockDevice.h>
-#include<devices/hardDisk/hardDisk.h>
-#include<devices/keyboard/keyboard.h>
-#include<devices/terminal/terminal.h>
-#include<devices/terminal/terminalSwitch.h>
-#include<devices/timer/timer.h>
-#include<devices/vga/textmode.h>
-#include<devices/virtualDevice.h>
-#include<fs/fileSystem.h>
 #include<fs/fsutil.h>
-#include<interrupt/IDT.h>
-#include<kit/oop.h>
+#include<init.h>
 #include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
-#include<memory/memory.h>
-#include<memory/pageAlloc.h>
-#include<memory/paging/paging.h>
 #include<multitask/process.h>
-#include<multitask/schedule.h>
 #include<multitask/semaphore.h>
-#include<multitask/spinlock.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
 #include<string.h>
@@ -34,60 +18,20 @@ char str[128];
 
 int* arr1, * arr2;
 
+static void printLOGO();
+
 __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     sysInfo = (SystemInfo*)sysInfoPtr;
-
     if (sysInfo->magic != SYSTEM_INFO_MAGIC16) {
-        blowup("Magic not match\n");
+        die();
     }
 
-    initVGATextMode(); //Initialize text mode
-
-    initTerminalSwitch();
-
-    printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
-
-    initIDT();      //Initialize the interrupt
-
-    initMemory();
-
-    initKeyboard();
-
-    //Set interrupt flag
-    //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
-    sti();
-
-    initBlockDeviceManager();
-
-    initHardDisk();
-
-    initSchedule();
-
-    initTimer();
-
-    initFileSystem();
-    
-    initVirtualDevices();
-
-    initUsermode();
-
-    {
-        char* buffer = allocateBuffer(BUFFER_SIZE_512);
-        int file = fileOpen("/LOGO.txt");
-        fileSeek(file, 0, FSUTIL_SEEK_END);
-        size_t fileSize = fileGetPointer(file);
-        fileSeek(file, 0, FSUTIL_SEEK_BEGIN);
-        size_t read = fileRead(file, buffer, fileSize);
-        printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", fileSize, buffer);
-        fileClose(file);
-        releaseBuffer(buffer, BUFFER_SIZE_512);
+    if (initKernel() == RESULT_FAIL) {
+        die();
     }
 
-    DirectoryEntry entry;
-    if (tracePath(&entry, "/dev", INODE_TYPE_DIRECTORY) == RESULT_SUCCESS) {
-        printf(TERMINAL_LEVEL_OUTPUT, "Virtual device installed\n");
-    }
+    printLOGO();
 
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
@@ -130,21 +74,12 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     kFree(arr2);
 
     do {
-        if (tracePath(&entry, "/dev/tty", INODE_TYPE_DEVICE) == RESULT_FAIL) {
-            printf(TERMINAL_LEVEL_OUTPUT, "TTY NOT EXIST\n");
-            break;
-        }
-
-        printf(TERMINAL_LEVEL_OUTPUT, "ENTRY: %llX %s %u\n", entry.iNodeID, entry.name, entry.type);
-
         int ttyFile = -1;
         if ((ttyFile = fileOpen("/dev/tty")) == -1) {
             printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", getCurrentProcess()->errorCode);
             break;
         }
 
-        File* filePtr = getFileFromSlot(getCurrentProcess(), ttyFile);
-        printf(TERMINAL_LEVEL_OUTPUT, "FILE: %p %p %p\n", filePtr, filePtr->iNode, filePtr->operations);
         fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
 
         fileRead(ttyFile, str, -1);
@@ -156,4 +91,16 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);
 
     die();
+}
+
+static void printLOGO() {
+    char* buffer = allocateBuffer(BUFFER_SIZE_512);
+    int file = fileOpen("/LOGO.txt");
+    fileSeek(file, 0, FSUTIL_SEEK_END);
+    size_t fileSize = fileGetPointer(file);
+    fileSeek(file, 0, FSUTIL_SEEK_BEGIN);
+    size_t read = fileRead(file, buffer, fileSize);
+    printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", fileSize, buffer);
+    fileClose(file);
+    releaseBuffer(buffer, BUFFER_SIZE_512);
 }

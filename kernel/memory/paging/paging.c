@@ -80,9 +80,9 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
     blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (uint64_t)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 
-void initPaging() {
+Result initPaging() {
     if (KERNEL_PHYSICAL_END % PAGE_SIZE != 0) {
-        blowup("Page size not match\n");
+        return RESULT_FAIL;
     }
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
@@ -94,6 +94,8 @@ void initPaging() {
     SWITCH_TO_TABLE((PML4Table*)sysInfo->kernelTable);
 
     registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
+
+    return RESULT_SUCCESS;
 }
 
 void* translateVaddr(PML4Table* pageTable, void* vAddr) {

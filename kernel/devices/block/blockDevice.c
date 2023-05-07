@@ -10,10 +10,12 @@
 static HashTable _hashTable;
 static SinglyLinkedList _hashChains[16];
 
-void initBlockDeviceManager() {
+Result initBlockDevice() {
     initHashTable(&_hashTable, 16, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
         return (size_t)key % 13;
     }));
+
+    return RESULT_SUCCESS;
 }
 
 BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {

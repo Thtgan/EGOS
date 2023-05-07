@@ -39,7 +39,7 @@ void schedule(ProcessStatus newStatus) {
     }
 }
 
-void initSchedule() {
+Result initSchedule() {
     for (int i = 0; i < PROCESS_STATUS_NUM; ++i) {
         initQueue(&statusQueues[i]);
     }
@@ -49,6 +49,8 @@ void initSchedule() {
     if (forkFromCurrentProcess("Idle") == NULL) {
         idle();
     }
+
+    return RESULT_SUCCESS;
 }
 
 void setProcessStatus(Process* process, ProcessStatus status) {

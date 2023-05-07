@@ -51,9 +51,11 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
 };
 
 /**
- * @brief Initialize the block device manager
+ * @brief Initialize the block device
+ * 
+ * @return Result Result of the operation
  */
-void initBlockDeviceManager();
+Result initBlockDevice();
 
 /**
  * @brief Create a block device, with basic information set, other information lisk additional information must be set manually

@@ -245,7 +245,7 @@ ISR_FUNC_HEADER(__channel2Handler) {
     }
 }
 
-void initHardDisk() {
+Result initHardDisk() {
     registerISR(0x2E, __channel1Handler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     registerISR(0x2F, __channel2Handler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     for (int i = 0; i < 2; ++i) {
@@ -281,6 +281,8 @@ void initHardDisk() {
             __registerDiskBlockDevice(d);   //Register as the block device
         }
     }
+
+    return RESULT_SUCCESS;
 }
 
 static void __resetChannel(const Channel* c) {

@@ -2,6 +2,7 @@
 #define __KEYBOARD_H
 
 #include<kit/bit.h>
+#include<kit/types.h>
 
 typedef struct {
     uint8_t ascii, alt_ascii;
@@ -113,7 +114,9 @@ typedef struct {
 
 /**
  * @brief Initialize the keyboard
+ * 
+ * @return Result Result of the operation
  */
-void initKeyboard();
+Result initKeyboard();
 
 #endif // __KEYBOARD_H

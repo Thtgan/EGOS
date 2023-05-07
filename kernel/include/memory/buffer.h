@@ -17,8 +17,10 @@ typedef enum {
 
 /**
  * @brief Initialize the buffer allocation
+ * 
+ * @return Result Result of the operation
  */
-void initBuffer();
+Result initBuffer();
 
 /**
  * @brief Get the total num of buffer in given size

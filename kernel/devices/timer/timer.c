@@ -3,7 +3,7 @@
 #include<devices/timer/PIT.h>
 #include<kit/types.h>
 
-void initTimer() {
+Result initTimer() {
     initPIT();
 }
 

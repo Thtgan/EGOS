@@ -39,7 +39,7 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     blowup("DEAD\n");
 }
 
-void initIDT() {
+Result initIDT() {
     idtDesc.size = (uint16_t)sizeof(IDTtable) - 1;  //Initialize the IDT desc
     idtDesc.tablePtr = (uint64_t)IDTtable;
 
@@ -58,6 +58,8 @@ void initIDT() {
     //Bloody lesson, I have struggled for why IRQ 14 and 15 cannot be rised for a whole day!
 
     asm volatile ("lidt %0" : : "m" (idtDesc));
+
+    return RESULT_SUCCESS;
 }
 
 void registerISR(uint8_t vector, void* isr, uint8_t attributes) {

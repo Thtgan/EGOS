@@ -20,16 +20,22 @@ SinglyLinkedList bufferLists[9];
  * @brief Add a page to the buffer list, increase only for now
  * 
  * @param size Buffer size
+ * 
+ * @return Result Result of the operation
  */
-void __addPage(BufferSizes size);
+Result __addPage(BufferSizes size);
 
-void initBuffer() {
+Result initBuffer() {
     for (int i = 0; i < 9; ++i) {
         initSinglyLinkedList(&bufferLists[i]);
 
         _bufferNums[i] = _freeBufferNums[i] = 0;
-        __addPage((BufferSizes)i);
+        if (__addPage((BufferSizes)i) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
     }
+
+    return RESULT_SUCCESS;
 }
 
 size_t getTotalBufferNum(BufferSizes size) {
@@ -57,15 +63,21 @@ void releaseBuffer(void* buffer, BufferSizes size) {
     singlyLinkedListInsertNext(&bufferLists[size], node);
 }
 
-void __addPage(BufferSizes size) {
+Result __addPage(BufferSizes size) {
     _bufferNums[size] += PAGE_SIZE / _bufferSizes[size];
     _freeBufferNums[size] += PAGE_SIZE / _bufferSizes[size];
 
     void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_NORMAL);
+    if (page == NULL) {
+        return RESULT_FAIL;
+    }
+
     for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[size]) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)(page + j);
         initSinglyLinkedListNode(node);
 
         singlyLinkedListInsertNext(&bufferLists[size], node);
     }
+
+    return RESULT_SUCCESS;
 }

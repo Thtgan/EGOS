@@ -8,7 +8,6 @@
 #include<memory/pageAlloc.h>
 #include<memory/physicalPages.h>
 #include<memory/paging/paging.h>
-#include<print.h>
 #include<system/address.h>
 #include<system/memoryMap.h>
 
@@ -17,30 +16,28 @@
  */
 void __E820Audit();
 
-/**
- * @brief Print the info about memory map, including the num of the detected memory areas, base address, length, type for each areas
- */
-static void __printMemoryAreas();
-
-void initMemory() {
+Result initMemory() {
     __E820Audit();
 
-    initPaging();
+    if (initPaging() == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
-    initPhysicalPage();
+    if (initPhysicalPage() == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    printf(TERMINAL_LEVEL_DEBUG, "Direct Page table takes %u pages\n", mMap->directPageTableEnd - mMap->directPageTableBegin);
-    printf(TERMINAL_LEVEL_DEBUG, "Physical page structs takes %u pages\n", mMap->physicalPageStructEnd - mMap->physicalPageStructBegin);
-    printf(TERMINAL_LEVEL_DEBUG, "Free page space: %u pages\n", mMap->freePageEnd - mMap->freePageBegin);
 
     initPageAlloc();
 
     initKmalloc();
 
-    initBuffer();
+    if (initBuffer() == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
-    printf(TERMINAL_LEVEL_DEBUG, "Memory Ready\n");
+    return RESULT_SUCCESS;
 }
 
 void* memcpy(void* des, const void* src, size_t n) {
@@ -101,8 +98,6 @@ void* memmove(void* des, const void* src, size_t n) {
 }
 
 void __E820Audit() {
-    __printMemoryAreas();
-
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
 
     mMap->freePageBegin = FREE_PAGE_BEGIN >> PAGE_SIZE_SHIFT;
@@ -119,16 +114,5 @@ void __E820Audit() {
             mMap->freePageEnd = endOfRegion;
             break;
         }
-    }
-}
-
-static void __printMemoryAreas() {
-    const MemoryMap* mMap = (const MemoryMap*)sysInfo->memoryMap;
-
-    printf(TERMINAL_LEVEL_DEBUG, "%d memory areas detected\n", mMap->entryNum);
-    printf(TERMINAL_LEVEL_DEBUG, "|     Base Address     |     Area Length     | Type |\n");
-    for (int i = 0; i < mMap->entryNum; ++i) {
-        const MemoryMapEntry* e = &mMap->memoryMapEntries[i];
-        printf(TERMINAL_LEVEL_DEBUG, "| %#018llX   | %#018llX  | %#04X |\n", e->base, e->size, e->type);
     }
 }

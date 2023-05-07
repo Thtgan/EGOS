@@ -1,6 +1,7 @@
 #if !defined(__SCHEDULE_H)
 #define __SCHEDULE_H
 
+#include<kit/types.h>
 #include<multitask/process.h>
 
 /**
@@ -10,8 +11,10 @@ void schedule(ProcessStatus newStatus);
 
 /**
  * @brief Initialize the schedule
+ * 
+ * @return Result Result of the operation
  */
-void initSchedule();
+Result initSchedule();
 
 /**
  * @brief Change the status of process, and add it to the end of corresponding queue

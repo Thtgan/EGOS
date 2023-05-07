@@ -2,6 +2,7 @@
 #define __TERMINAL_SWITCH_H
 
 #include<devices/terminal/terminal.h>
+#include<kit/types.h>
 
 typedef enum {
     TERMINAL_LEVEL_OUTPUT,
@@ -12,8 +13,10 @@ typedef enum {
 
 /**
  * @brief Initialize the terminal's switch
+ * 
+ * @return Result Result of the operation
  */
-void initTerminalSwitch();
+Result initTerminalSwitch();
 
 /**
  * @brief Switch terminal to specific level

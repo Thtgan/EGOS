@@ -122,7 +122,7 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
     }), format, args);
 
     if (terminal == getCurrentTerminal()) {
-        displayFlush();
+        flushDisplay();
     }
     return ret;
 }
@@ -143,7 +143,7 @@ int putchar(TerminalLevel level, int ch) {
     terminalOutputChar(terminal, ch);
 
     if (terminal == getCurrentTerminal()) {
-        displayFlush();
+        flushDisplay();
     }
 
     return ch;

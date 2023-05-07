@@ -5,8 +5,10 @@
 
 /**
  * @brief Initialize the memory, enable paging and memory allocation
+ * 
+ * @return Result Result of the operation
  */
-void initMemory();
+Result initMemory();
 
 /**
  * @brief Copy data from source to destination, overlap not handled
