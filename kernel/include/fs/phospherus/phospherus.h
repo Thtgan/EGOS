@@ -7,39 +7,41 @@
 #include<kit/types.h>
 
 /**
- * @brief Initialize the phospherus file system
+ * @brief Initialize the phospherus file system, sets errorcode to indicate error
+ * @return Result Result of the operation
  */
-void phospherusInitFileSystem();
+Result phospherusInitFileSystem();
 
 /**
- * @brief Deploy phospherus file system on device
+ * @brief Deploy phospherus file system on device, sets errorcode to indicate error
  * 
  * @param device Device to mount the phospherus file system
- * @return Is deployment succeeded
+ * @return Result Result of the operation
  */
-int phospherusDeployFileSystem(BlockDevice* device);
+Result phospherusDeployFileSystem(BlockDevice* device);
 
 /**
- * @brief Check if the device has phospherus deployed
+ * @brief Check if the device has phospherus deployed, sets errorcode to indicate error
  * 
  * @param device Device to check
- * @return Is the device has phospherus deployed
+ * @return Result Result of the operation
  */
-int phospherusCheckFileSystem(BlockDevice* device);
+Result phospherusCheckFileSystem(BlockDevice* device);
 
 /**
- * @brief Open phospherus file system on device
+ * @brief Open phospherus file system on device, sets errorcode to indicate error
  * 
  * @param device Device has phospherus deployed
- * @return FileSystem* OPened file system
+ * @return FileSystem* Opened file system, NULL if failed
  */
 FileSystem* phospherusOpenFileSystem(BlockDevice* device);
 
 /**
- * @brief Close a opened phospherus file system, cannot close a closed file system
+ * @brief Close a opened phospherus file system, cannot close a closed file system, sets errorcode to indicate error
  * 
- * @param fs Fiel system to close
+ * @param fs File system to close
+ * @return Result Result of the operation
  */
-void phospherusCloseFileSystem(FileSystem* fs);
+Result phospherusCloseFileSystem(FileSystem* fs);
 
 #endif // __PHOSPHERUS_H

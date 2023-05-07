@@ -27,10 +27,10 @@ void vectorClear(Vector* vector) {
     memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
 }
 
-bool vectorResize(Vector* vector, size_t newCapacity) {
+Result vectorResize(Vector* vector, size_t newCapacity) {
     Object* newStorage = kMalloc(newCapacity * sizeof(Object), MEMORY_TYPE_NORMAL);
     if (newStorage == NULL) {
-        return false;
+        return RESULT_FAIL;
     }
 
     vector->capacity = newCapacity;
@@ -39,59 +39,59 @@ bool vectorResize(Vector* vector, size_t newCapacity) {
     kFree(vector->storage);
     vector->storage = newStorage;
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
-bool vectorGet(Vector* vector, Index64 index, Object* retPtr) {
+Result vectorGet(Vector* vector, Index64 index, Object* retPtr) {
     if (index >= vector->size) {
-        return false;
+        return RESULT_FAIL;
     }
 
     *retPtr = vector->storage[index];
-    return true;
+    return RESULT_SUCCESS;
 }
 
-bool vectorSet(Vector* vector, Index64 index, Object item) {
+Result vectorSet(Vector* vector, Index64 index, Object item) {
     if (index >= vector->size) {
-        return false;
+        return RESULT_FAIL;
     }
 
     vector->storage[index] = item;
-    return true;
+    return RESULT_SUCCESS;
 }
 
-bool vectorErase(Vector* vector, Index64 index) {
+Result vectorErase(Vector* vector, Index64 index) {
     if (index >= vector->size) {
-        return false;
+        return RESULT_FAIL;
     }
 
     memmove(vector->storage + index, vector->storage + index + 1, (vector->capacity - index - 1) * sizeof(Object));
-    return true;
+    return RESULT_SUCCESS;
 }
 
-bool vectorBack(Vector* vector, Object* retPtr) {
+Result vectorBack(Vector* vector, Object* retPtr) {
     if (vectorIsEmpty(vector)) {
-        return false;
+        return RESULT_FAIL;
     }
 
     *retPtr = vector->storage[vector->size - 1];
-    return true;
+    return RESULT_SUCCESS;
 }
 
-bool vectorPush(Vector* vector, Object item) {
-    if (vector->size == vector->capacity && !vectorResize(vector, ((vector->capacity * sizeof(Object) + KMALLOC_HEADER_SIZE) * 2 - KMALLOC_HEADER_SIZE) / sizeof(Object))) {
-        return false;
+Result vectorPush(Vector* vector, Object item) {
+    if (vector->size == vector->capacity && vectorResize(vector, ((vector->capacity * sizeof(Object) + KMALLOC_HEADER_SIZE) * 2 - KMALLOC_HEADER_SIZE) / sizeof(Object)) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
     vector->storage[vector->size++] = item;
-    return true;
+    return RESULT_SUCCESS;
 }
 
-bool vectorPop(Vector* vector) {
+Result vectorPop(Vector* vector) {
     if (vectorIsEmpty(vector)) {
-        return false;
+        return RESULT_FAIL;
     }
 
     vector->storage[vector->size--] = OBJECT_NULL;
-    return true;
+    return RESULT_SUCCESS;
 }

@@ -1,8 +1,8 @@
 #include<devices/hardDisk/hardDisk.h>
 
+#include<error.h>
 #include<debug.h>
 #include<devices/block/blockDevice.h>
-#include<devices/block/blockDeviceTypes.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<devices/timer/timer.h>
 #include<interrupt/IDT.h>
@@ -141,9 +141,9 @@ static void __registerDiskBlockDevice(Disk* d);
  */
 static bool __checkBootDisk(Disk* d);
 
-static int __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n);
+static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n);
 
-static int __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n);
+static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n);
 
 static BlockDeviceOperation _operations = {
     .readBlocks = __readBlocks,
@@ -370,14 +370,14 @@ static bool __checkBootDisk(Disk* d) {
     return ret;
 }
 
-static int __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n) {
+static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-static int __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n) {
+static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n) {
     Disk* d = (Disk*)this->additionalData;
     __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
-    return 0;
+    return RESULT_SUCCESS;
 }

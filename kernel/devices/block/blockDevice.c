@@ -1,6 +1,5 @@
 #include<devices/block/blockDevice.h>
 
-#include<devices/block/blockDeviceTypes.h>
 #include<kit/types.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
@@ -42,14 +41,8 @@ void releaseBlockDevice(BlockDevice* device) {
     kFree(device);
 }
 
-bool registerBlockDevice(BlockDevice* device) {
-    if (hashTableFind(&_hashTable, (Object)device->deviceID) != NULL) {
-        return false;
-    }
-
-    hashTableInsert(&_hashTable, (Object)device->deviceID, &device->hashChainNode);
-
-    return true;
+Result registerBlockDevice(BlockDevice* device) {
+    return hashTableInsert(&_hashTable, (Object)device->deviceID, &device->hashChainNode);
 }
 
 BlockDevice* unregisterBlockDevice(ID deviceID) {

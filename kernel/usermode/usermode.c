@@ -35,6 +35,8 @@ __attribute__((naked))
  */
 void __syscallHandlerExit(int ret);
 
+static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, int* retPtr);
+
 void initUsermode() {
     initSyscall();
 
@@ -42,87 +44,25 @@ void initUsermode() {
 }
 
 int execute(ConstCstring path) {
-    DirectoryEntry entry;
-    if (tracePath(&entry, path, INODE_TYPE_FILE) == -1) {
-        return -1;
-    }
+    iNode* iNode = NULL;
+    File* file = NULL;
+    int ret = -1;
 
-    iNode* iNode = rawInodeOpen(entry.iNodeID);
-    File* file = rawFileOpen(iNode);
+    Result res = __doExecute(path, &iNode, &file, &ret);
 
-    ELF64Header header;
-    if (readELF64Header(file, &header) == -1) {
-        return -1;
-    }
-
-    ELF64ProgramHeader programHeader;
-    for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (readELF64ProgramHeader(file, &header, &programHeader, i) == -1) {
-            rawFileClose(file);
-            rawInodeClose(iNode);
-            return -1;
-        }
-
-        if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
-            continue;
-        }
-
-        if (!checkELF64ProgramHeader(&programHeader)) {
-            rawFileClose(file);
-            rawInodeClose(iNode);
-            SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_VERIFIVCATION_FAIL);
-            return -1;
-        }
-
-        if (loadELF64Program(file, &programHeader) == -1) {
-            rawFileClose(file);
-            rawInodeClose(iNode);
-            return -1;
+    if (file != NULL) {
+        if (rawFileClose(file) == RESULT_FAIL) {
+            return RESULT_FAIL;
         }
     }
 
-    Process* process = getCurrentProcess();
-    PML4Table* pageTable = process->pageTable;
-    for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        if (translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i) == NULL) {
-            mapAddr(pageTable, (void*)USER_STACK_BOTTOM - i, pageAlloc(1, PHYSICAL_PAGE_TYPE_USER_STACK));
+    if (iNode != NULL) {
+        if (rawInodeClose(iNode) == RESULT_FAIL) {
+            return RESULT_FAIL;
         }
     }
 
-    asm volatile(
-        "pushq $0;"         //Reserved for return value
-        SAVE_ALL_NO_FRAME   //Save context
-    );
-    process->userExitStackTop = (void*)readRegister_RSP_64();
-    __jumpToUserMode((void*)header.entryVaddr, (void*)USER_STACK_BOTTOM);
-    asm volatile (
-        "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
-        :
-        : "i"(sizeof(RegisterSet))
-    );
-
-    asm volatile(RESTORE_ALL);  //Restore context
-
-    for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        readELF64ProgramHeader(file, &header, &programHeader, i);
-        if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
-            continue;
-        }
-
-        unloadELF64Program(&programHeader);
-    }
-
-    for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
-    }
-
-    rawFileClose(file);
-    rawInodeClose(iNode);
-
-    register int ret asm("rax");
-    asm volatile("pop %rax");
-
-    return ret;
+    return res == RESULT_FAIL ? -1 : ret;
 }
 
 __attribute__((naked))
@@ -159,4 +99,106 @@ void __syscallHandlerExit(int ret) {
         :
         : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(getCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
     );
+}
+
+static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, int* retPtr) {
+    DirectoryEntry entry;
+    if (tracePath(&entry, path, INODE_TYPE_FILE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    iNode* iNode = NULL;
+    *iNodePtr = iNode = rawInodeOpen(entry.iNodeID);
+    if (iNode == NULL) {
+        return RESULT_FAIL;
+    }
+
+    File* file = NULL;
+    *filePtr = file = rawFileOpen(iNode);
+    if (file == NULL) {
+        return RESULT_FAIL;
+    }
+
+    ELF64Header header;
+    if (readELF64Header(file, &header) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    ELF64ProgramHeader programHeader;
+    for (int i = 0; i < header.programHeaderEntryNum; ++i) {
+        if (readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
+            continue;
+        }
+
+        if (checkELF64ProgramHeader(&programHeader) == RESULT_FAIL) {
+            SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_VERIFIVCATION_FAIL);
+            return RESULT_FAIL;
+        }
+
+        if (loadELF64Program(file, &programHeader) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
+    Process* process = getCurrentProcess();
+    PML4Table* pageTable = process->pageTable;
+    for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+        if (translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i) == NULL) {
+            void* pAddr = pageAlloc(1, PHYSICAL_PAGE_TYPE_USER_STACK);
+            if (pAddr == NULL) {
+                return RESULT_FAIL;
+            }
+
+            if (mapAddr(pageTable, (void*)USER_STACK_BOTTOM - i, pAddr) == RESULT_FAIL) {
+                return RESULT_FAIL;
+            }
+        }
+    }
+
+    asm volatile(
+        "pushq $0;"         //Reserved for return value
+        SAVE_ALL_NO_FRAME   //Save context
+    );
+    process->userExitStackTop = (void*)readRegister_RSP_64();
+    __jumpToUserMode((void*)header.entryVaddr, (void*)USER_STACK_BOTTOM);
+    asm volatile (
+        "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
+        :
+        : "i"(sizeof(RegisterSet))
+    );
+
+    asm volatile(RESTORE_ALL);  //Restore context
+
+    for (int i = 0; i < header.programHeaderEntryNum; ++i) {
+        if (readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
+            continue;
+        }
+
+        if (unloadELF64Program(&programHeader) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
+    for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+        void* pAddr = translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i);
+        if (pAddr == NULL) {
+            return RESULT_FAIL;
+        }
+        pageFree(pAddr, 1);
+    }
+
+    asm volatile(
+        "pop %0"
+        : "=m"(*retPtr)
+    );
+
+    return RESULT_SUCCESS;
 }

@@ -13,9 +13,9 @@ void initFSManager();
  * @brief Register file system to manager
  * 
  * @param fs File system to register
- * @return bool Is operation succeeded?
+ * @return Result Result of the operation
  */
-bool registerDeviceFS(FileSystem* fs);
+Result registerDeviceFS(FileSystem* fs);
 
 /**
  * @brief Unregister file system

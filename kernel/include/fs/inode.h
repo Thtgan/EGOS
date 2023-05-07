@@ -44,71 +44,71 @@ typedef struct __RecordOnDevice RecordOnDevice;
 
 STRUCT_PRIVATE_DEFINE(iNodeOperations) {
     /**
-     * @brief Resize the inode, will truncate the data if the removed part contains the data
+     * @brief Resize the inode, will truncate the data if the removed part contains the data, sets errorcode to indicate error
      * 
      * @param iNode iNode
      * @param newBlockSize New size to resize to
-     * @return int Status of the operation
+     * @return Result Result of the operation
      */
-    int (*resize)(iNode* iNode, size_t newBlockSize);
+    Result (*resize)(iNode* iNode, size_t newBlockSize);
 
     /**
-     * @brief Read the data inside the iNode
+     * @brief Read the data inside the iNode, sets errorcode to indicate error
      * 
      * @param iNode iNode
      * @param buffer Buffer to write to
      * @param blockIndexInNode First block to read, start from the beginning of the iNode
      * @param blockSize How many block(s) to read
-     * @return int Status of the operation
+     * @return Result Result of the operation
      */
-    int (*readBlocks)(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize);
+    Result (*readBlocks)(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize);
 
     /**
-     * @brief Write the data inside the iNode
+     * @brief Write the data inside the iNode, sets errorcode to indicate error
      * 
      * @param iNode iNode
      * @param buffer Buffer to read from
      * @param blockIndexInNode First block to write, start from the beginning of the iNode
      * @param blockSize How many block(s) to write
-     * @return int Status of the operation
+     * @return Result Result of the operation
      */
-    int (*writeBlocks)(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
+    Result (*writeBlocks)(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
 };
 
 /**
- * @brief Packed function of iNode operation
+ * @brief Packed function of iNode operation, sets errorcode to indicate error
  * 
  * @param iNode iNode
  * @param newBlockSize New block size to resize to 
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-static inline int rawInodeResize(iNode* iNode, size_t newBlockSize) {
+static inline Result rawInodeResize(iNode* iNode, size_t newBlockSize) {
     return iNode->operations->resize(iNode, newBlockSize);
 }
 
 /**
- * @brief Packed function of iNode operation
+ * @brief Packed function of iNode operation, sets errorcode to indicate error
  * 
  * @param iNode iNode
  * @param buffer Buffer to write to
  * @param blockIndexInNode Index of first block to read from
  * @param blockSize Num of block(s) to read
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-static inline int rawInodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static inline Result rawInodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
     return iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 
 /**
- * @brief Packed function of iNode operation
+ * @brief Packed function of iNode operation, sets errorcode to indicate error
  * 
  * @param iNode iNode
  * @param buffer Buffer to read from
  * @param blockIndexInNode Index of first block to write to
  * @param blockSize Num of block(s) to write
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-static inline int rawInodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static inline Result rawInodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
     return iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 

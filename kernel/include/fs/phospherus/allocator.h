@@ -27,40 +27,41 @@ typedef struct {
 void phospherusInitAllocator();
 
 /**
- * @brief Check if the block device has the phospherus' super node deployed
+ * @brief Check if the block device has the phospherus' super node deployed, sets errorcode to indicate error
  * 
  * @param device Block device
- * @return If the device has super node deployed
+ * @return Result If the device has super node deployed
  */
-int phospherusCheckBlockDevice(BlockDevice* device);
+Result phospherusCheckBlockDevice(BlockDevice* device);
 
 /**
- * @brief Deploy the essential data to the device, the block device must have at least one cluster free
+ * @brief Deploy the essential data to the device, the block device must have at least one cluster free, sets errorcode to indicate error
  * 
  * @param device Block device to deploy
- * @return Does the deploy succeeded
+ * @return Result Result of the operation
  */
-int phospherusDeployAllocator(BlockDevice* device);
+Result phospherusDeployAllocator(BlockDevice* device);
 
 /**
- * @brief Open the allocator from the disk
+ * @brief Open the allocator from the disk, sets errorcode to indicate error
  * 
- * @param device Block device involved
+ * @param device Block device opened, NULL if error happens
  */
 PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device);
 
 /**
- * @brief Close the allocator, make it unavailable for operation
+ * @brief Close the allocator, make it unavailable for operation, sets errorcode to indicate error
  * 
- * @param allocator Allocator to unload
+ * @param allocator Allocator to close
+ * @return Result Result of the operation
  */
-void phospherusCloseAllocator(PhospherusAllocator* allocator);
+Result phospherusCloseAllocator(PhospherusAllocator* allocator);
 
 /**
- * @brief Allocate a cluster
+ * @brief Allocate a cluster, sets errorcode to indicate error
  * 
  * @param allocator Allocator
- * @return Index64 First index of the cluster, PHOSPHERUS_NULL if allocate failed
+ * @return Index64 First index of the cluster, INVALID_INDEX if error happens
  */
 Index64 phospherusAllocateCluster(PhospherusAllocator* allocator);
 
@@ -69,8 +70,9 @@ Index64 phospherusAllocateCluster(PhospherusAllocator* allocator);
  * 
  * @param allocator Allocator
  * @param cluster First index of the cluster to release
+ * @return Result Result of the operation
  */
-void phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster);
+Result phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster);
 
 /**
  * @brief Get the remaining free cluster num on allocator
@@ -81,10 +83,10 @@ void phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster);
 size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator);
 
 /**
- * @brief Allocate a block
+ * @brief Allocate a block, sets errorcode to indicate error
  * 
  * @param allocator Allocator
- * @return Index64 Index of the block, PHOSPHERUS_NULL if allocate failed
+ * @return Index64 Index of the block, INVALID_INDEX if error happens
  */
 Index64 phospherusAllocateBlock(PhospherusAllocator* allocator);
 
@@ -93,8 +95,9 @@ Index64 phospherusAllocateBlock(PhospherusAllocator* allocator);
  * 
  * @param allocator Allocator
  * @param block Index of the block to release
+ * @return Result Result of the operation
  */
-void phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block);
+Result phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block);
 
 #endif // __PHOSPHERUS_ALLOCATOR
 

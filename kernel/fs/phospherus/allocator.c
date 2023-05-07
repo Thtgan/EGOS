@@ -60,6 +60,7 @@ typedef struct {
     uint64_t signature2;    //Signature for validation
 } __attribute__((packed)) __SuperNodeInfo;
 
+#define __SUPER_NODE_INFO_OFFSET    (offsetof(__SuperNode, info) / BLOCK_SIZE)
 #define __SUPER_NODE_INFO_SIZE      (sizeof(__SuperNodeInfo) / BLOCK_SIZE)
 
 typedef struct {
@@ -99,50 +100,300 @@ typedef struct {
 static HashTable _hashTable;
 static SinglyLinkedList _hashChains[32];
 
+static Result __doDeployAllocator(BlockDevice* device, __DeviceInfo** infoPtr, __SuperNode** superNodePtr);
+
+static Result __doReleaseCluster(PhospherusAllocator* allocator, Index64 cluster, void** belongToPtr, void** tailSuperNodeInfoPtr);
+
+static Index64 __doAllocateBlock(PhospherusAllocator* allocator, void** blockStackPtr);
+
+static Result __doReleaseBlock(PhospherusAllocator* allocator, Index64 block, void** belongToPtr, void** tailBlockStackPtr);
+
 void phospherusInitAllocator() {
     initHashTable(&_hashTable, 32, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
         return (size_t)key % 31;
     }));
 }
 
-int phospherusCheckBlockDevice(BlockDevice* device) {
+Result phospherusCheckBlockDevice(BlockDevice* device) {
     __SuperNodeInfo* rootSuperNodeInfo = allocateBuffer(BUFFER_SIZE_512);
-    blockDeviceReadBlocks(device, ROOT_SUPER_NODE_INDEX, rootSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
+
+    if (rootSuperNodeInfo == NULL || blockDeviceReadBlocks(device, ROOT_SUPER_NODE_INDEX, rootSuperNodeInfo, __SUPER_NODE_INFO_SIZE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
     if (rootSuperNodeInfo->signature1 != SYSTEM_INFO_MAGIC64 || rootSuperNodeInfo->signature2 != SYSTEM_INFO_MAGIC64) {
+        releaseBuffer(rootSuperNodeInfo, BUFFER_SIZE_512);
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
-        return -1;
+        return RESULT_FAIL;
     }
 
     releaseBuffer(rootSuperNodeInfo, BUFFER_SIZE_512);
 
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-int phospherusDeployAllocator(BlockDevice* device) {
+Result phospherusDeployAllocator(BlockDevice* device) {
+    __DeviceInfo* info = NULL;
+    __SuperNode* superNode = NULL;
+
+    Result ret = __doDeployAllocator(device, &info, &superNode);
+
+    if (superNode != NULL) {
+        releaseBuffer(superNode, BUFFER_SIZE_4096);
+    }
+
+    if (info != NULL) {
+        releaseBuffer(info, BUFFER_SIZE_512);
+    }
+
+    return ret;
+}
+
+PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
+    PhospherusAllocator* ret = NULL;
+
+    HashChainNode* node = NULL;
+    if ((node = hashTableFind(&_hashTable, (Object)device->deviceID)) != NULL) { //If allocator opened, give a reference
+        ret = HOST_POINTER(node, PhospherusAllocator, hashChainNode);
+        ++ret->openCnt;
+        return ret;
+    }
+
+    __DeviceInfo* deviceInfo = NULL;
+    __SuperNodeInfo* firstFreeSuperNode = NULL;
+    __BlockStack * firstFreeBlockStack = NULL;
+
+    bool abort = false;
+    do {
+        if (abort = (
+            (ret = kMalloc(sizeof(PhospherusAllocator), MEMORY_TYPE_NORMAL)) == NULL
+            )) {
+            break;
+        }
+
+        if (abort = (
+            (deviceInfo = kMalloc(sizeof(__DeviceInfo), MEMORY_TYPE_NORMAL)) == NULL
+            )) {
+            break;
+        }
+
+        if (abort = (
+            (firstFreeSuperNode = kMalloc(sizeof(__SuperNode), MEMORY_TYPE_NORMAL)) == NULL
+            )) {
+            break;
+        }
+
+        if (abort = (
+            (firstFreeBlockStack = kMalloc(sizeof(__BlockStack), MEMORY_TYPE_NORMAL)) == NULL
+            )) {
+            break;
+        }
+
+        if (abort = (
+            blockDeviceReadBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE) == RESULT_FAIL
+            )) {
+            break;
+        }
+
+        if (deviceInfo->firstFreeSuperNode != INVALID_INDEX) {
+            if (abort = (
+                blockDeviceReadBlocks(device, deviceInfo->firstFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE) == RESULT_FAIL
+                )) {
+                break;
+            }
+        }
+
+        if (deviceInfo->firstFreeBlockStack != INVALID_INDEX) {
+            if (abort = (
+                blockDeviceReadBlocks(device, deviceInfo->firstFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE) == RESULT_FAIL
+                )) {
+                break;
+            }
+        }
+
+        ret->device = device;
+        ret->deviceInfo = deviceInfo;
+        ret->firstFreeSuperNode = firstFreeSuperNode;
+        ret->firstFreeBlockStack = firstFreeBlockStack;
+        ret->openCnt = 1;
+        initHashChainNode(&ret->hashChainNode);
+
+        if (abort = 
+            !hashTableInsert(&_hashTable, (Object)device->deviceID, &ret->hashChainNode)
+            ) {
+
+            SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+            break;
+        }
+    } while (0);
+
+    if (abort) {
+        if (firstFreeBlockStack != NULL) {
+            kFree(firstFreeBlockStack);
+        }
+
+        if (firstFreeSuperNode != NULL) {
+            kFree(firstFreeSuperNode);
+        }
+
+        if (deviceInfo != NULL) {
+            kFree(deviceInfo);
+        }
+
+        if (ret != NULL) {
+            kFree(ret);
+        }
+
+        return NULL;
+    }
+
+    return ret;
+}
+
+Result phospherusCloseAllocator(PhospherusAllocator* allocator) {
+    if (--allocator->openCnt > 0) {
+        return RESULT_SUCCESS;
+    }
+
+    BlockDevice* device = allocator->device;
+    if (hashTableDelete(&_hashTable, (Object)device->deviceID) == NULL) {
+        SET_ERROR_CODE(ERROR_OBJECT_DATA, ERROR_STATUS_NOT_FOUND);
+        return RESULT_FAIL;
+    }
+
+    kFree(allocator->deviceInfo);
+    kFree(allocator->firstFreeSuperNode);
+    kFree(allocator->firstFreeBlockStack);
+    allocator->deviceInfo = allocator->firstFreeSuperNode = allocator->firstFreeBlockStack = NULL;
+    kFree(allocator);
+
+    return RESULT_SUCCESS;
+}
+
+Index64 phospherusAllocateCluster(PhospherusAllocator* allocator) {
+    BlockDevice* device = allocator->device;
+    __DeviceInfo* deviceInfo = allocator->deviceInfo;
+    __SuperNode* firstFreeSuperNode = allocator->firstFreeSuperNode;
+
+    if (deviceInfo->deviceFreeClusterNum == 0 || deviceInfo->firstFreeSuperNode == INVALID_INDEX) {         //Theoretically, these two can be true iff at the same time
+        return INVALID_INDEX;
+    }
+
+    __ClusterStack* stack = &firstFreeSuperNode->stack;
+    __SuperNodeInfo* info = &firstFreeSuperNode->info;
+
+    Index64 ret = POP_CLUSTER(stack);   //Pop one cluster from stack
+    if (blockDeviceWriteBlocks(device, info->blockIndex + __SUPER_NODE_STACK_OFFSET, stack, __SUPER_NODE_STACK_SIZE) == RESULT_FAIL) {  //Save the stack
+        return INVALID_INDEX;
+    }
+
+    bool empty = CLUSTER_STACK_EMPTY(stack);
+    if (empty) {
+        deviceInfo->firstFreeSuperNode = info->nextFreeSuperNode;
+        if (deviceInfo->firstFreeSuperNode == INVALID_INDEX) {
+            deviceInfo->lastFreeSuperNode = INVALID_INDEX;
+            memset(firstFreeSuperNode, 0, sizeof(__SuperNode));     //Destroy the invalid data
+        }
+    }
+
+    --deviceInfo->deviceFreeClusterNum;
+    //deviceInfo is very important for file system to work, if it is modified, no other errors shou happens before it is wrote back
+    if (blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE) == RESULT_FAIL) {    //Save root super node
+        return INVALID_INDEX;
+    }
+
+    if (empty) {
+        //Read new free super block, no need to modify old free super block's info
+        if (deviceInfo->firstFreeSuperNode != INVALID_INDEX && blockDeviceReadBlocks(device, deviceInfo->firstFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE) == RESULT_FAIL) {
+            return INVALID_INDEX;
+        }
+    }
+
+    return ret;
+}
+
+Result phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster) {
+    void* belongTo = NULL, * tailSuperNodeInfo = NULL;
+
+    Result ret = __doReleaseCluster(allocator, cluster, &belongTo, &tailSuperNodeInfo);
+
+    if (belongTo != NULL) {
+        releaseBuffer(belongTo, BUFFER_SIZE_4096);
+    }
+
+    if (tailSuperNodeInfo != NULL) {
+        releaseBuffer(tailSuperNodeInfo, BUFFER_SIZE_512);
+    }
+}
+
+size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator) {
+    __DeviceInfo* deviceInfo = allocator->deviceInfo;
+    return deviceInfo->deviceFreeClusterNum;
+}
+
+Index64 phospherusAllocateBlock(PhospherusAllocator* allocator) {
+    void* blockStack = NULL;
+
+    Index64 ret = __doAllocateBlock(allocator, &blockStack);
+
+    if (blockStack != NULL) {
+        releaseBuffer(blockStack, BUFFER_SIZE_512);
+    }
+
+    return ret;
+}
+
+Result phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block) {
+    void* belongTo = NULL, * tailBlockStack = NULL;
+
+    Result ret = __doReleaseBlock(allocator, block, &belongTo, &tailBlockStack);
+
+    if (belongTo != NULL) {
+        releaseBuffer(belongTo, BUFFER_SIZE_512);
+    }
+
+    if (tailBlockStack != NULL) {
+        releaseBuffer(tailBlockStack, BUFFER_SIZE_512);
+    }
+
+    return ret;
+}
+
+static Result __doDeployAllocator(BlockDevice* device, __DeviceInfo** infoPtr, __SuperNode** superNodePtr) {
     size_t deviceSize = device->availableBlockNum;
     size_t nodeNum = deviceSize / __SUPER_NODE_SPAN;
 
     if (nodeNum < 1) {   //The block device must have at least one node length free (1MB)
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NO_FREE_SPACE);
-        return -1;
+        return RESULT_FAIL;
     }
 
-    __DeviceInfo* info = allocateBuffer(BUFFER_SIZE_512);
-    //First free cluster of root super node is reserved for special purpose like root directory
+    __DeviceInfo* info = NULL;
+    *infoPtr = info = allocateBuffer(BUFFER_SIZE_512);
+    if (info == NULL) {
+        return RESULT_FAIL;
+    }
+
     info->signature = SYSTEM_INFO_MAGIC64;
+    //First free cluster of root super node is reserved for special purpose like root directory
     info->deviceFreeClusterNum = deviceSize / CLUSTER_BLOCK_SIZE - nodeNum - 1;
     info->firstFreeSuperNode = 0, info->lastFreeSuperNode = (nodeNum - 1) * __SUPER_NODE_SPAN;
     info->firstFreeBlockStack = info->lastFreeBlockStack = INVALID_INDEX;
-    blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, info, __DEVICE_INFO_SIZE);
-    releaseBuffer(info, BUFFER_SIZE_512);
-    
-    __SuperNode* node = allocateBuffer(BUFFER_SIZE_4096);
-    memset(node, 0, sizeof(__SuperNode));
+
+    if (blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, info, __DEVICE_INFO_SIZE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    __SuperNode* superNode = NULL;
+    *superNodePtr = superNode = allocateBuffer(BUFFER_SIZE_4096);
+    if (superNode == NULL) {
+        return RESULT_FAIL;
+    }
+    memset(superNode, 0, sizeof(__SuperNode));
 
     //Public info
-    __SuperNodeInfo* nodeInfo = &node->info;
-    __ClusterStack* stack = &node->stack;
+    __SuperNodeInfo* nodeInfo = &superNode->info;
+    __ClusterStack* stack = &superNode->stack;
     nodeInfo->signature1 = nodeInfo->signature2 = SYSTEM_INFO_MAGIC64;
 
     for (int i = 0; i < nodeNum; ++i) {
@@ -161,159 +412,94 @@ int phospherusDeployAllocator(BlockDevice* device) {
             }
         }
 
-        blockDeviceWriteBlocks(device, nodeInfo->blockIndex, node, __SUPER_NODE_SIZE);
-    }
-
-    releaseBuffer(node, BUFFER_SIZE_4096);
-
-    return 0;
-}
-
-PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
-    PhospherusAllocator* ret = NULL;
-    HashChainNode* node = NULL;
-    if ((node = hashTableFind(&_hashTable, (Object)device->deviceID)) != NULL) { //If allocator opened, give a reference
-        ret = HOST_POINTER(node, PhospherusAllocator, hashChainNode);
-        ++ret->openCnt;
-        return ret;
-    }
-
-    ret = kMalloc(sizeof(PhospherusAllocator), MEMORY_TYPE_NORMAL);
-    __DeviceInfo* deviceInfo = kMalloc(sizeof(__DeviceInfo), MEMORY_TYPE_NORMAL);
-    __SuperNodeInfo* firstFreeSuperNode = kMalloc(sizeof(__SuperNode), MEMORY_TYPE_NORMAL);
-    __BlockStack * firstFreeBlockStack = kMalloc(sizeof(__BlockStack), MEMORY_TYPE_NORMAL);
-
-    blockDeviceReadBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
-    if (deviceInfo->firstFreeSuperNode != INVALID_INDEX) {
-        blockDeviceReadBlocks(device, deviceInfo->firstFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE);
-    }
-    
-    if (deviceInfo->firstFreeBlockStack != INVALID_INDEX) {
-        blockDeviceReadBlocks(device, deviceInfo->firstFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
-    }
-
-    ret->device = device;
-    ret->deviceInfo = deviceInfo;
-    ret->firstFreeSuperNode = firstFreeSuperNode;
-    ret->firstFreeBlockStack = firstFreeBlockStack;
-    ret->openCnt = 1;
-    initHashChainNode(&ret->hashChainNode);
-
-    hashTableInsert(&_hashTable, (Object)device->deviceID, &ret->hashChainNode);
-
-    return ret;
-}
-
-void phospherusCloseAllocator(PhospherusAllocator* allocator) {
-    if (--allocator->openCnt > 0) {
-        return; //Something still using this, just return
-    }
-
-    BlockDevice* device = allocator->device;
-
-    hashTableDelete(&_hashTable, (Object)device->deviceID);
-
-    kFree(allocator->deviceInfo);
-    kFree(allocator->firstFreeSuperNode);
-    kFree(allocator->firstFreeBlockStack);
-    allocator->deviceInfo = allocator->firstFreeSuperNode = allocator->firstFreeBlockStack = NULL;
-    kFree(allocator);
-}
-
-Index64 phospherusAllocateCluster(PhospherusAllocator* allocator) {
-    BlockDevice* device = allocator->device;
-    __DeviceInfo* deviceInfo = allocator->deviceInfo;
-    __SuperNode* firstFreeSuperNode = allocator->firstFreeSuperNode;
-
-    if (deviceInfo->deviceFreeClusterNum == 0 || deviceInfo->firstFreeSuperNode == INVALID_INDEX) {    //Theoretically, these two can be true iff at the same time
-        return INVALID_INDEX;
-    }
-
-    __ClusterStack* stack = &firstFreeSuperNode->stack;
-    __SuperNodeInfo* info = &firstFreeSuperNode->info;
-    Index64 ret = POP_CLUSTER(stack);   //Pop one cluster from super node in memory
-
-    blockDeviceWriteBlocks(device, info->blockIndex + __SUPER_NODE_STACK_OFFSET, stack, __SUPER_NODE_STACK_SIZE);   //Save back the stack
-
-    if (CLUSTER_STACK_EMPTY(stack)) {                                                                                                       //If the stack is empty now, replace with new free super node
-        deviceInfo->firstFreeSuperNode = info->nextFreeSuperNode;                                                                           //Will be wrote in in updating
-        if (info->nextFreeSuperNode == INVALID_INDEX) {
-            memset(firstFreeSuperNode, 0, sizeof(__SuperNode));                                                                             //Destroy the invalid data
-            deviceInfo->lastFreeSuperNode = INVALID_INDEX;
-        } else {          
-            blockDeviceReadBlocks(device, info->nextFreeSuperNode, firstFreeSuperNode, __SUPER_NODE_SIZE);  //Read new free super block, no need to modify old free super block's info
+        if (blockDeviceWriteBlocks(device, nodeInfo->blockIndex, superNode, __SUPER_NODE_SIZE) == RESULT_FAIL) {
+            return RESULT_FAIL;
         }
     }
 
-    --deviceInfo->deviceFreeClusterNum;  //Save root super node
-    blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
-    return ret;
+    return RESULT_SUCCESS;
 }
 
-void phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster) {
+static Result __doReleaseCluster(PhospherusAllocator* allocator, Index64 cluster, void** belongToPtr, void** tailSuperNodeInfoPtr) {
     if (cluster == INVALID_INDEX) {     //Well, just in case
-        return;
+        SET_ERROR_CODE(ERROR_OBJECT_ARGUMENT, ERROR_STATUS_VERIFIVCATION_FAIL);
+        return RESULT_FAIL;
     }
 
     BlockDevice* device = allocator->device;
     __DeviceInfo* deviceInfo = allocator->deviceInfo;
     __SuperNode* firstFreeSuperNode = allocator->firstFreeSuperNode;
 
-    Index64 superNodeIndex = (cluster / __SUPER_NODE_SPAN) * __SUPER_NODE_SPAN;  //Which super node does this cluster belongs to
-    if (superNodeIndex == firstFreeSuperNode->info.blockIndex) {
-        PUSH_CLUSTER(&firstFreeSuperNode->stack, cluster);          //It belongs to first free super block, which is already in memory, just save in
-        blockDeviceWriteBlocks(device, superNodeIndex + __SUPER_NODE_STACK_OFFSET, &firstFreeSuperNode->stack, __SUPER_NODE_STACK_SIZE);
-    } else {    //It belongs to normal super node, not in memory
-        __SuperNode* superNode = allocateBuffer(BUFFER_SIZE_4096);
-        blockDeviceReadBlocks(device, superNodeIndex, superNode, __SUPER_NODE_SIZE);
-
-        bool needInsert = CLUSTER_STACK_EMPTY(&superNode->stack);
-        PUSH_CLUSTER(&superNode->stack, cluster);
-
-        if (needInsert) {   //The release make a super block free, need to be inserted back to the list
-            if (deviceInfo->lastFreeSuperNode == INVALID_INDEX) {  //When deivce has no free super node
-                deviceInfo->firstFreeSuperNode = superNodeIndex;
-            } else if (deviceInfo->lastFreeSuperNode == firstFreeSuperNode->info.blockIndex) {
-                firstFreeSuperNode->info.nextFreeSuperNode = superNodeIndex;
-                blockDeviceWriteBlocks(device, deviceInfo->lastFreeSuperNode, &firstFreeSuperNode->info, __SUPER_NODE_INFO_SIZE);
-            } else {
-                __SuperNodeInfo* lastFreeSuperNodeInfo = allocateBuffer(BUFFER_SIZE_512);  //Update linked list tail
-                blockDeviceReadBlocks(device, deviceInfo->lastFreeSuperNode, lastFreeSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
-                lastFreeSuperNodeInfo->nextFreeSuperNode = superNodeIndex;
-                blockDeviceWriteBlocks(device, deviceInfo->lastFreeSuperNode, lastFreeSuperNodeInfo, __SUPER_NODE_INFO_SIZE);
-                releaseBuffer(lastFreeSuperNodeInfo, BUFFER_SIZE_512);
-            }
-            
-            superNode->info.nextFreeSuperNode = INVALID_INDEX;    //Make tail a tail, and update the root super block
-            deviceInfo->lastFreeSuperNode = superNodeIndex;
+    __SuperNode* belongTo = NULL;
+    Index64 belongToIndex = (cluster / __SUPER_NODE_SPAN) * __SUPER_NODE_SPAN;  //Which super node does this cluster belongs to
+    if (belongToIndex == firstFreeSuperNode->info.blockIndex) {
+        belongTo = firstFreeSuperNode;
+    } else {
+        *belongToPtr = belongTo = allocateBuffer(BUFFER_SIZE_4096);
+        if (belongTo == NULL || blockDeviceReadBlocks(device, belongToIndex, belongTo, __SUPER_NODE_SIZE) == RESULT_FAIL) {
+            return RESULT_FAIL;
         }
-
-        blockDeviceWriteBlocks(device, superNodeIndex, superNode, __SUPER_NODE_SIZE);
-        releaseBuffer(superNode, BUFFER_SIZE_4096);
     }
 
-    ++deviceInfo->deviceFreeClusterNum;  //Save root super node
-    blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+    bool empty = CLUSTER_STACK_EMPTY(&belongTo->stack);
+    PUSH_CLUSTER(&belongTo->stack, cluster);
+    if (empty) {
+        belongTo->info.nextFreeSuperNode = INVALID_INDEX;
+    }
+
+    if (blockDeviceWriteBlocks(device, belongToIndex, belongTo, __SUPER_NODE_SIZE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    if (empty) {
+        //The release make a super block free, need to be inserted back to the list
+        if (deviceInfo->firstFreeSuperNode == INVALID_INDEX) {  //When deivce has no free super node
+            deviceInfo->firstFreeSuperNode = deviceInfo->lastFreeSuperNode = belongToIndex;
+        } else {
+            __SuperNodeInfo* tailSuperNodeInfo = NULL;
+            if (deviceInfo->firstFreeSuperNode == deviceInfo->lastFreeSuperNode) {
+                tailSuperNodeInfo = &firstFreeSuperNode->info;
+            } else {
+                *tailSuperNodeInfoPtr = tailSuperNodeInfo = allocateBuffer(BUFFER_SIZE_512);
+                if (tailSuperNodeInfo == NULL || blockDeviceReadBlocks(device, deviceInfo->lastFreeSuperNode + __SUPER_NODE_INFO_OFFSET, tailSuperNodeInfo, __SUPER_NODE_INFO_SIZE) == RESULT_FAIL) {
+                    return RESULT_FAIL;
+                }
+            }
+
+            tailSuperNodeInfo->nextFreeSuperNode = belongToIndex;
+
+            if (blockDeviceWriteBlocks(device, deviceInfo->lastFreeSuperNode + __SUPER_NODE_INFO_OFFSET, tailSuperNodeInfo, __SUPER_NODE_INFO_SIZE) == RESULT_FAIL) {
+                return RESULT_FAIL;
+            }
+
+            deviceInfo->lastFreeSuperNode = belongToIndex;
+        }
+    }
+
+    ++deviceInfo->deviceFreeClusterNum;
+    if (blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE) == RESULT_FAIL) {    //Save root super node
+        return RESULT_FAIL;
+    }
+
+    return RESULT_SUCCESS;
 }
 
-size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator) {
-    __DeviceInfo* deviceInfo = allocator->deviceInfo;
-    return deviceInfo->deviceFreeClusterNum;
-}
-
-Index64 phospherusAllocateBlock(PhospherusAllocator* allocator) {
+static Index64 __doAllocateBlock(PhospherusAllocator* allocator, void** blockStackPtr) {
     BlockDevice* device = allocator->device;
     __DeviceInfo* deviceInfo = allocator->deviceInfo;
     __BlockStack* firstFreeBlockStack = allocator->firstFreeBlockStack;
 
-    if (deviceInfo->firstFreeBlockStack == INVALID_INDEX) {
+    if (deviceInfo->firstFreeBlockStack == INVALID_INDEX) { //No block stacks
         Index64 cluster = phospherusAllocateCluster(allocator);
-
         if (cluster == INVALID_INDEX) {
             return INVALID_INDEX;
         }
 
-        __BlockStack* blockStack = (__BlockStack*)allocateBuffer(BUFFER_SIZE_512);
+        __BlockStack* blockStack = NULL;
+        *blockStackPtr = blockStack = (__BlockStack*)allocateBuffer(BUFFER_SIZE_512);
+        if (blockStack == NULL) {
+            return INVALID_INDEX;
+        }
         memset(blockStack, 0, sizeof(__BlockStack));
 
         blockStack->nextFreeBlockStack = INVALID_INDEX;
@@ -323,71 +509,101 @@ Index64 phospherusAllocateBlock(PhospherusAllocator* allocator) {
             blockStack->blockStack[i] = cluster + i + 1;
         }
 
-        blockDeviceWriteBlocks(device, cluster, blockStack, __BLOCK_STACK_SIZE);
+        if (blockDeviceWriteBlocks(device, cluster, blockStack, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+            return INVALID_INDEX;
+        }
 
         memcpy(firstFreeBlockStack, blockStack, sizeof(__BlockStack));
         deviceInfo->firstFreeBlockStack = deviceInfo->lastFreeBlockStack = blockStack->blockIndex;
-        blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
 
-        releaseBuffer(blockStack, BUFFER_SIZE_512);
+        if (blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE) == RESULT_FAIL) {
+            return INVALID_INDEX;
+        }
     }
 
     Index64 ret = POP_BLOCK(firstFreeBlockStack);
-    blockDeviceWriteBlocks(device, firstFreeBlockStack->blockIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+    if (blockDeviceWriteBlocks(device, firstFreeBlockStack->blockIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+        return INVALID_INDEX;
+    }
 
-    if (BLOCK_STACK_EMPTY(firstFreeBlockStack)) {
+    if (BLOCK_STACK_EMPTY(firstFreeBlockStack)) {   //If the pop make stack empty
         deviceInfo->firstFreeBlockStack = firstFreeBlockStack->nextFreeBlockStack;
-        if (firstFreeBlockStack->nextFreeBlockStack == INVALID_INDEX) {
-            deviceInfo->lastFreeBlockStack = INVALID_INDEX;
+        if (deviceInfo->firstFreeBlockStack == INVALID_INDEX) {
+            deviceInfo->lastFreeBlockStack = INVALID_INDEX;     //Destroy invalid data
             memset(firstFreeBlockStack, 0, sizeof(__BlockStack));
-        } else {
-            blockDeviceReadBlocks(device, firstFreeBlockStack->nextFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
         }
 
-        blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+        //deviceInfo is very important for file system to work, if it is modified, no other errors shou happens before it is wrote back
+        if (blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE) == RESULT_FAIL) {
+            return INVALID_INDEX;
+        }
+
+        if (deviceInfo->firstFreeBlockStack != INVALID_INDEX && blockDeviceReadBlocks(device, firstFreeBlockStack->nextFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+            return INVALID_INDEX;
+        }
     }
 
     return ret;
 }
 
-void phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block) {
+static Result __doReleaseBlock(PhospherusAllocator* allocator, Index64 block, void** belongToPtr, void** tailBlockStackPtr) {
+    if (block == INVALID_INDEX) {     //Well, just in case
+        SET_ERROR_CODE(ERROR_OBJECT_ARGUMENT, ERROR_STATUS_VERIFIVCATION_FAIL);
+        return RESULT_FAIL;
+    }
+
     BlockDevice* device = allocator->device;
     __DeviceInfo* deviceInfo = allocator->deviceInfo;
     __BlockStack* firstFreeBlockStack = allocator->firstFreeBlockStack;
 
-    Index64 blockStackIndex = (block / CLUSTER_BLOCK_SIZE) * CLUSTER_BLOCK_SIZE;
-
-    if (blockStackIndex == deviceInfo->firstFreeBlockStack) {
-        PUSH_BLOCK(firstFreeBlockStack, block);
-        blockDeviceWriteBlocks(device, blockStackIndex, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+    __BlockStack* belongTo = NULL;
+    Index64 belongToIndex = (block / CLUSTER_BLOCK_SIZE) * CLUSTER_BLOCK_SIZE;
+    if (belongToIndex == deviceInfo->firstFreeBlockStack) {
+        belongTo = firstFreeBlockStack;
     } else {
-        __BlockStack* stack = allocateBuffer(BUFFER_SIZE_512);
-        blockDeviceReadBlocks(device, blockStackIndex, stack, __BLOCK_STACK_SIZE);
-        bool needInsert = BLOCK_STACK_EMPTY(stack);
-        PUSH_BLOCK(stack, block);
+        *belongToPtr = belongTo = allocateBuffer(BUFFER_SIZE_512);
+        if (belongTo == NULL || blockDeviceReadBlocks(device, belongToIndex, belongTo, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
 
-        if (needInsert) {
-            if (deviceInfo->lastFreeBlockStack == INVALID_INDEX) {
-                deviceInfo->firstFreeBlockStack = blockStackIndex;
-                memcpy(firstFreeBlockStack, stack, sizeof(__BlockStack));
-            } else if (deviceInfo->lastFreeBlockStack == firstFreeBlockStack->blockIndex) {
-                firstFreeBlockStack->nextFreeBlockStack = blockStackIndex;
-                blockDeviceWriteBlocks(device, deviceInfo->lastFreeBlockStack, firstFreeBlockStack, __BLOCK_STACK_SIZE);
+    bool empty = BLOCK_STACK_EMPTY(belongTo);
+    PUSH_BLOCK(belongTo, block);
+    if (empty) {
+        belongTo->nextFreeBlockStack = INVALID_INDEX;
+    }
+
+    if (blockDeviceWriteBlocks(device, belongToIndex, belongTo, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    if (empty) {
+        if (deviceInfo->lastFreeBlockStack == INVALID_INDEX) {
+            deviceInfo->firstFreeBlockStack = deviceInfo->lastFreeBlockStack = belongToIndex;
+        } else {
+            __BlockStack* tailBlockStack = NULL;
+            if (deviceInfo->firstFreeBlockStack == deviceInfo->lastFreeBlockStack) {
+                tailBlockStack = firstFreeBlockStack;
             } else {
-                __BlockStack* lastFreeBlockStack = allocateBuffer(BUFFER_SIZE_512);
-                blockDeviceReadBlocks(device, deviceInfo->lastFreeBlockStack, lastFreeBlockStack, __BLOCK_STACK_SIZE);
-                lastFreeBlockStack->nextFreeBlockStack = blockStackIndex;
-                blockDeviceWriteBlocks(device, deviceInfo->lastFreeBlockStack, lastFreeBlockStack, __BLOCK_STACK_SIZE);
-                releaseBuffer(lastFreeBlockStack, BUFFER_SIZE_512);
+                *tailBlockStackPtr = tailBlockStack = allocateBuffer(BUFFER_SIZE_512);
+                if (tailBlockStack == NULL || blockDeviceReadBlocks(device, deviceInfo->lastFreeBlockStack, tailBlockStack, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+                    return RESULT_FAIL;
+                }
             }
 
-            stack->nextFreeBlockStack = INVALID_INDEX;
-            deviceInfo->lastFreeBlockStack = blockStackIndex;
+            tailBlockStack->nextFreeBlockStack = belongToIndex;
+
+            if (blockDeviceWriteBlocks(device, deviceInfo->lastFreeBlockStack, tailBlockStack, __BLOCK_STACK_SIZE) == RESULT_FAIL) {
+                return RESULT_FAIL;
+            }
+
+            deviceInfo->lastFreeBlockStack = belongToIndex;
         }
 
-        blockDeviceWriteBlocks(device, blockStackIndex, stack, __BLOCK_STACK_SIZE);
-        releaseBuffer(stack, BUFFER_SIZE_512);
-
-        blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE);
+        if (blockDeviceWriteBlocks(device, RESERVED_BLOCK_DEVICE_INFO, deviceInfo, __DEVICE_INFO_SIZE) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
     }
+
+    return RESULT_SUCCESS;
 }

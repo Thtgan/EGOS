@@ -182,13 +182,13 @@ typedef struct {
 } __attribute__((packed)) ELF64ProgramHeader;
 
 /**
- * @brief Read ELF header from file
+ * @brief Read ELF header from file, sets errorcode to indicate error
  * 
  * @param file ELF file
  * @param header Header struct
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int readELF64Header(File* file, ELF64Header* header);
+Result readELF64Header(File* file, ELF64Header* header);
 
 /**
  * @brief Print ELF header for debug 
@@ -199,15 +199,15 @@ int readELF64Header(File* file, ELF64Header* header);
 void printELF64Header(TerminalLevel level, ELF64Header* header);
 
 /**
- * @brief Read ELF program header from file
+ * @brief Read ELF program header from file, sets errorcode to indicate error
  * 
  * @param file ELF file
  * @param elfHeader ELF header
  * @param programHeader Program header struct
  * @param index Index of program header
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
+Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
 
 /**
  * @brief Print ELF program header for debug 
@@ -221,24 +221,25 @@ void printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header);
  * @brief Check is ELF program header leagel?
  * 
  * @param programHeader ELF program header
- * @return bool True if header is leagal
+ * @return Result True if header is leagal
  */
-bool checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
+Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
 
 /**
- * @brief Load program corresponded to program header from ELF file
+ * @brief Load program corresponded to program header from ELF file, sets errorcode to indicate error
  * 
  * @param file ELF file
  * @param programHeader Program header describes program to load
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
+Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Unload ELF program loaded
  * 
  * @param programHeader Program header describes program loaded
+ * @return Result Result of the operation
  */
-void unloadELF64Program(ELF64ProgramHeader* programHeader);
+Result unloadELF64Program(ELF64ProgramHeader* programHeader);
 
 #endif // __ELF_H

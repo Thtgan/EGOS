@@ -10,27 +10,27 @@ typedef struct {
 } VirtualDeviceINodeData;
 
 /**
- * @brief Initialize virtual devices, create a folder in path '/dev' which is mounted on memory block device to manage devices
+ * @brief Initialize virtual devices, create a folder in path '/dev' which is mounted on memory block device to manage devices, sets errorcode to indicate error
  * 
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int initVirtualDevices();
+Result initVirtualDevices();
 
 /**
- * @brief Close vitual devices
+ * @brief Close vitual devices, sets errorcode to indicate error
  * 
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int closeVitualDevices();
+Result closeVitualDevices();
 
 /**
- * @brief Register device as a virtual device can be accessed by file operations
+ * @brief Register device as a virtual device can be accessed by file operations, sets errorcode to indicate error
  * 
  * @param device Device to register
  * @param name Name of device
  * @param operations Operations of devices, in file operation format
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int registerVirtualDevice(void* device, ConstCstring name, FileOperations* operations);
+Result registerVirtualDevice(void* device, ConstCstring name, FileOperations* operations);
 
 #endif // __VIRTUAL_DEVICE_H

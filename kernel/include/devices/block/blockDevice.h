@@ -1,7 +1,6 @@
 #if !defined(__BLOCK_DEVICE_H)
 #define __BLOCK_DEVICE_H
 
-#include<devices/block/blockDeviceTypes.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
@@ -9,6 +8,12 @@
 #define BLOCK_SIZE 512
 
 STRUCT_PRE_DEFINE(BlockDeviceOperation);
+
+typedef enum {
+    RAM,
+    HDD,
+    UNKNOWN
+} BlockDeviceType;
 
 RECURSIVE_REFER_STRUCT(BlockDevice) {
     char name[32];
@@ -23,24 +28,26 @@ RECURSIVE_REFER_STRUCT(BlockDevice) {
 
 STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
     /**
-     * @brief Read blocks from the block device
+     * @brief Read blocks from the block device, sets errorcode to indicate error
      * 
      * @param additionalData Additional data of the block device
      * @param blockIndex Index of the first block to read from
      * @param buffer Buffer to storage the read data
      * @param n Num of blocks to read
+     * @return Result Result of the operation
      */
-    int (*readBlocks)(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n);
+    Result (*readBlocks)(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n);
 
     /**
-     * @brief Write blocks to the block device
+     * @brief Write blocks to the block device, sets errorcode to indicate error
      * 
      * @param additionalData Additional data of the block device
      * @param blockIndex Index of the first block to write to
      * @param buffer Buffer contains the data to write
      * @param n Num of blocks to write
+     * @return Result Result of the operation
      */
-    int (*writeBlocks)(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n);
+    Result (*writeBlocks)(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n);
 };
 
 /**
@@ -67,12 +74,12 @@ BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t av
 void releaseBlockDevice(BlockDevice* device);
 
 /**
- * @brief Register the block device, duplicated name not allowed
+ * @brief Register the block device, duplicated name not allowed, sets errorcode to indicate error
  * 
  * @param device Block device to register
- * @return bool Is the register successed?
+ * @return Result Result of the operation
  */
-bool registerBlockDevice(BlockDevice* device);
+Result registerBlockDevice(BlockDevice* device);
 
 /**
  * @brief Unregister the block device
@@ -99,28 +106,28 @@ BlockDevice* getBlockDeviceByName(const char* name);
 BlockDevice* getBlockDeviceByID(ID id);
 
 /**
- * @brief Packed function of block device operation
+ * @brief Packed function of block device operation, sets errorcode to indicate error
  * 
  * @param device Block device
  * @param blockIndex Index of block to read
  * @param buffer Buffer to write to
  * @param n Num of block(s) to read
- * @return int 0 if operation succeeded, otherwise -1, error code is set
+ * @return Result Result of the operation
  */
-static inline int blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n) {
+static inline Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n) {
     return device->operations->readBlocks(device, blockIndex, buffer, n);
 } 
 
 /**
- * @brief Packed function of block device operation
+ * @brief Packed function of block device operation, sets errorcode to indicate error
  * 
  * @param device Block device
  * @param blockIndex Index of block to write
  * @param buffer Buffer to read from
  * @param n Num of block(s) to write
- * @return int 0 if operation succeeded, otherwise -1, error code is set
+ * @return Result Result of the operation
  */
-static inline int blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n) {
+static inline Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n) {
     return device->operations->writeBlocks(device, blockIndex, buffer, n);
 } 
 

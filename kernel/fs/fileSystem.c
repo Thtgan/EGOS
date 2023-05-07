@@ -1,41 +1,49 @@
 #include<fs/fileSystem.h>
 
-#include<debug.h>
 #include<devices/block/blockDevice.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<error.h>
 #include<fs/fsManager.h>
 #include<fs/phospherus/phospherus.h>
-#include<print.h>
 
 FileSystem* rootFileSystem = NULL;
 
-static void (*_initFuncs[FILE_SYSTEM_TYPE_NUM])() = {
+static Result (*_initFuncs[FILE_SYSTEM_TYPE_NUM])() = {
     [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusInitFileSystem
 };
 
-static int (*_checkers[FILE_SYSTEM_TYPE_NUM])(BlockDevice*) = {
+static Result (*_checkers[FILE_SYSTEM_TYPE_NUM])(BlockDevice*) = {
     [FILE_SYSTEM_TYPE_PHOSPHERUS] = phospherusCheckFileSystem
 };
 
-void initFileSystem() {
+Result initFileSystem() {
     initFSManager();
     BlockDevice* hda = getBlockDeviceByName("hda");
     if (hda == NULL) {
-        blowup("Main device not found\n");
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
+        return RESULT_FAIL;
     }
 
     FileSystemType type = checkFileSystem(hda);
     if (type == FILE_SYSTEM_TYPE_UNKNOWN) {
-        blowup("Unknown file system\n");
+        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
+        return RESULT_FAIL;
     }
 
-    _initFuncs[type]();
+    if (_initFuncs[type]() == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
     rootFileSystem = openFileSystem(hda);
+    if (rootFileSystem == NULL) {
+        return RESULT_FAIL;
+    }
+
+    return RESULT_SUCCESS;
 }
 
-int deployFileSystem(BlockDevice* device, FileSystemType type) {
-    int ret = 0;
+Result deployFileSystem(BlockDevice* device, FileSystemType type) {
+    Result ret = RESULT_SUCCESS;
     switch (type) {
         case FILE_SYSTEM_TYPE_PHOSPHERUS:
             ret = phospherusDeployFileSystem(device);
@@ -46,7 +54,7 @@ int deployFileSystem(BlockDevice* device, FileSystemType type) {
 
 FileSystemType checkFileSystem(BlockDevice* device) {
     for (FileSystemType i = 0; i < FILE_SYSTEM_TYPE_NUM; ++i) {
-        if (_checkers[i](device) == 0) {
+        if (_checkers[i](device) == RESULT_SUCCESS) {
             return i;
         }
     }
@@ -68,24 +76,28 @@ FileSystem* openFileSystem(BlockDevice* device) {
     }
 
     if (ret != NULL) {
-        registerDeviceFS(ret);
+        if (registerDeviceFS(ret) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
     }
 
     return ret;
 }
 
-int closeFileSystem(FileSystem* fs) {
-    unregisterDeviceFS(fs->device);
-
-    switch (fs->type) {
-        case FILE_SYSTEM_TYPE_PHOSPHERUS:
-            phospherusCloseFileSystem(fs);
-            break;
-        default:
-            printf(TERMINAL_LEVEL_DEBUG, "Closing unknown file system\n");
-            SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
-            return -1;
+Result closeFileSystem(FileSystem* fs) {
+    if (unregisterDeviceFS(fs->device) == NULL) {
+        return RESULT_FAIL;
     }
 
-    return 0;
+    Result ret = RESULT_SUCCESS;
+    switch (fs->type) {
+        case FILE_SYSTEM_TYPE_PHOSPHERUS:
+            ret = phospherusCloseFileSystem(fs);
+            break;
+        default:
+            SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+            ret = RESULT_FAIL;
+    }
+
+    return ret;
 }

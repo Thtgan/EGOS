@@ -15,7 +15,7 @@ void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, 
     }
 }
 
-bool hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
+Result hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
     size_t hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
@@ -23,7 +23,7 @@ bool hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
         HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
-            return false;
+            return RESULT_FAIL;
         }
     }
 
@@ -33,7 +33,7 @@ bool hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
 
     ++table->size;
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
 void initHashChainNode(HashChainNode* node) {

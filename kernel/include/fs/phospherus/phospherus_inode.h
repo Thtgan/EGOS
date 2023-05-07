@@ -16,7 +16,8 @@ iNodeGlobalOperations* phospherusInitInode();
  * @param device Device
  * @param blockIndex Block
  * @param type Type of the iNode
+ * @return Result Result of the operation
  */
-void makeInode(BlockDevice* device, Index64 blockIndex, iNodeType type);
+Result makeInode(BlockDevice* device, Index64 blockIndex, iNodeType type);
 
 #endif // __PHOSPHERUS_INODE_H

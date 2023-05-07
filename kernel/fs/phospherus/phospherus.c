@@ -11,51 +11,66 @@
 
 FileSystemOperations fileSystemOperations;
 
-void phospherusInitFileSystem() {
+Result phospherusInitFileSystem() {
     phospherusInitAllocator();
     fileSystemOperations.iNodeGlobalOperations = phospherusInitInode();
     fileSystemOperations.fileGlobalOperations = phospherusInitFiles();
     fileSystemOperations.directoryGlobalOperations = phospherusInitDirectories();
+
+    return RESULT_SUCCESS;
 }
 
-int phospherusDeployFileSystem(BlockDevice* device) {
-    if (phospherusCheckBlockDevice(device) == 0) {
+Result phospherusDeployFileSystem(BlockDevice* device) {
+    if (phospherusCheckBlockDevice(device) == RESULT_SUCCESS) {
         SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
-        return -1;
+        return RESULT_FAIL;
     }
 
-    if (phospherusDeployAllocator(device) == -1) {
-        return -1;
+    if (phospherusDeployAllocator(device) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
-    if (phospherusCheckBlockDevice(device) == -1) {
-        SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
-        return -1;
+    if (phospherusCheckBlockDevice(device) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
-    makeInode(device, RESERVED_BLOCK_ROOT_DIRECTORY, INODE_TYPE_DIRECTORY);
+    if (makeInode(device, RESERVED_BLOCK_ROOT_DIRECTORY, INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-int phospherusCheckFileSystem(BlockDevice* device) {
+Result phospherusCheckFileSystem(BlockDevice* device) {
     return phospherusCheckBlockDevice(device);
 }
 
 FileSystem* phospherusOpenFileSystem(BlockDevice* device) {
     FileSystem* ret = kMalloc(sizeof(FileSystem), MEMORY_TYPE_NORMAL);
+    if (ret == NULL) {
+        return NULL;
+    }
 
     strcpy(ret->name, "phospherus");
     ret->type = FILE_SYSTEM_TYPE_PHOSPHERUS;
     ret->opearations = &fileSystemOperations;
     ret->device = device->deviceID;
     ret->data = phospherusOpenAllocator(device);    //Open allocator to keep it in buffer, other operations can access it more quickly
+    if (ret->data == NULL) {
+        kFree(ret);
+        return NULL;
+    }
     ret->rootDirectoryInodeIndex = RESERVED_BLOCK_ROOT_DIRECTORY;
 
     return ret;
 }
 
-void phospherusCloseFileSystem(FileSystem* fs) {
-    phospherusCloseAllocator((PhospherusAllocator*)fs->data);
+Result phospherusCloseFileSystem(FileSystem* fs) {
+    if (phospherusCloseAllocator((PhospherusAllocator*)fs->data) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+    
     kFree(fs);
+
+    return RESULT_SUCCESS;
 }

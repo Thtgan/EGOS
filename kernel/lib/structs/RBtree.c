@@ -52,7 +52,7 @@ RBtreeNode* searchNode(RBtree* tree, uint64_t val) {
     return NULL;
 }
 
-bool insertNode(RBtree* tree, RBtreeNode* newNode) {
+Result insertNode(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = NULL;
 
     int cmp;
@@ -60,7 +60,7 @@ bool insertNode(RBtree* tree, RBtreeNode* newNode) {
         cmp = tree->cmpFunc(newNode, node);
 
         if (cmp == 0) {
-            return false;
+            return RESULT_FAIL;
         } else {
             parent = node;
             node = cmp < 0 ? node->left : node->right;
@@ -78,7 +78,7 @@ bool insertNode(RBtree* tree, RBtreeNode* newNode) {
 
     __insertFix(tree, newNode);
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
 RBtreeNode* deleteNode(RBtree* tree, uint64_t val) {

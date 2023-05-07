@@ -36,15 +36,15 @@ static inline bool isStackEmpty(Stack* stack) {
  * 
  * @param stack Stack
  * @param obj Object to push
- * @return bool True if push succeeded
+ * @return Result Result of the operation
  */
-static inline bool stackPush(Stack* stack, Object obj) {
+static inline Result stackPush(Stack* stack, Object obj) {
     if (stack->size == stack->maxSize) {
-        return false;
+        return RESULT_FAIL;
     }
 
     stack->stack[stack->size++] = obj;
-    return true;
+    return RESULT_SUCCESS;
 }
 
 /**
@@ -52,32 +52,32 @@ static inline bool stackPush(Stack* stack, Object obj) {
  * 
  * @param stack Stack
  * @param retPtr Pointer to object
- * @return bool True if object is obtained
+ * @return Result Result of the operation
  */
-static inline bool stackTop(Stack* stack, Object* retPtr) {
+static inline Result stackTop(Stack* stack, Object* retPtr) {
     if (stack->size == 0) {
-        return false;
+        return RESULT_FAIL;
     }
 
     *retPtr = stack->stack[stack->size - 1];
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
 /**
  * @brief Pop the top object of stack
  * 
  * @param stack Stack
- * @return bool True if top object is popped
+ * @return Result Result of the operation
  */
-static inline bool stackPop(Stack* stack) {
+static inline Result stackPop(Stack* stack) {
     if (isStackEmpty(stack)) {
-        return false;
+        return RESULT_FAIL;
     }
 
     stack->stack[--stack->size] = OBJECT_NULL;
     
-    return true;
+    return RESULT_SUCCESS;
 }
 
 #endif // STACK_H

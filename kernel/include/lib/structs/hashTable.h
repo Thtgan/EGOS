@@ -41,9 +41,9 @@ void initHashChainNode(HashChainNode* node);
  * @param table Hash table
  * @param key Key of value
  * @param node Value's hash chain node to insert
- * @return bool Is insertion succeeded?
+ * @return Result Result of the operation
  */
-bool hashTableInsert(HashTable* table, Object key, HashChainNode* node);
+Result hashTableInsert(HashTable* table, Object key, HashChainNode* node);
 
 /**
  * @brief Delete a value corresponded to key

@@ -23,114 +23,156 @@
 #define __MEMORY_DEVICE_SIZE    4 * DATA_UNIT_MB
 #define __MEMORY_DEVICE_NAME    "Virtual devices"
 
-int initVirtualDevices() {
+static Result __doRegisterVirtualDevice(void* device, ConstCstring name, FileOperations* operations, void** onDevicePtr, iNode** iNodePtr, Directory** directoryPtr);
+
+Result initVirtualDevices() {
     void* region = pageAlloc(__MEMORY_DEVICE_SIZE / PAGE_SIZE, PHYSICAL_PAGE_TYPE_PUBLIC);
     BlockDevice* memDevice = createMemoryBlockDevice(region, __MEMORY_DEVICE_SIZE, __MEMORY_DEVICE_NAME);
-    registerBlockDevice(memDevice);
-    if (deployFileSystem(memDevice, FILE_SYSTEM_TYPE_PHOSPHERUS) == -1) {
-        return -1;
+    if (memDevice == NULL) {
+        return RESULT_FAIL;
     }
 
-    FileSystem* fs = openFileSystem(memDevice);
+    if (registerBlockDevice(memDevice) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    if (deployFileSystem(memDevice, FILE_SYSTEM_TYPE_PHOSPHERUS) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
     DirectoryEntry entry;
-    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) != -1) {
+    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) != RESULT_FAIL) {
         deleteEntry(__DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY);
     }
     
-    createEntry(__DEVICE_DIR_PARENT, __DEVICE_DIR_NAME, BUILD_INODE_ID(fs->device, fs->rootDirectoryInodeIndex), INODE_TYPE_DIRECTORY);
-    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == -1) {
-        return -1;
+    FileSystem* fs = openFileSystem(memDevice);
+    if (fs == NULL || createEntry(__DEVICE_DIR_PARENT, __DEVICE_DIR_NAME, BUILD_INODE_ID(fs->device, fs->rootDirectoryInodeIndex), INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
-    if (registerVirtualDevice(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), "tty", initTerminalDevice()) == -1) {
-        return -1;
+    if (registerVirtualDevice(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), "tty", initTerminalDevice()) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-int closeVitualDevices() {
+Result closeVitualDevices() {
     DirectoryEntry entry;
-    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == -1) {
-        return -1;
+    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
-    if (deleteEntry(__DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == -1) {
-        return -1;
+    if (deleteEntry(__DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
     BlockDevice* memDevice = getBlockDeviceByID(INODE_ID_GET_DEVICE_ID(entry.iNodeID));
-    closeFileSystem(openFileSystem(memDevice));
+    if (memDevice == NULL) {
+        return RESULT_FAIL;
+    }
+
+    FileSystem* fs = openFileSystem(memDevice);
+    if (fs == NULL || closeFileSystem(fs) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
     if (unregisterBlockDevice(memDevice->deviceID) == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_NOT_FOUND);
-        return -1;
+        return RESULT_FAIL;
     }
 
     void* region = (void*)memDevice->additionalData;
     releaseBlockDevice(memDevice);
-
     pageFree(region, __MEMORY_DEVICE_SIZE / PAGE_SIZE);
 
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-int registerVirtualDevice(void* device, ConstCstring name, FileOperations* operations) {
+Result registerVirtualDevice(void* device, ConstCstring name, FileOperations* operations) {
+    void* onDevice = NULL;
+    iNode* iNode = NULL;
+    Directory* directory = NULL;
+
+    Result ret = __doRegisterVirtualDevice(device, name, operations, &onDevice, &iNode, &directory);
+
+    if (directory != NULL) {
+        if (rawDirectoryClose(directory) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
+    if (iNode != NULL) {
+        if (rawInodeClose(iNode) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+ 
+    if (onDevice != NULL) {
+        releaseBuffer(onDevice, BUFFER_SIZE_512);
+    }
+
+    return ret;
+}
+
+static Result __doRegisterVirtualDevice(void* device, ConstCstring name, FileOperations* operations, void** onDevicePtr, iNode** iNodePtr, Directory** directoryPtr) {
     DirectoryEntry entry;
-    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == -1) {
-        return -1;
+    if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
     BlockDevice* memDevice = getBlockDeviceByID(INODE_ID_GET_DEVICE_ID(entry.iNodeID));
     if (memDevice == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
-        return -1;
+        return RESULT_FAIL;
     }
 
     FileSystem* fs = openFileSystem(memDevice);
     if (fs == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
-        return -1;
+        return RESULT_FAIL;
     }
 
     Index64 iNodeIndex = fs->opearations->iNodeGlobalOperations->createInode(fs, INODE_TYPE_DEVICE);
     if (iNodeIndex == INVALID_INDEX) {
         SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
-        return -1;
+        return RESULT_FAIL;
     }
 
-    RecordOnDevice* onDevice = allocateBuffer(BUFFER_SIZE_512);
+    RecordOnDevice* onDevice = NULL;
+    *onDevicePtr = onDevice = allocateBuffer(BUFFER_SIZE_512);
+    if (onDevice == NULL) {
+        return RESULT_FAIL;
+    }
     
     VirtualDeviceINodeData* data = (VirtualDeviceINodeData*)onDevice->data;
     data->fileOperations = operations;
     data->device = device;
 
-    blockDeviceWriteBlocks(memDevice, iNodeIndex, onDevice, 1);
+    if (blockDeviceWriteBlocks(memDevice, iNodeIndex, onDevice, 1) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
-    releaseBuffer(onDevice, BUFFER_SIZE_512);
+    iNode* iNode = NULL;
+    *iNodePtr = iNode = rawInodeOpen(entry.iNodeID);
+    if (iNode == NULL) {
+        return RESULT_FAIL;
+    }
 
-    iNode* directoryInode = rawInodeOpen(entry.iNodeID);
-    Directory* directory = rawDirectoryOpen(directoryInode);
+    Directory* directory = NULL;
+    *directoryPtr = directory = rawDirectoryOpen(iNode);
+    if (directory == NULL) {
+        return RESULT_FAIL;
+    }
 
     ID iNodeID = BUILD_INODE_ID(memDevice->deviceID, iNodeIndex);
+    if (rawDirectoryLookupEntry(directory, name, INODE_TYPE_DEVICE) != INVALID_INDEX) {
+        return RESULT_FAIL;
+    }
 
-    int ret = 0;
-    do {
-        if (rawDirectoryLookupEntry(directory, name, INODE_TYPE_DEVICE) != INVALID_INDEX) {
-            SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
-            ret = -1;
-            break;
-        }
+    if (rawDirectoryAddEntry(directory, iNodeID, INODE_TYPE_DEVICE, name) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
-        if (rawDirectoryAddEntry(directory, iNodeID, INODE_TYPE_DEVICE, name) == -1) {
-            rawInodeDelete(iNodeID);
-            ret = -1;
-        }
-    } while (0);
-
-    rawDirectoryClose(directory);
-    rawInodeClose(directoryInode);
-
-    return ret;
+    return RESULT_SUCCESS;
 }

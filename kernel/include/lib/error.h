@@ -31,5 +31,6 @@
 #define ERROR_STATUS_TIMEOUT                    0x0006
 #define ERROR_STATUS_VERIFIVCATION_FAIL         0x0007
 #define ERROR_STATUS_OPERATION_FAIL             0x0008
+#define ERROR_STATUS_IS_NULL                    0x0009
 
 #endif // __ERROR_H

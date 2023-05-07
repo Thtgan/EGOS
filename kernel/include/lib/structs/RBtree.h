@@ -60,9 +60,9 @@ RBtreeNode* searchNode(RBtree* tree, uint64_t val);
  * 
  * @param tree RB tree
  * @param newNode New node to insert
- * @return Is the node inserted successfully(Theoretically, failure happens only when duplicated value)
+ * @return Result Result of the operation(Theoretically, failure happens only when duplicated value)
  */
-bool insertNode(RBtree* tree, RBtreeNode* newNode);
+Result insertNode(RBtree* tree, RBtreeNode* newNode);
 
 /**
  * @brief Delete node

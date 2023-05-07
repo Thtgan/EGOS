@@ -55,13 +55,13 @@ static void __putCharacter(Terminal* terminal, char ch);
  */
 static void __scrollWindowToRow(Terminal* terminal, Index16 row);
 
-static int __terminalDeviceFileRead(File* this, void* buffer, size_t n);
+static Result __terminalDeviceFileRead(File* this, void* buffer, size_t n);
 
-static int __terminalDeviceFileWrite(File* this, const void* buffer, size_t n);
+static Result __terminalDeviceFileWrite(File* this, const void* buffer, size_t n);
 
-bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
+Result initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
     if (bufferSize < width * height) {
-        return false;
+        return RESULT_FAIL;
     }
     terminal->loopRowBegin = 0;
     terminal->bufferRowSize = bufferSize / width;
@@ -86,7 +86,7 @@ bool initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t wi
     initSemaphore(&terminal->inputLock, 1);
     initInputBuffer(&terminal->inputBuffer);
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
 void setCurrentTerminal(Terminal* terminal) {
@@ -123,24 +123,24 @@ void displayFlush() {
     up(&_currentTerminal->outputLock);
 }
 
-bool terminalScrollUp(Terminal* terminal) {
+Result terminalScrollUp(Terminal* terminal) {
     Index16 nextBegin = __ROW_INDEX_ADD(terminal->windowRowBegin, terminal->bufferRowSize - 1, terminal->bufferRowSize);
     if (terminal->windowRowBegin != terminal->loopRowBegin && __checkRowInRoll(terminal, nextBegin)) {
         terminal->windowRowBegin = nextBegin;
-        return true;
+        return RESULT_SUCCESS;
     }
 
-    return false;
+    return RESULT_FAIL;
 }
 
-bool terminalScrollDown(Terminal* terminal) {
+Result terminalScrollDown(Terminal* terminal) {
     Index16 nextEnd = __ROW_INDEX_ADD(terminal->windowRowBegin, terminal->windowHeight, terminal->bufferRowSize); //terminal->windowRowBegin + 1 + (terminal->windowHeight - 1)
     if (nextEnd != terminal->loopRowBegin && __checkRowInRoll(terminal, nextEnd)) {
         terminal->windowRowBegin = __ROW_INDEX_ADD(terminal->windowRowBegin, 1, terminal->bufferRowSize);
-        return true;
+        return RESULT_SUCCESS;
     }
 
-    return false;
+    return RESULT_FAIL;
 }
 
 void terminalOutputString(Terminal* terminal, ConstCstring str) {
@@ -404,15 +404,15 @@ static void __scrollWindowToRow(Terminal* terminal, Index16 row) {
     }
 }
 
-static int __terminalDeviceFileRead(File* this, void* buffer, size_t n) {
+static Result __terminalDeviceFileRead(File* this, void* buffer, size_t n) {
     Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
     terminalGetline(terminal, buffer);
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-static int __terminalDeviceFileWrite(File* this, const void* buffer, size_t n) {
+static Result __terminalDeviceFileWrite(File* this, const void* buffer, size_t n) {
     Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
     terminalOutputString(terminal, buffer);
     displayFlush();
-    return 0;
+    return RESULT_SUCCESS;
 }

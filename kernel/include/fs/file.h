@@ -15,67 +15,67 @@ typedef struct {
 
 STRUCT_PRIVATE_DEFINE(FileOperations) {
     /**
-     * @brief Seek file pointer to position
+     * @brief Seek file pointer to position, sets errorcode to indicate error
      * 
      * @param file File
      * @param seekTo Seek to position
-     * @return Index64 File pointer after seek, not exceed file size
+     * @return Index64 File pointer after seek, INVALID_INDEX if failed
      */
     Index64 (*seek)(File* file, size_t seekTo);
 
     /**
-     * @brief Read from file
+     * @brief Read from file, sets errorcode to indicate error
      * 
      * @param file File
      * @param buffer Buffer to write to
      * @param n Num of byte(s) to read
-     * @return int 0 if succeeded
+     * @return Result Result of the operation
      */
-    int (*read)(File* file, void* buffer, size_t n);
+    Result (*read)(File* file, void* buffer, size_t n);
 
     /**
-     * @brief Write to file
+     * @brief Write to file, sets errorcode to indicate error
      * 
      * @param file File
      * @param buffer Buffer to read from
      * @param n Num of byte(s) to write
-     * @return int 0 if succeeded
+     * @return Result Result of the operation
      */
-    int (*write)(File* file, const void* buffer, size_t n);
+    Result (*write)(File* file, const void* buffer, size_t n);
 };
 
 /**
- * @brief Packed function of file operation
+ * @brief Packed function of file operation, sets errorcode to indicate error
  * 
  * @param file File
  * @param seekTo Seek to position
- * @return Index64 File pointer after seek, not exceed file size
+ * @return Index64 File pointer after seek, INVALID_INDEX if failed
  */
 static inline Index64 rawFileSeek(File* file, size_t seekTo) {
     return file->operations->seek(file, seekTo);
 } 
 
 /**
- * @brief Packed function of file operation
+ * @brief Packed function of file operation, sets errorcode to indicate error
  * 
  * @param file File
  * @param buffer Buffer to write to
  * @param n Num of byte(s) to read
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-static inline int rawFileRead(File* file, void* buffer, size_t n) {
+static inline Result rawFileRead(File* file, void* buffer, size_t n) {
     return file->operations->read(file, buffer, n);
 } 
 
 /**
- * @brief Packed function of file operation
+ * @brief Packed function of file operation, sets errorcode to indicate error
  * 
  * @param file File
  * @param buffer Buffer to read from
  * @param n Num of byte(s) to write
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-static inline int rawFileWrite(File* file, const void* buffer, size_t n) {
+static inline Result rawFileWrite(File* file, const void* buffer, size_t n) {
     return file->operations->write(file, buffer, n);
 } 
 

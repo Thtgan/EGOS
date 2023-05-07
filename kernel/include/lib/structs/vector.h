@@ -43,9 +43,9 @@ void vectorClear(Vector* vector);
  * 
  * @param vector Vector
  * @param newCapacity New capacity to resize to, if capacity less than curretn size, data at the end will lost
- * @return bool True if resize succeeded
+ * @return Result Result of the operation
  */
-bool vectorResize(Vector* vector, size_t newCapacity);
+Result vectorResize(Vector* vector, size_t newCapacity);
 
 /**
  * @brief Get object in vector
@@ -53,9 +53,9 @@ bool vectorResize(Vector* vector, size_t newCapacity);
  * @param vector Vector
  * @param index Index of object in vector
  * @param retPtr Pointer to object
- * @return bool True if get succeeded
+ * @return Result Result of the operation
  */
-bool vectorGet(Vector* vector, Index64 index, Object* retPtr);
+Result vectorGet(Vector* vector, Index64 index, Object* retPtr);
 
 /**
  * @brief Set object in vector
@@ -63,43 +63,43 @@ bool vectorGet(Vector* vector, Index64 index, Object* retPtr);
  * @param vector Vector
  * @param index Index of object in vector
  * @param item Object to set
- * @return bool True if set succeeded
+ * @return Result Result of the operation
  */
-bool vectorSet(Vector* vector, Index64 index, Object item);
+Result vectorSet(Vector* vector, Index64 index, Object item);
 
 /**
  * @brief Erase object in vector
  * 
  * @param vector Vector
  * @param index Index of object to erase
- * @return bool True if erase succeeded
+ * @return Result Result of the operation
  */
-bool vectorErase(Vector* vector, Index64 index);
+Result vectorErase(Vector* vector, Index64 index);
 
 /**
  * @brief Get last object of vector
  * 
  * @param vector Vector
  * @param retPtr Pointer to object
- * @return bool True if get succeeded
+ * @return Result Result of the operation
  */
-bool vectorBack(Vector* vector, Object* retPtr);
+Result vectorBack(Vector* vector, Object* retPtr);
 
 /**
  * @brief Push object to the end of vector
  * 
  * @param vector Vector
  * @param item Object to push
- * @return bool True if push succeeded
+ * @return Result Result of the operation
  */
-bool vectorPush(Vector* vector, Object item);
+Result vectorPush(Vector* vector, Object item);
 
 /**
  * @brief Pop object from end of vector
  * 
  * @param vector Vector
- * @return bool True if pop succeeded
+ * @return Result Result of the operation
  */
-bool vectorPop(Vector* vector);
+Result vectorPop(Vector* vector);
 
 #endif // __VECTOR_H

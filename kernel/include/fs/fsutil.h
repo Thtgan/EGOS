@@ -9,161 +9,157 @@
 #include<kit/types.h>
 
 /**
- * @brief Trace a path and find directory entry corresponded to the path, starts from root directory
+ * @brief Trace a path and find directory entry corresponded to the path, starts from root directory, sets errorcode to indicate error
  * 
  * @param entry Direct entry struct
  * @param path Path to trace
  * @param type Type of entry
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);
+Result tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);
 
 /**
- * @brief Open file from path, starts from root directory
+ * @brief Open file from path, starts from root directory, sets errorcode to indicate error
  * 
  * @param path Path to file
- * @return File* File opened, NULL if open failed
+ * @return int Handle of file opened, -1 if error happens
  */
-//File* fileOpen(ConstCstring path);
 int fileOpen(ConstCstring path);
 
 /**
- * @brief Close file opened
+ * @brief Close file opened, sets errorcode to indicate error
  * 
- * @param file File to close
- * @return int 0 if succeeded
+ * @param file Handle of file to close
+ * @return Result Result of the operation
  */
-//int fileClose(File* file);
-int fileClose(int file);
+Result fileClose(int file);
 
 #define FSUTIL_SEEK_BEGIN   0
 #define FSUTIL_SEEK_CURRENT 1
 #define FSUTIL_SEEK_END     2
 
 /**
- * @brief Seek file pointer to position
+ * @brief Seek file pointer to position, sets errorcode to indicate error
  * 
- * @param file File
+ * @param file Handle of file
  * @param offset Offset to the vegin
  * @param begin Begin of the seek
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int fileSeek(int file, int64_t offset, uint8_t begin);
+Result fileSeek(int file, int64_t offset, uint8_t begin);
 
 /**
  * @brief Get current pointer of file
  * 
- * @param file File
+ * @param file Handle of file
  * @return Index64 Pointer position of file
  */
 Index64 fileGetPointer(int file);
 
 /**
- * @brief Read from file
+ * @brief Read from file, sets errorcode to indicate error
  * 
- * @param file File
+ * @param file Handle of file
  * @param buffer Buffer to write to
  * @param n Num of byte(s) to read
- * @return size_t Num of byte(s) read
+ * @return Result Result of the operation
  */
-//size_t fileRead(File* file, void* buffer, size_t n);
-size_t fileRead(int file, void* buffer, size_t n);
+Result fileRead(int file, void* buffer, size_t n);
 
 /**
- * @brief Write to file
+ * @brief Write to file, sets errorcode to indicate error
  * 
- * @param file File
+ * @param file Handle of file
  * @param buffer Buffer to read from
  * @param n Num of byte(s) to write
- * @return size_t Num of byte(s) writed
+ * @return Result Result of the operation
  */
-//size_t fileWrite(File* file, const void* buffer, size_t n);
-size_t fileWrite(int file, const void* buffer, size_t n);
+Result fileWrite(int file, const void* buffer, size_t n);
 
 /**
  * @brief Create an entry and insert it into directory, be aware its parent directory must be existed, this function cannot be used to create entry with type INODE_TYPE_DEVICE,
- * try registerVirtualDevice from virtualDevice.h
+ * try registerVirtualDevice from virtualDevice.h, sets errorcode to indicate error
  * 
  * @param path Path to new entry's parent directory
  * @param name Name of new entry
  * @param iNodeID iNode ID of new entry
  * @param type Type of new entry
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type);
+Result createEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type);
 
 /**
- * @brief Delete an entry
+ * @brief Delete an entry, sets errorcode to indicate error
  * 
  * @param path Path to entry to delete
  * @param type Type of entry to delete
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int deleteEntry(ConstCstring path, iNodeType type);
+Result deleteEntry(ConstCstring path, iNodeType type);
 
 /**
- * @brief Open a file from iNode
+ * @brief Open a file from iNode, sets errorcode to indicate error
  * 
  * @param iNode iNode contains file
- * @return File* File opened, NULL if failed
+ * @return File* File opened, NULL if error happens
  */
 File* rawFileOpen(iNode* iNode);
 
 /**
- * @brief Close a file opened
+ * @brief Close a file opened, sets errorcode to indicate error
  * 
  * @param file File to close
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int rawFileClose(File* file);
+Result rawFileClose(File* file);
 
 /**
- * @brief Open a directory from iNode
+ * @brief Open a directory from iNode, sets errorcode to indicate error
  * 
  * @param iNode iNode contains directory
- * @return Directory* Directory opened, NULL if failed
+ * @return Directory* Directory opened, NULL if error happens
  */
 Directory* rawDirectoryOpen(iNode* iNode);
 
 /**
- * @brief Close a directory opened
+ * @brief Close a directory opened, sets errorcode to indicate error
  * 
  * @param directory Directory to close
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int rawDirectoryClose(Directory* directory);
+Result rawDirectoryClose(Directory* directory);
 
 /**
- * @brief Create an iNode on device, this function cannot be used to create iNode with type INODE_TYPE_DEVICE
+ * @brief Create an iNode on device, this function cannot be used to create iNode with type INODE_TYPE_DEVICE, sets errorcode to indicate error
  * 
  * @param deviceID Device to create iNode
  * @param type Type of iNode to create
- * @return Index64 Index of block contiains iNode
+ * @return Index64 Index of block contiains iNode, INVALID_INDEX if error happens
  */
 Index64 rawInodeCreate(ID deviceID, iNodeType type);
 
 /**
- * @brief Delete an iNode on device
+ * @brief Delete an iNode on device, sets errorcode to indicate error
  * 
  * @param iNodeID Device where iNode is
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int rawInodeDelete(ID iNodeID);
+Result rawInodeDelete(ID iNodeID);
 
 /**
- * @brief Open an iNode from iNodeID
+ * @brief Open an iNode from iNodeID, sets errorcode to indicate error
  * 
  * @param iNodeID ID of iNode to open, contains device ID and iNode block index
- * @return iNode* iNode opened, NULL if failed
+ * @return iNode* iNode opened, NULL if error happens
  */
 iNode* rawInodeOpen(ID iNodeID);
 
 /**
- * @brief Close an iNode opened
+ * @brief Close an iNode opened, sets errorcode to indicate error
  * 
  * @param iNode iNode to close
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int rawInodeClose(iNode* iNode);
+Result rawInodeClose(iNode* iNode);
 
 #endif // __FS_UTIL_H

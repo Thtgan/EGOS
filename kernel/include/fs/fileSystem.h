@@ -15,74 +15,74 @@ typedef enum {
 
 typedef struct {
     /**
-     * @brief Open the file in iNode
+     * @brief Open the file in iNode, sets errorcode to indicate error
      * 
      * @param iNode iNode contains the file
-     * @return File* File opened
+     * @return File* File opened, NULL if error happens
      */
     File* (*fileOpen)(iNode* iNode);
 
     /**
-     * @brief Close the file opened, be awared that iNode is not closed
+     * @brief Close the file opened, be awared that iNode is not closed, sets errorcode to indicate error
      * 
      * @param file File to close
-     * @return int 0 if succeeded
+     * @return Result Result of the operation
      */
-    int (*fileClose)(File* file);
+    Result (*fileClose)(File* file);
 } FileGlobalOperations;
 
 typedef struct {
     /**
-     * @brief Open the directory in iNode
+     * @brief Open the directory in iNode, sets errorcode to indicate error
      * 
      * @param iNode iNode contains the directory
-     * @return Directory* Directory opened
+     * @return Directory* Directory opened, NULL if error happens
      */
     Directory* (*openDirectory)(iNode* iNode);
 
     /**
-     * @brief Close the directory opened, be awared that iNode is not closed
+     * @brief Close the directory opened, be awared that iNode is not closed, sets errorcode to indicate error
      * 
      * @param directory Directory to close
-     * @return int 0 if succeeded
+     * @return Result Result of the operation
      */
-    int (*closeDirectory)(Directory* directory);
+    Result (*closeDirectory)(Directory* directory);
 } DirectoryGlobalOperations;
 
 STRUCT_PRE_DEFINE(FileSystem);
 
 typedef struct {
     /**
-     * @brief Create a iNode with given size on this file system
+     * @brief Create a iNode with given size on this file system, sets errorcode to indicate error
      * 
      * @param type type of the iNode
-     * @return Index64 The index of the block where the iNode is located
+     * @return Index64 The index of the block where the iNode is located, INVALID_INDEX if error happens
      */
     Index64 (*createInode)(FileSystem* fs, iNodeType type);
 
     /**
-     * @brief Delete iNode from this file system
+     * @brief Delete iNode from this file system, sets errorcode to indicate error
      * 
      * @param iNodeBlock Block index where the inode is located
-     * @return int Status of the operation
+     * @return Result Result of the operation
      */
-    int (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
+    Result (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
 
     /**
-     * @brief Open a inode through on the given block
+     * @brief Open a inode through on the given block, sets errorcode to indicate error
      * 
      * @param iNodeBlock Block where the inode is located
-     * @return iNode* Opened iNode
+     * @return iNode* Opened iNode, NULL if error happens
      */
     iNode* (*openInode)(FileSystem* fs, Index64 iNodeBlock);
 
     /**
-     * @brief Close the inode opened
+     * @brief Close the inode opened, sets errorcode to indicate error
      * 
      * @param iNode iNode to close
-     * @return int Status of the operation
+     * @return Result Result of the operation
      */
-    int (*closeInode)(iNode* iNode);
+    Result (*closeInode)(iNode* iNode);
 } iNodeGlobalOperations;
 
 typedef struct {
@@ -103,17 +103,19 @@ STRUCT_PRIVATE_DEFINE(FileSystem) {
 
 /**
  * @brief Initialize the file system
+ * 
+ * @return Result Result of the operation
  */
-void initFileSystem();
+Result initFileSystem();
 
 /**
- * @brief Deploy file system on device
+ * @brief Deploy file system on device, sets errorcode to indicate error
  * 
  * @param device Device to mount the file system
  * @param type File system type to deploy
- * @return int 0 if succeeded
+ * @return Result Result of the operation
  */
-int deployFileSystem(BlockDevice* device, FileSystemType type);
+Result deployFileSystem(BlockDevice* device, FileSystemType type);
 
 /**
  * @brief Check type of file system on device
@@ -124,19 +126,19 @@ int deployFileSystem(BlockDevice* device, FileSystemType type);
 FileSystemType checkFileSystem(BlockDevice* device);
 
 /**
- * @brief Open file system on device, return from buffer if file system is open
+ * @brief Open file system on device, return from buffer if file system is open, sets errorcode to indicate error
  * 
  * @param device Device to open
- * @return FileSystem* File system
+ * @return FileSystem* File system, NULL if error happens
  */
 FileSystem* openFileSystem(BlockDevice* device);
 
 /**
- * @brief Close a opened file system, cannot close a closed file system
+ * @brief Close a opened file system, cannot close a closed file system, sets errorcode to indicate error
  * 
  * @param system File system
- * @return int 0 if succeeded
+ * @return Result Result of the operation, NULL if error happens
  */
-int closeFileSystem(FileSystem* fs);
+Result closeFileSystem(FileSystem* fs);
 
 #endif // __FILESYSTEM_H

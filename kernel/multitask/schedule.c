@@ -16,9 +16,9 @@ static Spinlock _queueLock = SPINLOCK_UNLOCKED;
  * @brief Remove process from the queue holds the process
  * 
  * @param process Process to remove
- * @return Is the process is deleted successfully
+ * @return Result Result of the operation
  */
-static bool __removeProcessFromQueue(Process* process);
+static Result __removeProcessFromQueue(Process* process);
 
 void schedule(ProcessStatus newStatus) {
     Process* current = getCurrentProcess(), * next = getStatusQueueHead(PROCESS_STATUS_READY);
@@ -78,7 +78,7 @@ Process* getStatusQueueHead(ProcessStatus status) {
     return ret;
 }
 
-static bool __removeProcessFromQueue(Process* process) {
+static Result __removeProcessFromQueue(Process* process) {
     ProcessStatus status = process->status;
 
     QueueNode* nodeAddr = &process->statusQueueNode;
@@ -93,10 +93,10 @@ static bool __removeProcessFromQueue(Process* process) {
 
             initQueueNode(&process->statusQueueNode);
 
-            return true;
+            return RESULT_SUCCESS;
         }
     }
-    return false;
+    return RESULT_FAIL;
 }
 
 void idle() {

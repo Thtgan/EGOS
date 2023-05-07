@@ -56,4 +56,8 @@ typedef __builtin_va_list va_list;
 #define va_arg(__LIST, __TYPE)          __builtin_va_arg(__LIST, __TYPE)
 #define va_copy(__DST, __SRC)	        __builtin_va_copy(__DST, __SRC)
 
+typedef uint8_t         Result;
+#define RESULT_FAIL     ((Result)0)
+#define RESULT_SUCCESS  ((Result)1)
+
 #endif // __TYPES_H

@@ -28,9 +28,9 @@ void* translateVaddr(PML4Table* pageTable, void* vAddr);
  * @param pageTable Page table applies the mapping
  * @param vAddr Virtual address to map from
  * @param pAddr Physical address to map to
- * @return bool True if map succeeded
+ * @return Result Result of the operation
  */
-bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
+Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
 
 /**
  * @brief Set flags of page table entry
@@ -39,9 +39,9 @@ bool mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
  * @param vAddr Virtual address corresponded to entry
  * @param level Level of the entry
  * @param flags New entry flags
- * @return bool True if set succeeded
+ * @return Result Result of the operation
  */
-bool pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, uint64_t flags);
+Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, uint64_t flags);
 
 /**
  * @brief Get flags of page table entry

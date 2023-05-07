@@ -67,7 +67,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     initTimer();
 
     initFileSystem();
-
+    
     initVirtualDevices();
 
     initUsermode();
@@ -79,13 +79,13 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         size_t fileSize = fileGetPointer(file);
         fileSeek(file, 0, FSUTIL_SEEK_BEGIN);
         size_t read = fileRead(file, buffer, fileSize);
-        printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", read, buffer);
+        printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", fileSize, buffer);
         fileClose(file);
         releaseBuffer(buffer, BUFFER_SIZE_512);
     }
 
     DirectoryEntry entry;
-    if (tracePath(&entry, "/dev", INODE_TYPE_DIRECTORY) == 0) {
+    if (tracePath(&entry, "/dev", INODE_TYPE_DIRECTORY) == RESULT_SUCCESS) {
         printf(TERMINAL_LEVEL_OUTPUT, "Virtual device installed\n");
     }
 
@@ -130,7 +130,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     kFree(arr2);
 
     do {
-        if (tracePath(&entry, "/dev/tty", INODE_TYPE_DEVICE) == -1) {
+        if (tracePath(&entry, "/dev/tty", INODE_TYPE_DEVICE) == RESULT_FAIL) {
             printf(TERMINAL_LEVEL_OUTPUT, "TTY NOT EXIST\n");
             break;
         }

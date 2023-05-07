@@ -1,5 +1,6 @@
 #include<fs/fsManager.h>
 
+#include<error.h>
 #include<fs/fileSystem.h>
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -14,19 +15,24 @@ void initFSManager() {
     }));
 }
 
-bool registerDeviceFS(FileSystem* fs) {
+Result registerDeviceFS(FileSystem* fs) {
     if (hashTableFind(&_hashTable, (Object)fs->device) != NULL) {
-        return false;
+        SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
+        return RESULT_FAIL;
     }
 
     initHashChainNode(&fs->managerNode);
-    hashTableInsert(&_hashTable, (Object)fs->device, &fs->managerNode);
+    if (hashTableInsert(&_hashTable, (Object)fs->device, &fs->managerNode) == RESULT_FAIL) {
+        SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+        return RESULT_FAIL;
+    }
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
 FileSystem* unregisterDeviceFS(ID device) {
     if (hashTableFind(&_hashTable, (Object)device) == NULL) {
+        SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_NOT_FOUND);
         return NULL;
     }
 
@@ -36,6 +42,7 @@ FileSystem* unregisterDeviceFS(ID device) {
 FileSystem* getDeviceFS(ID device) {
     HashChainNode* found = hashTableFind(&_hashTable, (Object)device);
     if (found == NULL) {
+        SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_NOT_FOUND);
         return NULL;
     }
 

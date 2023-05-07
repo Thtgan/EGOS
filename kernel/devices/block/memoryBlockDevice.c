@@ -1,7 +1,7 @@
 #include<devices/block/memoryBlockDevice.h>
 
 #include<devices/block/blockDevice.h>
-#include<devices/block/blockDeviceTypes.h>
+#include<error.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/kMalloc.h>
@@ -9,9 +9,9 @@
 #include<string.h>
 #include<structs/singlyLinkedList.h>
 
-static int __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n);
+static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n);
 
-static int __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n);
+static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n);
 
 static BlockDeviceOperation _operations = {
     .readBlocks = __readBlocks,
@@ -20,6 +20,7 @@ static BlockDeviceOperation _operations = {
 
 BlockDevice* createMemoryBlockDevice(void* region, size_t size, ConstCstring name) {
     if (region == NULL) {
+        SET_ERROR_CODE(ERROR_OBJECT_ARGUMENT, ERROR_STATUS_IS_NULL);
         return NULL;
     }
 
@@ -29,12 +30,12 @@ BlockDevice* createMemoryBlockDevice(void* region, size_t size, ConstCstring nam
     return createBlockDevice(name, RAM, blockSize, &_operations, (Object)region);   //RAM block device's additional data is its memory region's begin
 }
 
-static int __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n) {
+static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n) {
     memcpy(buffer, (void*)this->additionalData + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE);  //Just simple memcpy
-    return 0;
+    return RESULT_SUCCESS;
 }
 
-static int __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n) {
+static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n) {
     memcpy((void*)this->additionalData + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE);  //Just simple memcpy
-    return 0;
+    return RESULT_SUCCESS;
 }
