@@ -104,9 +104,9 @@ void releaseProcess(Process* process);
  * 
  * @param process Process
  * @param file File pointer
- * @return Index32 Index of slot for file, INVALID_INDEX if slots are full
+ * @return int Index of slot for file, INVALID_INDEX if slots are full
  */
-Index32 allocateFileSlot(Process* process, File* file);
+int allocateFileSlot(Process* process, File* file);
 
 /**
  * @brief Get file from slot
@@ -115,7 +115,7 @@ Index32 allocateFileSlot(Process* process, File* file);
  * @param index Index of slot
  * @return File* File pointer in slot, NULL if slot is empty
  */
-File* getFileFromSlot(Process* process, Index32 index);
+File* getFileFromSlot(Process* process, int index);
 
 /**
  * @brief Release a file slot
@@ -124,6 +124,6 @@ File* getFileFromSlot(Process* process, Index32 index);
  * @param index Index of slot to release
  * @return File* File stored in slot, NULL if slot is empty
  */
-File* releaseFileSlot(Process* process, Index32 index);
+File* releaseFileSlot(Process* process, int index);
 
 #endif // __PROCESS_H

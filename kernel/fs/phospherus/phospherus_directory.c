@@ -168,11 +168,6 @@ static Directory* __openDirectory(iNode* iNode) {
         return NULL;
     }
 
-    if (iNode->entryReference != NULL) {
-        ++iNode->referenceCnt;
-        return iNode->entryReference;
-    }
-
     void* ret = NULL, * directoryInMemory = NULL;
     if (__doOpenDirectory(iNode, &ret, &directoryInMemory) == RESULT_FAIL) {
         if (directoryInMemory != NULL) {
@@ -183,9 +178,6 @@ static Directory* __openDirectory(iNode* iNode) {
             kFree(ret);
             ret = NULL;
         }
-    } else {
-        iNode->entryReference = (void*)ret;
-        iNode->referenceCnt = 1;
     }
 
     return ret;
@@ -193,17 +185,10 @@ static Directory* __openDirectory(iNode* iNode) {
 
 static Result __closeDirectory(Directory* directory) {
     iNode* iNode = directory->iNode;
-    if (iNode->entryReference == NULL) {
-        SET_ERROR_CODE(ERROR_OBJECT_DATA, ERROR_STATUS_VERIFIVCATION_FAIL);
-        return RESULT_FAIL;
-    }
 
-    if (--iNode->referenceCnt == 0) {
-        iNode->entryReference = NULL;
-        directory->iNode = NULL;
-        kFree(directory->directoryInMemory);
-        kFree(directory);
-    }
+    directory->iNode = NULL;
+    kFree(directory->directoryInMemory);
+    kFree(directory);
 
     return RESULT_SUCCESS;
 }

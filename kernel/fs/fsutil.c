@@ -8,6 +8,7 @@
 #include<fs/fileSystem.h>
 #include<fs/inode.h>
 #include<kernel.h>
+#include<kit/types.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<multitask/process.h>
@@ -23,7 +24,7 @@ static bool __pathCheck(ConstCstring path);
 
 static Result __doTracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type, iNode** iNodePtr, Directory** directoryPtr);
 
-static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** filePtr, Index32* retPtr);
+static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** filePtr, Flags8 flags);
 
 static Result __doCreateEntry(ConstCstring path, ConstCstring name, ID iNodeID, iNodeType type, iNode** iNodePtr, Directory** directoryPtr);
 
@@ -50,116 +51,89 @@ Result tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type) {
     return ret;
 }
 
-int fileOpen(ConstCstring path) {
+File* fileOpen(ConstCstring path, Flags8 flags) {
     DirectoryEntry entry;
     if (tracePath(&entry, path, INODE_TYPE_FILE) == RESULT_FAIL && tracePath(&entry, path, INODE_TYPE_DEVICE) == RESULT_FAIL) {
-        return -1;
+        return NULL;
     }
 
     iNode* iNode = NULL;
     File* file = NULL;
-    Index32 ret = -1;
 
-    Result res = __doFileOpen(&entry, &iNode, &file, &ret);
+    Result res = __doFileOpen(&entry, &iNode, &file, flags);
 
     if (res == RESULT_FAIL) {
         if (file != NULL) {
             if (rawFileClose(file) == RESULT_FAIL) {
-                return -1;
+                return NULL;
             }
         }
 
         if (iNode != NULL) {
             if (rawInodeClose(iNode) == RESULT_FAIL) {
-                return -1;
+                return NULL;
             }
         }
 
-        return -1;
+        return NULL;
     }
 
-    return ret;
+    return file;
 }
 
-Result fileClose(int file) {
-    File* filePtr = releaseFileSlot(getCurrentProcess(), file);
-    if (filePtr == NULL) {
-        return RESULT_FAIL;
-    }
-
-    iNode* iNode = filePtr->iNode;
-    if (rawFileClose(filePtr) == RESULT_FAIL || rawInodeClose(iNode) == RESULT_FAIL) {
+Result fileClose(File* file) {
+    iNode* iNode = file->iNode;
+    if (rawFileClose(file) == RESULT_FAIL || rawInodeClose(iNode) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Result fileSeek(int file, int64_t offset, uint8_t begin) {
-    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
-    if (filePtr == NULL) {
-        return RESULT_FAIL;
-    }
-
-    Index64 base = filePtr->pointer;
-    switch (begin)
-    {
+Result fileSeek(File* file, int64_t offset, uint8_t begin) {
+    Index64 base = file->pointer;
+    switch (begin) {
         case FSUTIL_SEEK_BEGIN:
             base = 0;
             break;
         case FSUTIL_SEEK_CURRENT:
             break;
         case FSUTIL_SEEK_END:
-            base = filePtr->iNode->onDevice.dataSize;
+            base = file->iNode->onDevice.dataSize;
             break;
         default:
             break;
     }
     base += offset;
 
-    if ((int64_t)base < 0 || base > filePtr->iNode->onDevice.dataSize) {
+    if ((int64_t)base < 0 || base > file->iNode->onDevice.dataSize) {
         SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
         return RESULT_FAIL;
     }
 
-    if (rawFileSeek(filePtr, base) == INVALID_INDEX) {
+    if (rawFileSeek(file, base) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Index64 fileGetPointer(int file) {
-    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
-    if (filePtr == NULL) {
-        return INVALID_INDEX;
-    }
-
-    return filePtr->pointer;
+Index64 fileGetPointer(File* file) {
+    return file->pointer;
 }
 
-Result fileRead(int file, void* buffer, size_t n) {
-    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
-    if (filePtr == NULL) {
-        return RESULT_FAIL;
-    }
-
-    Index64 before = filePtr->pointer;
-    if (rawFileRead(filePtr, buffer, n) == RESULT_FAIL) {
+Result fileRead(File* file, void* buffer, size_t n) {
+    Index64 before = file->pointer;
+    if (rawFileRead(file, buffer, n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Result fileWrite(int file, const void* buffer, size_t n) {
-    File* filePtr = getFileFromSlot(getCurrentProcess(), file);
-    if (filePtr == NULL) {
-        return RESULT_FAIL;
-    }
-
-    Index64 before = filePtr->pointer;
-    if (rawFileWrite(filePtr, buffer, n) == RESULT_FAIL) {
+Result fileWrite(File* file, const void* buffer, size_t n) {
+    Index64 before = file->pointer;
+    if (rawFileWrite(file, buffer, n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -213,13 +187,13 @@ Result deleteEntry(ConstCstring path, iNodeType type) {
     return ret;
 }
 
-File* rawFileOpen(iNode* iNode) {
+File* rawFileOpen(iNode* iNode, Flags8 flags) {
     FileSystem* fs = openFileSystem(iNode->device);
     if (fs == NULL) {
         return NULL;
     }
     
-    return fs->opearations->fileGlobalOperations->fileOpen(iNode);
+    return fs->opearations->fileGlobalOperations->fileOpen(iNode, flags);
 }
 
 Result rawFileClose(File* file) {
@@ -385,7 +359,7 @@ static Result __doTracePath(DirectoryEntry* entry, ConstCstring path, iNodeType 
     return RESULT_SUCCESS;
 }
 
-static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** filePtr, Index32* retPtr) {
+static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** filePtr, Flags8 flags) {
     iNode* iNode = NULL;
     *iNodePtr = iNode = rawInodeOpen(entry->iNodeID);
     if (iNode == NULL) {
@@ -394,7 +368,7 @@ static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** fileP
 
     File* file = NULL;
     if (entry->type == INODE_TYPE_FILE) {
-        *filePtr = file = rawFileOpen(iNode);
+        *filePtr = file = rawFileOpen(iNode, flags);
         if (file == NULL) {
             return RESULT_FAIL;
         }
@@ -405,12 +379,27 @@ static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** fileP
         }
     
         file->iNode = iNode;
-        file->operations = ((VirtualDeviceINodeData*)iNode->onDevice.data)->fileOperations;
-        file->pointer = 0;
-    }
+        memset(&file->operations, 0, sizeof(FileOperations));
 
-    if ((*retPtr = allocateFileSlot(getCurrentProcess(), file)) == INVALID_INDEX) {
-        return RESULT_FAIL;
+        FileOperations* operations = ((VirtualDeviceINodeData*)iNode->onDevice.data)->fileOperations;
+        file->operations.seek = operations->seek;
+        switch (VAL_AND(flags, FILE_FLAG_RW_MASK)) {
+            case FILE_FLAG_READ_ONLY:
+                file->operations.read = operations->read;
+                break;
+            case FILE_FLAG_WRITE_ONLY:
+                file->operations.write = operations->write;
+                break;
+            case FILE_FLAG_READ_WRITE:
+                file->operations.read = operations->read;
+                file->operations.write = operations->write;
+                break;
+            default:
+                return RESULT_FAIL;
+                break;
+        }
+
+        file->pointer = 0;
     }
 
     return RESULT_SUCCESS;

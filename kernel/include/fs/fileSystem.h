@@ -20,7 +20,7 @@ typedef struct {
      * @param iNode iNode contains the file
      * @return File* File opened, NULL if error happens
      */
-    File* (*fileOpen)(iNode* iNode);
+    File* (*fileOpen)(iNode* iNode, Flags8 flags);
 
     /**
      * @brief Close the file opened, be awared that iNode is not closed, sets errorcode to indicate error

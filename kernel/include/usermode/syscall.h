@@ -2,9 +2,13 @@
 #define __SYSCALL_H
 
 typedef enum {
-    SYSCALL_TYPE_EXIT,
-    SYSCALL_TYPE_TEST,
-    SYSCALL_TYPE_NUM
+    SYSCALL_READ,
+    SYSCALL_WRITE,
+    SYSCALL_OPEN,
+    SYSCALL_CLOSE,
+    SYSCALL_EXIT,
+    SYSCALL_TEST,
+    SYSCALL_NUM
 } SyscallType;
 
 /**

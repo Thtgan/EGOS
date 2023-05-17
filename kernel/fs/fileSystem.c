@@ -4,6 +4,7 @@
 #include<devices/terminal/terminalSwitch.h>
 #include<error.h>
 #include<fs/fsManager.h>
+#include<fs/fsSyscall.h>
 #include<fs/phospherus/phospherus.h>
 
 FileSystem* rootFileSystem = NULL;
@@ -38,6 +39,8 @@ Result initFileSystem() {
     if (rootFileSystem == NULL) {
         return RESULT_FAIL;
     }
+
+    initFSsyscall();
 
     return RESULT_SUCCESS;
 }

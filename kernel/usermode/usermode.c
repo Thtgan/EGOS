@@ -40,7 +40,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
 Result initUsermode() {
     initSyscall();
 
-    registerSyscallHandler(SYSCALL_TYPE_EXIT, __syscallHandlerExit);
+    registerSyscallHandler(SYSCALL_EXIT, __syscallHandlerExit);
 
     return RESULT_SUCCESS;
 }
@@ -116,7 +116,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
     }
 
     File* file = NULL;
-    *filePtr = file = rawFileOpen(iNode);
+    *filePtr = file = rawFileOpen(iNode, FILE_FLAG_READ_ONLY);
     if (file == NULL) {
         return RESULT_FAIL;
     }

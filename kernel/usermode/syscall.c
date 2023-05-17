@@ -17,8 +17,8 @@ static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int a
 __attribute__((naked))
 static void __syscallHandler();
 
-static void* _syscallHandlers[SYSCALL_TYPE_NUM] = {
-    [0 ... SYSCALL_TYPE_NUM - 1] = NULL
+static void* _syscallHandlers[SYSCALL_NUM] = {
+    [0 ... SYSCALL_NUM - 1] = NULL
 };
 
 void initSyscall() {
@@ -30,7 +30,7 @@ void initSyscall() {
     SET_FLAG_BACK(flags, MSR_EFER_SCE);
     wrmsrl(MSR_ADDR_EFER, flags);
 
-    registerSyscallHandler(SYSCALL_TYPE_TEST, __testSyscall);
+    registerSyscallHandler(SYSCALL_TEST, __testSyscall);
 }
 
 void registerSyscallHandler(SyscallType type, void* handler) {

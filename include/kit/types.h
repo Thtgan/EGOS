@@ -60,4 +60,9 @@ typedef uint8_t         Result;
 #define RESULT_FAIL     ((Result)0)
 #define RESULT_SUCCESS  ((Result)1)
 
+typedef uint8_t Flags8;
+typedef uint16_t Flags16;
+typedef uint32_t Flags32;
+typedef uint64_t Flags64;
+
 #endif // __TYPES_H

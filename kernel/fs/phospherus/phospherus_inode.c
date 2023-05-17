@@ -700,7 +700,6 @@ static Result __doOpenInode(FileSystem* this, Index64 iNodeBlock, iNode** retPtr
         ret->blockIndex = iNodeBlock;
         ret->openCnt = 1;
         ret->operations = &phospherusInodeOperations;
-        ret->entryReference = NULL;
         initHashChainNode(&ret->hashChainNode);
 
         if (blockDeviceReadBlocks(devicePtr, iNodeBlock, &ret->onDevice, 1) == RESULT_FAIL) {

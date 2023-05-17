@@ -1,6 +1,8 @@
 #include<multitask/process.h>
 
 #include<debug.h>
+#include<fs/file.h>
+#include<fs/fsutil.h>
 #include<interrupt/IDT.h>
 #include<kernel.h>
 #include<kit/bit.h>
@@ -183,9 +185,15 @@ void releaseProcess(Process* process) {
 
     __releasePID(process->pid);
 
+    for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+        if (process->fileSlots[i] != NULL) {
+            fileClose(process->fileSlots[i]);
+        }
+    }
     size_t openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
     memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
     pageFree(process->fileSlots, (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE);
+
 
     memset(process, 0, PAGE_SIZE);
     pageFree(process, 1);
@@ -214,11 +222,16 @@ static Process* __createProcess(uint16_t pid, ConstCstring name) {
     ret->fileSlots = pageAlloc(openedFilePageSize, PHYSICAL_PAGE_TYPE_PRIVATE);
     memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
+    File* ttyFile = NULL;
+    if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) != NULL) {
+        ret->fileSlots[0] = ttyFile;
+    }
+
     return ret;
 }
 
-Index32 allocateFileSlot(Process* process, File* file) {
-    for (Index32 i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+int allocateFileSlot(Process* process, File* file) {
+    for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
         if (process->fileSlots[i] == NULL) {
             process->fileSlots[i] = file;
             return i;
@@ -228,7 +241,7 @@ Index32 allocateFileSlot(Process* process, File* file) {
     return INVALID_INDEX;
 }
 
-File* getFileFromSlot(Process* process, Index32 index) {
+File* getFileFromSlot(Process* process, int index) {
     if (index >= MAX_OPENED_FILE_NUM) {
         return NULL;
     }
@@ -236,7 +249,7 @@ File* getFileFromSlot(Process* process, Index32 index) {
     return process->fileSlots[index];
 }
 
-File* releaseFileSlot(Process* process, Index32 index) {
+File* releaseFileSlot(Process* process, int index) {
     if (index >= MAX_OPENED_FILE_NUM) {
         return NULL;
     }

@@ -6,6 +6,8 @@
 #include<fs/file.h>
 #include<fs/inode.h>
 #include<fs/phospherus/phospherus.h>
+#include<kit/bit.h>
+#include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
@@ -22,7 +24,7 @@ FileOperations fileOperations = {
     .write = __write
 };
 
-static File* __fileOpen(iNode* iNode);
+static File* __fileOpen(iNode* iNode, Flags8 flags);
 
 static Result __fileClose(File* file);
 
@@ -73,14 +75,9 @@ static Result __write(File* this, const void* buffer, size_t n) {
     return ret;
 }
 
-static File* __fileOpen(iNode* iNode) {
+static File* __fileOpen(iNode* iNode, Flags8 flags) {
     if (iNode->onDevice.type != INODE_TYPE_FILE) {
         return NULL;
-    }
-
-    if (iNode->entryReference != NULL) {
-        ++iNode->referenceCnt;
-        return iNode->entryReference;
     }
 
     File* ret = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
@@ -89,11 +86,29 @@ static File* __fileOpen(iNode* iNode) {
     }
 
     ret->iNode = iNode;
-    ret->operations = &fileOperations;
-    ret->pointer = 0;
+    memset(&ret->operations, 0, sizeof(FileOperations));
+    if (VAL_AND(flags, FILE_FLAG_RW_MASK) == 0) {
+        kFree(ret);
+        return NULL;
+    }
 
-    iNode->entryReference = (void*)ret;
-    iNode->referenceCnt = 1;
+    ret->operations.seek = __seek;
+    switch (VAL_AND(flags, FILE_FLAG_RW_MASK)) {
+        case FILE_FLAG_READ_ONLY:
+            ret->operations.read = __read;
+            break;
+        case FILE_FLAG_WRITE_ONLY:
+            ret->operations.write = __write;
+            break;
+        case FILE_FLAG_READ_WRITE:
+            ret->operations.read = __read;
+            ret->operations.write = __write;
+            break;
+        default:
+            break;
+    }
+
+    ret->pointer = 0;
 
     return ret;
 }

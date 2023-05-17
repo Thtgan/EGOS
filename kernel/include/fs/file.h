@@ -2,18 +2,18 @@
 #define __FILE_H
 
 #include<fs/inode.h>
+#include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 
-STRUCT_PRE_DEFINE(FileOperations);
+#define FILE_FLAG_RW_MASK       MASK_RANGE(8, 0, 2)
+#define FILE_FLAG_READ_ONLY     VAL_LEFT_SHIFT(1, 0)
+#define FILE_FLAG_WRITE_ONLY    VAL_LEFT_SHIFT(2, 0)
+#define FILE_FLAG_READ_WRITE    VAL_LEFT_SHIFT(3, 0)
+
+STRUCT_PRE_DEFINE(File);
 
 typedef struct {
-    iNode* iNode;
-    Index64 pointer;
-    FileOperations* operations;
-} File;
-
-STRUCT_PRIVATE_DEFINE(FileOperations) {
     /**
      * @brief Seek file pointer to position, sets errorcode to indicate error
      * 
@@ -42,6 +42,13 @@ STRUCT_PRIVATE_DEFINE(FileOperations) {
      * @return Result Result of the operation
      */
     Result (*write)(File* file, const void* buffer, size_t n);
+} FileOperations;
+
+STRUCT_PRIVATE_DEFINE(File) {
+    iNode* iNode;
+    Index64 pointer;
+    FileOperations operations;
+    Flags8 flags;
 };
 
 /**
@@ -52,7 +59,10 @@ STRUCT_PRIVATE_DEFINE(FileOperations) {
  * @return Index64 File pointer after seek, INVALID_INDEX if failed
  */
 static inline Index64 rawFileSeek(File* file, size_t seekTo) {
-    return file->operations->seek(file, seekTo);
+    if (file->operations.seek == NULL) {
+        return INVALID_INDEX;
+    }
+    return file->operations.seek(file, seekTo);
 } 
 
 /**
@@ -64,7 +74,10 @@ static inline Index64 rawFileSeek(File* file, size_t seekTo) {
  * @return Result Result of the operation
  */
 static inline Result rawFileRead(File* file, void* buffer, size_t n) {
-    return file->operations->read(file, buffer, n);
+    if (file->operations.read == NULL) {
+        return RESULT_FAIL;
+    }
+    return file->operations.read(file, buffer, n);
 } 
 
 /**
@@ -76,7 +89,10 @@ static inline Result rawFileRead(File* file, void* buffer, size_t n) {
  * @return Result Result of the operation
  */
 static inline Result rawFileWrite(File* file, const void* buffer, size_t n) {
-    return file->operations->write(file, buffer, n);
+    if (file->operations.write == NULL) {
+        return RESULT_FAIL;
+    }
+    return file->operations.write(file, buffer, n);
 } 
 
 #endif // __FILE_H

@@ -74,8 +74,8 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     kFree(arr2);
 
     do {
-        int ttyFile = -1;
-        if ((ttyFile = fileOpen("/dev/tty")) == -1) {
+        File* ttyFile = NULL;
+        if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {
             printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", getCurrentProcess()->errorCode);
             break;
         }
@@ -95,7 +95,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
 static void printLOGO() {
     char* buffer = allocateBuffer(BUFFER_SIZE_512);
-    int file = fileOpen("/LOGO.txt");
+    File* file = fileOpen("/LOGO.txt", FILE_FLAG_READ_ONLY);
     fileSeek(file, 0, FSUTIL_SEEK_END);
     size_t fileSize = fileGetPointer(file);
     fileSeek(file, 0, FSUTIL_SEEK_BEGIN);

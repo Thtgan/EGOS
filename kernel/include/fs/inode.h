@@ -35,8 +35,6 @@ typedef struct {
     Index64 blockIndex;     //Position on device
     uint32_t openCnt;       //How mauch is this iNode opened
     iNodeOperations* operations;
-    void* entryReference;
-    uint32_t referenceCnt;
     HashChainNode hashChainNode;
 } iNode;
 

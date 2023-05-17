@@ -22,17 +22,17 @@ Result tracePath(DirectoryEntry* entry, ConstCstring path, iNodeType type);
  * @brief Open file from path, starts from root directory, sets errorcode to indicate error
  * 
  * @param path Path to file
- * @return int Handle of file opened, -1 if error happens
+ * @return File opened, NULL if error happens
  */
-int fileOpen(ConstCstring path);
+File* fileOpen(ConstCstring path, Flags8 flags);
 
 /**
  * @brief Close file opened, sets errorcode to indicate error
  * 
- * @param file Handle of file to close
+ * @param file File to close
  * @return Result Result of the operation
  */
-Result fileClose(int file);
+Result fileClose(File* file);
 
 #define FSUTIL_SEEK_BEGIN   0
 #define FSUTIL_SEEK_CURRENT 1
@@ -41,40 +41,40 @@ Result fileClose(int file);
 /**
  * @brief Seek file pointer to position, sets errorcode to indicate error
  * 
- * @param file Handle of file
+ * @param file File
  * @param offset Offset to the vegin
  * @param begin Begin of the seek
  * @return Result Result of the operation
  */
-Result fileSeek(int file, int64_t offset, uint8_t begin);
+Result fileSeek(File* file, int64_t offset, uint8_t begin);
 
 /**
  * @brief Get current pointer of file
  * 
- * @param file Handle of file
+ * @param file File
  * @return Index64 Pointer position of file
  */
-Index64 fileGetPointer(int file);
+Index64 fileGetPointer(File* file);
 
 /**
  * @brief Read from file, sets errorcode to indicate error
  * 
- * @param file Handle of file
+ * @param file File
  * @param buffer Buffer to write to
  * @param n Num of byte(s) to read
  * @return Result Result of the operation
  */
-Result fileRead(int file, void* buffer, size_t n);
+Result fileRead(File* file, void* buffer, size_t n);
 
 /**
  * @brief Write to file, sets errorcode to indicate error
  * 
- * @param file Handle of file
+ * @param file File
  * @param buffer Buffer to read from
  * @param n Num of byte(s) to write
  * @return Result Result of the operation
  */
-Result fileWrite(int file, const void* buffer, size_t n);
+Result fileWrite(File* file, const void* buffer, size_t n);
 
 /**
  * @brief Create an entry and insert it into directory, be aware its parent directory must be existed, this function cannot be used to create entry with type INODE_TYPE_DEVICE,
@@ -103,7 +103,7 @@ Result deleteEntry(ConstCstring path, iNodeType type);
  * @param iNode iNode contains file
  * @return File* File opened, NULL if error happens
  */
-File* rawFileOpen(iNode* iNode);
+File* rawFileOpen(iNode* iNode, Flags8 flags);
 
 /**
  * @brief Close a file opened, sets errorcode to indicate error
