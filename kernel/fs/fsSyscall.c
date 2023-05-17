@@ -31,7 +31,6 @@ static int __syscall_read(int fileDescriptor, void* buffer, size_t n) {
 
 static int __syscall_write(int fileDescriptor, const void* buffer, size_t n) {
     File* file = getFileFromSlot(getCurrentProcess(), fileDescriptor);
-    printf(TERMINAL_LEVEL_DEV, "%p %u %s %u\n", fileDescriptor, file, buffer, n);
     if (file == NULL || fileWrite(file, buffer, n) == RESULT_FAIL) {
         return -1;
     }
