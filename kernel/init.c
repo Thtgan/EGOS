@@ -8,6 +8,7 @@
 #include<devices/virtualDevice.h>
 #include<fs/fileSystem.h>
 #include<interrupt/IDT.h>
+#include<interrupt/TSS.h>
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<multitask/schedule.h>
@@ -28,13 +29,14 @@ static __InitFunc _initFuncs[] = {
     { initTerminalSwitch, "Terminal" },
     { initIDT, "Interrupt" },
     { initMemory, "Memory" },
+    { initTSS, "TSS" },
     { __printBootSlogan, NULL },
     { initKeyboard, "Keyboard" },
-    { __enableInterrupt, NULL },
     { initBlockDevice, "Block Device" },
-    { initHardDisk, "Hard Disk" },
     { initSchedule, "Schedule" },
     { initTimer, "Timer" },
+    { __enableInterrupt, NULL },
+    { initHardDisk, "Hard Disk" },
     { initFileSystem, "File System" },
     { initVirtualDevices, "Virtual Device" },
     { initUsermode, "User Mode" },
@@ -43,13 +45,15 @@ static __InitFunc _initFuncs[] = {
 
 Result initKernel() {
     for (int i = 0; _initFuncs[i].func != NULL; ++i) {
-        if (_initFuncs[i].func() == RESULT_FAIL) {
-            if (_initFuncs[i].name != NULL) {
-                printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
-            }
-
-            return RESULT_FAIL;
+        if (_initFuncs[i].func() == RESULT_SUCCESS) {
+            continue;
         }
+
+        if (_initFuncs[i].name != NULL) {
+            printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
+        }
+
+        return RESULT_FAIL;
     }
 
     printf(TERMINAL_LEVEL_DEBUG, "All Initializations passed\n");

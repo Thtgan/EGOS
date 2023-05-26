@@ -5,19 +5,20 @@
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
+#include<multitask/context.h>
 #include<print.h>
 #include<real/flags/eflags.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
-#include<structs/registerSet.h>
 #include<system/GDT.h>
 
-void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, RegisterSet* registers) = {};
+
+void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
 IDTentry IDTtable[256];
 IDTdesc idtDesc;
 
-extern void (*stubs[256])(HandlerStackFrame* handlerStackFrame);
+extern void (*stubs[256])();
 
 /**
  * @brief Assign an IDT entry to the 

@@ -9,9 +9,9 @@
 #include<memory/physicalPages.h>
 #include<memory/pageAlloc.h>
 #include<memory/paging/paging.h>
-#include<multitask/process.h>
+#include<multitask/context.h>
+#include<multitask/schedule.h>
 #include<real/simpleAsmLines.h>
-#include<structs/registerSet.h>
 #include<system/address.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
@@ -99,7 +99,7 @@ void __syscallHandlerExit(int ret) {
         "mov %0, %%eax;"
         "iretq;"
         :
-        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(getCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
+        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedulerGetCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
     );
 }
 
@@ -146,8 +146,8 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
         }
     }
 
-    Process* process = getCurrentProcess();
-    PML4Table* pageTable = process->pageTable;
+    Process* process = schedulerGetCurrentProcess();
+    PML4Table* pageTable = process->context.pageTable;
     for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
         if (translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i) == NULL) {
             void* pAddr = pageAlloc(1, PHYSICAL_PAGE_TYPE_USER_STACK);
@@ -161,19 +161,19 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
         }
     }
 
-    asm volatile(
-        "pushq $0;"         //Reserved for return value
-        SAVE_ALL_NO_FRAME   //Save context
-    );
+    asm volatile("pushq $0;");  //Reserved for return value
+    
+    SAVE_REGISTERS();
+    
     process->userExitStackTop = (void*)readRegister_RSP_64();
     __jumpToUserMode((void*)header.entryVaddr, (void*)USER_STACK_BOTTOM);
     asm volatile (
         "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :
-        : "i"(sizeof(RegisterSet))
+        : "i"(sizeof(Registers))
     );
 
-    asm volatile(RESTORE_ALL);  //Restore context
+    RESTORE_REGISTERS();    //Restore context
 
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
         if (readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {

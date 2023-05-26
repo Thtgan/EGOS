@@ -123,7 +123,6 @@ Index64 fileGetPointer(File* file) {
 }
 
 Result fileRead(File* file, void* buffer, size_t n) {
-    Index64 before = file->pointer;
     if (rawFileRead(file, buffer, n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -132,7 +131,6 @@ Result fileRead(File* file, void* buffer, size_t n) {
 }
 
 Result fileWrite(File* file, const void* buffer, size_t n) {
-    Index64 before = file->pointer;
     if (rawFileWrite(file, buffer, n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -400,6 +398,7 @@ static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** fileP
         }
 
         file->pointer = 0;
+        file->flags = flags;
     }
 
     return RESULT_SUCCESS;

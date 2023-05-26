@@ -3,14 +3,14 @@
 
 #include<kit/bit.h>
 #include<kit/types.h>
-#include<multitask/process.h>
+#include<multitask/schedule.h>
 
 #define BUILD_ERROR_CODE(__OBJECT, __STATUS)    (VAL_OR(VAL_LEFT_SHIFT(__OBJECT, 16), __STATUS))
 #define ERROR_GET_OBJECT(__ERROR)               (EXTRACT_VAL(__ERROR, 32, 16, 32))
 #define ERROR_GET_STATUS(__ERROR)               (EXTRACT_VAL(__ERROR, 32, 0, 16))
 
-#define SET_ERROR_CODE(__OBJECT, __STATUS)      getCurrentProcess()->errorCode = BUILD_ERROR_CODE(__OBJECT, __STATUS)
-#define GET_ERROR_CODE()                        getCurrentProcess()->errorCode
+#define SET_ERROR_CODE(__OBJECT, __STATUS)      schedulerGetCurrentProcess()->errorCode = BUILD_ERROR_CODE(__OBJECT, __STATUS)
+#define GET_ERROR_CODE()                        schedulerGetCurrentProcess()->errorCode
 
 #define ERROR_OBJECT_EXECUTION                  0x0000
 #define ERROR_OBJECT_MEMORY                     0x0001

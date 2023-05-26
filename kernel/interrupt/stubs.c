@@ -2,51 +2,46 @@
 #include<interrupt/ISR.h>
 #include<kit/macro.h>
 #include<kit/types.h>
+#include<multitask/context.h>
+#include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 
-extern void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, RegisterSet* registers);
+
+extern void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, Registers* registers);
 
 #define HANDLER_STUB_NAME(__NUMBER) MACRO_CONCENTRATE2(handlerStub_, __NUMBER)
 
 #define ERROR_CODE_PADDING_EXCEPTION    ""
 #define ERROR_CODE_PADDING_INTERRUPT    "pushq $-1;"
 
-#define HANDLER_STUB(__NUMBER, __TYPE)                                      \
-__attribute__((naked))                                                      \
-void HANDLER_STUB_NAME(__NUMBER) (HandlerStackFrame* handlerStackFrame) {   \
-    asm volatile(                                                           \
-        "cli;"                                                              \
-        MACRO_CONCENTRATE2(ERROR_CODE_PADDING_, __TYPE)                     \
-        SAVE_ALL                                                            \
-    );                                                                      \
-    register RegisterSet* registers asm ("%rdx");                           \
-    asm volatile(                                                           \
-        "mov %%rsp, %0;"                                                    \
-        "mov %%rsp, %1;"                                                    \
-        "add %2, %0;"                                                       \
-        "cld;"                                                              \
-        "mov %3, %%ax;"                                                     \
-        "mov %%ax, %%ds;"                                                   \
-        "mov %%ax, %%ss;"                                                   \
-        "mov %%ax, %%es;"                                                   \
-        : "=S"(handlerStackFrame), "=d"(registers)                          \
-        : "i"(sizeof(RegisterSet)), "i"(SEGMENT_KERNEL_DATA)                \
-    );                                                                      \
-    EOI();                                                                  \
-    register uint8_t vec asm ("%rdi");                                      \
-    asm volatile(                                                           \
-        "mov $" MACRO_STR(__NUMBER) ", %0\n"                                \
-        "sti;"                                                              \
-        : "=D"(vec), "=S"(handlerStackFrame)                                \
-    );                                                                      \
-    handlers[vec](vec, handlerStackFrame, registers);                       \
-    asm volatile(                                                           \
-        "cli;"  \
-        RESTORE_ALL                                                         \
-        "add $8, %rsp;"  /* Pop errorCode */                                \
-        "sti;"  \
-        "iretq;"                                                            \
-    );                                                                      \
+#define HANDLER_STUB(__NUMBER, __TYPE)                                                                                              \
+__attribute__((naked))                                                                                                              \
+void HANDLER_STUB_NAME(__NUMBER) () {                                                                                               \
+    cli();                                                                                                                          \
+    asm volatile(MACRO_CONCENTRATE2(ERROR_CODE_PADDING_, __TYPE));                                                                  \
+    SAVE_REGISTERS();                                                                                                               \
+    register HandlerStackFrame* handlerStackFrame asm ("rsi") = (HandlerStackFrame*)(readRegister_RSP_64() + sizeof(Registers));    \
+    register Registers* registers asm ("rdi") = (Registers*)readRegister_RSP_64();                                                  \
+    cld();                                                                                                                          \
+    asm volatile(                                                                                                                   \
+        "mov %0, %%ax;"                                                                                                             \
+        "mov %%ax, %%ds;"                                                                                                           \
+        "mov %%ax, %%ss;"                                                                                                           \
+        "mov %%ax, %%es;"                                                                                                           \
+        :                                                                                                                           \
+        : "i"(SEGMENT_KERNEL_DATA)                                                                                                  \
+    );                                                                                                                              \
+    EOI();                                                                                                                          \
+    register uint8_t vec = __NUMBER;                                                                                                \
+    sti();                                                                                                                          \
+    handlers[vec](vec, handlerStackFrame, registers);                                                                               \
+    cli();                                                                                                                          \
+    RESTORE_REGISTERS();                                                                                                            \
+    asm volatile(                                                                                                                   \
+        "add $8, %rsp;"  /* Pop errorCode */                                                                                        \
+        "sti;"                                                                                                                      \
+        "iretq;"                                                                                                                    \
+    );                                                                                                                              \
 }
 
 #define HANDLER_STUB_ROW(__ROW, __TYPE)                                                                         \
@@ -92,7 +87,7 @@ HANDLER_STUB_NAME(MACRO_CONCENTRATE3(0x, __ROW, A)), HANDLER_STUB_NAME(MACRO_CON
 HANDLER_STUB_NAME(MACRO_CONCENTRATE3(0x, __ROW, C)), HANDLER_STUB_NAME(MACRO_CONCENTRATE3(0x, __ROW, D)),   \
 HANDLER_STUB_NAME(MACRO_CONCENTRATE3(0x, __ROW, E)), HANDLER_STUB_NAME(MACRO_CONCENTRATE3(0x, __ROW, F))
 
-void (*stubs[256])(HandlerStackFrame* handlerStackFrame) = {
+void (*stubs[256])() = {
     HANDLER_STUB_NAME_ROW(0), HANDLER_STUB_NAME_ROW(1), HANDLER_STUB_NAME_ROW(2), HANDLER_STUB_NAME_ROW(3),
     HANDLER_STUB_NAME_ROW(4), HANDLER_STUB_NAME_ROW(5), HANDLER_STUB_NAME_ROW(6), HANDLER_STUB_NAME_ROW(7),
     HANDLER_STUB_NAME_ROW(8), HANDLER_STUB_NAME_ROW(9), HANDLER_STUB_NAME_ROW(A), HANDLER_STUB_NAME_ROW(B),

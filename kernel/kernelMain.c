@@ -3,7 +3,7 @@
 #include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
-#include<multitask/process.h>
+#include<multitask/schedule.h>
 #include<multitask/semaphore.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
@@ -38,13 +38,13 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
 
     arr1 = kMalloc(1 * sizeof(int), MEMORY_TYPE_NORMAL), arr2 = kMalloc(1 * sizeof(int), MEMORY_TYPE_SHARE);
     arr1[0] = 1, arr2[0] = 114514;
-    if (forkFromCurrentProcess("Forked") != NULL) {
-        printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", getCurrentProcess()->name);
+    if (fork("Forked") != NULL) {
+        printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
     } else {
-        printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", getCurrentProcess()->name);
+        printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", schedulerGetCurrentProcess()->name);
     }
 
-    if (getCurrentProcess()->pid == 0) {
+    if (schedulerGetCurrentProcess()->pid == 0) {
         arr1[0] = 3;
         up(&sema1);
         down(&sema2);
@@ -76,7 +76,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
     do {
         File* ttyFile = NULL;
         if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {
-            printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", getCurrentProcess()->errorCode);
+            printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", schedulerGetCurrentProcess()->errorCode);
             break;
         }
 
@@ -88,7 +88,7 @@ void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
         fileClose(ttyFile);
     } while (0);
 
-    printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", getCurrentProcess()->name);
+    printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
     die();
 }

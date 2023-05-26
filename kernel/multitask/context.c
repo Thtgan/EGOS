@@ -1,12 +1,34 @@
-#include<structs/registerSet.h>
+#include<multitask/context.h>
 
+#include<devices/terminal/terminalSwitch.h>
 #include<print.h>
 
-void printRegisters(TerminalLevel outputLevel, RegisterSet* registers) {
+__attribute__((naked))
+void switchContext(Context* from, Context* to) {
+    //Switch the page table, place it here to prevent stack corruption from function call
+    SWITCH_TO_TABLE(to->pageTable);
+    asm volatile(
+        "mov %%rsp, 16(%0);"
+        "mov 16(%1), %%rsp;"
+        "push %%rbx;"
+        "lea __switch_return(%%rip), %%rbx;"
+        "mov %%rbx, 8(%0);"
+        "pop %%rbx;"
+        "pushq 8(%1);"
+        "retq;"
+        "__switch_return:"
+        "retq;"
+        : "=D"(from)
+        : "S"(to)
+        : "memory"
+    );
+}
+
+void printRegisters(TerminalLevel outputLevel, Registers* registers) {
     printf(outputLevel, "RAX-%#018llX RBX-%#018llX\n", registers->rax, registers->rbx);
     printf(outputLevel, "RCX-%#018llX RDX-%#018llX\n", registers->rcx, registers->rdx);
-    printf(outputLevel, "RSP-%#018llX RBP-%#018llX\n", registers->rsp, registers->rbp);
     printf(outputLevel, "RSI-%#018llX RDI-%#018llX\n", registers->rsi, registers->rdi);
+    printf(outputLevel, "RBP-%#018llX\n", registers->rbp);
     printf(outputLevel, "CS-%#06llX DS-%#06llX\n", registers->cs, registers->ds);
     printf(outputLevel, "SS-%#06llX ES-%#06llX\n", registers->ss, registers->es);
     printf(outputLevel, "FS-%#06llX GS-%#06llX\n", registers->fs, registers->gs);

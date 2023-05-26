@@ -1,10 +1,9 @@
 #include<multitask/process.h>
 
 #include<debug.h>
+#include<devices/virtualDevice.h>
 #include<fs/file.h>
 #include<fs/fsutil.h>
-#include<interrupt/IDT.h>
-#include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<memory/memory.h>
@@ -13,21 +12,15 @@
 #include<memory/paging/pagingCopy.h>
 #include<memory/paging/pagingRelease.h>
 #include<memory/physicalPages.h>
+#include<multitask/context.h>
 #include<multitask/schedule.h>
 #include<string.h>
 #include<structs/bitmap.h>
 #include<structs/queue.h>
-#include<structs/registerSet.h>
 #include<structs/vector.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
-#include<system/GDT.h>
-#include<system/TSS.h>
 #include<real/simpleAsmLines.h>
-
-static TSS _tss;
-
-static Process* _currentProcess = NULL;
 
 /**
  * @brief Create  process with basic initialization
@@ -61,119 +54,74 @@ Process* initProcess() {
     initBitmap(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
     setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
 
-    Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Kernel Process");
+    Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Init");
     mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
-    mainProcess->pageTable = currentPageTable;
-
-    switchProcess(mainProcess, mainProcess);
-
-    //Call switch function, not just for setting up _currentProcess properly, also for setting up the stack pointer properly
-    PhysicalPage* stackPhysicalPageStruct = getPhysicalPageStruct(translateVaddr(currentPageTable, (void*)(KERNEL_PHYSICAL_END | KERNEL_VIRTUAL_BEGIN)));
-    for (int i = 0; i < KERNEL_STACK_PAGE_NUM; ++i) {
-        (stackPhysicalPageStruct + i)->flags = PHYSICAL_PAGE_TYPE_NORMAL;
-        referPhysicalPage(stackPhysicalPageStruct + i);
-    }
-
-    setProcessStatus(mainProcess, PROCESS_STATUS_RUNNING);
+    mainProcess->context.pageTable = currentPageTable;
 
     return mainProcess;
 }
 
-void initTSS() {
-    memset(&_tss, 0, sizeof(TSS));
-    _tss.ist[0] = (uintptr_t)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
-    _tss.rsp[0] = (uintptr_t)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
-    _tss.ioMapBaseAddress = 0x8000;  //Invalid
-    
-    GDTDesc64* desc = (GDTDesc64*)sysInfo->gdtDesc;
-    GDTEntryTSS_LDT* gdtEntryTSS = (GDTEntryTSS_LDT*)((GDTEntry*)desc->table + GDT_ENTRY_INDEX_TSS);
-
-    *gdtEntryTSS = BUILD_GDT_ENTRY_TSS_LDT(((uintptr_t)&_tss), sizeof(TSS), GDT_TSS_LDT_TSS | GDT_TSS_LDT_PRIVIEGE_0 | GDT_TSS_LDT_PRESENT, 0);
-
-    asm volatile("ltr %w0" :: "r"(SEGMENT_TSS));
-}
-
-__attribute__((naked))
 void switchProcess(Process* from, Process* to) {
-    asm volatile(
-        SAVE_ALL
-    );
-    asm volatile(
-        "mov %%rsp, %0;"
-        "mov %1, %%rsp"
-        : "=m"(from->registers)
-        : "m"(to->registers)
-    );
+    SAVE_REGISTERS();
 
-    //Switch the page table
-    SWITCH_TO_TABLE(to->pageTable);
+    from->registers = (Registers*)readRegister_RSP_64();
     
-    _currentProcess = to;
+    switchContext(&from->context, &to->context);
 
-    asm volatile(
-        RESTORE_ALL
-        "retq;"
-    );
+    RESTORE_REGISTERS();
 }
 
-Process* getCurrentProcess() {
-    return _currentProcess;
-}
+extern void* __fork_return;
 
-static char _tmpStack[KERNEL_STACK_SIZE];
+Process* fork(ConstCstring name) {
+    uint32_t oldPID = schedulerGetCurrentProcess()->pid, newPID = __allocatePID();
 
-Process* forkFromCurrentProcess(const char* processName) {
-    uint32_t oldPID = _currentProcess->pid, newPID = __allocatePID();
     if (newPID == INVALID_PID) {
         return NULL;
     }
+    
+    Process* newProcess = __createProcess(newPID, name);
+    newProcess->ppid = oldPID;
+    PML4Table* newTable = copyPML4Table(schedulerGetCurrentProcess()->context.pageTable);
 
-    switchProcess(_currentProcess, _currentProcess);    //Mark the current process's stack here, forked process will take the stack address and starts from here
-    char* source = (char*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE;
-    for (int i = 0; i < KERNEL_STACK_SIZE; ++i) {
-        _tmpStack[i] = source[i];
+    void* newStack = pageAlloc(KERNEL_STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL);
+    memset(newStack, 0, KERNEL_STACK_SIZE);
+    for (uintptr_t i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
+        mapAddr(newTable, (void*)KERNEL_STACK_BOTTOM - i, newStack + KERNEL_STACK_SIZE - i);
     }
 
-    uint32_t currentPID = _currentProcess->pid;
-    if (currentPID == oldPID) {   //The parent process is forking new process, forked process will execute this statement too but will not pass
-        Process* newProcess = __createProcess(newPID, processName);
-        newProcess->ppid = oldPID;
-        newProcess->pageTable = copyPML4Table(_currentProcess->pageTable);
-        newProcess->registers = _currentProcess->registers;
+    SAVE_REGISTERS();
+    memcpy(newStack, (void*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
 
-        void* newStackBottom = pageAlloc(KERNEL_STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL) + KERNEL_STACK_SIZE;
-        for (uintptr_t i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
-            mapAddr(newProcess->pageTable, (void*)KERNEL_STACK_BOTTOM - i, newStackBottom - i);
-        }
+    newProcess->context.pageTable = newTable;
+    newProcess->context.rip = (uint64_t)&__fork_return;
+    newProcess->context.rsp = readRegister_RSP_64();
 
-        char* des = newStackBottom - KERNEL_STACK_SIZE;
-        for (int i = 0; i < KERNEL_STACK_SIZE; ++i) {
-            des[i] = _tmpStack[i];
-        }
+    schedulerAddProcess(newProcess);
 
-        setProcessStatus(newProcess, PROCESS_STATUS_READY);
+    asm volatile("__fork_return:");
+    //New process starts from here
 
-        return newProcess;
-    }
+    RESTORE_REGISTERS();
 
-    //Only forked process will return from here
-    return NULL;
+    return schedulerGetCurrentProcess()->pid == oldPID ? newProcess : NULL;
 }
 
 void exitProcess() {
-    schedule(PROCESS_STATUS_DYING);
+    schedulerTerminateProcess(schedulerGetCurrentProcess());
 
     blowup("Func exitProcess is trying to return\n");
 }
 
 void releaseProcess(Process* process) {
-    void* pAddr = translateVaddr(process->pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
+    PML4Table* pageTable = process->context.pageTable;
+    void* pAddr = translateVaddr(pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
     memset(pAddr, 0, KERNEL_STACK_SIZE);
     pageFree(pAddr, KERNEL_STACK_PAGE_NUM);
 
     if (process->userStackTop != NULL) {
         for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-            pageFree(translateVaddr(process->pageTable, (void*)USER_STACK_BOTTOM - i), 1);
+            pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
         }
     }
 
@@ -181,11 +129,11 @@ void releaseProcess(Process* process) {
         pageFree(process->userProgramBegin, process->userProgramPageSize);
     }
 
-    releasePML4Table(process->pageTable);
+    releasePML4Table(pageTable);
 
     __releasePID(process->pid);
 
-    for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+    for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
         if (process->fileSlots[i] != NULL) {
             fileClose(process->fileSlots[i]);
         }
@@ -209,7 +157,7 @@ static Process* __createProcess(uint16_t pid, ConstCstring name) {
     ret->remainTick = PROCESS_TICK;
     ret->status = PROCESS_STATUS_UNKNOWN;
 
-    ret->pageTable = NULL;
+    memset(&ret->context, 0, sizeof(Context));
     ret->registers = NULL;
 
     ret->userStackTop = ret->userProgramBegin = NULL;
@@ -222,10 +170,7 @@ static Process* __createProcess(uint16_t pid, ConstCstring name) {
     ret->fileSlots = pageAlloc(openedFilePageSize, PHYSICAL_PAGE_TYPE_PRIVATE);
     memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
-    File* ttyFile = NULL;
-    if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) != NULL) {
-        ret->fileSlots[0] = ttyFile;
-    }
+    ret->fileSlots[0] = getStandardOutputFile();
 
     return ret;
 }

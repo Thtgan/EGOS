@@ -2,7 +2,7 @@
 
 #include<fs/fsutil.h>
 #include<kit/types.h>
-#include<multitask/process.h>
+#include<multitask/schedule.h>
 #include<usermode/syscall.h>
 
 static int __syscall_read(int fileDescriptor, void* buffer, size_t n);
@@ -21,7 +21,7 @@ void initFSsyscall() {
 }
 
 static int __syscall_read(int fileDescriptor, void* buffer, size_t n) {
-    File* file = getFileFromSlot(getCurrentProcess(), fileDescriptor);
+    File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
     if (file == NULL || fileRead(file, buffer, n) == RESULT_FAIL) {
         return -1;
     }
@@ -30,7 +30,7 @@ static int __syscall_read(int fileDescriptor, void* buffer, size_t n) {
 }
 
 static int __syscall_write(int fileDescriptor, const void* buffer, size_t n) {
-    File* file = getFileFromSlot(getCurrentProcess(), fileDescriptor);
+    File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
     if (file == NULL || fileWrite(file, buffer, n) == RESULT_FAIL) {
         return -1;
     }
@@ -40,7 +40,7 @@ static int __syscall_write(int fileDescriptor, const void* buffer, size_t n) {
 
 static int __syscall_open(ConstCstring filename, Flags8 flags) {
     File* file = fileOpen(filename, flags);
-    int ret = allocateFileSlot(getCurrentProcess(), file);
+    int ret = allocateFileSlot(schedulerGetCurrentProcess(), file);
 
     if (ret == -1) {
         fileClose(file);
@@ -50,7 +50,11 @@ static int __syscall_open(ConstCstring filename, Flags8 flags) {
 }
 
 static int __syscall_close(int fileDescriptor) {
-    File* file = getFileFromSlot(getCurrentProcess(), fileDescriptor);
+    if (fileDescriptor == 0) {
+        return -1;
+    }
+
+    File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
     if (file == NULL) {
         return -1;
     }
@@ -59,7 +63,7 @@ static int __syscall_close(int fileDescriptor) {
         return -1;
     }
 
-    releaseFileSlot(getCurrentProcess(), fileDescriptor);
+    releaseFileSlot(schedulerGetCurrentProcess(), fileDescriptor);
 
     return 0;
 }

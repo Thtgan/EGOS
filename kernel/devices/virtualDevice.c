@@ -23,7 +23,13 @@
 #define __MEMORY_DEVICE_SIZE    4 * DATA_UNIT_MB
 #define __MEMORY_DEVICE_NAME    "Virtual devices"
 
+static File _standardOutputFile;
+
 static Result __doRegisterVirtualDevice(void* device, ConstCstring name, FileOperations* operations, void** onDevicePtr, iNode** iNodePtr, Directory** directoryPtr);
+
+static Result __openStandardOutput();
+
+static Result __doOpenStandardOutput(DirectoryEntry* entry, iNode** iNodePtr);
 
 Result initVirtualDevices() {
     void* region = pageAlloc(__MEMORY_DEVICE_SIZE / PAGE_SIZE, PHYSICAL_PAGE_TYPE_PUBLIC);
@@ -50,7 +56,7 @@ Result initVirtualDevices() {
         return RESULT_FAIL;
     }
 
-    if (registerVirtualDevice(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), "tty", initTerminalDevice()) == RESULT_FAIL) {
+    if (registerVirtualDevice(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), "tty", initTerminalDevice()) == RESULT_FAIL || __openStandardOutput() == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -115,6 +121,10 @@ Result registerVirtualDevice(void* device, ConstCstring name, FileOperations* op
     return ret;
 }
 
+File* getStandardOutputFile() {
+    return &_standardOutputFile;
+}
+
 static Result __doRegisterVirtualDevice(void* device, ConstCstring name, FileOperations* operations, void** onDevicePtr, iNode** iNodePtr, Directory** directoryPtr) {
     DirectoryEntry entry;
     if (tracePath(&entry, __DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
@@ -173,6 +183,46 @@ static Result __doRegisterVirtualDevice(void* device, ConstCstring name, FileOpe
     if (rawDirectoryAddEntry(directory, iNodeID, INODE_TYPE_DEVICE, name) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
+
+    return RESULT_SUCCESS;
+}
+
+static Result __openStandardOutput() {
+    DirectoryEntry entry;
+    if (tracePath(&entry, __DEVICE_DIR_PATH "/tty", INODE_TYPE_DEVICE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    iNode* iNode = NULL;
+
+    Result res = __doOpenStandardOutput(&entry, &iNode);
+
+    if (res == RESULT_FAIL) {
+        if (iNode != NULL) {
+            if (rawInodeClose(iNode) == RESULT_FAIL) {
+                return RESULT_FAIL;
+            }
+        }
+
+        return RESULT_FAIL;
+    }
+
+    return RESULT_SUCCESS;
+}
+
+static Result __doOpenStandardOutput(DirectoryEntry* entry, iNode** iNodePtr) {
+    iNode* iNode = NULL;
+    *iNodePtr = iNode = rawInodeOpen(entry->iNodeID);
+    if (iNode == NULL) {
+        return RESULT_FAIL;
+    }
+
+    _standardOutputFile.iNode = iNode;
+    memset(&_standardOutputFile.operations, 0, sizeof(FileOperations));
+
+    FileOperations* operations = ((VirtualDeviceINodeData*)iNode->onDevice.data)->fileOperations;
+    _standardOutputFile.operations.write = operations->write;
+    _standardOutputFile.pointer = 0;
 
     return RESULT_SUCCESS;
 }

@@ -9,7 +9,7 @@
 #include<memory/pageAlloc.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
-#include<multitask/process.h>
+#include<multitask/schedule.h>
 #include<print.h>
 #include<system/address.h>
 #include<system/pageTable.h>
@@ -112,7 +112,7 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         readRemain = programHeader->segmentSizeInFile,
         memoryRemain = programHeader->segmentSizeInMemory;
 
-    PML4Table* pageTable = getCurrentProcess()->pageTable;
+    PML4Table* pageTable = schedulerGetCurrentProcess()->context.pageTable;
     if (rawFileSeek(file, fileBegin) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
@@ -162,7 +162,7 @@ Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
     uintptr_t pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     size_t memoryRemain = programHeader->segmentSizeInMemory;
 
-    PML4Table* pageTable = getCurrentProcess()->pageTable;
+    PML4Table* pageTable = schedulerGetCurrentProcess()->context.pageTable;
     uintptr_t from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {

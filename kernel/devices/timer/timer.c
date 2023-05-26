@@ -5,6 +5,7 @@
 
 Result initTimer() {
     initPIT();
+    return RESULT_SUCCESS;
 }
 
 void sleep(TimeUnit unit, uint64_t time) {

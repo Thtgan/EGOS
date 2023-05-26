@@ -3,14 +3,14 @@
 
 #include<interrupt/IDT.h>
 #include<kit/types.h>
+#include<multitask/context.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
-#include<structs/registerSet.h>
 
 /**
  * @brief Header for interrupt service routine function
  */
-#define ISR_FUNC_HEADER(__FUNC_IDENTIFIER) void __FUNC_IDENTIFIER (uint8_t vec, HandlerStackFrame* handlerStackFrame, RegisterSet* registers)
+#define ISR_FUNC_HEADER(__FUNC_IDENTIFIER) void __FUNC_IDENTIFIER (uint8_t vec, HandlerStackFrame* handlerStackFrame, Registers* registers)
 
 /**
  * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler

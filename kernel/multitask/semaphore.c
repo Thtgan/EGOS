@@ -68,7 +68,7 @@ __attribute__((regparm(1)))
 void __down_handler(Semaphore* sema) {
     spinlockLock(&sema->queueLock);
 
-    QueueNode* node = &getCurrentProcess()->semaWaitQueueNode;
+    QueueNode* node = &schedulerGetCurrentProcess()->semaWaitQueueNode;
     initQueueNode(node);
 
     bool loop = true;
@@ -77,7 +77,7 @@ void __down_handler(Semaphore* sema) {
         queuePush(&sema->waitQueue, node);
 
         spinlockUnlock(&sema->queueLock);
-        schedule(PROCESS_STATUS_WAITING);
+        schedulerBlockProcess(schedulerGetCurrentProcess());
         spinlockLock(&sema->queueLock);
 
         asm volatile(
@@ -102,10 +102,10 @@ void __up_handler(Semaphore* sema) {
         queuePop(&sema->waitQueue);
 
         initQueueNode(&p->semaWaitQueueNode);
-        setProcessStatus(p, PROCESS_STATUS_READY);
+        schedulerWakeProcess(p);
 
         spinlockUnlock(&sema->queueLock);
-        schedule(PROCESS_STATUS_READY);
+        schedulerYield();
         spinlockLock(&sema->queueLock);
     }
 

@@ -109,6 +109,7 @@ static File* __fileOpen(iNode* iNode, Flags8 flags) {
     }
 
     ret->pointer = 0;
+    ret->flags = flags;
 
     return ret;
 }

@@ -4,12 +4,13 @@
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<multitask/context.h>
 #include<multitask/process.h>
 #include<real/flags/eflags.h>
 #include<real/flags/msr.h>
 #include<print.h>
-#include<structs/registerSet.h>
 #include<system/GDT.h>
+#include<kit/macro.h>
 
 //TODO: REMOVE THIS IN FUTURE
 static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
@@ -44,8 +45,8 @@ static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int a
 
 __attribute__((naked))
 static void __syscallHandler() {
-    asm volatile(SAVE_ALL);
-    register RegisterSet* registers asm ("rbx") = NULL;
+    SAVE_REGISTERS();
+    register Registers* registers asm ("rbx") = NULL;
     asm volatile(
         "mov %1, %%ds;"
         "mov %1, %%es;"
@@ -54,11 +55,11 @@ static void __syscallHandler() {
         : "r"(SEGMENT_KERNEL_DATA)
     );
 
-    register void* handler asm ("r10") = _syscallHandlers[registers->rax];
+    register void* handler asm(MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_4_ALT)) = _syscallHandlers[registers->rax];
 
     asm volatile(
-        "mov %6, %%r8;"
-        "mov %7, %%r9;"
+        "mov %6, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_5) ";"
+        "mov %7, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_6) ";"
         "call *%1;"
         "mov %%rax, %0;"
         : "=m"(registers->rax)
@@ -68,8 +69,9 @@ static void __syscallHandler() {
         "m"(registers->REGISTER_ARGUMENTS_5), "m"(registers->REGISTER_ARGUMENTS_6)
     );
 
+    RESTORE_REGISTERS();
+
     asm volatile(
-        RESTORE_ALL
         "sysretq;"
     );
 }

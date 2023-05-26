@@ -33,4 +33,11 @@ Result closeVitualDevices();
  */
 Result registerVirtualDevice(void* device, ConstCstring name, FileOperations* operations);
 
+/**
+ * @brief Get file refering to standard output
+ * 
+ * @return File* Standard output file
+ */
+File* getStandardOutputFile();
+
 #endif // __VIRTUAL_DEVICE_H
