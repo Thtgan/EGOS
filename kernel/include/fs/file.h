@@ -21,7 +21,7 @@ typedef struct {
      * @param seekTo Seek to position
      * @return Index64 File pointer after seek, INVALID_INDEX if failed
      */
-    Index64 (*seek)(File* file, size_t seekTo);
+    Index64 (*seek)(File* file, Size seekTo);
 
     /**
      * @brief Read from file, sets errorcode to indicate error
@@ -31,7 +31,7 @@ typedef struct {
      * @param n Num of byte(s) to read
      * @return Result Result of the operation
      */
-    Result (*read)(File* file, void* buffer, size_t n);
+    Result (*read)(File* file, void* buffer, Size n);
 
     /**
      * @brief Write to file, sets errorcode to indicate error
@@ -41,7 +41,7 @@ typedef struct {
      * @param n Num of byte(s) to write
      * @return Result Result of the operation
      */
-    Result (*write)(File* file, const void* buffer, size_t n);
+    Result (*write)(File* file, const void* buffer, Size n);
 } FileOperations;
 
 STRUCT_PRIVATE_DEFINE(File) {
@@ -58,7 +58,7 @@ STRUCT_PRIVATE_DEFINE(File) {
  * @param seekTo Seek to position
  * @return Index64 File pointer after seek, INVALID_INDEX if failed
  */
-static inline Index64 rawFileSeek(File* file, size_t seekTo) {
+static inline Index64 rawFileSeek(File* file, Size seekTo) {
     if (file->operations.seek == NULL) {
         return INVALID_INDEX;
     }
@@ -73,7 +73,7 @@ static inline Index64 rawFileSeek(File* file, size_t seekTo) {
  * @param n Num of byte(s) to read
  * @return Result Result of the operation
  */
-static inline Result rawFileRead(File* file, void* buffer, size_t n) {
+static inline Result rawFileRead(File* file, void* buffer, Size n) {
     if (file->operations.read == NULL) {
         return RESULT_FAIL;
     }
@@ -88,7 +88,7 @@ static inline Result rawFileRead(File* file, void* buffer, size_t n) {
  * @param n Num of byte(s) to write
  * @return Result Result of the operation
  */
-static inline Result rawFileWrite(File* file, const void* buffer, size_t n) {
+static inline Result rawFileWrite(File* file, const void* buffer, Size n) {
     if (file->operations.write == NULL) {
         return RESULT_FAIL;
     }

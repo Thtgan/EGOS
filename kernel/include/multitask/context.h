@@ -8,38 +8,38 @@
 
 typedef struct {
     PML4Table* pageTable;   //Page table placed here to ensure stack safety
-    uint64_t rip;
-    uint64_t rsp;
+    Uint64 rip;
+    Uint64 rsp;
 } __attribute__((packed)) Context;
 
 void switchContext(Context* from, Context* to);
 
 typedef struct {
-    uint64_t r15;
-    uint64_t r14;
-    uint64_t r13;
-    uint64_t r12;
-    uint64_t r11;
-    uint64_t r10;
-    uint64_t r9;
-    uint64_t r8;
+    Uint64 r15;
+    Uint64 r14;
+    Uint64 r13;
+    Uint64 r12;
+    Uint64 r11;
+    Uint64 r10;
+    Uint64 r9;
+    Uint64 r8;
 
-    uint16_t cs;
-    uint16_t ds;
-    uint16_t ss;
-    uint16_t es;
-    uint16_t fs;
-    uint16_t gs;
+    Uint16 cs;
+    Uint16 ds;
+    Uint16 ss;
+    Uint16 es;
+    Uint16 fs;
+    Uint16 gs;
 
-    uint64_t rsi;
-    uint64_t rdi;
-    uint64_t rax;
-    uint64_t rcx;
-    uint64_t rdx;
-    uint64_t rbx;
+    Uint64 rsi;
+    Uint64 rdi;
+    Uint64 rax;
+    Uint64 rcx;
+    Uint64 rdx;
+    Uint64 rbx;
 
-    uint64_t rbp;
-    uint64_t eflags;
+    Uint64 rbp;
+    Uint64 eflags;
 } __attribute__((packed)) Registers;
 
 #define SAVE_REGISTERS_WITH_FRAME() \

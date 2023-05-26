@@ -5,13 +5,13 @@
 
 static bool _flags[256];
 
-size_t strlen(const char* str) {
+Size strlen(const char* str) {
     const char* ptr = str;
     for (; *ptr != '\0'; ++ptr);
     return ptr - str;
 }
 
-size_t strspn(const char* str1, const char* str2) {
+Size strspn(const char* str1, const char* str2) {
     memset(_flags, 0, sizeof(_flags));
     for (; *str2 != '\0'; ++str2) {
         _flags[*str2] = true;
@@ -26,7 +26,7 @@ size_t strspn(const char* str1, const char* str2) {
     return ptr - str1;
 }
 
-size_t strcspn(const char* str1, const char* str2) {
+Size strcspn(const char* str1, const char* str2) {
     memset(_flags, 0, sizeof(_flags));
     for (; *str2 != '\0'; ++str2) {
         _flags[*str2] = true;
@@ -53,7 +53,7 @@ char* strstr(const char* str1, const char* str2) {
         return NULL;
     }
 
-    uint32_t sum = 0;
+    Uint32 sum = 0;
     bool identical = true;
     const char* front1 = str1, * front2 = str2;
     for (; *str1 != '\0' && *str2 != '\0'; ++str1, ++str2) {
@@ -68,7 +68,7 @@ char* strstr(const char* str1, const char* str2) {
         return (char*)front1;
     }
 
-    size_t subLen = str2 - front2 - 1;
+    Size subLen = str2 - front2 - 1;
     while (*str1 != '\0') {
         sum -= *front1++;
         sum += *str1++;
@@ -123,7 +123,7 @@ char* strpbrk(const char* str1, const char* str2) {
 
 char* strchr(const char* str, int ch) {
     for (; *str != '\0'; ++str) {
-        if (*str == (uint8_t)ch) {
+        if (*str == (Uint8)ch) {
             return (char*)str;
         }
     }
@@ -133,7 +133,7 @@ char* strchr(const char* str, int ch) {
 char* strrchr(const char* str, int ch) {
     char* ret = NULL;
     for (; *str != '\0'; ++str) {
-        if (*str == (uint8_t)ch) {
+        if (*str == (Uint8)ch) {
             ret = (char*)str;
         }
     }
@@ -149,7 +149,7 @@ char* strcpy(char* des, const char* src) {
     return ret;
 }
 
-char* strncpy(char* des, const char* src, size_t n) {
+char* strncpy(char* des, const char* src, Size n) {
     char* ret = des;
     for (; *src != '\0' && n != 0; ++src, ++des, --n) {
         *des = *src;
@@ -169,7 +169,7 @@ int strcmp(const char* str1, const char* str2) {
     return ret;
 }
 
-int strncmp(const char* str1, const char* str2, size_t n) {
+int strncmp(const char* str1, const char* str2, Size n) {
     int ret = 0;
     for (; *str1 != '\0' && *str2 != '\0' && n != 0; ++str1, ++str2, --n) {
         if (*str1 != *str2) {
@@ -180,8 +180,8 @@ int strncmp(const char* str1, const char* str2, size_t n) {
     return ret;
 }
 
-size_t strhash(const char* str, size_t p, size_t mod) {
-    size_t pp = 1, ret = 0;
+Size strhash(const char* str, Size p, Size mod) {
+    Size pp = 1, ret = 0;
 
     for (int i = 0; str[i] != '\0'; ++i) {
         ret = (ret + str[i] * pp) % mod;

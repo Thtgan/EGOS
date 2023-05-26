@@ -28,18 +28,18 @@ typedef enum {
 #define MAX_OPENED_FILE_NUM         (PAGE_SIZE / sizeof(File*))
 
 typedef struct {
-    uint16_t pid;
-    uint16_t ppid;
+    Uint16 pid;
+    Uint16 ppid;
     char name[32];
     
-    uint16_t remainTick;
+    Uint16 remainTick;
     ProcessStatus status;
 
     Context context;
     Registers* registers;
 
     void* userExitStackTop, * userStackTop, * userProgramBegin;
-    size_t userProgramPageSize;
+    Size userProgramPageSize;
     
     QueueNode statusQueueNode;
     QueueNode semaWaitQueueNode;

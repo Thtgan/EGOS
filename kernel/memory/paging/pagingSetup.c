@@ -50,7 +50,7 @@ PML4Table* setupPML4Table() {
     }
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    void* pAddr = (void*)0, * pAddrEnd = (void*)((uintptr_t)mMap->freePageEnd << PAGE_SIZE_SHIFT);
+    void* pAddr = (void*)0, * pAddrEnd = (void*)((Uintptr)mMap->freePageEnd << PAGE_SIZE_SHIFT);
     for (int i = 0; i < PML4_TABLE_SIZE && pAddr < pAddrEnd; ++i, pAddr += PDPT_SPAN) {
         ret->tableEntries[i] = BUILD_PML4_ENTRY(__setupPDPtable(pAddr), PML4_ENTRY_FLAG_US | PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
     }
@@ -72,7 +72,7 @@ static void* __allocPage() {
         blowup("No enough memory for page table\n");
     }
 
-    void* ret = (void*)((uint64_t)(mMap->directPageTableEnd++) << PAGE_SIZE_SHIFT);
+    void* ret = (void*)((Uint64)(mMap->directPageTableEnd++) << PAGE_SIZE_SHIFT);
     memset(ret, 0, PAGE_SIZE);
     return ret;
 }
@@ -82,7 +82,7 @@ static PDPtable* __setupPDPtable(void* pAddr) {
     PDPtable* ret = __allocPage();
     
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    void* pAddrEnd = (void*)((uintptr_t)mMap->freePageEnd << PAGE_SIZE_SHIFT);
+    void* pAddrEnd = (void*)((Uintptr)mMap->freePageEnd << PAGE_SIZE_SHIFT);
 
     int i = 0;
     for (; i < PDP_TABLE_SIZE && pAddr < pAddrEnd; ++i, pAddr += PAGE_DIRECTORY_SPAN) {
@@ -100,7 +100,7 @@ static PageDirectory* __setupPageDirectoryTable(void* pAddr) {
     PageDirectory* ret = __allocPage();
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    void* pAddrEnd = (void*)((uintptr_t)mMap->freePageEnd << PAGE_SIZE_SHIFT);
+    void* pAddrEnd = (void*)((Uintptr)mMap->freePageEnd << PAGE_SIZE_SHIFT);
 
     int i = 0;
     for (; i < PAGE_DIRECTORY_SIZE && pAddr < pAddrEnd; ++i, pAddr += PAGE_TABLE_SPAN) {
@@ -118,7 +118,7 @@ static PageTable* __setupPageTable(void* pAddr) {
     PageTable* ret = __allocPage();
 
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    void* pAddrEnd = (void*)((uintptr_t)mMap->freePageEnd << PAGE_SIZE_SHIFT);
+    void* pAddrEnd = (void*)((Uintptr)mMap->freePageEnd << PAGE_SIZE_SHIFT);
 
     int i = 0;
     for (; i < PAGE_TABLE_SIZE && pAddr < pAddrEnd; ++i, pAddr += PAGE_SIZE) {

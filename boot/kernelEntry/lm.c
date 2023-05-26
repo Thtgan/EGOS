@@ -8,12 +8,12 @@
 GDTDesc64 gdtDesc64;
 
 __attribute__((noreturn))
-extern void __jumpToLongMode(uint16_t codeSegment, uint32_t kernelAddr, uint32_t sysInfo);
+extern void __jumpToLongMode(Uint16 codeSegment, Uint32 kernelAddr, Uint32 sysInfo);
 
 __attribute__((noreturn))
-void jumpToLongMode(uint32_t sysInfo) {
+void jumpToLongMode(Uint32 sysInfo) {
     SystemInfo* info = (SystemInfo*)sysInfo;
-    GDTDesc32* desc32 = (GDTDesc32*)(uint32_t)info->gdtDesc;
+    GDTDesc32* desc32 = (GDTDesc32*)(Uint32)info->gdtDesc;
     GDTEntry* table = (GDTEntry*)desc32->table;
     //In 64-bit mode, the processor DOES NOT perform runtime limit checking on code or data segments. However, the processor does check descriptor-table limits.
     //That's why we can jump to kernel starts at position far above segment's limitation
@@ -27,7 +27,7 @@ void jumpToLongMode(uint32_t sysInfo) {
     gdtDesc64.size = desc32->size;
     gdtDesc64.table = desc32->table;
 
-    info->gdtDesc = (uint32_t)&gdtDesc64;
+    info->gdtDesc = (Uint32)&gdtDesc64;
 
     asm volatile("lgdt %0" : : "m" (gdtDesc64));
 

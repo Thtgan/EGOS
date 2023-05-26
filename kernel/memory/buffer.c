@@ -7,12 +7,12 @@
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 
-static size_t _bufferSizes[] = {
+static Size _bufferSizes[] = {
     16, 32, 64, 128, 256, 512, 1024, 2048, 4096
 };
 
-static size_t _bufferNums[9];
-static size_t _freeBufferNums[9];
+static Size _bufferNums[9];
+static Size _freeBufferNums[9];
 
 SinglyLinkedList bufferLists[9];
 
@@ -38,11 +38,11 @@ Result initBuffer() {
     return RESULT_SUCCESS;
 }
 
-size_t getTotalBufferNum(BufferSizes size) {
+Size getTotalBufferNum(BufferSizes size) {
     return _bufferNums[size];
 }
 
-size_t getFreeBufferNum(BufferSizes size) {
+Size getFreeBufferNum(BufferSizes size) {
     return _freeBufferNums[size];
 }
 

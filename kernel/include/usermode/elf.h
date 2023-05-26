@@ -20,12 +20,12 @@
 #define ELF_IDENTIFICATION_OSABI_STANDALONE 255
 
 typedef struct {
-    uint32_t magic;
-    uint8_t class;
-    uint8_t endian;
-    uint8_t version;
-    uint8_t osABI;
-    uint8_t unused[8];
+    Uint32 magic;
+    Uint8 class;
+    Uint8 endian;
+    Uint8 version;
+    Uint8 osABI;
+    Uint8 unused[8];
 } __attribute__((packed)) ELFidentification;
 
 #define ELF64_HEADER_TYPE_NONE          0
@@ -52,19 +52,19 @@ typedef struct {
 
 typedef struct {
     ELFidentification identification;
-    uint16_t type;
-    uint16_t machine;
-    uint32_t elfVersion;
-    uint64_t entryVaddr;
-    uint64_t programHeadersBegin;
-    uint64_t sectionHeadersBegin;
-    uint32_t flags;
-    uint16_t headerSize;
-    uint16_t programHeaderEntrySize;
-    uint16_t programHeaderEntryNum;
-    uint16_t sectionHeaderEntrySize;
-    uint16_t sectionHeaderEntryNum;
-    uint16_t nameSectionHeaderEntryIndex;
+    Uint16 type;
+    Uint16 machine;
+    Uint32 elfVersion;
+    Uint64 entryVaddr;
+    Uint64 programHeadersBegin;
+    Uint64 sectionHeadersBegin;
+    Uint32 flags;
+    Uint16 headerSize;
+    Uint16 programHeaderEntrySize;
+    Uint16 programHeaderEntryNum;
+    Uint16 sectionHeaderEntrySize;
+    Uint16 sectionHeaderEntryNum;
+    Uint16 nameSectionHeaderEntryIndex;
 } __attribute__((packed)) ELF64Header;
 
 #define ELF_SPECIAL_SECTION_INDEX_UNDEFINED 0
@@ -99,16 +99,16 @@ typedef struct {
 #define ELF_SECTION_HEADER_FLAGS_MASKPROC       0xF0000000
 
 typedef struct {
-    uint32_t name;
-    uint32_t type;
-    uint64_t flags;
-    uint64_t vAddr;
-    uint64_t offset;
-    uint64_t size;
-    uint32_t link;
-    uint32_t info;
-    uint64_t align;
-    uint64_t entriesSize;
+    Uint32 name;
+    Uint32 type;
+    Uint64 flags;
+    Uint64 vAddr;
+    Uint64 offset;
+    Uint64 size;
+    Uint32 link;
+    Uint32 info;
+    Uint64 align;
+    Uint64 entriesSize;
 } __attribute__((packed)) ELF64SectionHeader;
 
 #define ELF64_SYMBOL_TABLE_ENTRY_TYPE_NOTYPE    0
@@ -130,26 +130,26 @@ typedef struct {
 #define ELF64_SYMBOL_TABLE_ENTRY_BINDING_HIPROC 15
 
 typedef struct {
-    uint32_t name;
-    uint8_t type    : 4;
-    uint8_t binding : 4;
-    uint8_t reserved;
-    uint16_t sectionTableIndex;
-    uint64_t symbolValue;
-    uint64_t objectSize;
+    Uint32 name;
+    Uint8 type    : 4;
+    Uint8 binding : 4;
+    Uint8 reserved;
+    Uint16 sectionTableIndex;
+    Uint64 symbolValue;
+    Uint64 objectSize;
 } __attribute__((packed)) ELF64SymbolTableEntry;
 
 typedef struct {
-    uint64_t offset;
-    uint32_t type;
-    uint32_t symbolTableIndex;
+    Uint64 offset;
+    Uint32 type;
+    Uint32 symbolTableIndex;
 } __attribute__((packed)) ELF64REL;
 
 typedef struct {
-    uint64_t offset;
-    uint32_t type;
-    uint32_t symbolTableIndex;
-    uint64_t addend;
+    Uint64 offset;
+    Uint32 type;
+    Uint32 symbolTableIndex;
+    Uint64 addend;
 } __attribute__((packed)) ELF64RELA;
 
 #define ELF64_PROGRAM_HEADER_TYPE_NULL      0
@@ -171,14 +171,14 @@ typedef struct {
 #define ELF64_PROGRAM_HEADER_FLAGS_MAKEPROC 0xFF000000
 
 typedef struct {
-    uint32_t type;
-    uint32_t flags;
-    uint64_t offset;
-    uint64_t vAddr;
-    uint64_t pAddr;
-    uint64_t segmentSizeInFile;
-    uint64_t segmentSizeInMemory;
-    uint64_t align;
+    Uint32 type;
+    Uint32 flags;
+    Uint64 offset;
+    Uint64 vAddr;
+    Uint64 pAddr;
+    Uint64 segmentSizeInFile;
+    Uint64 segmentSizeInMemory;
+    Uint64 align;
 } __attribute__((packed)) ELF64ProgramHeader;
 
 /**

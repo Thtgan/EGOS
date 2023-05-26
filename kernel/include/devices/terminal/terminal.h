@@ -13,7 +13,7 @@
 #define TEXT_MODE_SIZE                      TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT
 
 typedef struct {
-    uint8_t character, colorPattern;
+    Uint8 character, colorPattern;
 } __attribute__((packed)) TerminalDisplayUnit;
 
 //Bit 7 6 5 4 3 2 1 0
@@ -40,7 +40,7 @@ typedef struct {
 #define TERMINAL_PATTERN_COLOR_YELLOW          14
 #define TERMINAL_PATTERN_COLOR_WHITE           15
 
-#define BUILD_PATTERN(__BACKGROUND_COLOR, __FOREGROUND_COLOR) (uint8_t)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))
+#define BUILD_PATTERN(__BACKGROUND_COLOR, __FOREGROUND_COLOR) (Uint8)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))
 
 /**
  * Window width
@@ -89,10 +89,10 @@ typedef struct {
 
 typedef struct {
     Index16 loopRowBegin;                           //Which row in buffer does loop begin
-    size_t bufferRowSize;                           //Size of buffer (in row)
+    Size bufferRowSize;                           //Size of buffer (in row)
     char* buffer;                                   //Buffer
 
-    uint16_t windowWidth, windowHeight, windowSize; //Window size
+    Uint16 windowWidth, windowHeight, windowSize; //Window size
     Index16 windowRowBegin;                         //Which row in buffer does window
 
     Index16 rollRange;                              //Range of scrolling
@@ -102,8 +102,8 @@ typedef struct {
     bool cursorLastInWindow, cursorEnabled;
     Index16 cursorPosX, cursorPosY;                 //Cursor position, starts from beginning of loop, (0, 0) means first character in first row of loop
 
-    uint8_t colorPattern;
-    uint8_t tabStride;
+    Uint8 colorPattern;
+    Uint8 tabStride;
 
     bool inputMode;
     int inputLength;
@@ -121,7 +121,7 @@ typedef struct {
  * @param height Height of terminal on display
  * @return Result Result of the operation
  */
-Result initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height);
+Result initTerminal(Terminal* terminal, void* buffer, Size bufferSize, Size width, Size height);
 
 /**
  * @brief Set current terminal
@@ -189,7 +189,7 @@ void terminalOutputChar(Terminal* terminal, char ch);
  * @param background Output background color
  * @param foreground Output foreground color
  */
-void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foreground);
+void terminalSetPattern(Terminal* terminal, Uint8 background, Uint8 foreground);
 
 /**
  * @brief Set how mant spaces does a tab strides
@@ -197,7 +197,7 @@ void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foregrou
  * @param terminal Terminal
  * @param stride Num of spaces
  */
-void terminalSetTabStride(Terminal* terminal, uint8_t stride);
+void terminalSetTabStride(Terminal* terminal, Uint8 stride);
 
 /**
  * @brief Perform effect of key home

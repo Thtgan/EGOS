@@ -7,7 +7,7 @@
 #include<system/GDT.h>
 
 
-extern void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, Registers* registers);
+extern void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers);
 
 #define HANDLER_STUB_NAME(__NUMBER) MACRO_CONCENTRATE2(handlerStub_, __NUMBER)
 
@@ -32,7 +32,7 @@ void HANDLER_STUB_NAME(__NUMBER) () {                                           
         : "i"(SEGMENT_KERNEL_DATA)                                                                                                  \
     );                                                                                                                              \
     EOI();                                                                                                                          \
-    register uint8_t vec = __NUMBER;                                                                                                \
+    register Uint8 vec = __NUMBER;                                                                                                  \
     sti();                                                                                                                          \
     handlers[vec](vec, handlerStackFrame, registers);                                                                               \
     cli();                                                                                                                          \

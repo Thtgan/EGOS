@@ -48,7 +48,7 @@
 typedef struct {
     LinkedListNode node;
     void* base;             //Base of the page node stands for
-    size_t length;          //Length of the page node(in size of num of pages)
+    Size length;            //Length of the page node(in size of num of pages)
 } PageNode;
 
 /**
@@ -64,7 +64,7 @@ typedef LinkedList PageNodeList;
  * 
  * @return Initialized page node
  */
-PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength);
+PageNode* initPageNode(void* pageAreaBegin, Size pageAreaLength);
 
 /**
  * @brief Initialize the page node list with an initial page area
@@ -75,7 +75,7 @@ PageNode* initPageNode(void* pageAreaBegin, size_t pageAreaLength);
  * 
  * @return PageNode* First page node of the initialized page node list
  */
-PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, size_t pageAreaLength);
+PageNode* initPageNodeList(LinkedList* listHead, void* pageAreaBegin, Size pageAreaLength);
 
 /**
  * @brief Get node's next page node
@@ -147,7 +147,7 @@ void insertPageNodeBack(PageNode* node, PageNode* newNode);
  * @param splitLength Length to split from the node (in number of pages)
  * @return PageNode* The Later page node, NULL if split failed (e.g. splitLength too large), if splitLength fit the length of the node, return the next node.
  */
-PageNode* splitPageNode(PageNode* node, size_t splitLength);
+PageNode* splitPageNode(PageNode* node, Size splitLength);
 
 /**
  * @brief Cut a large page node as a free memory area from node's front
@@ -156,7 +156,7 @@ PageNode* splitPageNode(PageNode* node, size_t splitLength);
  * @param cutLength Length to cut from the node (in number of pages)
  * @return PageNode* The page node after the cut area, NULL if cut failed (e.g. cutLength too large) or there is no next node (When cutLength fits the node length).
  */
-PageNode* cutPageNodeFront(PageNode* node, size_t cutLength);
+PageNode* cutPageNodeFront(PageNode* node, Size cutLength);
 
 /**
  * @brief Cut a large page node as a free memory area from node's back
@@ -165,7 +165,7 @@ PageNode* cutPageNodeFront(PageNode* node, size_t cutLength);
  * @param cutLength Length to cut from the node (in number of pages)
  * @return PageNode* The page node before the cut area, NULL if cut failed (e.g. cutLength too large) or there is no previous node (When cutLength fits the node length).
  */
-PageNode* cutPageNodeBack(PageNode* node, size_t cutLength);
+PageNode* cutPageNodeBack(PageNode* node, Size cutLength);
 
 /**
  * @brief Combine given page and linked continued next page node into one
@@ -229,7 +229,7 @@ PageNode* combinePrevPageNode(PageNode* node);
  * @param size Size wanted
  * @return PageNode* Page node contains enough pages, NULL if there is no such page
  */
-PageNode* firstFitFindPages(LinkedList* list, size_t size);
+PageNode* firstFitFindPages(LinkedList* list, Size size);
 
 /**
  * @brief Find a node whose length is equal or greater than size, use best fit
@@ -238,7 +238,7 @@ PageNode* firstFitFindPages(LinkedList* list, size_t size);
  * @param size Size wanted
  * @return PageNode* Page node contains enough pages, NULL if there is no such page
  */
-PageNode* bestFitFindPages(LinkedList* list, size_t size);
+PageNode* bestFitFindPages(LinkedList* list, Size size);
 
 /**
  * @brief Find a node whose length is equal or greater than size, use best fit
@@ -247,6 +247,6 @@ PageNode* bestFitFindPages(LinkedList* list, size_t size);
  * @param size Size wanted
  * @return PageNode* Page node contains enough pages, NULL if there is no such page
  */
-PageNode* worstFitFindPages(LinkedList* list, size_t size);
+PageNode* worstFitFindPages(LinkedList* list, Size size);
 
 #endif // __PAGING_NODE_H

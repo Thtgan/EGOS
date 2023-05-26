@@ -6,9 +6,9 @@
 #include<kit/types.h>
 
 typedef struct {
-    uint32_t flags;
-    uint16_t processReferenceCnt;
-    uint8_t reserved[26];
+    Uint32 flags;
+    Uint16 processReferenceCnt;
+    Uint8 reserved[26];
 } __attribute__((packed)) PhysicalPage;
 
 #define PHYSICAL_PAGE_FLAG_PRESENT  FLAG32(0)
@@ -57,7 +57,7 @@ static inline void referPhysicalPage(PhysicalPage* page) {
  */
 static inline void cancelReferPhysicalPage(PhysicalPage* page) {
     --page->processReferenceCnt;
-    ASSERT(page->processReferenceCnt != (uint16_t)-1, "Cannot release a released page.");
+    ASSERT(page->processReferenceCnt != (Uint16)-1, "Cannot release a released page.");
 }
 
 #endif // PHYSICAL_PAGE_H

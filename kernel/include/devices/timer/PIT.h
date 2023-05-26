@@ -18,15 +18,15 @@ void initPIT();
  * @param mode Channel mode
  * @param frequency Channel frequency
  */
-void configureChannel(uint8_t channel, uint8_t mode, uint32_t frequency);
+void configureChannel(Uint8 channel, Uint8 mode, Uint32 frequency);
 
 /**
  * @brief Read back the configuration of the channel
  * 
  * @param channel Channel to read
- * @return uint8_t Channel configuration
+ * @return Uint8 Channel configuration
  */
-uint8_t readbackConfiguration(uint8_t channel);
+Uint8 readbackConfiguration(Uint8 channel);
 
 /**
  * @brief Pause the executation for a period of time
@@ -34,6 +34,6 @@ uint8_t readbackConfiguration(uint8_t channel);
  * @param unit Time unit
  * @param time Size of time
  */
-void PITsleep(TimeUnit unit, uint64_t time);
+void PITsleep(TimeUnit unit, Uint64 time);
 
 #endif // __PIT_H

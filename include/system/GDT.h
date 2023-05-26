@@ -57,24 +57,24 @@
  * @brief GDT table entry
  */
 typedef struct {
-    uint16_t    limit0_15;
-    uint16_t    base0_15;
-    uint8_t     base16_23;
-    uint8_t     access;
-    uint8_t     limit16_19 : 4, flags : 4;
-    uint8_t     base24_31;
+    Uint16  limit0_15;
+    Uint16  base0_15;
+    Uint8   base16_23;
+    Uint8   access;
+    Uint8   limit16_19 : 4, flags : 4;
+    Uint8   base24_31;
 } __attribute__((packed)) GDTEntry;
 
 //Macro to construct the GDT entry
 //Reference: https://wiki.osdev.org/Global_Descriptor_Table
 #define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) (GDTEntry) {                \
-    (uint16_t)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
-    (uint16_t)  EXTRACT_VAL(__BASE, 32, 0, 16),                                         \
-    (uint8_t)   EXTRACT_VAL(__BASE, 32, 16, 24),                                        \
-    (uint8_t)   (__ACCESS),                                                             \
+    (Uint16)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
+    (Uint16)  EXTRACT_VAL(__BASE, 32, 0, 16),                                         \
+    (Uint8)   EXTRACT_VAL(__BASE, 32, 16, 24),                                        \
+    (Uint8)   (__ACCESS),                                                             \
     EXTRACT_VAL(__LIMIT, 32, 16, 20),                                                   \
     (__FLAGS),                                                                          \
-    (uint8_t)   EXTRACT_VAL(__BASE, 32, 24, 32),                                        \
+    (Uint8)   EXTRACT_VAL(__BASE, 32, 24, 32),                                        \
 }
 
 // +---------------+--------------+-------------+
@@ -106,36 +106,36 @@ typedef struct {
 #define GDT_TSS_LDT_BUSY        FLAG8(3)
 
 typedef struct {
-    uint16_t    limit0_15;
-    uint16_t    base0_15;
-    uint8_t     base16_23;
-    uint8_t     access;
-    uint8_t     limit16_19 : 4, flags : 4;
-    uint8_t     base24_31;
-    uint32_t    base32_63;
-    uint32_t    reserved;
+    Uint16    limit0_15;
+    Uint16    base0_15;
+    Uint8     base16_23;
+    Uint8     access;
+    Uint8     limit16_19 : 4, flags : 4;
+    Uint8     base24_31;
+    Uint32    base32_63;
+    Uint32    reserved;
 } __attribute__((packed)) GDTEntryTSS_LDT;
 
 #define BUILD_GDT_ENTRY_TSS_LDT(__BASE, __LIMIT, __ACCESS, __FLAGS) (GDTEntryTSS_LDT) { \
-    (uint16_t)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
-    (uint16_t)  EXTRACT_VAL(__BASE, 64, 0, 16),                                         \
-    (uint8_t)   EXTRACT_VAL(__BASE, 64, 16, 24),                                        \
-    (uint8_t)   (__ACCESS),                                                             \
+    (Uint16)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
+    (Uint16)  EXTRACT_VAL(__BASE, 64, 0, 16),                                         \
+    (Uint8)   EXTRACT_VAL(__BASE, 64, 16, 24),                                        \
+    (Uint8)   (__ACCESS),                                                             \
     EXTRACT_VAL(__LIMIT, 32, 16, 20),                                                   \
     (__FLAGS),                                                                          \
-    (uint8_t)   EXTRACT_VAL(__BASE, 64, 24, 32),                                        \
-    (uint32_t)  EXTRACT_VAL(__BASE, 64, 32, 64),                                        \
+    (Uint8)   EXTRACT_VAL(__BASE, 64, 24, 32),                                        \
+    (Uint32)  EXTRACT_VAL(__BASE, 64, 32, 64),                                        \
     0                                                                                   \
 }
 
 typedef struct {
-    uint16_t    size;
-    uint32_t    table;
+    Uint16    size;
+    Uint32    table;
 } __attribute__((packed)) GDTDesc32;
 
 typedef struct {
-    uint16_t    size;
-    uint64_t    table;
+    Uint16    size;
+    Uint64    table;
 } __attribute__((packed)) GDTDesc64;
 
 #endif // __GDT_H

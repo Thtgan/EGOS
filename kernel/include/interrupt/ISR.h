@@ -10,7 +10,7 @@
 /**
  * @brief Header for interrupt service routine function
  */
-#define ISR_FUNC_HEADER(__FUNC_IDENTIFIER) void __FUNC_IDENTIFIER (uint8_t vec, HandlerStackFrame* handlerStackFrame, Registers* registers)
+#define ISR_FUNC_HEADER(__FUNC_IDENTIFIER) void __FUNC_IDENTIFIER (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers)
 
 /**
  * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler

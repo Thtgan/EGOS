@@ -26,6 +26,6 @@ void initRegs(RegisterSet* regs);
  * @param inputRegs Register set to input
  * @param outputRegs Register set to output
  */
-void intInvoke(uint8_t interrupt, const RegisterSet *inputRegs, RegisterSet *outputRegs);
+void intInvoke(Uint8 interrupt, const RegisterSet *inputRegs, RegisterSet *outputRegs);
 
 #endif // __REAL_MODE_H

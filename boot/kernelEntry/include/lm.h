@@ -9,6 +9,6 @@ __attribute__((noreturn))
  * 
  * @param sysInfo Pointer to system information
  */
-void jumpToLongMode(uint32_t sysInfo);
+void jumpToLongMode(Uint32 sysInfo);
 
 #endif // __LM_H

@@ -19,11 +19,11 @@ __attribute__((noreturn)) //Use register to pass parameters for better stack ope
  * @param dataSegment Data segment
  * @param protectedBegin The address where the kernel will be loaded to
  */
-extern void jumpToProtectedMode(uint16_t codeSegment, uint16_t dataSegment, uint32_t sysInfo);
+extern void jumpToProtectedMode(Uint16 codeSegment, Uint16 dataSegment, Uint32 sysInfo);
 
 __attribute__((noreturn))
 void jumpToKernel(SystemInfo* sysInfo) {
-    sysInfo->gdtDesc = (uint32_t)setupGDT();
+    sysInfo->gdtDesc = (Uint32)setupGDT();
     
     //Switch to protected mode
     writeRegister_CR0_32(SET_FLAG(readRegister_CR0_32(), CR0_PE));
@@ -31,5 +31,5 @@ void jumpToKernel(SystemInfo* sysInfo) {
     //ANCHOR[id=arch_boot_sys_pm_c_cli]
     cli();//Clear interrupt flag
 
-    jumpToProtectedMode(SEGMENT_KERNEL_CODE, SEGMENT_KERNEL_DATA, (uint32_t)sysInfo);
+    jumpToProtectedMode(SEGMENT_KERNEL_CODE, SEGMENT_KERNEL_DATA, (Uint32)sysInfo);
 }

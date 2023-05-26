@@ -5,9 +5,9 @@
 #include<multitask/schedule.h>
 #include<usermode/syscall.h>
 
-static int __syscall_read(int fileDescriptor, void* buffer, size_t n);
+static int __syscall_read(int fileDescriptor, void* buffer, Size n);
 
-static int __syscall_write(int fileDescriptor, const void* buffer, size_t n);
+static int __syscall_write(int fileDescriptor, const void* buffer, Size n);
 
 static int __syscall_open(ConstCstring filename, Flags8 flags);
 
@@ -20,7 +20,7 @@ void initFSsyscall() {
     registerSyscallHandler(SYSCALL_CLOSE, __syscall_close);
 }
 
-static int __syscall_read(int fileDescriptor, void* buffer, size_t n) {
+static int __syscall_read(int fileDescriptor, void* buffer, Size n) {
     File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
     if (file == NULL || fileRead(file, buffer, n) == RESULT_FAIL) {
         return -1;
@@ -29,7 +29,7 @@ static int __syscall_read(int fileDescriptor, void* buffer, size_t n) {
     return 0;
 }
 
-static int __syscall_write(int fileDescriptor, const void* buffer, size_t n) {
+static int __syscall_write(int fileDescriptor, const void* buffer, Size n) {
     File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
     if (file == NULL || fileWrite(file, buffer, n) == RESULT_FAIL) {
         return -1;

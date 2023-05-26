@@ -54,7 +54,7 @@ static Result __addEntry(Directory* this, ID iNodeID, iNodeType type, ConstCstri
 
     iNode* directoryInode = this->iNode;
 
-    size_t 
+    Size 
         oldBlockSize = directoryInode->onDevice.availableBlockSize,
         newBlockSize = ((this->size + 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
@@ -99,7 +99,7 @@ static Result __addEntry(Directory* this, ID iNodeID, iNodeType type, ConstCstri
 static Result __removeEntry(Directory* this, Index64 entryIndex) {
     iNode* directoryInode = this->iNode;
 
-    size_t 
+    Size 
         oldBlockSize = directoryInode->onDevice.availableBlockSize,
         newBlockSize = ((this->size - 1) * sizeof(__DirectoryEntry) + BLOCK_SIZE - 1) / BLOCK_SIZE;
 

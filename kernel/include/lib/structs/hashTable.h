@@ -6,9 +6,9 @@
 #include<structs/singlyLinkedList.h>
 
 RECURSIVE_REFER_STRUCT(HashTable) {
-    size_t size, hashSize;
+    Size size, hashSize;
     SinglyLinkedList* chains;
-    size_t (*hashFunc)(HashTable* this, Object key);
+    Size (*hashFunc)(HashTable* this, Object key);
 };
 
 typedef struct {
@@ -16,7 +16,7 @@ typedef struct {
     Object key;
 } HashChainNode;
 
-#define HASH_FUNC size_t (*hashFunc)(HashTable* this, Object key)
+#define HASH_FUNC Size (*hashFunc)(HashTable* this, Object key)
 
 /**
  * @brief Initialize hash table
@@ -26,7 +26,7 @@ typedef struct {
  * @param chains Hash chain list
  * @param hashFunc Hash function to apply
  */
-void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, HASH_FUNC);
+void initHashTable(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC);
 
 /**
  * @brief Initialize hash chain node

@@ -23,11 +23,11 @@ static void* _syscallHandlers[SYSCALL_NUM] = {
 };
 
 void initSyscall() {
-    wrmsrl(MSR_ADDR_STAR, ((uint64_t)SEGMENT_KERNEL_CODE << 32) | ((uint64_t)SEGMENT_USER_CODE32 << 48));
-    wrmsrl(MSR_ADDR_LSTAR, (uint64_t)__syscallHandler);
+    wrmsrl(MSR_ADDR_STAR, ((Uint64)SEGMENT_KERNEL_CODE << 32) | ((Uint64)SEGMENT_USER_CODE32 << 48));
+    wrmsrl(MSR_ADDR_LSTAR, (Uint64)__syscallHandler);
     wrmsrl(MSR_ADDR_FMASK, EFLAGS_TF | EFLAGS_IF | EFLAGS_DF | EFLAGS_IOPL(3));
 
-    uint64_t flags = rdmsrl(MSR_ADDR_EFER);
+    Uint64 flags = rdmsrl(MSR_ADDR_EFER);
     SET_FLAG_BACK(flags, MSR_EFER_SCE);
     wrmsrl(MSR_ADDR_EFER, flags);
 

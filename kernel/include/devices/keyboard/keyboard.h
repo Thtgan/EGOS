@@ -5,8 +5,8 @@
 #include<kit/types.h>
 
 typedef struct {
-    uint8_t ascii, alt_ascii;
-    uint16_t flags;
+    Uint8 ascii, alt_ascii;
+    Uint16 flags;
 } KeyEntry;
 
 #define KEY_ESC                     0x01

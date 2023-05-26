@@ -22,7 +22,7 @@ static int testA20() {
     setFS(__A20_TEST_SEG1);
     setGS(__A20_TEST_SEG2);
 
-    uint16_t identifier = readMemoryFS16(__A20_TEST_ADDR1); //Read the flag of MBR(should be 0xAA55)
+    Uint16 identifier = readMemoryFS16(__A20_TEST_ADDR1); //Read the flag of MBR(should be 0xAA55)
     writeMemoryFS16(__A20_TEST_ADDR1, ~identifier);         //Flip and write back(should be 0x55AA)
 
     if (identifier != readMemoryGS16(__A20_TEST_ADDR2))     //MEM(0x7DFE) == MEM(0x107DFE) ? If A20 line not enabled, the address will be truncated to 20 bits
@@ -37,7 +37,7 @@ static int testA20() {
  * @brief Enable A20 line with PS/2 system control port
  */
 static void enableA20Fast() {
-    uint8_t val = inb(POS_PS2_SYSTEM_CONTROL_A);
+    Uint8 val = inb(POS_PS2_SYSTEM_CONTROL_A);
     SET_FLAG_BACK(val, POS_A20_ACTIVE);
     outb(POS_PS2_SYSTEM_CONTROL_A, val);
 }

@@ -4,7 +4,7 @@
 #include<kit/types.h>
 #include<structs/singlyLinkedList.h>
 
-void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, HASH_FUNC) {
+void initHashTable(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC) {
     table->size = 0;
     table->hashSize = hashSize;
     table->hashFunc = hashFunc;
@@ -16,7 +16,7 @@ void initHashTable(HashTable* table, size_t hashSize, SinglyLinkedList* chains, 
 }
 
 Result hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
-    size_t hashKey = table->hashFunc(table, key);
+    Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
     for (SinglyLinkedListNode* node = chain->next; node != chain; node = node->next) {
@@ -42,7 +42,7 @@ void initHashChainNode(HashChainNode* node) {
 }
 
 HashChainNode* hashTableDelete(HashTable* table, Object key) {
-    size_t hashKey = table->hashFunc(table, key);
+    Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
     for (SinglyLinkedListNode* node = chain->next, *last = chain; node != chain; last = node, node = node->next) {
@@ -61,7 +61,7 @@ HashChainNode* hashTableDelete(HashTable* table, Object key) {
 }
 
 HashChainNode* hashTableFind(HashTable* table, Object key) {
-    size_t hashKey = table->hashFunc(table, key);
+    Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
     for (SinglyLinkedListNode* node = chain->next, *last = chain; node != chain; last = node, node = node->next) {

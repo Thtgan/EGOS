@@ -51,26 +51,26 @@ typedef enum {
  * | 3Fh-3Fh |     1     | Execute Disable bit                                              |
  * +---------+-----------+------------------------------------------------------------------+
  */
-typedef uint64_t PML4Entry;
+typedef Uint64 PML4Entry;
 
 #define EMPTY_PML4_ENTRY    0
 
 #define PML4_SPAN_SHIFT     48
 #define PML4_SPAN           (1llu << PML4_SPAN_SHIFT)   //How much memory a PML4 table can cover (256TB)
 
-#define PML4_INDEX(__VA)    EXTRACT_VAL((uint64_t)(__VA), 64, PDPT_SPAN_SHIFT, PML4_SPAN_SHIFT)
+#define PML4_INDEX(__VA)    EXTRACT_VAL((Uint64)(__VA), 64, PDPT_SPAN_SHIFT, PML4_SPAN_SHIFT)
 
 //Build a PML4 entry
 #define BUILD_PML4_ENTRY(__PDPT_ADDR, __FLAGS)              \
 (                                                           \
-    TRIM_VAL_RANGE((uint64_t)(__PDPT_ADDR), 64, 12, 52) |   \
+    TRIM_VAL_RANGE((Uint64)(__PDPT_ADDR), 64, 12, 52) |     \
     CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                 \
 )
 
 #define PDPT_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY)         ((PDPtable*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 12, 52))
 #define FLAGS_FROM_PML4_ENTRY(__PML4_ENTRY)             (CLEAR_VAL_RANGLE((__PML4_ENTRY), 64, 12, 52))
 #define PS_BASE_FROM_PML4_ENTRY(__PML4_ENTRY)           ((void*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52))
-#define PS_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 39)))
+#define PS_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 39)))
 
 #define PML4_ENTRY_FLAG_PRESENT FLAG64(0)
 #define PML4_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
@@ -113,26 +113,26 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                                |
  * +---------+-----------+----------------------------------------------------+
  */
-typedef uint64_t PDPtableEntry;
+typedef Uint64 PDPtableEntry;
 
 #define EMPTY_PDPT_ENTRY    0
 
 #define PDPT_SPAN_SHIFT     39
 #define PDPT_SPAN           (1llu << PDPT_SPAN_SHIFT)   //How much memory a page directory pointer table can cover (512GB)
 
-#define PDPT_INDEX(__VA)    EXTRACT_VAL((uint64_t)(__VA), 64, PAGE_DIRECTORY_SPAN_SHIFT, PDPT_SPAN_SHIFT)
+#define PDPT_INDEX(__VA)    EXTRACT_VAL((Uint64)(__VA), 64, PAGE_DIRECTORY_SPAN_SHIFT, PDPT_SPAN_SHIFT)
 
 //Build a PDPT entry
 #define BUILD_PDPT_ENTRY(__PAGE_DIRECTORY_ADDR, __FLAGS)            \
 (                                                                   \
-    TRIM_VAL_RANGE((uint64_t)(__PAGE_DIRECTORY_ADDR), 64, 12, 52) | \
+    TRIM_VAL_RANGE((Uint64)(__PAGE_DIRECTORY_ADDR), 64, 12, 52) |   \
     CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                         \
 )
 
 #define PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY)   ((PageDirectory*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 12, 52))
 #define FLAGS_FROM_PDPT_ENTRY(__PDPT_ENTRY)                 (CLEAR_VAL_RANGLE((__PDPT_ENTRY), 64, 12, 52))
 #define PS_BASE_FROM_PDPT_ENTRY(__PDPT_ENTRY)               ((void*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52))
-#define PS_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY, __VADDR)      ((void*)(TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 30)))
+#define PS_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY, __VADDR)      ((void*)(TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 30)))
 
 #define PDPT_ENTRY_FLAG_PRESENT FLAG64(0)
 #define PDPT_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
@@ -170,19 +170,19 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                            |
  * +---------+-----------+------------------------------------------------+
  */
-typedef uint64_t PageDirectoryEntry;
+typedef Uint64 PageDirectoryEntry;
 
 #define EMPTY_PAGE_DIRECTORY_ENTRY  0
 
 #define PAGE_DIRECTORY_SPAN_SHIFT   30
 #define PAGE_DIRECTORY_SPAN         (1llu << PAGE_DIRECTORY_SPAN_SHIFT) //How much memory a page directory can cover (1GB)
 
-#define PAGE_DIRECTORY_INDEX(__VA)  EXTRACT_VAL((uint64_t)(__VA), 64, PAGE_TABLE_SPAN_SHIFT, PAGE_DIRECTORY_SPAN_SHIFT)
+#define PAGE_DIRECTORY_INDEX(__VA)  EXTRACT_VAL((Uint64)(__VA), 64, PAGE_TABLE_SPAN_SHIFT, PAGE_DIRECTORY_SPAN_SHIFT)
 
 //Build a Page Directory entry
 #define BUILD_PAGE_DIRECTORY_ENTRY(__PAGE_TABLE_ADDR, __FLAGS)      \
 (                                                                   \
-    TRIM_VAL_RANGE((uint64_t)(__PAGE_TABLE_ADDR), 64, 12, 52)   |   \
+    TRIM_VAL_RANGE((Uint64)(__PAGE_TABLE_ADDR), 64, 12, 52)   |     \
     CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                           \
 )
 
@@ -190,7 +190,7 @@ typedef uint64_t PageDirectoryEntry;
 #define PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)   ((PageTable*)TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
 #define FLAGS_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
 #define PS_BASE_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)           ((void*)TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52))
-#define PS_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 21)))
+#define PS_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 21)))
 
 #define PAGE_DIRECTORY_ENTRY_FLAG_PRESENT   FLAG64(0)
 #define PAGE_DIRECTORY_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
@@ -229,33 +229,33 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                             |
  * +---------+-----------+-------------------------------------------------+
  */
-typedef uint64_t PageTableEntry;
+typedef Uint64 PageTableEntry;
 
 #define EMPTY_PAGE_TABLE_ENTRY  0
 
 #define PAGE_TABLE_SPAN_SHIFT   21
 #define PAGE_TABLE_SPAN         (1llu << PAGE_TABLE_SPAN_SHIFT) //How much memory a page table can cover (2MB)
 
-#define PAGE_TABLE_INDEX(__VA)  EXTRACT_VAL((uint64_t)(__VA), 64, PAGE_SIZE_SHIFT, PAGE_TABLE_SPAN_SHIFT)
+#define PAGE_TABLE_INDEX(__VA)  EXTRACT_VAL((Uint64)(__VA), 64, PAGE_SIZE_SHIFT, PAGE_TABLE_SPAN_SHIFT)
 
 //Build a Page Table entry with protection key
 #define BUILD_PAGE_TABLE_ENTRY_WITH_PROTECTION_KEY(__PAGE_ADDR, __FLAGS, __PROTECTION_KEY)  \
 (                                                                                           \
-    TRIM_VAL_RANGE((uint64_t)(__PAGE_ADDR), 64, 12, 52)         |                           \
+    TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, 12, 52)         |                             \
     CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                       |                           \
-    TRIM_VAL_RANGE((uint64_t)(__PROTECTION_KEY), 64, 59, 63)                                \
+    TRIM_VAL_RANGE((Uint64)(__PROTECTION_KEY), 64, 59, 63)                                  \
 )
 
 //Build a Page Table entry without protection key
 #define BUILD_PAGE_TABLE_ENTRY(__PAGE_ADDR, __FLAGS)        \
 (                                                           \
-    TRIM_VAL_RANGE((uint64_t)(__PAGE_ADDR), 64, 12, 52) |   \
+    TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, 12, 52) |     \
     CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                   \
 )
 
 #define PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)         ((void*)TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52))
 #define FLAGS_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_TABLE_ENTRY), 64, 12, 52))
-#define ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY, __VADDR)     ((void*)(TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52) | TRIM_VAL_SIMPLE((uintptr_t)(__VADDR), 64, 12)))
+#define ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY, __VADDR)     ((void*)(TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 12)))
 
 #define PAGE_TABLE_ENTRY_FLAG_PRESENT   FLAG64(0)
 #define PAGE_TABLE_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write

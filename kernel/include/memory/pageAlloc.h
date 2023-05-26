@@ -17,7 +17,7 @@ void initPageAlloc();
  * @param type Type of the phisical pages allocated
  * @return void* Physical address of the pages
  */
-void* pageAlloc(size_t n, PhysicalPageType type);
+void* pageAlloc(Size n, PhysicalPageType type);
 
 /**
  * @brief Free continous physical pages
@@ -25,6 +25,6 @@ void* pageAlloc(size_t n, PhysicalPageType type);
  * @param pPageBegin Physical address of the pages
  * @param n Number of page
  */
-void pageFree(void* pPageBegin, size_t n);
+void pageFree(void* pPageBegin, Size n);
 
 #endif // __PAGE_ALLOC

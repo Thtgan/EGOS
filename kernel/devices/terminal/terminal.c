@@ -41,7 +41,7 @@ static void __vgaDisableCursor();
  * @param row The row index, starts with 0
  * @param col The column index, starts with 0
  */
-static void __vgaSetCursorPosition(uint8_t row, uint8_t col);
+static void __vgaSetCursorPosition(Uint8 row, Uint8 col);
 
 /**
  * @brief Chech is the row of buffer is in window
@@ -77,11 +77,11 @@ static void __putCharacter(Terminal* terminal, char ch);
  */
 static void __scrollWindowToRow(Terminal* terminal, Index16 row);
 
-static Result __terminalDeviceFileRead(File* this, void* buffer, size_t n);
+static Result __terminalDeviceFileRead(File* this, void* buffer, Size n);
 
-static Result __terminalDeviceFileWrite(File* this, const void* buffer, size_t n);
+static Result __terminalDeviceFileWrite(File* this, const void* buffer, Size n);
 
-Result initTerminal(Terminal* terminal, void* buffer, size_t bufferSize, size_t width, size_t height) {
+Result initTerminal(Terminal* terminal, void* buffer, Size bufferSize, Size width, Size height) {
     if (bufferSize < width * height) {
         return RESULT_FAIL;
     }
@@ -201,11 +201,11 @@ void terminalOutputChar(Terminal* terminal, char ch) {
     up(&terminal->inputLock);
 }
 
-void terminalSetPattern(Terminal* terminal, uint8_t background, uint8_t foreground) {
+void terminalSetPattern(Terminal* terminal, Uint8 background, Uint8 foreground) {
     terminal->colorPattern = BUILD_PATTERN(background, foreground);
 }
 
-void terminalSetTabStride(Terminal* terminal, uint8_t stride) {
+void terminalSetTabStride(Terminal* terminal, Uint8 stride) {
     terminal->tabStride = stride;
 }
 
@@ -296,8 +296,8 @@ static void __vgaDisableCursor() {
 	outb(CGA_CRT_DATA, 0x20);
 }
 
-static void __vgaSetCursorPosition(uint8_t row, uint8_t col) {
-    uint16_t pos = row * TEXT_MODE_WIDTH + col;
+static void __vgaSetCursorPosition(Uint8 row, Uint8 col) {
+    Uint16 pos = row * TEXT_MODE_WIDTH + col;
 	outb(CGA_CRT_INDEX, CGA_CURSOR_LOCATION_LOW);
 	outb(CGA_CRT_DATA, pos & 0xFF);
 	outb(CGA_CRT_INDEX, CGA_CURSOR_LOCATION_HIGH);
@@ -461,13 +461,13 @@ static void __scrollWindowToRow(Terminal* terminal, Index16 row) {
     }
 }
 
-static Result __terminalDeviceFileRead(File* this, void* buffer, size_t n) {
+static Result __terminalDeviceFileRead(File* this, void* buffer, Size n) {
     Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
     terminalGetline(terminal, buffer);
     return RESULT_SUCCESS;
 }
 
-static Result __terminalDeviceFileWrite(File* this, const void* buffer, size_t n) {
+static Result __terminalDeviceFileWrite(File* this, const void* buffer, Size n) {
     Terminal* terminal = (Terminal*)((VirtualDeviceINodeData*)(this->iNode->onDevice.data))->device;
     terminalOutputString(terminal, buffer);
     flushDisplay();

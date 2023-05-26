@@ -5,103 +5,103 @@
 #include<structs/linkedList.h>
 #include<structs/singlyLinkedList.h>
 
-static inline int8_t max8(int8_t a, int8_t b) {
+static inline Int8 max8(Int8 a, Int8 b) {
     return a > b ? a : b;
 }
 
-static inline uint8_t umax8(uint8_t a, uint8_t b) {
+static inline Uint8 umax8(Uint8 a, Uint8 b) {
     return a > b ? a : b;
 }
 
-static inline int16_t max16(int16_t a, int16_t b) {
+static inline Int16 max16(Int16 a, Int16 b) {
     return a > b ? a : b;
 }
 
-static inline uint16_t umax16(uint16_t a, uint16_t b) {
+static inline Uint16 umax16(Uint16 a, Uint16 b) {
     return a > b ? a : b;
 }
 
-static inline int32_t max32(int32_t a, int32_t b) {
+static inline Int32 max32(Int32 a, Int32 b) {
     return a > b ? a : b;
 }
 
-static inline uint32_t umax32(uint32_t a, uint32_t b) {
+static inline Uint32 umax32(Uint32 a, Uint32 b) {
     return a > b ? a : b;
 }
 
-static inline int64_t max64(int64_t a, int64_t b) {
+static inline Int64 max64(Int64 a, Int64 b) {
     return a > b ? a : b;
 }
 
-static inline uint64_t umax64(uint64_t a, uint64_t b) {
+static inline Uint64 umax64(Uint64 a, Uint64 b) {
     return a > b ? a : b;
 }
 
-static inline int8_t min8(int8_t a, int8_t b) {
+static inline Int8 min8(Int8 a, Int8 b) {
     return a < b ? a : b;
 }
 
-static inline uint8_t umin8(uint8_t a, uint8_t b) {
+static inline Uint8 umin8(Uint8 a, Uint8 b) {
     return a < b ? a : b;
 }
 
-static inline int16_t min16(int16_t a, int16_t b) {
+static inline Int16 min16(Int16 a, Int16 b) {
     return a < b ? a : b;
 }
 
-static inline uint16_t umin16(uint16_t a, uint16_t b) {
+static inline Uint16 umin16(Uint16 a, Uint16 b) {
     return a < b ? a : b;
 }
 
-static inline int32_t min32(int32_t a, int32_t b) {
+static inline Int32 min32(Int32 a, Int32 b) {
     return a < b ? a : b;
 }
 
-static inline uint32_t umin32(uint32_t a, uint32_t b) {
+static inline Uint32 umin32(Uint32 a, Uint32 b) {
     return a < b ? a : b;
 }
 
-static inline int64_t min64(int64_t a, int64_t b) {
+static inline Int64 min64(Int64 a, Int64 b) {
     return a < b ? a : b;
 }
 
-static inline uint64_t umin64(uint64_t a, uint64_t b) {
+static inline Uint64 umin64(Uint64 a, Uint64 b) {
     return a < b ? a : b;
 }
 
-static inline uint8_t abs8(int8_t val) {
+static inline Uint8 abs8(Int8 val) {
     return val < 0 ? -val : val;
 }
 
-static inline uint8_t abs16(int16_t val) {
+static inline Uint8 abs16(Int16 val) {
     return val < 0 ? -val : val;
 }
 
-static inline uint8_t abs32(int32_t val) {
+static inline Uint8 abs32(Int32 val) {
     return val < 0 ? -val : val;
 }
 
-static inline uint8_t abs64(int64_t val) {
+static inline Uint8 abs64(Int64 val) {
     return val < 0 ? -val : val;
 }
 
-static inline void swap8(uint8_t* a, uint8_t* b) {
-    uint8_t tmp = *a;
+static inline void swap8(Uint8* a, Uint8* b) {
+    Uint8 tmp = *a;
     *a = *b, *b = tmp;
 }
 
-static inline void swap16(uint16_t* a, uint16_t* b) {
-    uint16_t tmp = *a;
+static inline void swap16(Uint16* a, Uint16* b) {
+    Uint16 tmp = *a;
     *a = *b, *b = tmp;
 }
 
-static inline void swap32(uint32_t* a, uint32_t* b) {
-    uint32_t tmp = *a;
+static inline void swap32(Uint32* a, Uint32* b) {
+    Uint32 tmp = *a;
     *a = *b, *b = tmp;
 }
 
-static inline void swap64(uint64_t* a, uint64_t* b) {
-    uint64_t tmp = *a;
+static inline void swap64(Uint64* a, Uint64* b) {
+    Uint64 tmp = *a;
     *a = *b, *b = tmp;
 }
 
@@ -115,7 +115,7 @@ static inline void swap64(uint64_t* a, uint64_t* b) {
  * @param len Length of the list
  * @param comparator Comparator applied to compare the elements in the list
  */
-void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode));
+void linkedListMergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode));
 
 /**
  * @brief Sort the singly linked list using merge sort
@@ -124,6 +124,6 @@ void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator
  * @param len Length of the list
  * @param comparator Comparator applied to compare the elements in the list
  */
-void singlyLinkedListMergeSort(SinglyLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
+void singlyLinkedListMergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
 
 #endif // __ALGORITHMS_H

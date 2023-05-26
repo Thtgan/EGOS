@@ -31,9 +31,9 @@
  */
 
 typedef struct {
-    uint64_t signature;
+    Uint64 signature;
 
-    size_t deviceFreeClusterNum;
+    Size deviceFreeClusterNum;
 
     Index64 firstFreeSuperNode;
 
@@ -43,21 +43,21 @@ typedef struct {
     
     Index64 lastFreeBlockStack;
 
-    uint64_t reserved1[58];
+    Uint64 reserved1[58];
 } __attribute__((packed)) __DeviceInfo;
 
 #define __DEVICE_INFO_SIZE          (sizeof(__DeviceInfo) / BLOCK_SIZE)
 
 typedef struct {
-    uint64_t signature1;    //Signature for validation
+    Uint64 signature1;    //Signature for validation
 
     Index64 blockIndex;
 
     Index64 nextFreeSuperNode;
 
-    uint64_t reserved1[60];
+    Uint64 reserved1[60];
 
-    uint64_t signature2;    //Signature for validation
+    Uint64 signature2;    //Signature for validation
 } __attribute__((packed)) __SuperNodeInfo;
 
 #define __SUPER_NODE_INFO_OFFSET    (offsetof(__SuperNode, info) / BLOCK_SIZE)
@@ -77,7 +77,7 @@ typedef struct {
 
 typedef struct {
     __SuperNodeInfo info;
-    uint64_t reserved2[192];
+    Uint64 reserved2[192];
     __ClusterStack stack;
 } __attribute__((packed)) __SuperNode;
 
@@ -85,7 +85,7 @@ typedef struct {
     Index64 nextFreeBlockStack;
     Index64 blockIndex;
 
-    uint64_t reserved[54];
+    Uint64 reserved[54];
     
     Index64 stackTop;
     Index64 blockStack[CLUSTER_BLOCK_SIZE - 1];
@@ -109,8 +109,8 @@ static Index64 __doAllocateBlock(PhospherusAllocator* allocator, void** blockSta
 static Result __doReleaseBlock(PhospherusAllocator* allocator, Index64 block, void** belongToPtr, void** tailBlockStackPtr);
 
 void phospherusInitAllocator() {
-    initHashTable(&_hashTable, 32, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
-        return (size_t)key % 31;
+    initHashTable(&_hashTable, 32, _hashChains, LAMBDA(Size, (HashTable* this, Object key) {
+        return (Size)key % 31;
     }));
 }
 
@@ -326,7 +326,7 @@ Result phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster)
     }
 }
 
-size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator) {
+Size phospherusGetFreeClusterNum(PhospherusAllocator* allocator) {
     __DeviceInfo* deviceInfo = allocator->deviceInfo;
     return deviceInfo->deviceFreeClusterNum;
 }
@@ -360,8 +360,8 @@ Result phospherusReleaseBlock(PhospherusAllocator* allocator, Index64 block) {
 }
 
 static Result __doDeployAllocator(BlockDevice* device, __DeviceInfo** infoPtr, __SuperNode** superNodePtr) {
-    size_t deviceSize = device->availableBlockNum;
-    size_t nodeNum = deviceSize / __SUPER_NODE_SPAN;
+    Size deviceSize = device->availableBlockNum;
+    Size nodeNum = deviceSize / __SUPER_NODE_SPAN;
 
     if (nodeNum < 1) {   //The block device must have at least one node length free (1MB)
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NO_FREE_SPACE);

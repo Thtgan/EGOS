@@ -23,7 +23,7 @@ void initKmalloc();
  * @param type Type of the memory
  * @return void* Allocated memory
  */
-void* kMalloc(size_t n, MemoryType type);
+void* kMalloc(Size n, MemoryType type);
 
 /**
  * @brief Free the memory allocated by kMalloc
@@ -32,8 +32,8 @@ void* kMalloc(size_t n, MemoryType type);
  */
 void kFree(void* ptr);
 
-void* kCalloc(size_t num, size_t size, MemoryType type);
+void* kCalloc(Size num, Size size, MemoryType type);
 
-void* kRealloc(void *ptr, size_t newSize);
+void* kRealloc(void *ptr, Size newSize);
 
 #endif // __K_MALLOC_H

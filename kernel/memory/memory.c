@@ -40,27 +40,27 @@ Result initMemory() {
     return RESULT_SUCCESS;
 }
 
-void* memcpy(void* des, const void* src, size_t n) {
+void* memcpy(void* des, const void* src, Size n) {
     while(n--) {
-        *((uint8_t*)des) = *((uint8_t*)src);
+        *((Uint8*)des) = *((Uint8*)src);
         ++src, ++des;
     }
 }
 
-void* memset(void* ptr, int b, size_t n) {
+void* memset(void* ptr, int b, Size n) {
     void* ret = ptr;
     while (n--) {
-        *((uint8_t*)ptr) = b;
+        *((Uint8*)ptr) = b;
         ++ptr;
     }
     return ret;
 }
 
-int memcmp(const void* ptr1, const void* ptr2, size_t n) {
+int memcmp(const void* ptr1, const void* ptr2, Size n) {
     int ret = 0;
     while (n--) {
-        if (*((uint8_t*)ptr1) != *((uint8_t*)ptr2)) {
-            ret = *((uint8_t*)ptr1) < *((uint8_t*)ptr2) ? -1 : 1;
+        if (*((Uint8*)ptr1) != *((Uint8*)ptr2)) {
+            ret = *((Uint8*)ptr1) < *((Uint8*)ptr2) ? -1 : 1;
             break;
         }
         ++ptr1, ++ptr2;
@@ -68,10 +68,10 @@ int memcmp(const void* ptr1, const void* ptr2, size_t n) {
     return ret;
 }
 
-void* memchr(const void* ptr, int val, size_t n) {
+void* memchr(const void* ptr, int val, Size n) {
     void* ret = NULL;
     while (n--) {
-        if (*((uint8_t*)ptr) == val) {
+        if (*((Uint8*)ptr) == val) {
             ret = (void*)ptr;
             break;
         }
@@ -80,17 +80,17 @@ void* memchr(const void* ptr, int val, size_t n) {
     return ret;
 }
 
-void* memmove(void* des, const void* src, size_t n) {
+void* memmove(void* des, const void* src, Size n) {
     void* ret = des;
     if (des < src) {
         while (n--) {
-            *((uint8_t*)des) = *((uint8_t*)src);
+            *((Uint8*)des) = *((Uint8*)src);
             ++src, ++des;
         }
     } else if (des > src) {
         src += (n - 1), des += (n - 1);
         while (n--) {
-            *((uint8_t*)des) = *((uint8_t*)src);
+            *((Uint8*)des) = *((Uint8*)src);
             --src, --des;
         }
     }
@@ -108,7 +108,7 @@ void __E820Audit() {
             continue;
         }
 
-        uint32_t endOfRegion = (e->base + e->size) >> PAGE_SIZE_SHIFT;
+        Uint32 endOfRegion = (e->base + e->size) >> PAGE_SIZE_SHIFT;
 
         if ((e->base >> PAGE_SIZE_SHIFT) <= mMap->freePageBegin && mMap->freePageBegin < endOfRegion) {
             mMap->freePageEnd = endOfRegion;

@@ -3,7 +3,7 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 
-void initBitmap(Bitmap* b, size_t bitSize, void* bitPtr) {
+void initBitmap(Bitmap* b, Size bitSize, void* bitPtr) {
     b->bitNum = bitSize;
     b->bitSetNum = 0;
     b->bitPtr = bitPtr;
@@ -13,18 +13,18 @@ void initBitmap(Bitmap* b, size_t bitSize, void* bitPtr) {
 #define __RAW_CLEAR(__PTR, __INDEX) CLEAR_FLAG_BACK(__PTR[EXTRACT_VAL(__INDEX, 64, 3, 64)], FLAG8(TRIM_VAL(__INDEX, 0x7)))      //Clear the bit
 #define __RAW_TEST(__PTR, __INDEX)  TEST_FLAGS_CONTAIN(__PTR[EXTRACT_VAL(__INDEX, 64, 3, 64)], FLAG8(TRIM_VAL(__INDEX, 0x7)))   //Test the bit
 
-bool testBit(Bitmap* b, const size_t index) {
+bool testBit(Bitmap* b, const Size index) {
     return __RAW_TEST(b->bitPtr, index);
 }
 
-void setBit(Bitmap* b, const size_t index) {
+void setBit(Bitmap* b, const Size index) {
     setBits(b, index, 1);
 }
 
-void setBits(Bitmap* b, const size_t index, const size_t n) {
-    size_t endIndex = index + n - 1;
+void setBits(Bitmap* b, const Size index, const Size n) {
+    Size endIndex = index + n - 1;
 
-    for (size_t i = index; i <= endIndex; ++i) {
+    for (Size i = index; i <= endIndex; ++i) {
 
         if (__RAW_TEST(b->bitPtr, i)) {
             continue; //Skip the bit already set
@@ -35,14 +35,14 @@ void setBits(Bitmap* b, const size_t index, const size_t n) {
     }
 }
 
-void clearBit(Bitmap* b, const size_t index) {
+void clearBit(Bitmap* b, const Size index) {
     clearBits(b, index, 1);
 }
 
-void clearBits(Bitmap* b, const size_t index, const size_t n) {
-    size_t endIndex = index + n - 1;
+void clearBits(Bitmap* b, const Size index, const Size n) {
+    Size endIndex = index + n - 1;
 
-    for (size_t i = index; i <= endIndex; ++i) {
+    for (Size i = index; i <= endIndex; ++i) {
 
         if (!__RAW_TEST(b->bitPtr, i)) {
             continue;
@@ -53,14 +53,14 @@ void clearBits(Bitmap* b, const size_t index, const size_t n) {
     }
 }
 
-size_t findFirstSet(Bitmap* b, size_t begin) {
+Size findFirstSet(Bitmap* b, Size begin) {
     if (b->bitSetNum == 0) {
         return INVALID_INDEX;
     }
 
-    uint64_t* ptr = (void*)&b->bitPtr[begin >> 3];
+    Uint64* ptr = (void*)&b->bitPtr[begin >> 3];
 
-    size_t i = begin, limit = CLEAR_VAL_SIMPLE(begin, 64, 6) + 64;
+    Size i = begin, limit = CLEAR_VAL_SIMPLE(begin, 64, 6) + 64;
     for (; i < limit && i < b->bitNum; ++i) {
         if (__RAW_TEST(b->bitPtr, i)) {
             return i;
@@ -83,14 +83,14 @@ size_t findFirstSet(Bitmap* b, size_t begin) {
     return INVALID_INDEX;
 }
 
-size_t findFirstClear(Bitmap* b, size_t begin) {
+Size findFirstClear(Bitmap* b, Size begin) {
     if (b->bitSetNum == b->bitNum) {
         return INVALID_INDEX;
     }
 
-    uint64_t* ptr = (void*)&b->bitPtr[begin >> 3];
+    Uint64* ptr = (void*)&b->bitPtr[begin >> 3];
 
-    size_t i = begin, limit = CLEAR_VAL_SIMPLE(begin, 64, 6) + 64;
+    Size i = begin, limit = CLEAR_VAL_SIMPLE(begin, 64, 6) + 64;
     for (; i < limit && i < b->bitNum; ++i) {
         if (!__RAW_TEST(b->bitPtr, i)) {
             return i;

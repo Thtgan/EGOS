@@ -104,11 +104,11 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
 }
 
 Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
-    uintptr_t
+    Uintptr
         pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT),
         fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
     
-    size_t
+    Size
         readRemain = programHeader->segmentSizeInFile,
         memoryRemain = programHeader->segmentSizeInMemory;
 
@@ -117,9 +117,9 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         return RESULT_FAIL;
     }
 
-    uint64_t flags = PAGE_TABLE_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGE_TABLE_ENTRY_FLAG_RW : 0) | PAGE_TABLE_ENTRY_FLAG_PRESENT;
+    Uint64 flags = PAGE_TABLE_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGE_TABLE_ENTRY_FLAG_RW : 0) | PAGE_TABLE_ENTRY_FLAG_PRESENT;
     
-    uintptr_t from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
+    Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = NULL;
@@ -136,7 +136,7 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
         base += PAGE_SIZE;
 
-        size_t readN = min64(readRemain, to - from);
+        Size readN = min64(readRemain, to - from);
         if (readN > 0) {
             if (rawFileRead(file, (void*)from, readN) == RESULT_FAIL) {
                 return RESULT_FAIL;
@@ -159,11 +159,11 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 }
 
 Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
-    uintptr_t pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
-    size_t memoryRemain = programHeader->segmentSizeInMemory;
+    Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
+    Size memoryRemain = programHeader->segmentSizeInMemory;
 
     PML4Table* pageTable = schedulerGetCurrentProcess()->context.pageTable;
-    uintptr_t from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
+    Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = translateVaddr(pageTable, base);

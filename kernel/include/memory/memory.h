@@ -18,7 +18,7 @@ Result initMemory();
  * @param n Num of bytes to copy
  * @return void* des
  */
-void* memcpy(void* des, const void* src, size_t n);
+void* memcpy(void* des, const void* src, Size n);
 
 /**
  * @brief Fill an area of memory with a byte
@@ -29,7 +29,7 @@ void* memcpy(void* des, const void* src, size_t n);
  * 
  * @return ptr
  */
-void* memset(void* ptr, int b, size_t n);
+void* memset(void* ptr, int b, Size n);
 
 /**
  * @brief Compare the data in memory by bytes
@@ -39,7 +39,7 @@ void* memset(void* ptr, int b, size_t n);
  * @param n Maximum num of bytes to compare
  * @return int -1 if first different byte in ptr1 is smaller than ptr2's, 1 if first different byte in ptr1 is greater than ptr2's, 0 if n bytes in both ptrs are the same
  */
-int memcmp(const void* ptr1, const void* ptr2, size_t n);
+int memcmp(const void* ptr1, const void* ptr2, Size n);
 
 /**
  * @brief Find the position of first byte of val in the ptr
@@ -49,7 +49,7 @@ int memcmp(const void* ptr1, const void* ptr2, size_t n);
  * @param n Maximum num of bytes to search
  * @return void* First position of the byte appears, NULL if byte not exists
  */
-void* memchr(const void* ptr, int val, size_t n);
+void* memchr(const void* ptr, int val, Size n);
 
 /**
  * @brief Copy data from source to destination, overlap is handled
@@ -59,6 +59,6 @@ void* memchr(const void* ptr, int val, size_t n);
  * @param n Num of bytes to copy
  * @return void* des
  */
-void* memmove(void* des, const void* src, size_t n);
+void* memmove(void* des, const void* src, Size n);
 
 #endif // __MEMORY_H

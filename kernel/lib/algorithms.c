@@ -11,13 +11,13 @@
  * @param len Length of the sub-list
  * @return LinkedListNode* Beginning node of the sorted sub-list
  */
-static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode));
+static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode));
 
-void linkedListMergeSort(LinkedList* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode)) {
+void linkedListMergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode)) {
     __linkedListMergeSort(list->next, len, comparator);
 }
 
-static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, LinkedListNode)) {
+static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode)) {
     if (len == 1) {
         return list; //Just return
     } else if (len == 2) {
@@ -36,7 +36,7 @@ static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, C
         return list;
     }
 
-    size_t len1 = len >> 1, len2 = len - len1;
+    Size len1 = len >> 1, len2 = len - len1;
     LinkedListNode* prev = list->prev, * subList1 = list, * subList2 = list, * next = NULL;
 
     for (int i = 0; i < len1; ++i) {
@@ -100,13 +100,13 @@ static LinkedListNode* __linkedListMergeSort(LinkedListNode* list, size_t len, C
  * @param len Length of the sub-list
  * @return SinglyLinkedListNode* Beginning node of the sorted sub-list
  */
-static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
+static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
 
-void singlyLinkedListMergeSort(SinglyLinkedList* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
+void singlyLinkedListMergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
     __singlyLinkedListMergeSort(list, list->next, len, comparator);
 }
 
-static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, size_t len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
+static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
     if (len == 1) {
         return list; //Just return
     } else if (len == 2) {
@@ -124,7 +124,7 @@ static SinglyLinkedListNode* __singlyLinkedListMergeSort(SinglyLinkedListNode* p
         return list;
     }
 
-    size_t len1 = len >> 1, len2 = len - len1;
+    Size len1 = len >> 1, len2 = len - len1;
     SinglyLinkedListNode* subList1 = list, * subPrev = NULL, * subList2 = NULL, * next = NULL;
 
     subPrev = subList1 = __singlyLinkedListMergeSort(prev, subList1, len1, comparator);

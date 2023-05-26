@@ -6,12 +6,12 @@
 
 #define PTR(__LENGTH)                                               MACRO_EVAL(MACRO_CONCENTRATE2(PTR, __LENGTH))
 
-#define PTR8(__PTR)                                                 (*((uint8_t*)(__PTR)))
-#define PTR16(__PTR)                                                (*((uint16_t*)(__PTR)))
-#define PTR32(__PTR)                                                (*((uint32_t*)(__PTR)))
-#define PTR64(__PTR)                                                (*((uint64_t*)(__PTR)))
+#define PTR8(__PTR)                                                 (*((Uint8*)(__PTR)))
+#define PTR16(__PTR)                                                (*((Uint16*)(__PTR)))
+#define PTR32(__PTR)                                                (*((Uint32*)(__PTR)))
+#define PTR64(__PTR)                                                (*((Uint64*)(__PTR)))
 
-#define UINT(__LENGTH)                                              MACRO_EVAL(MACRO_CONCENTRATE3(uint, __LENGTH, _t))
+#define UINT(__LENGTH)                                              MACRO_EVAL(MACRO_CONCENTRATE2(Uint, __LENGTH))
 
 #define ONE(__LENGTH)                                               (UINT(__LENGTH))1
 #define FULL_MASK(__LENGTH)                                         (UINT(__LENGTH))-1

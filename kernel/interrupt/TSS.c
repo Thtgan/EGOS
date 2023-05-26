@@ -12,14 +12,14 @@ static TSS _tss;
 
 Result initTSS() {
     memset(&_tss, 0, sizeof(TSS));
-    _tss.ist[0] = (uintptr_t)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
-    _tss.rsp[0] = (uintptr_t)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
+    _tss.ist[0] = (Uintptr)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
+    _tss.rsp[0] = (Uintptr)pageAlloc(2, PHYSICAL_PAGE_TYPE_PUBLIC);
     _tss.ioMapBaseAddress = 0x8000;  //Invalid
     
     GDTDesc64* desc = (GDTDesc64*)sysInfo->gdtDesc;
     GDTEntryTSS_LDT* gdtEntryTSS = (GDTEntryTSS_LDT*)((GDTEntry*)desc->table + GDT_ENTRY_INDEX_TSS);
 
-    *gdtEntryTSS = BUILD_GDT_ENTRY_TSS_LDT(((uintptr_t)&_tss), sizeof(TSS), GDT_TSS_LDT_TSS | GDT_TSS_LDT_PRIVIEGE_0 | GDT_TSS_LDT_PRESENT, 0);
+    *gdtEntryTSS = BUILD_GDT_ENTRY_TSS_LDT(((Uintptr)&_tss), sizeof(TSS), GDT_TSS_LDT_TSS | GDT_TSS_LDT_PRIVIEGE_0 | GDT_TSS_LDT_PRESENT, 0);
 
     asm volatile("ltr %w0" :: "r"(SEGMENT_TSS));
 

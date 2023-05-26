@@ -11,6 +11,6 @@
  * 
  * @return Memory blovk device created, NULL if create failed
  */
-BlockDevice* createMemoryBlockDevice(void* region, size_t size, ConstCstring name);
+BlockDevice* createMemoryBlockDevice(void* region, Size size, ConstCstring name);
 
 #endif // MEMORY_BLOCK_DEVICE_H

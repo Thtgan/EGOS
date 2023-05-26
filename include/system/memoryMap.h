@@ -10,20 +10,20 @@
 #define MEMORY_MAP_ENTRY_TYPE_BAD                   5
 
 typedef struct {
-    uint64_t base;
-    uint64_t size;
-    uint32_t type;
-    uint32_t extendedAttributes;
+    Uint64 base;
+    Uint64 size;
+    Uint32 type;
+    Uint32 extendedAttributes;
 } __attribute__((packed)) MemoryMapEntry;
 
 #define MEMORY_AREA_NUM 16
 
 typedef struct {
     MemoryMapEntry memoryMapEntries[MEMORY_AREA_NUM];
-    uint32_t entryNum;
-    uint32_t directPageTableBegin, directPageTableEnd;
-    uint32_t physicalPageStructBegin, physicalPageStructEnd;
-    uint32_t freePageBegin, freePageEnd;
+    Uint32 entryNum;
+    Uint32 directPageTableBegin, directPageTableEnd;
+    Uint32 physicalPageStructBegin, physicalPageStructEnd;
+    Uint32 freePageBegin, freePageEnd;
 } MemoryMap;
 
 #endif // __MEMORY_AREA_H

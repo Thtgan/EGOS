@@ -24,30 +24,30 @@
  */
 
 typedef struct {
-    uint16_t isr0_15;
-    uint16_t codeSector;
-    uint8_t reserved1;
-    uint8_t attributes;
-    uint16_t isr16_31;
-    uint32_t isr32_63;
-    uint32_t reserved2;
+    Uint16 isr0_15;
+    Uint16 codeSector;
+    Uint8 reserved1;
+    Uint8 attributes;
+    Uint16 isr16_31;
+    Uint32 isr32_63;
+    Uint32 reserved2;
 } __attribute__((packed)) IDTentry;
 
 typedef struct {
-    uint16_t size;
-    uint32_t tablePtr;
+    Uint16 size;
+    Uint32 tablePtr;
 } __attribute__((packed)) IDTdesc;
 
 /**
  * @brief Before enter the interrupt handler, CPU will push these registers into stack
  */
 typedef struct {
-    uint64_t errorCode;
-    uint64_t rip;
-    uint64_t cs;        //Padded to doubleword
-    uint64_t eflags;
-    uint64_t rsp;
-    uint64_t ss;
+    Uint64 errorCode;
+    Uint64 rip;
+    Uint64 cs;          //Padded to doubleword
+    Uint64 eflags;
+    Uint64 rsp;
+    Uint64 ss;
 } __attribute__((packed)) HandlerStackFrame;
 
 /**
@@ -64,7 +64,7 @@ Result initIDT();
  * @param isr The interrupt service routine to bind
  * @param attributes arrtibutes
  */
-void registerISR(uint8_t vector, void* isr, uint8_t attributes);
+void registerISR(Uint8 vector, void* isr, Uint8 attributes);
 
 /**
  * @brief Disable the interrupt, and return if the interrupt is enabled before

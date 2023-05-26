@@ -24,10 +24,10 @@ void blowup(const Cstring format, ...);
 
 typedef struct {
     union {
-        uint8_t bytes[256];
-        uint16_t words[128];
-        uint32_t dwords[64];
-        uint64_t quads[32];
+        Uint8 bytes[256];
+        Uint16 words[128];
+        Uint32 dwords[64];
+        Uint64 quads[32];
     };
 } DataSharer;
 

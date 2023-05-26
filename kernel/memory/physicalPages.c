@@ -12,19 +12,19 @@ static PhysicalPage* _pageStructs;
 
 Result initPhysicalPage() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-    size_t physicalPageStructPageNum = (mMap->freePageEnd + (__PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE - 1)) / __PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE;
+    Size physicalPageStructPageNum = (mMap->freePageEnd + (__PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE - 1)) / __PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE;
     if (mMap->freePageBegin + physicalPageStructPageNum >= mMap->freePageEnd) {
         return RESULT_FAIL;
     }
 
     mMap->physicalPageStructBegin = mMap->freePageBegin, mMap->physicalPageStructEnd = mMap->freePageBegin + physicalPageStructPageNum;
-    _pageStructs = (PhysicalPage*)((uintptr_t)mMap->freePageBegin << PAGE_SIZE_SHIFT);
+    _pageStructs = (PhysicalPage*)((Uintptr)mMap->freePageBegin << PAGE_SIZE_SHIFT);
     mMap->freePageBegin = mMap->physicalPageStructEnd;
 
     for (int i = 0; i < mMap->freePageEnd; ++i) {
-        uint32_t flags = PHYSICAL_PAGE_TYPE_NORMAL;
+        Uint32 flags = PHYSICAL_PAGE_TYPE_NORMAL;
 
-        uintptr_t pAddr = (uintptr_t)i << PAGE_SIZE_SHIFT;
+        Uintptr pAddr = (Uintptr)i << PAGE_SIZE_SHIFT;
         do {
             if (pAddr < KERNEL_PHYSICAL_END) {
                 flags = PHYSICAL_PAGE_TYPE_PUBLIC;
@@ -45,5 +45,5 @@ Result initPhysicalPage() {
 }
 
 PhysicalPage* getPhysicalPageStruct(void* pAddr) {
-    return &_pageStructs[(uintptr_t)pAddr >> PAGE_SIZE_SHIFT];
+    return &_pageStructs[(Uintptr)pAddr >> PAGE_SIZE_SHIFT];
 }

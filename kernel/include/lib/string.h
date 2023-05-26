@@ -7,27 +7,27 @@
  * @brief Return the length of the string, ends with '\0'
  * 
  * @param str String
- * @return size_t The length of the string
+ * @return Size The length of the string
  */
-size_t strlen(const char* str);
+Size strlen(const char* str);
 
 /**
  * @brief Return the first position in str1 where character not appeared in str2
  * 
  * @param str1 String
  * @param str2 Character set
- * @return size_t First position in str1 where character not appeared in str2, length of str1 if all characters in str1 contained in str2
+ * @return Size First position in str1 where character not appeared in str2, length of str1 if all characters in str1 contained in str2
  */
-size_t strspn(const char* str1, const char* str2);
+Size strspn(const char* str1, const char* str2);
 
 /**
  * @brief Return the first position in str1 where character appeared in str2
  * 
  * @param str1 String
  * @param str2 Character set
- * @return size_t First position in str1 where character appeared in str2, length of str1 if all characters in str1 not contained in str2
+ * @return Size First position in str1 where character appeared in str2, length of str1 if all characters in str1 not contained in str2
  */
-size_t strcspn(const char* str1, const char* str2);
+Size strcspn(const char* str1, const char* str2);
 
 /**
  * @brief Return the pointer to the position str2 first appeared in str1
@@ -91,7 +91,7 @@ char* strcpy(char* des, const char* src);
  * @param n Maximum number of characters bytes to copy
  * @return char* des
  */
-char* strncpy(char* des, const char* src, size_t n);
+char* strncpy(char* des, const char* src, Size n);
 
 /**
  * @brief Compare two strings
@@ -110,7 +110,7 @@ int strcmp(const char* str1, const char* str2);
  * @param n Maximum number of characters to compare
  * @return int -1 if first different character in str1 is smaller than str2's, 1 if first different character in str1 is greater than str2's, 0 if both strings are the same
  */
-int strncmp(const char* str1, const char* str2, size_t n);
+int strncmp(const char* str1, const char* str2, Size n);
 
 /**
  * @brief Get polynomial rolling hash of the string
@@ -118,8 +118,8 @@ int strncmp(const char* str1, const char* str2, size_t n);
  * @param str String to hash
  * @param p Prime number for rolling
  * @param mod Mod of the hash
- * @return size_t Hash value of string
+ * @return Size Hash value of string
  */
-size_t strhash(const char* str, size_t p, size_t mod);
+Size strhash(const char* str, Size p, Size mod);
 
 #endif // __KERNEL_STRING_H

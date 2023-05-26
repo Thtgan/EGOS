@@ -6,7 +6,7 @@
 
 typedef struct {
     Queue bufferQueue;
-    size_t bufferSize;
+    Size bufferSize;
     Semaphore queueLock;
     Semaphore lineNumSema;
 } InputBuffer;

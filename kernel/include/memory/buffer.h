@@ -26,17 +26,17 @@ Result initBuffer();
  * @brief Get the total num of buffer in given size
  * 
  * @param size Buffer size
- * @return size_t Num of buffer in this size
+ * @return Size Num of buffer in this size
  */
-size_t getTotalBufferNum(BufferSizes size);
+Size getTotalBufferNum(BufferSizes size);
 
 /**
  * @brief Get the num of free buffer in given size
  * 
  * @param size Buffer size
- * @return size_t Num of free buffer in this size
+ * @return Size Num of free buffer in this size
  */
-size_t getFreeBufferNum(BufferSizes size);
+Size getFreeBufferNum(BufferSizes size);
 
 /**
  * @brief Allocate a buffer in given size, may increase the num of buffer if buffer not enough

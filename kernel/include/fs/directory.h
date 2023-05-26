@@ -9,7 +9,7 @@ STRUCT_PRE_DEFINE(DirectoryOperations);
 
 typedef struct {
     iNode* iNode;
-    size_t size;
+    Size size;
     void* directoryInMemory;
     DirectoryOperations* operations;
 } Directory;

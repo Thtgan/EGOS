@@ -12,11 +12,11 @@
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 
-static Index64 __seek(File* this, size_t seekTo);
+static Index64 __seek(File* this, Size seekTo);
 
-static Result __read(File* this, void* buffer, size_t n);
+static Result __read(File* this, void* buffer, Size n);
 
-static Result __write(File* this, const void* buffer, size_t n);
+static Result __write(File* this, const void* buffer, Size n);
 
 FileOperations fileOperations = {
     .seek = __seek,
@@ -28,9 +28,9 @@ static File* __fileOpen(iNode* iNode, Flags8 flags);
 
 static Result __fileClose(File* file);
 
-static Result __doRead(File* this, void* buffer, size_t n, void** tmpBufferPtr);
+static Result __doRead(File* this, void* buffer, Size n, void** tmpBufferPtr);
 
-static Result __doWrite(File* this, const void* buffer, size_t n, void** tmpBufferPtr);
+static Result __doWrite(File* this, const void* buffer, Size n, void** tmpBufferPtr);
 
 FileGlobalOperations fileGlobalOperations = {
     .fileOpen = __fileOpen,
@@ -41,8 +41,8 @@ FileGlobalOperations* phospherusInitFiles() {
     return &fileGlobalOperations;
 }
 
-static Index64 __seek(File* this, size_t seekTo) {
-    size_t fileSize = this->iNode->onDevice.dataSize;
+static Index64 __seek(File* this, Size seekTo) {
+    Size fileSize = this->iNode->onDevice.dataSize;
     if (seekTo > fileSize) {
         SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
         return INVALID_INDEX;
@@ -51,7 +51,7 @@ static Index64 __seek(File* this, size_t seekTo) {
     return this->pointer = seekTo;
 }
 
-static Result __read(File* this, void* buffer, size_t n) {
+static Result __read(File* this, void* buffer, Size n) {
     void* tmpBuffer = NULL;
 
     Result ret = __doRead(this, buffer, n, &tmpBuffer);
@@ -63,7 +63,7 @@ static Result __read(File* this, void* buffer, size_t n) {
     return ret;
 }
 
-static Result __write(File* this, const void* buffer, size_t n) {
+static Result __write(File* this, const void* buffer, Size n) {
     void* tmpBuffer = NULL;
 
     Result ret = __doWrite(this, buffer, n, &tmpBuffer);
@@ -121,16 +121,16 @@ static Result __fileClose(File* file) {
     return RESULT_SUCCESS;
 }
 
-static Result __doRead(File* this, void* buffer, size_t n, void** tmpBufferPtr) {
+static Result __doRead(File* this, void* buffer, Size n, void** tmpBufferPtr) {
     Index64 pointer = this->pointer;
     iNode* iNode = this->iNode;
-    size_t fileSize = iNode->onDevice.dataSize;
+    Size fileSize = iNode->onDevice.dataSize;
     if (pointer > fileSize) {
         SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
         return RESULT_FAIL;
     }
 
-    size_t remainByteToRead = umin64(fileSize - pointer, n), currentReadPointer = pointer;
+    Size remainByteToRead = umin64(fileSize - pointer, n), currentReadPointer = pointer;
     void* currentBuffer = buffer, * tmpBuffer = NULL;
     *tmpBufferPtr = tmpBuffer = allocateBuffer(BUFFER_SIZE_512);
     if (tmpBuffer == NULL) {
@@ -151,7 +151,7 @@ static Result __doRead(File* this, void* buffer, size_t n, void** tmpBufferPtr) 
         remainByteToRead -= frontByteNum;
     }
 
-    size_t midBlockNum = remainByteToRead / BLOCK_SIZE;
+    Size midBlockNum = remainByteToRead / BLOCK_SIZE;
     if (midBlockNum > 0) {
         if (rawInodeReadBlocks(iNode, currentBuffer, currentReadPointer / BLOCK_SIZE, midBlockNum) == RESULT_FAIL) {
             return RESULT_FAIL;
@@ -167,7 +167,7 @@ static Result __doRead(File* this, void* buffer, size_t n, void** tmpBufferPtr) 
             return RESULT_FAIL;
         }
 
-        size_t tailByteNum = umin64(remainByteToRead, BLOCK_SIZE);
+        Size tailByteNum = umin64(remainByteToRead, BLOCK_SIZE);
         memcpy(currentBuffer, tmpBuffer, tailByteNum);
 
         currentBuffer += tailByteNum;
@@ -187,27 +187,27 @@ static Result __doRead(File* this, void* buffer, size_t n, void** tmpBufferPtr) 
     return RESULT_SUCCESS;
 }
 
-static Result __doWrite(File* this, const void* buffer, size_t n, void** tmpBufferPtr) {
+static Result __doWrite(File* this, const void* buffer, Size n, void** tmpBufferPtr) {
     iNode* iNode = this->iNode;
-    size_t pointer = (this->pointer == INVALID_INDEX) ? iNode->onDevice.dataSize : this->pointer;
+    Size pointer = (this->pointer == INVALID_INDEX) ? iNode->onDevice.dataSize : this->pointer;
 
-    size_t blockNum = iNode->onDevice.availableBlockSize, leastBlockNumAfterWrite = (pointer + n + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    Size blockNum = iNode->onDevice.availableBlockSize, leastBlockNumAfterWrite = (pointer + n + BLOCK_SIZE - 1) / BLOCK_SIZE;
     if (leastBlockNumAfterWrite > blockNum && rawInodeResize(iNode, leastBlockNumAfterWrite) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    size_t remainByteToWrite = n, currentWritePointer = pointer;
+    Size remainByteToWrite = n, currentWritePointer = pointer;
     const void* currentBuffer = buffer;
     void* tmpBuffer = NULL;
     *tmpBufferPtr = tmpBuffer = allocateBuffer(BUFFER_SIZE_512);
 
-    size_t flooredWritePointer = currentWritePointer / BLOCK_SIZE * BLOCK_SIZE;
+    Size flooredWritePointer = currentWritePointer / BLOCK_SIZE * BLOCK_SIZE;
     if (flooredWritePointer < currentWritePointer) {
         if (rawInodeReadBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
-        size_t indexInBlock = currentWritePointer - flooredWritePointer, frontByteNum = umin64(BLOCK_SIZE - indexInBlock, remainByteToWrite);
+        Size indexInBlock = currentWritePointer - flooredWritePointer, frontByteNum = umin64(BLOCK_SIZE - indexInBlock, remainByteToWrite);
         memcpy(tmpBuffer + indexInBlock, currentBuffer, frontByteNum);
         if (rawInodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
@@ -218,7 +218,7 @@ static Result __doWrite(File* this, const void* buffer, size_t n, void** tmpBuff
         remainByteToWrite -= frontByteNum;
     }
 
-    size_t midBlockNum = remainByteToWrite / BLOCK_SIZE;
+    Size midBlockNum = remainByteToWrite / BLOCK_SIZE;
     if (midBlockNum > 0) {
         if (rawInodeWriteBlocks(iNode, currentBuffer, currentWritePointer / BLOCK_SIZE, midBlockNum) == RESULT_FAIL) {
             return RESULT_FAIL;
@@ -234,7 +234,7 @@ static Result __doWrite(File* this, const void* buffer, size_t n, void** tmpBuff
             return RESULT_FAIL;
         }
 
-        size_t tailByteNum = umin64(remainByteToWrite, BLOCK_SIZE);
+        Size tailByteNum = umin64(remainByteToWrite, BLOCK_SIZE);
         memcpy(tmpBuffer, currentBuffer, tailByteNum);
 
         if (rawInodeWriteBlocks(iNode, tmpBuffer, currentWritePointer / BLOCK_SIZE, 1) == RESULT_FAIL) {

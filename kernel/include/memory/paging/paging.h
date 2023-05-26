@@ -43,7 +43,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
  * @param flags New entry flags
  * @return Result Result of the operation
  */
-Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, uint64_t flags);
+Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, Uint64 flags);
 
 /**
  * @brief Get flags of page table entry
@@ -51,14 +51,14 @@ Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, ui
  * @param pageTable Page table contains entry to get
  * @param vAddr Virtual address corresponded to entry
  * @param level Level of the entry
- * @return uint64_t Flags of entry
+ * @return Uint64 Flags of entry
  */
-uint64_t pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level);
+Uint64 pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level);
 
 #define SWITCH_TO_TABLE(__PAGE_TABLE)               \
 do {                                                \
     currentPageTable = __PAGE_TABLE;                    \
-    writeRegister_CR3_64((uint64_t)currentPageTable);   \
+    writeRegister_CR3_64((Uint64)currentPageTable);   \
 } while(0)
 
 //Flush the TLB

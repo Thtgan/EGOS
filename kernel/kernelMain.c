@@ -21,7 +21,7 @@ int* arr1, * arr2;
 static void printLOGO();
 
 __attribute__((section(".kernelMain"), regparm(2)))
-void kernelMain(uint64_t magic, uint64_t sysInfoPtr) {
+void kernelMain(Uint64 magic, Uint64 sysInfoPtr) {
     sysInfo = (SystemInfo*)sysInfoPtr;
     if (sysInfo->magic != SYSTEM_INFO_MAGIC16) {
         die();
@@ -97,9 +97,9 @@ static void printLOGO() {
     char* buffer = allocateBuffer(BUFFER_SIZE_512);
     File* file = fileOpen("/LOGO.txt", FILE_FLAG_READ_ONLY);
     fileSeek(file, 0, FSUTIL_SEEK_END);
-    size_t fileSize = fileGetPointer(file);
+    Size fileSize = fileGetPointer(file);
     fileSeek(file, 0, FSUTIL_SEEK_BEGIN);
-    size_t read = fileRead(file, buffer, fileSize);
+    Size read = fileRead(file, buffer, fileSize);
     printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", fileSize, buffer);
     fileClose(file);
     releaseBuffer(buffer, BUFFER_SIZE_512);

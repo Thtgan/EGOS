@@ -5,7 +5,7 @@
 
 typedef struct {
     Object* stack;
-    size_t maxSize, size;
+    Size maxSize, size;
 } Stack;
 
 /**
@@ -15,7 +15,7 @@ typedef struct {
  * @param buffer Buffer of stack
  * @param maxSize Maximum capacity of stack
  */
-static inline void initStack(Stack* stack, Object* buffer, size_t maxSize) {
+static inline void initStack(Stack* stack, Object* buffer, Size maxSize) {
     stack->stack = buffer;
     stack->maxSize = maxSize;
     stack->size = 0;

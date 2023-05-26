@@ -21,10 +21,10 @@ static void __collectPages(PageNodeList* list, PageNode* node);
 void initPageAlloc() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
 
-    initPageNodeList(&_freePageNodeList, (void*)((uintptr_t)mMap->freePageBegin << PAGE_SIZE_SHIFT), mMap->freePageEnd - mMap->freePageBegin); //Initialize the page node list
+    initPageNodeList(&_freePageNodeList, (void*)((Uintptr)mMap->freePageBegin << PAGE_SIZE_SHIFT), mMap->freePageEnd - mMap->freePageBegin); //Initialize the page node list
 }
 
-void* pageAlloc(size_t n, PhysicalPageType type) {
+void* pageAlloc(Size n, PhysicalPageType type) {
     PageNode* ret = firstFitFindPages(&_freePageNodeList, n);
     cutPageNodeFront(ret, n);
     
@@ -40,7 +40,7 @@ void* pageAlloc(size_t n, PhysicalPageType type) {
     return ret;
 }
 
-void pageFree(void* pPageBegin, size_t n) {
+void pageFree(void* pPageBegin, Size n) {
     PageNode* newNode = initPageNode(pPageBegin, n);
     __collectPages(&_freePageNodeList, newNode);
 

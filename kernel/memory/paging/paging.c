@@ -77,7 +77,7 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
         return;
     }
     
-    blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (uint64_t)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
+    blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (Uint64)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 
 Result initPaging() {
@@ -88,7 +88,7 @@ Result initPaging() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
 
     mMap->directPageTableBegin = mMap->directPageTableEnd = mMap->freePageBegin;
-    sysInfo->kernelTable = (uintptr_t)setupPML4Table();
+    sysInfo->kernelTable = (Uintptr)setupPML4Table();
     mMap->freePageBegin = mMap->directPageTableEnd;
 
     SWITCH_TO_TABLE((PML4Table*)sysInfo->kernelTable);
@@ -159,11 +159,11 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
 
         memset(page, 0, PAGE_SIZE);
         PML4Entry = PML4TablePtr->tableEntries[PML4Index] = 
-        BUILD_PML4_ENTRY(page, ((uintptr_t)vAddr >= KERNEL_VIRTUAL_BEGIN ? 0 : PML4_ENTRY_FLAG_US) | PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+        BUILD_PML4_ENTRY(page, ((Uintptr)vAddr >= KERNEL_VIRTUAL_BEGIN ? 0 : PML4_ENTRY_FLAG_US) | PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
     }
 
     if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {
-        if ((uintptr_t)pAddr & (PDPT_SPAN - 1) != 0) {
+        if ((Uintptr)pAddr & (PDPT_SPAN - 1) != 0) {
             return RESULT_FAIL;
         }
 
@@ -185,7 +185,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
     }
 
     if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
-        if ((uintptr_t)pAddr & (PAGE_DIRECTORY_SPAN - 1) != 0) {
+        if ((Uintptr)pAddr & (PAGE_DIRECTORY_SPAN - 1) != 0) {
             return RESULT_FAIL;
         }
 
@@ -207,7 +207,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
     }
 
     if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
-        if ((uintptr_t)pAddr & (PAGE_TABLE_SPAN - 1) != 0) {
+        if ((Uintptr)pAddr & (PAGE_TABLE_SPAN - 1) != 0) {
             return RESULT_FAIL;
         }
 
@@ -222,7 +222,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
     return RESULT_SUCCESS;
 }
 
-Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, uint64_t flags) {
+Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, Uint64 flags) {
     Index16 PML4Index = PML4_INDEX(vAddr),
             PDPTindex = PDPT_INDEX(vAddr),
             pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
@@ -271,7 +271,7 @@ Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, ui
     return RESULT_FAIL;
 }
 
-uint64_t pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level) {
+Uint64 pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level) {
     Index16 PML4Index = PML4_INDEX(vAddr),
             PDPTindex = PDPT_INDEX(vAddr),
             pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),

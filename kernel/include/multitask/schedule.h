@@ -12,7 +12,7 @@ STRUCT_PRIVATE_DEFINE(Scheduler) {
     bool started;
 
     void (*tick)(Scheduler* this);
-    uint64_t tickCnt;
+    Uint64 tickCnt;
 
     void (*yield)(Scheduler* this);
     Result (*addProcess)(Scheduler* this, Process* process);

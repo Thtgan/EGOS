@@ -3,8 +3,8 @@
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 
-void remapPIC(uint8_t offset1, uint8_t offset2) {
-    uint8_t mask1, mask2;
+void remapPIC(Uint8 offset1, Uint8 offset2) {
+    Uint8 mask1, mask2;
     
     getPICMask(&mask1, &mask2);
 
@@ -23,12 +23,12 @@ void remapPIC(uint8_t offset1, uint8_t offset2) {
     setPICMask(mask1, mask2);
 }
 
-void getPICMask(uint8_t* mask1, uint8_t* mask2) {
+void getPICMask(Uint8* mask1, Uint8* mask2) {
     *mask1 = inb(PIC_DATA_1);  //Reverse bits
     *mask2 = inb(PIC_DATA_2);
 }
 
-void setPICMask(uint8_t mask1, uint8_t mask2) {
+void setPICMask(Uint8 mask1, Uint8 mask2) {
     outb(PIC_DATA_1, mask1);  //Reverse bits
     outb(PIC_DATA_2, mask2);
 }

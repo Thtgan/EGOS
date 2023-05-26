@@ -19,7 +19,7 @@ RECURSIVE_REFER_STRUCT(BlockDevice) {
     char name[32];
     BlockDeviceType type;
     ID deviceID;            //ID of the device
-    size_t availableBlockNum;
+    Size availableBlockNum;
 
     Object additionalData;  //Something to assist the block device working, can be anything
     BlockDeviceOperation* operations;
@@ -36,7 +36,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
      * @param n Num of blocks to read
      * @return Result Result of the operation
      */
-    Result (*readBlocks)(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n);
+    Result (*readBlocks)(BlockDevice* device, Index64 blockIndex, void* buffer, Size n);
 
     /**
      * @brief Write blocks to the block device, sets errorcode to indicate error
@@ -47,7 +47,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
      * @param n Num of blocks to write
      * @return Result Result of the operation
      */
-    Result (*writeBlocks)(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n);
+    Result (*writeBlocks)(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n);
 };
 
 /**
@@ -66,7 +66,7 @@ Result initBlockDevice();
  * @param operations Operation functions for block device
  * @return BlockDevice* Created block device, NULL if device has duplicated name with registered device
  */
-BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
+BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, Size availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
 
 /**
  * @brief Release created block device, be sure that this device is NOT REGISTERED
@@ -116,7 +116,7 @@ BlockDevice* getBlockDeviceByID(ID id);
  * @param n Num of block(s) to read
  * @return Result Result of the operation
  */
-static inline Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, size_t n) {
+static inline Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n) {
     return device->operations->readBlocks(device, blockIndex, buffer, n);
 } 
 
@@ -129,7 +129,7 @@ static inline Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockInd
  * @param n Num of block(s) to write
  * @return Result Result of the operation
  */
-static inline Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, size_t n) {
+static inline Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n) {
     return device->operations->writeBlocks(device, blockIndex, buffer, n);
 } 
 

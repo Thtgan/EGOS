@@ -24,12 +24,12 @@
 __attribute__((aligned(sizeof(DeviceIdentifyData))))
 DeviceIdentifyData deviceIdentifies[4];
 
-typedef uint32_t LBA28_t;
+typedef Uint32 LBA28_t;
 
 typedef struct {
-    uint16_t cylinder;
-    uint8_t head;
-    uint8_t sector;
+    Uint16 cylinder;
+    Uint8 head;
+    Uint8 sector;
 } CHSAddress;
 
 struct __Channel;
@@ -45,7 +45,7 @@ typedef struct {
 } Disk;
 
 struct __Channel {
-    uint16_t portBase;
+    Uint16 portBase;
     bool waitingForInterrupt;
     Disk disks[2];
 };
@@ -55,33 +55,33 @@ struct __Channel {
  * 
  * @param ch Channel to wait
  * @param waitFlags Flags to wait for clear
- * @return uint8_t Final status returned
+ * @return Uint8 Final status returned
  */
-static uint8_t __waitChannelClear(const Channel* ch, uint8_t waitFlags);
+static Uint8 __waitChannelClear(const Channel* ch, Uint8 waitFlags);
 
 /**
  * @brief Wait channel till wait flags set, or retry times out
  * 
  * @param ch Channel to wait
  * @param waitFlags Flags to wait for set
- * @return uint8_t Final status returned
+ * @return Uint8 Final status returned
  */
-static uint8_t __waitChannelSet(const Channel* ch, uint8_t waitFlags);
+static Uint8 __waitChannelSet(const Channel* ch, Uint8 waitFlags);
 
 /**
  * @brief Select device d
  * 
  * @param d Device to select
  */
-static uint8_t __selectDevice(const Disk* d);
+static Uint8 __selectDevice(const Disk* d);
 
 /**
  * @brief Read identify data of the device, and check device's availibility
  * 
  * @param d Disk device to read
- * @return uint8_t Finally returned status 
+ * @return Uint8 Finally returned status 
  */
-static uint8_t __identifyDevice(Disk* d);
+static Uint8 __identifyDevice(Disk* d);
 
 /**
  * @brief Reset the channel, this will make the registers load the device's signature and fire the controller interrupt
@@ -96,7 +96,7 @@ static void __resetChannel(const Channel* c);
  * @param c Channel
  * @param command Command to post
  */
-static void __postChannelCommand(Channel* c, uint8_t command);
+static void __postChannelCommand(Channel* c, Uint8 command);
 
 /**
  * @brief Select a sector on the disk through the lba
@@ -114,7 +114,7 @@ static void __selectSector(const Disk* d, LBA28_t lba);
  * @param buffer Buffer to read data to
  * @param n Num of sectors to read
  */
-static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
+static void __readSectors(Disk* d, LBA28_t lba, void* buffer, Uint8 n);
 
 /**
  * @brief Write continued sector(s) in selected disk with data from buffer, first sector located by lba
@@ -124,7 +124,7 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n);
  * @param buffer Buffer contains data to write
  * @param Num of sectors to write
  */
-static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n);
+static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, Uint8 n);
 
 /**
  * @brief Register the disk as a block device
@@ -141,9 +141,9 @@ static void __registerDiskBlockDevice(Disk* d);
  */
 static bool __checkBootDisk(Disk* d);
 
-static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n);
+static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n);
 
-static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n);
+static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n);
 
 static BlockDeviceOperation _operations = {
     .readBlocks = __readBlocks,
@@ -152,9 +152,9 @@ static BlockDeviceOperation _operations = {
 
 #define RETRY_TIME 65535
 
-static uint8_t __waitChannelClear(const Channel* ch, uint8_t waitFlags) {
-    uint16_t retry = RETRY_TIME;
-    uint8_t status;
+static Uint8 __waitChannelClear(const Channel* ch, Uint8 waitFlags) {
+    Uint16 retry = RETRY_TIME;
+    Uint8 status;
     do {
         status = inb(HDC_ALT_STATUS(ch->portBase));
         sleep(MICROSECOND, 1);
@@ -162,9 +162,9 @@ static uint8_t __waitChannelClear(const Channel* ch, uint8_t waitFlags) {
     return status;
 }
 
-static uint8_t __waitChannelSet(const Channel* ch, uint8_t waitFlags) {
-    uint16_t retry = RETRY_TIME;
-    uint8_t status;
+static Uint8 __waitChannelSet(const Channel* ch, Uint8 waitFlags) {
+    Uint16 retry = RETRY_TIME;
+    Uint8 status;
     do {
         status = inb(HDC_ALT_STATUS(ch->portBase));
         sleep(MICROSECOND, 1);
@@ -172,9 +172,9 @@ static uint8_t __waitChannelSet(const Channel* ch, uint8_t waitFlags) {
     return status;
 }
 
-static uint8_t __selectDevice(const Disk* d) {
-    uint16_t portBase = d->channel->portBase;
-    uint8_t select = HDC_DEVICE_SELECT_BASE;
+static Uint8 __selectDevice(const Disk* d) {
+    Uint16 portBase = d->channel->portBase;
+    Uint8 select = HDC_DEVICE_SELECT_BASE;
     if (!d->isMaster) {
         SET_FLAG_BACK(select, HDC_DEVICE_SELECT_SLAVE);
     }
@@ -185,7 +185,7 @@ static uint8_t __selectDevice(const Disk* d) {
     return inb(HDC_ALT_STATUS(portBase));
 }
 
-static uint8_t __identifyDevice(Disk* d) {
+static Uint8 __identifyDevice(Disk* d) {
     d->available = false;
     __selectDevice(d);
 
@@ -198,7 +198,7 @@ static uint8_t __identifyDevice(Disk* d) {
 
     __postChannelCommand(c, HDC_COMMAND_IDENTIFY_DEVICE);
 
-    uint8_t status = inb(HDC_STATUS(c->portBase));
+    Uint8 status = inb(HDC_STATUS(c->portBase));
     if (status == 0) {
         return 0;
     }
@@ -212,14 +212,14 @@ static uint8_t __identifyDevice(Disk* d) {
     __waitChannelSet(c, HDC_STATUS_ERROR | HDC_STATUS_DATA_REQUIRE_SERVICE);
 
     if (!TEST_FLAGS(status, HDC_STATUS_ERROR)) {
-        insw(HDC_DATA(c->portBase), d->parameters, sizeof(DeviceIdentifyData) / sizeof(uint16_t));
+        insw(HDC_DATA(c->portBase), d->parameters, sizeof(DeviceIdentifyData) / sizeof(Uint16));
     }
     d->available = true;
 
     return status;
 }
 
-const uint16_t _channelPortBases[2] = {
+const Uint16 _channelPortBases[2] = {
     HDC_CANNNEL_1,
     HDC_CANNNEL_2
 };
@@ -263,7 +263,7 @@ Result initHardDisk() {
             d->available = false;
             d->isMaster = (j == 0);
 
-            uint8_t identifyStatus = __identifyDevice(d);
+            Uint8 identifyStatus = __identifyDevice(d);
             if (d->parameters->generalConfiguration.isNotATA) {
                 printf(TERMINAL_LEVEL_DEBUG, "%s hard disk is not an ATA device, ignored.\n", d->name);
                 continue;
@@ -286,13 +286,13 @@ Result initHardDisk() {
 }
 
 static void __resetChannel(const Channel* c) {
-    uint16_t portBase = c->portBase;
+    Uint16 portBase = c->portBase;
     outb(HDC_CONTROL(portBase), 0);
     outb(HDC_CONTROL(portBase), 4); //Disk reset bit
     outb(HDC_CONTROL(portBase), 0);
 }
 
-static void __postChannelCommand(Channel* c, uint8_t command) {
+static void __postChannelCommand(Channel* c, Uint8 command) {
     c->waitingForInterrupt = true;
     outb(HDC_COMMAND(c->portBase), command);
 }
@@ -300,7 +300,7 @@ static void __postChannelCommand(Channel* c, uint8_t command) {
 static void __selectSector(const Disk* d, LBA28_t lba) {
     __selectDevice(d);
 
-    uint16_t portBase = d->channel->portBase;
+    Uint16 portBase = d->channel->portBase;
     outb(HDC_LBA_0_7(portBase), EXTRACT_VAL(lba, 32, 0, 8));
     outb(HDC_LBA_8_15(portBase), EXTRACT_VAL(lba, 32, 8, 16));
     outb(HDC_LBA_16_23(portBase), EXTRACT_VAL(lba, 32, 16, 24));
@@ -313,7 +313,7 @@ static void __selectSector(const Disk* d, LBA28_t lba) {
     );
 }
 
-static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
+static void __readSectors(Disk* d, LBA28_t lba, void* buffer, Uint8 n) {
     Channel* c = d->channel;
 
     __selectSector(d, lba);
@@ -329,12 +329,12 @@ static void __readSectors(Disk* d, LBA28_t lba, void* buffer, uint8_t n) {
 
         __waitChannelClear(c, HDC_STATUS_BUSY);
 
-        insw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
+        insw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(Uint16));
         buffer += SECTOR_SIZE;
     }
 }
 
-static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) {
+static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, Uint8 n) {
     Channel* c = d->channel;
 
     __selectSector(d, lba);
@@ -346,7 +346,7 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, uint8_t n) 
         c->waitingForInterrupt = true;
         __waitChannelClear(c, HDC_STATUS_BUSY);
 
-        outsw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(uint16_t));
+        outsw(HDC_DATA(c->portBase), buffer, SECTOR_SIZE / sizeof(Uint16));
 
         while (c->waitingForInterrupt) {
             nop();
@@ -362,7 +362,7 @@ static void __registerDiskBlockDevice(Disk* d) {
 }
 
 static bool __checkBootDisk(Disk* d) {
-    uint16_t* MBR = allocateBuffer(BUFFER_SIZE_512);
+    Uint16* MBR = allocateBuffer(BUFFER_SIZE_512);
     __readSectors(d, 0, MBR, 1);
 
     bool ret = (MBR[219] == SYSTEM_INFO_MAGIC16) && (MBR[255] == 0xAA55);
@@ -372,13 +372,13 @@ static bool __checkBootDisk(Disk* d) {
     return ret;
 }
 
-static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, size_t n) {
+static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n) {
     Disk* d = (Disk*)this->additionalData;
     __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
     return RESULT_SUCCESS;
 }
 
-static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, size_t n) {
+static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n) {
     Disk* d = (Disk*)this->additionalData;
     __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
     return RESULT_SUCCESS;

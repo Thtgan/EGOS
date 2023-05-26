@@ -13,7 +13,7 @@
 #include<system/GDT.h>
 
 
-void (*handlers[256]) (uint8_t vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
+void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
 IDTentry IDTtable[256];
 IDTdesc idtDesc;
@@ -27,7 +27,7 @@ extern void (*stubs[256])();
  * @param isr 
  * @param attributes 
  */
-static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes);
+static void __setIDTentry(Uint8 vector, void* isr, Uint8 attributes);
 
 ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     cli();
@@ -41,8 +41,8 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
 }
 
 Result initIDT() {
-    idtDesc.size = (uint16_t)sizeof(IDTtable) - 1;  //Initialize the IDT desc
-    idtDesc.tablePtr = (uint64_t)IDTtable;
+    idtDesc.size = (Uint16)sizeof(IDTtable) - 1;  //Initialize the IDT desc
+    idtDesc.tablePtr = (Uint64)IDTtable;
 
     for (int vec = 0; vec < 256; ++vec) {
         handlers[vec] = __defaultISRHalt;
@@ -63,8 +63,8 @@ Result initIDT() {
     return RESULT_SUCCESS;
 }
 
-void registerISR(uint8_t vector, void* isr, uint8_t attributes) {
-    uint8_t mask1, mask2;
+void registerISR(Uint8 vector, void* isr, Uint8 attributes) {
+    Uint8 mask1, mask2;
     getPICMask(&mask1, &mask2);
 
     if (REMAP_BASE_1 <= vector && vector < REMAP_BASE_2 + 8) {
@@ -81,26 +81,26 @@ void registerISR(uint8_t vector, void* isr, uint8_t attributes) {
     handlers[vector] = isr;
 }
 
-static void __setIDTentry(uint8_t vector, void* isr, uint8_t attributes) {
+static void __setIDTentry(Uint8 vector, void* isr, Uint8 attributes) {
     IDTtable[vector] = (IDTentry) {
-        EXTRACT_VAL((uint64_t)isr, 64, 0, 16),
+        EXTRACT_VAL((Uint64)isr, 64, 0, 16),
         SEGMENT_KERNEL_CODE,
         0,
         attributes,
-        EXTRACT_VAL((uint64_t)isr, 64, 16, 32),
-        EXTRACT_VAL((uint64_t)isr, 64, 32, 64),
+        EXTRACT_VAL((Uint64)isr, 64, 16, 32),
+        EXTRACT_VAL((Uint64)isr, 64, 32, 64),
         0
     };
 }
 
 bool disableInterrupt() {
-    uint32_t eflags = readEFlags64();
+    Uint32 eflags = readEFlags64();
     cli();
     return TEST_FLAGS(eflags, EFLAGS_IF);
 }
 
 bool enableInterrupt() {
-    uint32_t eflags = readEFlags64();
+    Uint32 eflags = readEFlags64();
     sti();
     return TEST_FLAGS(eflags, EFLAGS_IF);
 }

@@ -17,7 +17,7 @@ typedef struct {
     void* deviceInfo;
     void* firstFreeSuperNode;
     void* firstFreeBlockStack;
-    uint8_t openCnt;
+    Uint8 openCnt;
     HashChainNode hashChainNode;
 } PhospherusAllocator;
 
@@ -78,9 +78,9 @@ Result phospherusReleaseCluster(PhospherusAllocator* allocator, Index64 cluster)
  * @brief Get the remaining free cluster num on allocator
  * 
  * @param allocator Allocator
- * @return size_t Num of free cluster
+ * @return Size Num of free cluster
  */
-size_t phospherusGetFreeClusterNum(PhospherusAllocator* allocator);
+Size phospherusGetFreeClusterNum(PhospherusAllocator* allocator);
 
 /**
  * @brief Allocate a block, sets errorcode to indicate error

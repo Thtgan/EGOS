@@ -29,25 +29,25 @@
  * @param name Name of process
  * @return Process* Created process
  */
-static Process* __createProcess(uint16_t pid, ConstCstring name);
+static Process* __createProcess(Uint16 pid, ConstCstring name);
 
 /**
  * @brief Allocate a PID
  * 
- * @return uint16_t PID allocated
+ * @return Uint16 PID allocated
  */
-static uint16_t __allocatePID();
+static Uint16 __allocatePID();
 
 /**
  * @brief Release a PID
  * 
  * @param pid PID to release
  */
-static void __releasePID(uint16_t pid);
+static void __releasePID(Uint16 pid);
 
-static uint16_t _lastGeneratePID = 0;
+static Uint16 _lastGeneratePID = 0;
 static Bitmap _pidBitmap;
-static uint8_t _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
+static Uint8 _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
 
 Process* initProcess() {
     memset(&_pidBitmapBits, 0, sizeof(_pidBitmapBits));
@@ -74,7 +74,7 @@ void switchProcess(Process* from, Process* to) {
 extern void* __fork_return;
 
 Process* fork(ConstCstring name) {
-    uint32_t oldPID = schedulerGetCurrentProcess()->pid, newPID = __allocatePID();
+    Uint32 oldPID = schedulerGetCurrentProcess()->pid, newPID = __allocatePID();
 
     if (newPID == INVALID_PID) {
         return NULL;
@@ -86,7 +86,7 @@ Process* fork(ConstCstring name) {
 
     void* newStack = pageAlloc(KERNEL_STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL);
     memset(newStack, 0, KERNEL_STACK_SIZE);
-    for (uintptr_t i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
+    for (Uintptr i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
         mapAddr(newTable, (void*)KERNEL_STACK_BOTTOM - i, newStack + KERNEL_STACK_SIZE - i);
     }
 
@@ -94,7 +94,7 @@ Process* fork(ConstCstring name) {
     memcpy(newStack, (void*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
 
     newProcess->context.pageTable = newTable;
-    newProcess->context.rip = (uint64_t)&__fork_return;
+    newProcess->context.rip = (Uint64)&__fork_return;
     newProcess->context.rsp = readRegister_RSP_64();
 
     schedulerAddProcess(newProcess);
@@ -120,7 +120,7 @@ void releaseProcess(Process* process) {
     pageFree(pAddr, KERNEL_STACK_PAGE_NUM);
 
     if (process->userStackTop != NULL) {
-        for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+        for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
             pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
         }
     }
@@ -138,7 +138,7 @@ void releaseProcess(Process* process) {
             fileClose(process->fileSlots[i]);
         }
     }
-    size_t openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
+    Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
     memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
     pageFree(process->fileSlots, (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE);
 
@@ -147,7 +147,7 @@ void releaseProcess(Process* process) {
     pageFree(process, 1);
 }
 
-static Process* __createProcess(uint16_t pid, ConstCstring name) {
+static Process* __createProcess(Uint16 pid, ConstCstring name) {
     Process* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
     memset(ret, 0, PAGE_SIZE);
 
@@ -166,7 +166,7 @@ static Process* __createProcess(uint16_t pid, ConstCstring name) {
     initQueueNode(&ret->statusQueueNode);
     initQueueNode(&ret->semaWaitQueueNode);
 
-    size_t openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
+    Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
     ret->fileSlots = pageAlloc(openedFilePageSize, PHYSICAL_PAGE_TYPE_PRIVATE);
     memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
@@ -205,8 +205,8 @@ File* releaseFileSlot(Process* process, int index) {
     return ret;
 }
 
-static uint16_t __allocatePID() {
-    uint16_t pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
+static Uint16 __allocatePID() {
+    Uint16 pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
     if (pid != INVALID_PID) {
         setBit(&_pidBitmap, pid);
         _lastGeneratePID = pid;
@@ -214,6 +214,6 @@ static uint16_t __allocatePID() {
     return pid;
 }
 
-static void __releasePID(uint16_t pid) {
+static void __releasePID(Uint16 pid) {
     clearBit(&_pidBitmap, pid);
 }

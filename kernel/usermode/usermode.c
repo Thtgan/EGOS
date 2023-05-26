@@ -148,7 +148,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
 
     Process* process = schedulerGetCurrentProcess();
     PML4Table* pageTable = process->context.pageTable;
-    for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+    for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
         if (translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i) == NULL) {
             void* pAddr = pageAlloc(1, PHYSICAL_PAGE_TYPE_USER_STACK);
             if (pAddr == NULL) {
@@ -189,7 +189,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
         }
     }
 
-    for (uintptr_t i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+    for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
         void* pAddr = translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i);
         if (pAddr == NULL) {
             return RESULT_FAIL;

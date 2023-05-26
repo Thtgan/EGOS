@@ -27,7 +27,7 @@ void vectorClear(Vector* vector) {
     memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
 }
 
-Result vectorResize(Vector* vector, size_t newCapacity) {
+Result vectorResize(Vector* vector, Size newCapacity) {
     Object* newStorage = kMalloc(newCapacity * sizeof(Object), MEMORY_TYPE_NORMAL);
     if (newStorage == NULL) {
         return RESULT_FAIL;

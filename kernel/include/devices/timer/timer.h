@@ -23,6 +23,6 @@ Result initTimer();
  * @param unit Time unit
  * @param time Time
  */
-void sleep(TimeUnit unit, uint64_t time);
+void sleep(TimeUnit unit, Uint64 time);
 
 #endif // __TIMER_H

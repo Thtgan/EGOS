@@ -46,7 +46,7 @@ Result fileClose(File* file);
  * @param begin Begin of the seek
  * @return Result Result of the operation
  */
-Result fileSeek(File* file, int64_t offset, uint8_t begin);
+Result fileSeek(File* file, Int64 offset, Uint8 begin);
 
 /**
  * @brief Get current pointer of file
@@ -64,7 +64,7 @@ Index64 fileGetPointer(File* file);
  * @param n Num of byte(s) to read
  * @return Result Result of the operation
  */
-Result fileRead(File* file, void* buffer, size_t n);
+Result fileRead(File* file, void* buffer, Size n);
 
 /**
  * @brief Write to file, sets errorcode to indicate error
@@ -74,7 +74,7 @@ Result fileRead(File* file, void* buffer, size_t n);
  * @param n Num of byte(s) to write
  * @return Result Result of the operation
  */
-Result fileWrite(File* file, const void* buffer, size_t n);
+Result fileWrite(File* file, const void* buffer, Size n);
 
 /**
  * @brief Create an entry and insert it into directory, be aware its parent directory must be existed, this function cannot be used to create entry with type INODE_TYPE_DEVICE,

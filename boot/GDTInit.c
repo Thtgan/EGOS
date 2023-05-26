@@ -14,8 +14,8 @@ static const GDTEntry GDTTable[16] = {
 static GDTDesc32 gdtDesc;
 
 GDTDesc32* setupGDT() {
-    gdtDesc.size    = (uint16_t)sizeof(GDTTable) - 1;
-    gdtDesc.table   = (uint32_t)GDTTable + (getDS() << 4);
+    gdtDesc.size    = (Uint16)sizeof(GDTTable) - 1;
+    gdtDesc.table   = (Uint32)GDTTable + (getDS() << 4);
 
     asm volatile("lgdt %0" : : "m" (gdtDesc));
 

@@ -16,7 +16,7 @@
 static inline bool __checkLongMode();
 
 __attribute__((noreturn))
-void kernelEntry(uint32_t magic, uint32_t sysInfo) {
+void kernelEntry(Uint32 magic, Uint32 sysInfo) {
     SystemInfo* info = (SystemInfo*)sysInfo;
     if (!checkCPUID() || !__checkLongMode()) {
         die();
@@ -29,7 +29,7 @@ void kernelEntry(uint32_t magic, uint32_t sysInfo) {
 }
 
 static inline bool __checkLongMode() {
-    uint32_t eax, ebx, ecx, edx;
+    Uint32 eax, ebx, ecx, edx;
 
     CPUID(CPUID_GET_HIGHEST_EXTENDED_FUNCTION, eax, ebx, ecx, edx);
 

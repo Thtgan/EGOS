@@ -17,15 +17,15 @@
  */
 typedef struct {
     SinglyLinkedList list;  //Region list, singly lnked list to save space
-    size_t length;          //Length of regions in this list
-    size_t regionNum;       //Num of regions this list contains
-    size_t freeCnt;         //How many times is the free function called on this list
+    Size length;          //Length of regions in this list
+    Size regionNum;       //Num of regions this list contains
+    Size freeCnt;         //How many times is the free function called on this list
 } __PhysicalRegionList;
 
 typedef struct {
-    size_t size;
+    Size size;
     MemoryType type;
-    uint8_t padding[KMALLOC_HEADER_SIZE - sizeof(size_t) - sizeof(MemoryType)];  //Fill size to 16 for alignment
+    Uint8 padding[KMALLOC_HEADER_SIZE - sizeof(Size) - sizeof(MemoryType)];  //Fill size to 16 for alignment
 } __attribute__((packed)) __RegionHeader;
 
 #define MIN_REGION_LENGTH_BIT       5
@@ -46,7 +46,7 @@ static __PhysicalRegionList _regionLists[MEMORY_TYPE_NUM][REGION_LIST_NUM];
  * @param type Type of the memory
  * @return void* Beginning of the region
  */
-static void* __getRegion(size_t level, MemoryType type);
+static void* __getRegion(Size level, MemoryType type);
 
 /**
  * @brief Get a region from the region list
@@ -54,7 +54,7 @@ static void* __getRegion(size_t level, MemoryType type);
  * @param level Region list level
  * @return void* Beginning of the region
  */
-static void* __getRegionFromList(size_t level, MemoryType type);
+static void* __getRegionFromList(Size level, MemoryType type);
 
 /**
  * @brief Add the region to the region list
@@ -62,14 +62,14 @@ static void* __getRegionFromList(size_t level, MemoryType type);
  * @param regionBegin Begining of the region
  * @param level Level of the region list to add to
  */
-static void __addRegionToList(void* regionBegin, size_t level, MemoryType type);
+static void __addRegionToList(void* regionBegin, Size level, MemoryType type);
 
 /**
  * @brief Tidy up the region list, combine unnecessary regions and handle it back to the higher level region list
  * 
  * @param level Level of the region list
  */
-static void __regionListTidyUp(size_t level, MemoryType type);
+static void __regionListTidyUp(Size level, MemoryType type);
 
 /**
  * @brief Convert a Memory type to physical page type
@@ -93,12 +93,12 @@ void initKmalloc() {
     }
 }
 
-void* kMalloc(size_t n, MemoryType type) {
+void* kMalloc(Size n, MemoryType type) {
     if (n == 0) {
         return NULL;
     }
 
-    size_t realSize = n + sizeof(__RegionHeader), regionLevel = 0;
+    Size realSize = n + sizeof(__RegionHeader), regionLevel = 0;
 
     __PhysicalRegionList* regionLists = _regionLists[type];
     bool isMultiPage = realSize > regionLists[REGION_LIST_NUM - 1].length;
@@ -123,18 +123,18 @@ void* kMalloc(size_t n, MemoryType type) {
     header->size = isMultiPage ? realSize : regionLevel; //If size greater than REGION_LIST_NUM, it must be pages
     header->type = type;
 
-    return (void*)((uintptr_t)(header + 1) | KERNEL_VIRTUAL_BEGIN);
+    return (void*)((Uintptr)(header + 1) | KERNEL_VIRTUAL_BEGIN);
 }
 
 void kFree(void* ptr) {
-    if ((uintptr_t)ptr < KERNEL_VIRTUAL_BEGIN) {
+    if ((Uintptr)ptr < KERNEL_VIRTUAL_BEGIN) {
         return;
     }
-    ptr = (void*)((uintptr_t)ptr ^ KERNEL_VIRTUAL_BEGIN);
+    ptr = (void*)((Uintptr)ptr ^ KERNEL_VIRTUAL_BEGIN);
 
     __RegionHeader* header = ptr - sizeof(__RegionHeader);
     MemoryType type = header->type;
-    size_t n = header->size;
+    Size n = header->size;
 
     if (n >= REGION_LIST_NUM) { //Release the specially allocated pages
         pageFree(header, n >> PAGE_SIZE_SHIFT);
@@ -149,12 +149,12 @@ void kFree(void* ptr) {
     }
 }
 
-void* kCalloc(size_t num, size_t size, MemoryType type) {
+void* kCalloc(Size num, Size size, MemoryType type) {
     if (num == 0 || size == 0) {
         return NULL;
     }
 
-    size_t s = num * size;
+    Size s = num * size;
     void* ret = kMalloc(s, type);
     memset(ret, 0, s);
 
@@ -162,17 +162,17 @@ void* kCalloc(size_t num, size_t size, MemoryType type) {
 }
 
 //TODO: When region is large enough, recycle exceedded memory and return old address
-void* kRealloc(void *ptr, size_t newSize) {
+void* kRealloc(void *ptr, Size newSize) {
     void* ret = NULL;
 
     if (newSize != 0) {
         __RegionHeader* header = (ptr - sizeof(__RegionHeader));
-        size_t size = header->size;
+        Size size = header->size;
         if (size < REGION_LIST_NUM) {
             size = _regionLists[header->type][size].length - sizeof(__RegionHeader);
         }
 
-        size_t copySize = min64(size, newSize);
+        Size copySize = min64(size, newSize);
 
         ret = kMalloc(newSize, header->type);
         memcpy(ret, ptr, copySize);
@@ -183,7 +183,7 @@ void* kRealloc(void *ptr, size_t newSize) {
     return ret;
 }
 
-static void* __getRegion(size_t level, MemoryType type) {
+static void* __getRegion(Size level, MemoryType type) {
     __PhysicalRegionList* regionList = _regionLists[type] + level;
 
     if (regionList->regionNum == 0) { //If region list is empty
@@ -199,8 +199,8 @@ static void* __getRegion(size_t level, MemoryType type) {
             return NULL;
         }
 
-        size_t split = needMorePage ? PAGE_ALLOCATE_BATCH_SIZE : 2;
-        for (size_t i = 0; i < split; ++i) { //Split new region
+        Size split = needMorePage ? PAGE_ALLOCATE_BATCH_SIZE : 2;
+        for (Size i = 0; i < split; ++i) { //Split new region
             __addRegionToList(newRegionBase + i * regionList->length, level, type);
         }
     }
@@ -208,7 +208,7 @@ static void* __getRegion(size_t level, MemoryType type) {
     return __getRegionFromList(level, type);
 }
 
-static void* __getRegionFromList(size_t level, MemoryType type) {
+static void* __getRegionFromList(Size level, MemoryType type) {
     void* ret = NULL;
 
     __PhysicalRegionList* regionList = _regionLists[type] + level;
@@ -220,7 +220,7 @@ static void* __getRegionFromList(size_t level, MemoryType type) {
     return ret;
 }
 
-static void __addRegionToList(void* regionBegin, size_t level, MemoryType type) {
+static void __addRegionToList(void* regionBegin, Size level, MemoryType type) {
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)regionBegin;
     initSinglyLinkedListNode(node);
 
@@ -229,7 +229,7 @@ static void __addRegionToList(void* regionBegin, size_t level, MemoryType type) 
     ++regionList->regionNum;
 }
 
-static void __regionListTidyUp(size_t level, MemoryType type) {
+static void __regionListTidyUp(Size level, MemoryType type) {
     __PhysicalRegionList* regionList = _regionLists[type] + level;
     
     if (level == REGION_LIST_NUM - 1) { //Just reduce to a limitation, no need to sort
@@ -243,7 +243,7 @@ static void __regionListTidyUp(size_t level, MemoryType type) {
                 if (node1 == node2) {
                     return 0;
                 }
-                return (uintptr_t)node1 < (uintptr_t)node2 ? -1 : 1;
+                return (Uintptr)node1 < (Uintptr)node2 ? -1 : 1;
             })
         );
         for (
@@ -252,7 +252,7 @@ static void __regionListTidyUp(size_t level, MemoryType type) {
             node = prev->next
         ) {    
             if (
-                ((uintptr_t)node & regionList->length) == 0 && 
+                ((Uintptr)node & regionList->length) == 0 && 
                 ((void*)node) + regionList->length == (void*)node->next
             ) { //Two node may combine and handle to higher level region list
                 singlyLinkedListDeleteNext(prev);

@@ -8,6 +8,6 @@ Result initTimer() {
     return RESULT_SUCCESS;
 }
 
-void sleep(TimeUnit unit, uint64_t time) {
+void sleep(TimeUnit unit, Uint64 time) {
     PITsleep(unit, time);
 }

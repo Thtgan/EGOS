@@ -11,7 +11,7 @@
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
 
-static uint64_t _tick, _loopPerTick;
+static Uint64 _tick, _loopPerTick;
 
 ISR_FUNC_HEADER(__timerHandler) {
     ++_tick;
@@ -23,25 +23,25 @@ ISR_FUNC_HEADER(__timerHandler) {
  * 
  * @param loop loops to wait
  */
-static void __loopWait(uint64_t loop);
+static void __loopWait(Uint64 loop);
 
 /**
  * @brief Test out the num of loop per tick could take, no more than a whole tick;
  * 
- * @return uint64_t Num of loop a tick takes
+ * @return Uint64 Num of loop a tick takes
  */
-static uint64_t __findTickLoop();
+static Uint64 __findTickLoop();
 
-static void __loopWait(uint64_t loop) {
+static void __loopWait(Uint64 loop) {
     while (loop--) {
         nop();
     }
 }
 
-static bool __testLoop(uint64_t loop) {
-    uint8_t cnt = 0;
+static bool __testLoop(Uint64 loop) {
+    Uint8 cnt = 0;
     for (int i = 0; i < 5; ++i) {   //Test more than one time for better accuracy
-        uint64_t t = _tick;
+        Uint64 t = _tick;
         while (t == _tick) {
             nop();
         } //Wait for beginning of the another tick
@@ -65,8 +65,8 @@ void initPIT() {
     _loopPerTick = 3800000; //TODO: NO, No magic number here
 }
 
-void configureChannel(uint8_t channel, uint8_t mode, uint32_t frequency) {
-    uint16_t count;
+void configureChannel(Uint8 channel, Uint8 mode, Uint32 frequency) {
+    Uint16 count;
 
     if (frequency <= 18) {                      //Minimum frequency PIT could reach is 18.2065Hz
         count = 0;                              //Means 65536 to PIT
@@ -81,7 +81,7 @@ void configureChannel(uint8_t channel, uint8_t mode, uint32_t frequency) {
     outb(PIT_CHANNEL_SELECT(channel), EXTRACT_VAL(count, 16, 8, 16));
 }
 
-uint8_t readbackConfiguration(uint8_t channel) {
+Uint8 readbackConfiguration(Uint8 channel) {
     outb(PIT_CONTROL, PIT_CONTROL_READBACK | PIT_READBACK_NO_LATCH_COUNT | PIT_READBACK_CHANNEL(channel));
 
     return inb(PIT_CHANNEL_SELECT(channel));
@@ -89,10 +89,10 @@ uint8_t readbackConfiguration(uint8_t channel) {
 
 #define TICK_NANOSECOND (SECOND / TICK_FREQUENCY)
 
-void PITsleep(TimeUnit unit, uint64_t time) {
-    uint64_t tick = time * unit / TICK_NANOSECOND, remain = time * unit % TICK_NANOSECOND;
+void PITsleep(TimeUnit unit, Uint64 time) {
+    Uint64 tick = time * unit / TICK_NANOSECOND, remain = time * unit % TICK_NANOSECOND;
 
-    uint64_t targetTick = _tick + tick;
+    Uint64 targetTick = _tick + tick;
     while (_tick < targetTick) {
         nop();
     }

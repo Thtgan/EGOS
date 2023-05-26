@@ -25,7 +25,7 @@ struct _RBtreeNode {
 typedef struct {
     RBtreeNode* root;
     int (*cmpFunc)(RBtreeNode* node1, RBtreeNode* node2);
-    int (*searchFunc)(RBtreeNode* node, uint64_t val);
+    int (*searchFunc)(RBtreeNode* node, Uint64 val);
     RBtreeNode NIL;
 } RBtree;
 
@@ -36,7 +36,7 @@ typedef struct {
  * @param cmpFunc Comparation function between nodes
  * @param searchFunc Comparation function between node and value
  */
-void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, uint64_t));
+void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, Uint64));
 
 /**
  * @brief Initialize the RB tree node
@@ -53,7 +53,7 @@ void initRBtreeNode(RBtree* tree, RBtreeNode* node);
  * @param val Can be anything, a integer or a pointer, depending on how is the comparation function designed
  * @return RBtreeNode* Founded node, NULL if node not exist
  */
-RBtreeNode* searchNode(RBtree* tree, uint64_t val);
+RBtreeNode* searchNode(RBtree* tree, Uint64 val);
 
 /**
  * @brief Insert new node
@@ -71,7 +71,7 @@ Result insertNode(RBtree* tree, RBtreeNode* newNode);
  * @param val Can be anything, a integer or a pointer, depending on how is the comparation function designed
  * @return RBtreeNode* Deleted node, NULL if node not exist
  */
-RBtreeNode* deleteNode(RBtree* tree, uint64_t val);
+RBtreeNode* deleteNode(RBtree* tree, Uint64 val);
 
 /**
  * @brief Get the predecessor of a node

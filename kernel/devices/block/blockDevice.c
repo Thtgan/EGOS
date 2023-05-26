@@ -11,15 +11,15 @@ static HashTable _hashTable;
 static SinglyLinkedList _hashChains[16];
 
 Result initBlockDevice() {
-    initHashTable(&_hashTable, 16, _hashChains, LAMBDA(size_t, (HashTable* this, Object key) {
-        return (size_t)key % 13;
+    initHashTable(&_hashTable, 16, _hashChains, LAMBDA(Size, (HashTable* this, Object key) {
+        return (Size)key % 13;
     }));
 
     return RESULT_SUCCESS;
 }
 
-BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, size_t availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
-    ID deviceID = (uint16_t)strhash(name, 13, 65536);
+BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, Size availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
+    ID deviceID = (Uint16)strhash(name, 13, 65536);
     while (hashTableFind(&_hashTable, (Object)deviceID) != NULL) {
         ++deviceID;
     }
@@ -52,7 +52,7 @@ BlockDevice* unregisterBlockDevice(ID deviceID) {
 }
 
 BlockDevice* getBlockDeviceByName(ConstCstring name) {
-    size_t deviceID = (uint16_t)strhash(name, 13, 65536);
+    Size deviceID = (Uint16)strhash(name, 13, 65536);
     HashChainNode* node = NULL;
     if ((node = hashTableFind(&_hashTable, (Object)deviceID)) != NULL) {
         return HOST_POINTER(node, BlockDevice, hashChainNode);

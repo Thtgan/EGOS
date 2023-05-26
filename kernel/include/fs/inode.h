@@ -22,18 +22,18 @@ STRUCT_PRE_DEFINE(iNodeOperations);
 
 typedef struct {
     struct __RecordOnDevice {
-        uint64_t signature;
-        size_t dataSize;            //iNode size in byte
-        size_t availableBlockSize;  //How many blocks available for r/w?
-        size_t blockTaken;          //How many block this iNode takes (including blocks used to maintain data)
+        Uint64 signature;
+        Size dataSize;            //iNode size in byte
+        Size availableBlockSize;  //How many blocks available for r/w?
+        Size blockTaken;          //How many block this iNode takes (including blocks used to maintain data)
         iNodeType type;
-        size_t linkCnt;
-        uint8_t data[464];          //Undefined data for different file systems
+        Size linkCnt;
+        Uint8 data[464];          //Undefined data for different file systems
     } onDevice;
 
     BlockDevice* device;    //Which device is this iNode on
     Index64 blockIndex;     //Position on device
-    uint32_t openCnt;       //How mauch is this iNode opened
+    Uint32 openCnt;         //How mauch is this iNode opened
     iNodeOperations* operations;
     HashChainNode hashChainNode;
 } iNode;
@@ -48,7 +48,7 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
      * @param newBlockSize New size to resize to
      * @return Result Result of the operation
      */
-    Result (*resize)(iNode* iNode, size_t newBlockSize);
+    Result (*resize)(iNode* iNode, Size newBlockSize);
 
     /**
      * @brief Read the data inside the iNode, sets errorcode to indicate error
@@ -59,7 +59,7 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
      * @param blockSize How many block(s) to read
      * @return Result Result of the operation
      */
-    Result (*readBlocks)(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize);
+    Result (*readBlocks)(iNode* iNode, void* buffer, Size blockIndexInNode, Size blockSize);
 
     /**
      * @brief Write the data inside the iNode, sets errorcode to indicate error
@@ -70,7 +70,7 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
      * @param blockSize How many block(s) to write
      * @return Result Result of the operation
      */
-    Result (*writeBlocks)(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize);
+    Result (*writeBlocks)(iNode* iNode, const void* buffer, Size blockIndexInNode, Size blockSize);
 };
 
 /**
@@ -80,7 +80,7 @@ STRUCT_PRIVATE_DEFINE(iNodeOperations) {
  * @param newBlockSize New block size to resize to 
  * @return Result Result of the operation
  */
-static inline Result rawInodeResize(iNode* iNode, size_t newBlockSize) {
+static inline Result rawInodeResize(iNode* iNode, Size newBlockSize) {
     return iNode->operations->resize(iNode, newBlockSize);
 }
 
@@ -93,7 +93,7 @@ static inline Result rawInodeResize(iNode* iNode, size_t newBlockSize) {
  * @param blockSize Num of block(s) to read
  * @return Result Result of the operation
  */
-static inline Result rawInodeReadBlocks(iNode* iNode, void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static inline Result rawInodeReadBlocks(iNode* iNode, void* buffer, Size blockIndexInNode, Size blockSize) {
     return iNode->operations->readBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 
@@ -106,7 +106,7 @@ static inline Result rawInodeReadBlocks(iNode* iNode, void* buffer, size_t block
  * @param blockSize Num of block(s) to write
  * @return Result Result of the operation
  */
-static inline Result rawInodeWriteBlocks(iNode* iNode, const void* buffer, size_t blockIndexInNode, size_t blockSize) {
+static inline Result rawInodeWriteBlocks(iNode* iNode, const void* buffer, Size blockIndexInNode, Size blockSize) {
     return iNode->operations->writeBlocks(iNode, buffer, blockIndexInNode, blockSize);
 }
 

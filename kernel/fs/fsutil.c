@@ -90,7 +90,7 @@ Result fileClose(File* file) {
     return RESULT_SUCCESS;
 }
 
-Result fileSeek(File* file, int64_t offset, uint8_t begin) {
+Result fileSeek(File* file, Int64 offset, Uint8 begin) {
     Index64 base = file->pointer;
     switch (begin) {
         case FSUTIL_SEEK_BEGIN:
@@ -106,7 +106,7 @@ Result fileSeek(File* file, int64_t offset, uint8_t begin) {
     }
     base += offset;
 
-    if ((int64_t)base < 0 || base > file->iNode->onDevice.dataSize) {
+    if ((Int64)base < 0 || base > file->iNode->onDevice.dataSize) {
         SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
         return RESULT_FAIL;
     }
@@ -122,7 +122,7 @@ Index64 fileGetPointer(File* file) {
     return file->pointer;
 }
 
-Result fileRead(File* file, void* buffer, size_t n) {
+Result fileRead(File* file, void* buffer, Size n) {
     if (rawFileRead(file, buffer, n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -130,7 +130,7 @@ Result fileRead(File* file, void* buffer, size_t n) {
     return RESULT_SUCCESS;
 }
 
-Result fileWrite(File* file, const void* buffer, size_t n) {
+Result fileWrite(File* file, const void* buffer, Size n) {
     if (rawFileWrite(file, buffer, n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -441,7 +441,7 @@ static Result __doCreateEntry(ConstCstring path, ConstCstring name, ID iNodeID, 
 }
 
 static Result __doDeleteEntry(ConstCstring path, iNodeType type, Cstring* copyPtr, iNode** iNodePtr, Directory** directoryPtr) {
-    size_t len = strlen(path);
+    Size len = strlen(path);
     Cstring copy = NULL;
     *copyPtr = copy = kMalloc(len + 1, MEMORY_TYPE_NORMAL);
     if (copy == NULL) {

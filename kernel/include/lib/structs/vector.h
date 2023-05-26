@@ -4,8 +4,8 @@
 #include<kit/types.h>
 
 typedef struct {
-    size_t size;
-    size_t capacity;
+    Size size;
+    Size capacity;
     Object* storage;
 } Vector;
 
@@ -45,7 +45,7 @@ void vectorClear(Vector* vector);
  * @param newCapacity New capacity to resize to, if capacity less than curretn size, data at the end will lost
  * @return Result Result of the operation
  */
-Result vectorResize(Vector* vector, size_t newCapacity);
+Result vectorResize(Vector* vector, Size newCapacity);
 
 /**
  * @brief Get object in vector

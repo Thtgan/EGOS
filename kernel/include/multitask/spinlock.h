@@ -4,11 +4,11 @@
 #include<kit/types.h>
 
 typedef struct {
-    volatile uint8_t counter;
+    volatile Uint8 counter;
 } Spinlock;
 
-#define SPINLOCK_UNLOCKED (Spinlock) {1};
-#define SPINLOCK_LOCKED (Spinlock) {0};
+#define SPINLOCK_UNLOCKED   (Spinlock) {1};
+#define SPINLOCK_LOCKED     (Spinlock) {0};
 
 /**
  * @brief Lock a spinlock, spinning if lock is already locked

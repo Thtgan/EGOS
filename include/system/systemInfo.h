@@ -8,10 +8,10 @@
 #define SYSTEM_INFO_MAGIC64 0xE605E605E605E605
 
 typedef struct {
-    uint16_t magic;
-    uint64_t memoryMap; //Memory map of the system
-    uint64_t gdtDesc;   //GDT Descriptor
-    uint64_t kernelTable;
+    Uint16 magic;
+    Uint64 memoryMap; //Memory map of the system
+    Uint64 gdtDesc;   //GDT Descriptor
+    Uint64 kernelTable;
 } __attribute__((packed)) SystemInfo;
 //Don't remove this attribute, passing these data with no conflicting between three modes is all counting on it
 

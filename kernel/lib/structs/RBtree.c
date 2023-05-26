@@ -19,7 +19,7 @@ static RBtreeNode* __getSibling(RBtreeNode* node);
 static void __insertFix(RBtree* tree, RBtreeNode* newNode);
 static void __deleteFix(RBtree* tree, RBtreeNode* newNode);
 
-void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, uint64_t)) {
+void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, Uint64)) {
     RBtreeNode* NIL = &tree->NIL;
     NIL->color = RB_TREE_COLOR_BLACK;
     NIL->left = NIL->right = NIL->parent = NULL;
@@ -36,7 +36,7 @@ void initRBtreeNode(RBtree* tree, RBtreeNode* node) {
     node->left = node->right = &tree->NIL;
 }
 
-RBtreeNode* searchNode(RBtree* tree, uint64_t val) {
+RBtreeNode* searchNode(RBtree* tree, Uint64 val) {
     int cmp;
     for (RBtreeNode* node = tree->root; node != &tree->NIL;) {
         cmp = tree->searchFunc(node, val);
@@ -81,7 +81,7 @@ Result insertNode(RBtree* tree, RBtreeNode* newNode) {
     return RESULT_SUCCESS;
 }
 
-RBtreeNode* deleteNode(RBtree* tree, uint64_t val) {
+RBtreeNode* deleteNode(RBtree* tree, Uint64 val) {
     RBtreeNode* found = searchNode(tree, val);
 
     if (found == NULL) {

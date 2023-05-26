@@ -25,7 +25,7 @@
  * @param flags Flags to declare the detail while writing the number
  * @return The pointer to the buffer after the number written
  */
-static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, uint8_t flags) {
+static char* __writeNumber(char* writeTo, unsigned long num, int base, int width, int precision, Uint8 flags) {
     static const char digits[17] = "0123456789ABCDEF";  //Character of each digit
     char tmp[128];
 
@@ -123,7 +123,7 @@ int vprintf(char* buffer, const char* format, va_list args)
             continue;
         }
 
-        uint8_t flags = 0;
+        Uint8 flags = 0;
 
     loop: //Goto is awful, but useful
         switch (*(++format)) { //Set the flags
@@ -211,7 +211,7 @@ int vprintf(char* buffer, const char* format, va_list args)
         case 's':
             const char* str = va_arg(args, char*);
             int len = 0;
-            for (; str[len] != '\0' && (size_t)len < precision; ++len);
+            for (; str[len] != '\0' && (Size)len < precision; ++len);
 
             if (width > 0 && !TEST_FLAGS(flags, __VFPRINTF_FLAGS_LEFT_JUSTIFY)) {
                 while (len <= --width)

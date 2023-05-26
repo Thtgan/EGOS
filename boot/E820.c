@@ -24,7 +24,7 @@ int detectMemory(SystemInfo* info) {
     if (ret == 0) {
         ret = -1;
     }
-    info->memoryMap = (uint32_t)&_memoryMap;
+    info->memoryMap = (Uint32)&_memoryMap;
     return ret;
 }
 
@@ -40,7 +40,7 @@ static int __E820detect(MemoryMap* memoryMap) {
         registers.eax = 0xE820;
         registers.ecx = sizeof(MemoryMapEntry);
         registers.edx = SMAP;
-        registers.edi = (uint32_t) &buf;
+        registers.edi = (Uint32) &buf;
 
         intInvoke(0x15, &registers, &registers);
 
