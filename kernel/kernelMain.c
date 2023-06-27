@@ -11,6 +11,9 @@
 #include<system/systemInfo.h>
 #include<usermode/usermode.h>
 
+#include<debug.h>
+#include<memory/physicalPages.h>
+
 SystemInfo* sysInfo;
 
 Semaphore sema1, sema2;
@@ -24,11 +27,11 @@ __attribute__((section(".kernelMain"), regparm(2)))
 void kernelMain(Uint64 magic, Uint64 sysInfoPtr) {
     sysInfo = (SystemInfo*)sysInfoPtr;
     if (sysInfo->magic != SYSTEM_INFO_MAGIC16) {
-        die();
+        blowup("Boot magic not match");
     }
 
     if (initKernel() == RESULT_FAIL) {
-        die();
+        blowup("Initialization failed");
     }
 
     printLOGO();
@@ -36,7 +39,7 @@ void kernelMain(Uint64 magic, Uint64 sysInfoPtr) {
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
 
-    arr1 = kMalloc(1 * sizeof(int), MEMORY_TYPE_NORMAL), arr2 = kMalloc(1 * sizeof(int), MEMORY_TYPE_SHARE);
+    arr1 = kMallocSpecific(1 * sizeof(int), MEMORY_TYPE_NORMAL), arr2 = kMallocSpecific(1 * sizeof(int), MEMORY_TYPE_PUBLIC);
     arr1[0] = 1, arr2[0] = 114514;
     if (fork("Forked") != NULL) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
@@ -44,7 +47,7 @@ void kernelMain(Uint64 magic, Uint64 sysInfoPtr) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", schedulerGetCurrentProcess()->name);
     }
 
-    if (schedulerGetCurrentProcess()->pid == 0) {
+    if (strcmp(schedulerGetCurrentProcess()->name, "Init") == 0) {
         arr1[0] = 3;
         up(&sema1);
         down(&sema2);
@@ -55,6 +58,7 @@ void kernelMain(Uint64 magic, Uint64 sysInfoPtr) {
         printf(TERMINAL_LEVEL_OUTPUT, "DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
         up(&sema2);
         while (true) {
+            printf(TERMINAL_LEVEL_OUTPUT, "Waiting for input: ");
             int len = terminalGetline(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), str);
 
             if (strcmp(str, "PASS") == 0 || len == 0) {

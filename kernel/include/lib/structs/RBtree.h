@@ -5,11 +5,6 @@
 
 typedef struct _RBtreeNode RBtreeNode;
 
-#if !defined(HOST_POINTER)
-//Get the host pointer containing the node
-#define HOST_POINTER(__NODE_PTR, __TYPE, __MEMBER)  ((__TYPE*)(((void*)(__NODE_PTR)) - offsetof(__TYPE, __MEMBER)))
-#endif
-
 typedef enum {
     RB_TREE_COLOR_RED,
     RB_TREE_COLOR_BLACK

@@ -7,7 +7,6 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<memory/pageAlloc.h>
 #include<memory/paging/pagingSetup.h>
 #include<memory/physicalPages.h>
 #include<real/simpleAsmLines.h>
@@ -50,15 +49,15 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
     PhysicalPage* oldPhysicalPageStruct = getPhysicalPageStruct(pAddr);
     if (
         TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
-        TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_COW) && 
+        PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(oldPhysicalPageStruct->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
         TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_RW)
         ) {
-        if (oldPhysicalPageStruct->processReferenceCnt == 1) {
+        if (oldPhysicalPageStruct->referenceCnt == 1) {
             SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_RW);
             return;
         }
 
-        void* copyTo = pageAlloc(1, PHYSICAL_PAGE_TYPE_COW);
+        void* copyTo = pageAlloc(1, MEMORY_TYPE_COW);
         PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
         memcpy(copyTo, PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), PAGE_SIZE);
         pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(copyTo, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW);
@@ -69,7 +68,7 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
 
     if (
         TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_US) && 
-        TEST_FLAGS(oldPhysicalPageStruct->flags, PHYSICAL_PAGE_FLAG_USER) &&
+        TEST_FLAGS(oldPhysicalPageStruct->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_USER) &&
         TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_US)
         ) {
         SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_US);
@@ -152,7 +151,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
     PML4Table* PML4TablePtr = pageTable;
     PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
     if (TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
-        void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+        void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
         if (page == NULL) {
             return RESULT_FAIL;
         }
@@ -174,7 +173,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
     PDPtable* PDPtablePtr = PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry);
     PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
     if (TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
-        void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+        void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
         if (page == NULL) {
             return RESULT_FAIL;
         }
@@ -196,7 +195,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
     PageDirectory* pageDirectoryPtr = PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry);
     PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
     if (TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
-        void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+        void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
         if (page == NULL) {
             return RESULT_FAIL;
         }

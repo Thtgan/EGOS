@@ -46,7 +46,7 @@ Result phospherusCheckFileSystem(BlockDevice* device) {
 }
 
 FileSystem* phospherusOpenFileSystem(BlockDevice* device) {
-    FileSystem* ret = kMalloc(sizeof(FileSystem), MEMORY_TYPE_NORMAL);
+    FileSystem* ret = kMalloc(sizeof(FileSystem));
     if (ret == NULL) {
         return NULL;
     }

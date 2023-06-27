@@ -30,6 +30,7 @@ static void __idle() {
     while (true) {
         sti();
         hlt();
+        //No, no yield here, currently it will make system freezed for input
     }
 
     blowup("Idle is trying to return\n");

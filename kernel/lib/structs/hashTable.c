@@ -2,6 +2,7 @@
 
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<structs/singlyLinkedList.h>
 
 void initHashTable(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC) {

@@ -6,7 +6,6 @@
 #include<fs/file.h>
 #include<kit/bit.h>
 #include<memory/memory.h>
-#include<memory/pageAlloc.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
 #include<multitask/schedule.h>
@@ -124,7 +123,7 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     while (memoryRemain > 0) {
         void* pAddr = NULL;
         if ((pAddr = translateVaddr(pageTable, base)) == NULL) {
-            pAddr = pageAlloc(1, PHYSICAL_PAGE_TYPE_USER_PROGRAM);
+            pAddr = pageAlloc(1, MEMORY_TYPE_USER_PROGRAM);
             if (pAddr == NULL || mapAddr(pageTable, base, pAddr) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
@@ -170,7 +169,7 @@ Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
         if (pAddr == NULL) {
             return RESULT_FAIL;
         }
-        pageFree(pAddr, 1);
+        pageFree(pAddr);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 

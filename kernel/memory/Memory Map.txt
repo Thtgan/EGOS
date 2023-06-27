@@ -3,10 +3,14 @@ This file describes the Virtual Memory Map of the EGOS:
 #=========================================#==============#==================================================================#
 |                  Range                  |     Size     |                           Description                            |
 #=========================================#==============#==================================================================#
-| 0x0000000000000000 - 0x000000000001FFFF | 128KB        | Reserved for low-level hardware, like IVT                        |
-| 0x0000000000020000 - ???                | ???          | Direct memory access mapping, reserved for user space            |
-| 0x0000010000000000 - 0x000001000001FFFF | 128KB        | Unused                                                           |
-| 0x0000010000020000 - 0x0000010000FFFFFF | 16MB - 128KB | For kernel codes                                                 |
-| 0x0000010001000000 - 0x0000010001003FFF | 16KB         | For kernel stack                                                 |
-| 0x0000010001004000 - ???                | ???          | Kernel memory space                                              |
+| 0x0000000000000000 - 0x0000000000000FFF | 4KB          | NULL protect hole                                                |
+| 0x0000000000001000 - 0x00007FFFFFFFFFFF | 128TB - 4KB  | For user program's code, stack and heap(not yet)                 |
+| 0x0000800000000000 - 0xFFFF7FFFFFFFFFFF | ???          | Hole from sign extension                                         |
+| 0xFFFF800000000000 - 0xFFFFFEFFFFFFFFFF | 127TB        | Unused                                                           |
+| 0xFFFFFF0000000000 - 0xFFFFFF1FFFFFFFFF | 128GB        | Physical memory mapping                                          |
+| 0xFFFFFF2000000000 - 0xFFFFFFFFBFFFFFFF | 895GB        | Unused                                                           |
+| 0xFFFFFFFFC0000000 - 0xFFFFFFFFCFFFFFFF | 256MB        | Kernel stack(Mapping from 0x0)                                   |
+| 0xFFFFFFFFD0000000 - 0xFFFFFFFFDFFFFFFF | 256MB        | Unused                                                           |
+| 0xFFFFFFFFE0000000 - 0xFFFFFFFFEFFFFFFF | 256MB        | Kernel text                                                      |
+| 0xFFFFFFFFF0000000 - 0xFFFFFFFFFFFFFFFF | 256MB        | Unused                                                           |
 #=========================================#==============#==================================================================#

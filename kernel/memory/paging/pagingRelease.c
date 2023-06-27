@@ -3,7 +3,7 @@
 #include<kit/bit.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
-#include<memory/pageAlloc.h>
+#include<memory/physicalPages.h>
 
 /**
  * @brief Release a PDP table
@@ -35,7 +35,7 @@ void releasePML4Table(PML4Table* table) {
         __releasePDPtable(PDPT_ADDR_FROM_PML4_ENTRY(table->tableEntries[i]));
     }
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
+    pageFree(table);
 }
 
 static void __releasePDPtable(PDPtable* table) {
@@ -47,7 +47,7 @@ static void __releasePDPtable(PDPtable* table) {
         __releasePageDirectory(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(table->tableEntries[i]));
     }
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
+    pageFree(table);
 }
 
 static void __releasePageDirectory(PageDirectory* table) {
@@ -59,10 +59,10 @@ static void __releasePageDirectory(PageDirectory* table) {
         __releasePageTable(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(table->tableEntries[i]));
     }
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
+    pageFree(table);
 }
 
 static void __releasePageTable(PageTable* table) {
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(table, 1);
+    pageFree(table);
 }

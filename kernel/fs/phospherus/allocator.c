@@ -5,6 +5,7 @@
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
@@ -166,25 +167,25 @@ PhospherusAllocator* phospherusOpenAllocator(BlockDevice* device) {
     bool abort = false;
     do {
         if (abort = (
-            (ret = kMalloc(sizeof(PhospherusAllocator), MEMORY_TYPE_NORMAL)) == NULL
+            (ret = kMalloc(sizeof(PhospherusAllocator))) == NULL
             )) {
             break;
         }
 
         if (abort = (
-            (deviceInfo = kMalloc(sizeof(__DeviceInfo), MEMORY_TYPE_NORMAL)) == NULL
+            (deviceInfo = kMalloc(sizeof(__DeviceInfo))) == NULL
             )) {
             break;
         }
 
         if (abort = (
-            (firstFreeSuperNode = kMalloc(sizeof(__SuperNode), MEMORY_TYPE_NORMAL)) == NULL
+            (firstFreeSuperNode = kMalloc(sizeof(__SuperNode))) == NULL
             )) {
             break;
         }
 
         if (abort = (
-            (firstFreeBlockStack = kMalloc(sizeof(__BlockStack), MEMORY_TYPE_NORMAL)) == NULL
+            (firstFreeBlockStack = kMalloc(sizeof(__BlockStack))) == NULL
             )) {
             break;
         }

@@ -60,7 +60,7 @@ static Result __addEntry(Directory* this, ID iNodeID, iNodeType type, ConstCstri
 
     void* newDirectoryInMemory = NULL;
     if (this->size == 0) {
-        newDirectoryInMemory = kMalloc(sizeof(__DirectoryEntry), MEMORY_TYPE_NORMAL);
+        newDirectoryInMemory = kMalloc(sizeof(__DirectoryEntry));
     } else if (oldBlockSize != newBlockSize) {
         newDirectoryInMemory = kRealloc(this->directoryInMemory, newBlockSize * BLOCK_SIZE);
     }
@@ -184,8 +184,6 @@ static Directory* __openDirectory(iNode* iNode) {
 }
 
 static Result __closeDirectory(Directory* directory) {
-    iNode* iNode = directory->iNode;
-
     directory->iNode = NULL;
     kFree(directory->directoryInMemory);
     kFree(directory);
@@ -196,7 +194,7 @@ static Result __closeDirectory(Directory* directory) {
 static Result __doOpenDirectory(iNode* iNode, void** retPtr, void** directoryInMemoryPtr) {
     Directory* ret = NULL, * directoryInMemory = NULL;
 
-    *retPtr = ret = kMalloc(sizeof(Directory), MEMORY_TYPE_NORMAL);
+    *retPtr = ret = kMalloc(sizeof(Directory));
     if (ret == NULL) {
         return RESULT_FAIL;
     }
@@ -206,7 +204,7 @@ static Result __doOpenDirectory(iNode* iNode, void** retPtr, void** directoryInM
     ret->operations = &directoryOperations;
     ret->directoryInMemory = NULL;
     if (ret->size > 0) {
-        *directoryInMemoryPtr = directoryInMemory = ret->directoryInMemory = kMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE, MEMORY_TYPE_NORMAL);
+        *directoryInMemoryPtr = directoryInMemory = ret->directoryInMemory = kMalloc(iNode->onDevice.availableBlockSize * BLOCK_SIZE);
         if (directoryInMemory == NULL) {
             return RESULT_FAIL;
         }

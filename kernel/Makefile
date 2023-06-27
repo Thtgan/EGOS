@@ -6,6 +6,9 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-nostdinc			\
 								-ffreestanding		\
 								-mno-red-zone		\
+								-mno-mmx			\
+								-mno-sse			\
+								-mno-sse2			\
 								-m64				\
 								-I.	 				\
 								-I./include			\

@@ -2,7 +2,6 @@
 
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<memory/pageAlloc.h>
 #include<memory/physicalPages.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
@@ -67,7 +66,7 @@ Result __addPage(BufferSizes size) {
     _bufferNums[size] += PAGE_SIZE / _bufferSizes[size];
     _freeBufferNums[size] += PAGE_SIZE / _bufferSizes[size];
 
-    void* page = pageAlloc(1, PHYSICAL_PAGE_TYPE_NORMAL);
+    void* page = pageAlloc(1, MEMORY_TYPE_NORMAL);
     if (page == NULL) {
         return RESULT_FAIL;
     }

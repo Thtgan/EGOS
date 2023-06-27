@@ -4,6 +4,7 @@
 #include<fs/fileSystem.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<structs/hashTable.h>
 
 static HashTable _hashTable;

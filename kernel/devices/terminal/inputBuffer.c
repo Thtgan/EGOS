@@ -1,7 +1,7 @@
 #include<devices/terminal/inputBuffer.h>
 
+#include<kit/util.h>
 #include<memory/memory.h>
-#include<memory/pageAlloc.h>
 #include<memory/physicalPages.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
@@ -113,7 +113,7 @@ int bufferGetLine(InputBuffer* buffer, char* writeTo) {
 }
 
 static __InputBufferNode* __allocateNode() {
-    __InputBufferNode* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PUBLIC);
+    __InputBufferNode* ret = pageAlloc(1, MEMORY_TYPE_PUBLIC);
 
     initQueueNode(&ret->node);
     ret->begin = ret->end = 0;
@@ -124,5 +124,5 @@ static __InputBufferNode* __allocateNode() {
 
 static void __releaseNode(__InputBufferNode* node) {
     memset(node, 0, PAGE_SIZE);
-    pageFree(node, 1);
+    pageFree(node);
 }

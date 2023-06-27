@@ -7,7 +7,6 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<memory/pageAlloc.h>
 #include<memory/paging/paging.h>
 #include<memory/paging/pagingCopy.h>
 #include<memory/paging/pagingRelease.h>
@@ -84,7 +83,7 @@ Process* fork(ConstCstring name) {
     newProcess->ppid = oldPID;
     PML4Table* newTable = copyPML4Table(schedulerGetCurrentProcess()->context.pageTable);
 
-    void* newStack = pageAlloc(KERNEL_STACK_PAGE_NUM, PHYSICAL_PAGE_TYPE_NORMAL);
+    void* newStack = pageAlloc(KERNEL_STACK_PAGE_NUM, MEMORY_TYPE_NORMAL);
     memset(newStack, 0, KERNEL_STACK_SIZE);
     for (Uintptr i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
         mapAddr(newTable, (void*)KERNEL_STACK_BOTTOM - i, newStack + KERNEL_STACK_SIZE - i);
@@ -117,17 +116,17 @@ void releaseProcess(Process* process) {
     PML4Table* pageTable = process->context.pageTable;
     void* pAddr = translateVaddr(pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
     memset(pAddr, 0, KERNEL_STACK_SIZE);
-    pageFree(pAddr, KERNEL_STACK_PAGE_NUM);
+    pageFree(pAddr);
 
-    if (process->userStackTop != NULL) {
-        for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-            pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i), 1);
-        }
-    }
+    // if (process->userStackTop != NULL) {
+    //     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
+    //         pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i));
+    //     }
+    // }
 
-    if (process->userProgramBegin != NULL) {
-        pageFree(process->userProgramBegin, process->userProgramPageSize);
-    }
+    // if (process->userProgramBegin != NULL) {
+    //     pageFree(process->userProgramBegin);
+    // }
 
     releasePML4Table(pageTable);
 
@@ -140,15 +139,15 @@ void releaseProcess(Process* process) {
     }
     Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
     memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    pageFree(process->fileSlots, (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE);
+    pageFree(process->fileSlots);
 
 
     memset(process, 0, PAGE_SIZE);
-    pageFree(process, 1);
+    pageFree(process);
 }
 
 static Process* __createProcess(Uint16 pid, ConstCstring name) {
-    Process* ret = pageAlloc(1, PHYSICAL_PAGE_TYPE_PRIVATE);
+    Process* ret = pageAlloc(1, MEMORY_TYPE_PRIVATE);
     memset(ret, 0, PAGE_SIZE);
 
     ret->pid = pid, ret->ppid = 0;
@@ -160,14 +159,14 @@ static Process* __createProcess(Uint16 pid, ConstCstring name) {
     memset(&ret->context, 0, sizeof(Context));
     ret->registers = NULL;
 
-    ret->userStackTop = ret->userProgramBegin = NULL;
-    ret->userProgramPageSize = 0;
+    // ret->userStackTop = ret->userProgramBegin = NULL;
+    // ret->userProgramPageSize = 0;
 
     initQueueNode(&ret->statusQueueNode);
     initQueueNode(&ret->semaWaitQueueNode);
 
     Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
-    ret->fileSlots = pageAlloc(openedFilePageSize, PHYSICAL_PAGE_TYPE_PRIVATE);
+    ret->fileSlots = pageAlloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
     memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
     ret->fileSlots[0] = getStandardOutputFile();

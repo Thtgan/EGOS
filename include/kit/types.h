@@ -30,12 +30,15 @@ typedef __UINTPTR_TYPE__    Uintptr;
 typedef __INTMAX_TYPE__     Intmax;
 typedef __UINTMAX_TYPE__    Uintmax;
 
-//Get the host pointer containing the node
-#define HOST_POINTER(__NODE_PTR, __TYPE, __MEMBER)  ((__TYPE*)(((void*)(__NODE_PTR)) - offsetof(__TYPE, __MEMBER)))
-
 //If this object refers to a struct, use pointer
 typedef Uint64          Object;
 #define OBJECT_NULL     (Object)NULL
+
+#define DATA_UNIT_B                     (1ull)
+#define DATA_UNIT_KB                    (1024ull)
+#define DATA_UNIT_MB                    (1024ull * 1024)
+#define DATA_UNIT_GB                    (1024ull * 1024 * 1024)
+#define DATA_UNIT_TB                    (1024ull * 1024 * 1024 * 1024)
 
 typedef Uint64      ID;
 

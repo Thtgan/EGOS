@@ -5,7 +5,6 @@
 #include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
-#include<memory/pageAlloc.h>
 #include<memory/physicalPages.h>
 #include<memory/paging/paging.h>
 #include<system/address.h>
@@ -27,11 +26,9 @@ Result initMemory() {
         return RESULT_FAIL;
     }
 
-    MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-
-    initPageAlloc();
-
-    initKmalloc();
+    if (initKmalloc() == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
     if (initBuffer() == RESULT_FAIL) {
         return RESULT_FAIL;

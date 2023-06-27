@@ -6,9 +6,8 @@
 #include<fs/fsutil.h>
 #include<fs/inode.h>
 #include<kit/types.h>
-#include<memory/physicalPages.h>
-#include<memory/pageAlloc.h>
 #include<memory/paging/paging.h>
+#include<memory/physicalPages.h>
 #include<multitask/context.h>
 #include<multitask/schedule.h>
 #include<real/simpleAsmLines.h>
@@ -150,7 +149,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
     PML4Table* pageTable = process->context.pageTable;
     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
         if (translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i) == NULL) {
-            void* pAddr = pageAlloc(1, PHYSICAL_PAGE_TYPE_USER_STACK);
+            void* pAddr = pageAlloc(1, MEMORY_TYPE_USER_STACK);
             if (pAddr == NULL) {
                 return RESULT_FAIL;
             }
@@ -194,7 +193,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
         if (pAddr == NULL) {
             return RESULT_FAIL;
         }
-        pageFree(pAddr, 1);
+        pageFree(pAddr);
     }
 
     asm volatile(

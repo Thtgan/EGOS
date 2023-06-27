@@ -1,5 +1,6 @@
 #include<multitask/semaphore.h>
 
+#include<kit/util.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
 #include<structs/queue.h>

@@ -12,9 +12,7 @@
 #include<kit/types.h>
 #include<memory/buffer.h>
 #include<memory/memory.h>
-#include<memory/pageAlloc.h>
 #include<memory/physicalPages.h>
-#include<system/address.h>
 #include<system/pageTable.h>
 
 #define __DEVICE_DIR_PARENT     "/"
@@ -32,7 +30,7 @@ static Result __openStandardOutput();
 static Result __doOpenStandardOutput(DirectoryEntry* entry, iNode** iNodePtr);
 
 Result initVirtualDevices() {
-    void* region = pageAlloc(__MEMORY_DEVICE_SIZE / PAGE_SIZE, PHYSICAL_PAGE_TYPE_PUBLIC);
+    void* region = pageAlloc(__MEMORY_DEVICE_SIZE / PAGE_SIZE, MEMORY_TYPE_PUBLIC);
     BlockDevice* memDevice = createMemoryBlockDevice(region, __MEMORY_DEVICE_SIZE, __MEMORY_DEVICE_NAME);
     if (memDevice == NULL) {
         return RESULT_FAIL;
@@ -90,7 +88,7 @@ Result closeVitualDevices() {
 
     void* region = (void*)memDevice->additionalData;
     releaseBlockDevice(memDevice);
-    pageFree(region, __MEMORY_DEVICE_SIZE / PAGE_SIZE);
+    pageFree(region);
 
     return RESULT_SUCCESS;
 }

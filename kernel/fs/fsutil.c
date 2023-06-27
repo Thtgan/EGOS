@@ -371,7 +371,7 @@ static Result __doFileOpen(DirectoryEntry* entry, iNode** iNodePtr, File** fileP
             return RESULT_FAIL;
         }
     } else {
-        *filePtr = file = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
+        *filePtr = file = kMalloc(sizeof(File));
         if (file == NULL) {
             return RESULT_FAIL;
         }
@@ -443,7 +443,7 @@ static Result __doCreateEntry(ConstCstring path, ConstCstring name, ID iNodeID, 
 static Result __doDeleteEntry(ConstCstring path, iNodeType type, Cstring* copyPtr, iNode** iNodePtr, Directory** directoryPtr) {
     Size len = strlen(path);
     Cstring copy = NULL;
-    *copyPtr = copy = kMalloc(len + 1, MEMORY_TYPE_NORMAL);
+    *copyPtr = copy = kMalloc(len + 1);
     if (copy == NULL) {
         return RESULT_FAIL;
     }

@@ -38,8 +38,9 @@ typedef struct {
     Context context;
     Registers* registers;
 
-    void* userExitStackTop, * userStackTop, * userProgramBegin;
-    Size userProgramPageSize;
+    void* userExitStackTop;
+    // , * userStackTop, * userProgramBegin;
+    // Size userProgramPageSize;
     
     QueueNode statusQueueNode;
     QueueNode semaWaitQueueNode;

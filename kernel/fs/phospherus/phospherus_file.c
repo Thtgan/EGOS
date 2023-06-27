@@ -80,7 +80,7 @@ static File* __fileOpen(iNode* iNode, Flags8 flags) {
         return NULL;
     }
 
-    File* ret = kMalloc(sizeof(File), MEMORY_TYPE_NORMAL);
+    File* ret = kMalloc(sizeof(File));
     if (ret == NULL) {
         return NULL;
     }

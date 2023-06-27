@@ -3,27 +3,31 @@
 
 #include<kit/types.h>
 
-typedef enum {
-    MEMORY_TYPE_NORMAL, //Normal memory, COW between processes
-    MEMORY_TYPE_SHARE,  //Shared with child processes
-    MEMORY_TYPE_NUM,    //DO NOT USE THIS
-} MemoryType;
-
-#define KMALLOC_HEADER_SIZE 16
+#include<memory/physicalPages.h>
 
 /**
  * @brief Initialize the virtual malloc
+ * 
+ * @return Result Result of the operation
  */
-void initKmalloc();
+Result initKmalloc();
 
 /**
  * @brief Allocate memory
  * 
  * @param n Number of bytes to allocate
+ * @return void* Allocated memory
+ */
+void* kMalloc(Size n);
+
+/**
+ * @brief Allocate memory with specific type
+ * 
+ * @param n Number of bytes to allocate
  * @param type Type of the memory
  * @return void* Allocated memory
  */
-void* kMalloc(Size n, MemoryType type);
+void* kMallocSpecific(Size n, MemoryType type);
 
 /**
  * @brief Free the memory allocated by kMalloc
@@ -31,8 +35,6 @@ void* kMalloc(Size n, MemoryType type);
  * @param ptr Allocated memory
  */
 void kFree(void* ptr);
-
-void* kCalloc(Size num, Size size, MemoryType type);
 
 void* kRealloc(void *ptr, Size newSize);
 

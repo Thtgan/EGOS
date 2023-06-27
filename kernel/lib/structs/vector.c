@@ -5,12 +5,12 @@
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 
-#define __VECTOR_INIT_STORAGE_SIZE  (64 - KMALLOC_HEADER_SIZE)
+#define __VECTOR_INIT_STORAGE_SIZE  48
 
 void initVector(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
-    vector->storage = kMalloc(__VECTOR_INIT_STORAGE_SIZE, MEMORY_TYPE_NORMAL);
+    vector->storage = kMalloc(__VECTOR_INIT_STORAGE_SIZE);
     memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
 }
 
@@ -28,7 +28,7 @@ void vectorClear(Vector* vector) {
 }
 
 Result vectorResize(Vector* vector, Size newCapacity) {
-    Object* newStorage = kMalloc(newCapacity * sizeof(Object), MEMORY_TYPE_NORMAL);
+    Object* newStorage = kMalloc(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
         return RESULT_FAIL;
     }
@@ -79,7 +79,7 @@ Result vectorBack(Vector* vector, Object* retPtr) {
 }
 
 Result vectorPush(Vector* vector, Object item) {
-    if (vector->size == vector->capacity && vectorResize(vector, ((vector->capacity * sizeof(Object) + KMALLOC_HEADER_SIZE) * 2 - KMALLOC_HEADER_SIZE) / sizeof(Object)) == RESULT_FAIL) {
+    if (vector->size == vector->capacity && vectorResize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 

@@ -5,8 +5,6 @@
 #include<kit/bit.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
-#include<real/flags/cr0.h>
-#include<real/simpleAsmLines.h>
 #include<system/address.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
@@ -59,8 +57,6 @@ PML4Table* setupPML4Table() {
     for (int i = KERNEL_VIRTUAL_BEGIN / PDPT_SPAN; i < PML4_TABLE_SIZE && pAddr < pAddrEnd; ++i, pAddr += PDPT_SPAN) {
         ret->tableEntries[i] = BUILD_PML4_ENTRY(__setupPDPtable(pAddr), PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
     }
-
-    writeRegister_CR0_64(SET_FLAG(readRegister_CR0_64(), CR0_WP));  //Enable write protect
 
     return ret;
 }

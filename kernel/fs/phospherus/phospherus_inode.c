@@ -8,6 +8,7 @@
 #include<fs/phospherus/phospherus.h>
 #include<kit/macro.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
@@ -690,7 +691,7 @@ static Result __doOpenInode(FileSystem* this, Index64 iNodeBlock, iNode** retPtr
         *retPtr = ret = HOST_POINTER(node, iNode, hashChainNode);
         ++ret->openCnt;
     } else {
-        *retPtr = ret = kMalloc(sizeof(iNode), MEMORY_TYPE_NORMAL);
+        *retPtr = ret = kMalloc(sizeof(iNode));
         if (ret == NULL) {
             return RESULT_FAIL;
         }

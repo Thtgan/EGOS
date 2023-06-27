@@ -1,6 +1,7 @@
 #include<devices/block/blockDevice.h>
 
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<string.h>
@@ -24,7 +25,7 @@ BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, Size ava
         ++deviceID;
     }
 
-    BlockDevice* ret = kMalloc(sizeof(BlockDevice), MEMORY_TYPE_NORMAL);
+    BlockDevice* ret = kMalloc(sizeof(BlockDevice));
     memset(ret, 0, sizeof(BlockDevice));
 
     strcpy(ret->name, name);

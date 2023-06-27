@@ -45,6 +45,7 @@
 #define REVERSE_FLAG(__FLAGS, __FLAG)                               VAL_XOR(__FLAGS, __FLAG)
 #define REVERSE_FLAG_BACK(__FLAGS, __FLAG)                          (__FLAGS = REVERSE_FLAG(__FLAGS, __FLAG))
 
+#define TEST_VAL(__FLAGS, __MASK, __FLAG)                           LOGIC_EQUAL(VAL_AND(__FLAGS, __MASK), __FLAG)
 #define TEST_FLAGS(__FLAGS, __FLAG)                                 LOGIC_EQUAL(VAL_AND(__FLAGS, __FLAG), __FLAG)
 #define TEST_FLAGS_NONE(__FLAGS, __FLAG)                            LOGIC_EQUAL(VAL_AND(__FLAGS, __FLAG), 0)
 #define TEST_FLAGS_FAIL(__FLAGS, __FLAG)                            LOGIC_NOT_EQUAL(VAL_AND(__FLAGS, __FLAG), __FLAG)
