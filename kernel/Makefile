@@ -1,7 +1,6 @@
-include ../build.config
+include $(RELATIVE_BASE)/global.mk
+include $(RELATIVE_BASE)/tools.mk
 
-NASM 						= 	nasm
-CC 							= 	x86_64-elf-gcc
 CC_OPTIONS 					= 	-nostdlib			\
 								-nostdinc			\
 								-ffreestanding		\
@@ -14,52 +13,45 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-I./include			\
 								-I./include/lib		\
 								-I../include		\
-								-Os					\
+								-O2					\
 								-mcmodel=large		\
+								-g					\
 
-LD 							= 	x86_64-elf-ld
+BUILD_KERNEL_MAP_NAME		:=	kernelMap.txt
+BUILD_KERNEL_MAP			:=	$(BUILD_KERNEL_DIR)/$(BUILD_KERNEL_MAP_NAME)
 
-BUILD_DIR 					= 	./build
-BUILD_NAME					=	kernel.bin
-BUILD_BIN_NAME				=	$(BUILD_DIR)/$(BUILD_NAME)
-BUILD_TMP_NAME				=	$(BUILD_DIR)/tmp
+SOURCE_FILES_C				:=	$(shell find ./ -type f -name '*.c' | sort)
+OBJ_FILES_C					:=	$(patsubst ./%.c, $(BUILD_KERNEL_DIR)/%.o, $(SOURCE_FILES_C))
 
-MAP_NAME					= map.txt
-
-C_FILES 					:= 	$(shell find ./ -type f -name '*.c' | sort)
-ASM_FILES					:=	$(shell find ./ -type f -name '*.asm' | sort)
-
-OBJ_FILES_C					:=	$(C_FILES:.c=.o)
-OBJ_FILES_ASM				:=  $(ASM_FILES:.asm=.o)
-BUILD_OBJ_FILES				:=	$(subst ./, $(BUILD_DIR)/, $(OBJ_FILES_ASM) $(OBJ_FILES_C))
+SOURCE_FILES_ASM			:=	$(shell find ./ -type f -name '*.S' | sort)
+OBJ_FILES_ASM				:=  $(patsubst ./%.S, $(BUILD_KERNEL_DIR)/%.o, $(SOURCE_FILES_ASM))
 
 .PHONY: all clean
 
 all: preBuild build postBuild
 
-preBuild:
-ifeq ($(TEST), TRUE)
-	$(eval CC_OPTIONS += -D DEBUG)
-endif
+preBuild: buildDir
 
-build: buildDir $(BUILD_BIN_NAME)
+build: $(BUILD_KERNEL)
 
 postBuild:
 
 buildDir:
-	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
+	@for i in $(OBJ_FILES_C) $(OBJ_FILES_ASM); do mkdir -p `dirname $$i`; done
 
-$(BUILD_BIN_NAME): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
-	@$(LD) $(BUILD_OBJ_FILES) -T linker.ld -o $(BUILD_TMP_NAME)
-	@objdump -d $(BUILD_TMP_NAME) > $(MAP_NAME)
-	@objcopy -O binary $(BUILD_TMP_NAME) $(BUILD_BIN_NAME)
+$(BUILD_KERNEL): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
+	@$(LD) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -T linker.ld -o $@ -nmagic
+	@echo "LD -> $@"
+	@$(OBJDUMP) -d -S $@ > $(BUILD_KERNEL_MAP)
+	@echo "OBJDUMP -> $(BUILD_KERNEL_MAP)"
+	@$(OBJCOPY) --only-keep-debug $@ $@.dbg
+	@echo "OBJCOPY -> $@.dbg"
+	@$(OBJCOPY) --strip-debug $@
 
-$(OBJ_FILES_C):%.o:%.c
-	@$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@
+$(OBJ_FILES_C):$(BUILD_KERNEL_DIR)/%.o:%.c
+	@$(CC) $(CC_OPTIONS) -c ./$< -o $@
+	@echo "CC -> $@"
 
-$(OBJ_FILES_ASM):%.o:%.asm
-	@$(NASM) $< -f elf64 -o $(BUILD_DIR)/$@
-
-clean:
-	@rm -f	$(MAP_NAME)
-	@rm -rf $(BUILD_DIR)
+$(OBJ_FILES_ASM):$(BUILD_KERNEL_DIR)/%.o:%.S
+	@$(CC) $(CC_OPTIONS) -c ./$< -o $@
+	@echo "CC -> $@"

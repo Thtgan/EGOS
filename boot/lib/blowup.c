@@ -1,11 +1,11 @@
-#include<blowup.h>
+#include<lib/blowup.h>
 
-#include<biosIO.h>
-#include<printf.h>
-#include<realmode.h>
+#include<kit/types.h>
+#include<lib/print.h>
+#include<real/simpleAsmLines.h>
 
 __attribute__((noreturn))
-void blowup(const char* format, ...) {
+void blowup(ConstCstring format, ...) {
     char buf[1024];
 
     va_list args;
@@ -15,7 +15,7 @@ void blowup(const char* format, ...) {
 
     va_end(args);
 
-    biosPrint(buf);
+    print(buf);
 
     die();
 }

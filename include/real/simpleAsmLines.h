@@ -124,6 +124,50 @@ __WRITE_MEMORY_FUNC_SEG(16, GS);
 __WRITE_MEMORY_FUNC_SEG(32, GS);
 __WRITE_MEMORY_FUNC_SEG(64, GS);
 
+#define SEG_REG_INLINE_NAME_DS  ds
+#define SEG_REG_INLINE_NAME_ES  es
+#define SEG_REG_INLINE_NAME_FS  fs
+#define SEG_REG_INLINE_NAME_GS  gs
+
+#define SEG_REG_INLINE_NAME(__REG) MACRO_EVAL(MACRO_CONCENTRATE2(SEG_REG_INLINE_NAME_, __REG))
+
+#define __GET_SEGMENT_FUNC_HEADER(__SEGMENT)                \
+static inline Uint16 MACRO_CONCENTRATE2(get, __SEGMENT) ()
+
+#define __GET_SEGMENT_FUNC_INLINE_ASM(__SEGMENT)                        \
+"movw %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) ", %0"  \
+: "=rm" (ret)
+
+#define __GET_SEGMENT_FUNC(__SEGMENT)                       \
+__GET_SEGMENT_FUNC_HEADER(__SEGMENT) {                      \
+    Uint16 ret;                                             \
+    asm volatile(__GET_SEGMENT_FUNC_INLINE_ASM(__SEGMENT)); \
+    return ret;                                             \
+}
+
+__GET_SEGMENT_FUNC(DS)
+__GET_SEGMENT_FUNC(ES)
+__GET_SEGMENT_FUNC(FS)
+__GET_SEGMENT_FUNC(GS)
+
+#define __SET_SEGMENT_FUNC_HEADER(__SEGMENT)                                                    \
+static inline void MACRO_CONCENTRATE2(set, __SEGMENT) (Uint16 SEG_REG_INLINE_NAME(__SEGMENT))
+
+#define __SET_SEGMENT_FUNC_INLINE_ASM(__SEGMENT)                    \
+"movw %0, %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) \
+:                                                                   \
+: "rm" (SEG_REG_INLINE_NAME(__SEGMENT))
+
+#define __SET_SEGMENT_FUNC(__SEGMENT)                       \
+__SET_SEGMENT_FUNC_HEADER(__SEGMENT) {                      \
+    asm volatile(__SET_SEGMENT_FUNC_INLINE_ASM(__SEGMENT)); \
+}
+
+__SET_SEGMENT_FUNC(DS)
+__SET_SEGMENT_FUNC(ES)
+__SET_SEGMENT_FUNC(FS)
+__SET_SEGMENT_FUNC(GS)
+
 #define __READ_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH)                                   \
 static inline UINT(__LENGTH) MACRO_CONCENTRATE4(readRegister_, __REGISTER, _, __LENGTH) ()
 
@@ -281,9 +325,9 @@ __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfq);
 
 __attribute__((noreturn))
 static inline void die() {
-    hltLabel:
-    hlt();
-    goto hltLabel;
+    while (1) {
+        hlt();
+    }
 }
 
 #define PUSH(__LENGTH) MACRO_EVAL(MACRO_CALL(MACRO_CONCENTRATE2, push, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))

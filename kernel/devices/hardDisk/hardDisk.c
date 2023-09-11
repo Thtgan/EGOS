@@ -365,7 +365,7 @@ static bool __checkBootDisk(Disk* d) {
     Uint16* MBR = allocateBuffer(BUFFER_SIZE_512);
     __readSectors(d, 0, MBR, 1);
 
-    bool ret = (MBR[219] == SYSTEM_INFO_MAGIC16) && (MBR[255] == 0xAA55);
+    bool ret = (MBR[219] == SYSTEM_INFO_MAGIC) && (MBR[255] == 0xAA55);
 
     releaseBuffer(MBR, BUFFER_SIZE_512);
 

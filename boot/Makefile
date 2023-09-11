@@ -1,59 +1,61 @@
-NASM 						= 	nasm
-CC 							= 	x86_64-elf-gcc
-CC_OPTIONS 					= 	-nostdlib			\
+include $(RELATIVE_BASE)/global.mk
+include $(RELATIVE_BASE)/tools.mk
+
+CC_OPTIONS 					:= 	-nostdlib			\
 								-nostdinc			\
 								-ffreestanding		\
 								-mno-red-zone		\
-								-m16				\
-								-I.	 				\
+								-mno-mmx			\
+								-mno-sse			\
+								-mno-sse2			\
+								-m32				\
 								-I./include			\
-								-I./include/lib		\
 								-I../include		\
-								-Os					\
-								-march=i386			\
+								-O2					\
+								-g					\
 
-LD 							= 	x86_64-elf-ld
-LD_OPTIONS					=	-melf_i386
+BUILD_BOOTLOADER_MAP_NAME	:=	bootMap.txt
+BUILD_BOOTLOADER_MAP		:=	$(BUILD_BOORLOADER_DIR)/$(BUILD_BOOTLOADER_MAP_NAME)
 
-BUILD_DIR 					= 	./build
-BUILD_NAME					=	boot.bin
-BUILD_BIN_NAME 				=	$(BUILD_DIR)/$(BUILD_NAME)
+SOURCE_FILES_C				:=	$(shell find ./ -type f -name '*.c' | sort)
+OBJ_FILES_C					:=	$(patsubst ./%.c, $(BUILD_BOORLOADER_DIR)/%.o, $(SOURCE_FILES_C))
 
-C_FILES 					:= 	$(filter-out $(wildcard ./kernelEntry/*.c), $(shell find ./ -type f -name '*.c' | sort))
-ASM_FILES					:=	$(filter-out $(wildcard ./kernelEntry/*.asm), $(shell find ./ -type f -name '*.asm' | sort))
+SOURCE_FILES_ASM			:=	$(shell find ./ -type f -name '*.S' | sort)
+OBJ_FILES_ASM				:=  $(patsubst ./%.S, $(BUILD_BOORLOADER_DIR)/%.o, $(SOURCE_FILES_ASM))
 
-OBJ_FILES_C					:=	$(C_FILES:.c=.o)
-OBJ_FILES_ASM				:=  $(ASM_FILES:.asm=.o)
-ENTRY_OBJ_FILE				=	kernelEntry.o
+PROCESSED_LINKER_SCRIPT		:=	$(BUILD_BOORLOADER_DIR)/linker.ld
+BUILD_TARGET_BLOCK_SIZE		:= 	512
 
-BUILD_OBJ_FILES				:=	$(subst ./, $(BUILD_DIR)/, $(OBJ_FILES_ASM) $(OBJ_FILES_C) ./$(ENTRY_OBJ_FILE))
-
-.PHONY: all clean
+.PHONY: all test
 
 all: preBuild build postBuild
 
-preBuild:
+preBuild: buildDir
 
-build: buildDir $(BUILD_BIN_NAME)
+build: $(BUILD_BOOTLOADER)
 
 postBuild:
 
 buildDir:
-	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
+	@for i in $(OBJ_FILES_C) $(OBJ_FILES_ASM); do mkdir -p `dirname $$i`; done
+	
+$(BUILD_BOOTLOADER): $(OBJ_FILES_C) $(OBJ_FILES_ASM) $(PROCESSED_LINKER_SCRIPT)
+	@$(LD) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -T $(PROCESSED_LINKER_SCRIPT) -m elf_i386 -o $@
+	@echo "LD -> $@"
+	@$(OBJDUMP) -d -S $@ > $(BUILD_BOOTLOADER_MAP)
+	@echo "OBJDUMP -> $(BUILD_BOOTLOADER_MAP)"
+	@$(OBJCOPY) --only-keep-debug $@ $@.dbg
+	@echo "OBJCOPY -> $@.dbg"
+	@$(OBJCOPY) -O binary $@ $@
+	@$(DD) if=/dev/null of=$@ bs=1 count=1 seek=$$(expr $$(expr $$(stat -L -c %s $@) + $(BUILD_TARGET_BLOCK_SIZE) - 1) / $(BUILD_TARGET_BLOCK_SIZE) \* $(BUILD_TARGET_BLOCK_SIZE))
 
-$(BUILD_BIN_NAME): $(OBJ_FILES_ASM) $(OBJ_FILES_C) $(ENTRY_OBJ_FILE)
-	@$(LD) $(BUILD_OBJ_FILES) $(LD_OPTIONS) -T linker.ld -o $(BUILD_BIN_NAME)
+$(OBJ_FILES_C):$(BUILD_BOORLOADER_DIR)/%.o:%.c
+	@$(CC) $(CC_OPTIONS) -c ./$< -o $@
+	@echo "CC -> $@"
 
-$(OBJ_FILES_ASM):%.o:%.asm
-	@$(NASM) -i./ $< -f elf32 -o $(BUILD_DIR)/$@
+$(OBJ_FILES_ASM):$(BUILD_BOORLOADER_DIR)/%.o:%.S
+	@$(CC) $(CC_OPTIONS) -c ./$< -o $@
+	@echo "CC -> $@"
 
-$(OBJ_FILES_C):%.o:%.c
-	@$(CC) $(CC_OPTIONS) -c $< -o $(BUILD_DIR)/$@
-
-$(ENTRY_OBJ_FILE):
-	@cd kernelEntry && $(MAKE)
-	@mv ./kernelEntry/build/$(ENTRY_OBJ_FILE) $(BUILD_DIR)/$(ENTRY_OBJ_FILE)
-
-clean:
-	@rm -rf $(BUILD_DIR)
-	@cd kernelEntry && $(MAKE) clean
+$(PROCESSED_LINKER_SCRIPT): linker.lds.s
+	@$(CC) -E -P -x c -I../include $< > $(PROCESSED_LINKER_SCRIPT)

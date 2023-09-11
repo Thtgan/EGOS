@@ -6,7 +6,7 @@
 //CMOS RAM/RTC
 
 //CMOS register select index port
-#define CMOS_INDEX  0x70
+#define CMOS_INDEX                                          0x70
 
 #define CMOS_NMI_DISABLE                                    FLAG8(7)    //Non-Maskable Interrupt (not) disabled
 #define CMOS_INDEX_SELECT(__INDEX)                          TRIM_VAL_SIMPLE(__INDEX, 8, 7)

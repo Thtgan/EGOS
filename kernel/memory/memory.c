@@ -105,7 +105,7 @@ void __E820Audit() {
             continue;
         }
 
-        Uint32 endOfRegion = (e->base + e->size) >> PAGE_SIZE_SHIFT;
+        Uint32 endOfRegion = (e->base + e->length) >> PAGE_SIZE_SHIFT;
 
         if ((e->base >> PAGE_SIZE_SHIFT) <= mMap->freePageBegin && mMap->freePageBegin < endOfRegion) {
             mMap->freePageEnd = endOfRegion;

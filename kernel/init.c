@@ -28,18 +28,18 @@ static Result __enableInterrupt();
 static __InitFunc _initFuncs[] = {
     { initTerminalSwitch, "Terminal" },
     { initIDT, "Interrupt" },
-    { initMemory, "Memory" },
-    { initTSS, "TSS" },
-    { __printBootSlogan, NULL },
+    // { initMemory, "Memory" },
+    // { initTSS, "TSS" },
+    // { __printBootSlogan, NULL },
     { initKeyboard, "Keyboard" },
-    { initBlockDevice, "Block Device" },
-    { initSchedule, "Schedule" },
-    { initTimer, "Timer" },
+    // { initBlockDevice, "Block Device" },
+    // { initSchedule, "Schedule" },
+    // { initTimer, "Timer" },
     { __enableInterrupt, NULL },
-    { initHardDisk, "Hard Disk" },
-    { initFileSystem, "File System" },
-    { initVirtualDevices, "Virtual Device" },
-    { initUsermode, "User Mode" },
+    // { initHardDisk, "Hard Disk" },
+    // { initFileSystem, "File System" },
+    // { initVirtualDevices, "Virtual Device" },
+    // { initUsermode, "User Mode" },
     { NULL, NULL }
 };
 
@@ -66,6 +66,6 @@ static Result __printBootSlogan() {
 }
 
 static Result __enableInterrupt() {
-    sti();  //Cleared in LINK boot/pm.c#arch_boot_sys_pm_c_cli
+    sti();
     return RESULT_SUCCESS;
 }

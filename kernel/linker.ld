@@ -1,11 +1,10 @@
 OUTPUT_FORMAT(elf64-x86-64)
 
-ENTRY(kernelMain)
+ENTRY(boot64)
 
 SECTIONS {
-    . = 0x10000000000 + 0x20000;
+    . = 0x100000;
     .text ALIGN(0x1000) : {
-        ./build/kernelMain.o(.kernelMain)
         *(.text)
     }
 

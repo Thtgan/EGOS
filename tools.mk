@@ -1,0 +1,15 @@
+CC			:= 	x86_64-elf-gcc
+LD			:= 	x86_64-elf-ld
+OBJCOPY		:= 	objcopy
+OBJDUMP		:= 	objdump
+DD 			:= 	dd
+CAT 		:=	cat
+STRIP		:= 	strip
+PY			:= 	python3
+PARTED		:=	parted
+LOSETUP		:=	losetup
+PARTPROBE	:=	partprobe
+MKFS		:=	mkfs
+MOUNT		:=	mount
+UMOUNT		:=  umount
+CP 			:=	cp

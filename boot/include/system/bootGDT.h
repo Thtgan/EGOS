@@ -1,0 +1,9 @@
+#if !defined(__BOOT_GDT_H)
+#define __BOOT_GDT_H
+
+#define SEGMENT_PROTECTED16_CODE    0x08
+#define SEGMENT_PROTECTED16_DATA    0x10
+#define SEGMENT_PROTECTED32_CODE    0x18
+#define SEGMENT_PROTECTED32_DATA    0x20
+
+#endif // __BOOT_GDT_H

@@ -87,10 +87,12 @@ Result initPaging() {
     MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
 
     mMap->directPageTableBegin = mMap->directPageTableEnd = mMap->freePageBegin;
-    sysInfo->kernelTable = (Uintptr)setupPML4Table();
+    PML4Table* table = setupPML4Table();
+    // sysInfo->kernelTable = (Uintptr)setupPML4Table();
     mMap->freePageBegin = mMap->directPageTableEnd;
 
-    SWITCH_TO_TABLE((PML4Table*)sysInfo->kernelTable);
+    // SWITCH_TO_TABLE((PML4Table*)sysInfo->kernelTable);
+    SWITCH_TO_TABLE(table);
 
     registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
 

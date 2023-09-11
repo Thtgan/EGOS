@@ -122,7 +122,7 @@ Result phospherusCheckBlockDevice(BlockDevice* device) {
         return RESULT_FAIL;
     }
 
-    if (rootSuperNodeInfo->signature1 != SYSTEM_INFO_MAGIC64 || rootSuperNodeInfo->signature2 != SYSTEM_INFO_MAGIC64) {
+    if (rootSuperNodeInfo->signature1 != SYSTEM_INFO_MAGIC || rootSuperNodeInfo->signature2 != SYSTEM_INFO_MAGIC) {
         releaseBuffer(rootSuperNodeInfo, BUFFER_SIZE_512);
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
@@ -375,7 +375,7 @@ static Result __doDeployAllocator(BlockDevice* device, __DeviceInfo** infoPtr, _
         return RESULT_FAIL;
     }
 
-    info->signature = SYSTEM_INFO_MAGIC64;
+    info->signature = SYSTEM_INFO_MAGIC;
     //First free cluster of root super node is reserved for special purpose like root directory
     info->deviceFreeClusterNum = deviceSize / CLUSTER_BLOCK_SIZE - nodeNum - 1;
     info->firstFreeSuperNode = 0, info->lastFreeSuperNode = (nodeNum - 1) * __SUPER_NODE_SPAN;
@@ -395,7 +395,7 @@ static Result __doDeployAllocator(BlockDevice* device, __DeviceInfo** infoPtr, _
     //Public info
     __SuperNodeInfo* nodeInfo = &superNode->info;
     __ClusterStack* stack = &superNode->stack;
-    nodeInfo->signature1 = nodeInfo->signature2 = SYSTEM_INFO_MAGIC64;
+    nodeInfo->signature1 = nodeInfo->signature2 = SYSTEM_INFO_MAGIC;
 
     for (int i = 0; i < nodeNum; ++i) {
         nodeInfo->blockIndex = i * __SUPER_NODE_SPAN;

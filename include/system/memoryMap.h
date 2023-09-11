@@ -11,15 +11,15 @@
 
 typedef struct {
     Uint64 base;
-    Uint64 size;
+    Uint64 length;
     Uint32 type;
     Uint32 extendedAttributes;
 } __attribute__((packed)) MemoryMapEntry;
 
-#define MEMORY_AREA_NUM 16
+#define MEMORY_MAP_ENTRY_NUM 16
 
 typedef struct {
-    MemoryMapEntry memoryMapEntries[MEMORY_AREA_NUM];
+    MemoryMapEntry memoryMapEntries[MEMORY_MAP_ENTRY_NUM];
     Uint32 entryNum;
     Uint64 directPageTableBegin, directPageTableEnd;
     Uint64 physicalPageStructBegin, physicalPageStructEnd;

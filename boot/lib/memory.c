@@ -1,29 +1,50 @@
-#include<memory.h>
+#include<lib/memory.h>
 
 #include<kit/types.h>
 
-void* memset(void* dest, int ch, Size count) {
-    Uint8* ptr = (Uint8*)dest;
-    for (Size i = 0; i < count; ++i)
-        ptr[i] = ch;
-    return dest;
+void* memset(void* dst, int byte, Size n) {
+    asm volatile(
+        "rep stosb;"
+        :
+        : "D"(dst), "a"(byte), "c"(n)
+    );
+    return dst;
 }
 
-void* memcpy(void* des, const void* src, Size n) {
-    while(n--) {
-        *((Uint8*)des) = *((Uint8*)src);
-        ++src, ++des;
-    }
+void* memcpy(void* dst, const void* src, Size n) {
+    asm volatile(
+        "rep movsb;"
+        :
+        : "S"(src), "D"(dst), "c"(n)
+    );
+    return dst;
 }
 
-int memcmp(const void* ptr1, const void* ptr2, Size n) {
-    int ret = 0;
-    while (n--) {
-        if (*((Uint8*)ptr1) != *((Uint8*)ptr2)) {
-            ret = *((Uint8*)ptr1) < *((Uint8*)ptr2) ? -1 : 1;
-            break;
-        }
-        ++ptr1, ++ptr2;
+int memcmp(const void* src1, const void* src2, Size n) {
+    const char* p1 = src1, * p2 = src2;
+    int res = 0;
+
+    for (int i = 0; i < n && ((res = *p1 - *p2) == 0); ++i, ++p1, ++p2);
+
+    return res;
+}
+
+void* memmove(void* dst, const void* src, Size n) {
+    if (dst < src) {
+        asm volatile(
+            "rep movsb;"
+            :
+            : "S"(src), "D"(dst), "c"(n)
+        );
+    } else {
+        asm volatile(
+            "std;"
+            "rep movsb;"
+            "cld;"
+            :
+            : "S"(src + n - 1), "D"(dst + n - 1), "c"(n)
+        );
     }
-    return ret;
+
+    return dst;
 }

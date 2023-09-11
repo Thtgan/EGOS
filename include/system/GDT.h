@@ -67,14 +67,14 @@ typedef struct {
 
 //Macro to construct the GDT entry
 //Reference: https://wiki.osdev.org/Global_Descriptor_Table
-#define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) (GDTEntry) {                \
-    (Uint16)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
-    (Uint16)  EXTRACT_VAL(__BASE, 32, 0, 16),                                         \
-    (Uint8)   EXTRACT_VAL(__BASE, 32, 16, 24),                                        \
-    (Uint8)   (__ACCESS),                                                             \
-    EXTRACT_VAL(__LIMIT, 32, 16, 20),                                                   \
-    (__FLAGS),                                                                          \
-    (Uint8)   EXTRACT_VAL(__BASE, 32, 24, 32),                                        \
+#define BUILD_GDT_ENTRY(__BASE, __LIMIT, __ACCESS, __FLAGS) (GDTEntry) {    \
+    (Uint16)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                              \
+    (Uint16)  EXTRACT_VAL(__BASE, 32, 0, 16),                               \
+    (Uint8)   EXTRACT_VAL(__BASE, 32, 16, 24),                              \
+    (Uint8)   (__ACCESS),                                                   \
+    EXTRACT_VAL(__LIMIT, 32, 16, 20),                                       \
+    (__FLAGS),                                                              \
+    (Uint8)   EXTRACT_VAL(__BASE, 32, 24, 32),                              \
 }
 
 // +---------------+--------------+-------------+
@@ -117,14 +117,14 @@ typedef struct {
 } __attribute__((packed)) GDTEntryTSS_LDT;
 
 #define BUILD_GDT_ENTRY_TSS_LDT(__BASE, __LIMIT, __ACCESS, __FLAGS) (GDTEntryTSS_LDT) { \
-    (Uint16)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                        \
-    (Uint16)  EXTRACT_VAL(__BASE, 64, 0, 16),                                         \
-    (Uint8)   EXTRACT_VAL(__BASE, 64, 16, 24),                                        \
-    (Uint8)   (__ACCESS),                                                             \
+    (Uint16)  EXTRACT_VAL(__LIMIT, 32, 0, 16),                                          \
+    (Uint16)  EXTRACT_VAL(__BASE, 64, 0, 16),                                           \
+    (Uint8)   EXTRACT_VAL(__BASE, 64, 16, 24),                                          \
+    (Uint8)   (__ACCESS),                                                               \
     EXTRACT_VAL(__LIMIT, 32, 16, 20),                                                   \
     (__FLAGS),                                                                          \
-    (Uint8)   EXTRACT_VAL(__BASE, 64, 24, 32),                                        \
-    (Uint32)  EXTRACT_VAL(__BASE, 64, 32, 64),                                        \
+    (Uint8)   EXTRACT_VAL(__BASE, 64, 24, 32),                                          \
+    (Uint32)  EXTRACT_VAL(__BASE, 64, 32, 64),                                          \
     0                                                                                   \
 }
 

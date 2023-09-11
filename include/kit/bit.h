@@ -4,15 +4,6 @@
 #include<kit/macro.h>
 #include<kit/types.h>
 
-#define PTR(__LENGTH)                                               MACRO_EVAL(MACRO_CONCENTRATE2(PTR, __LENGTH))
-
-#define PTR8(__PTR)                                                 (*((Uint8*)(__PTR)))
-#define PTR16(__PTR)                                                (*((Uint16*)(__PTR)))
-#define PTR32(__PTR)                                                (*((Uint32*)(__PTR)))
-#define PTR64(__PTR)                                                (*((Uint64*)(__PTR)))
-
-#define UINT(__LENGTH)                                              MACRO_EVAL(MACRO_CONCENTRATE2(Uint, __LENGTH))
-
 #define ONE(__LENGTH)                                               (UINT(__LENGTH))1
 #define FULL_MASK(__LENGTH)                                         (UINT(__LENGTH))-1
 #define EMPTY_FLAGS                                                 0

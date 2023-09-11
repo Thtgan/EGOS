@@ -606,7 +606,7 @@ static Result __doMakeInode(BlockDevice* device, Index64 blockIndex, iNodeType t
     memset(record, 0, BLOCK_SIZE);
     record->dataSize = record->availableBlockSize = 0;
     record->blockTaken = 1;
-    record->signature = SYSTEM_INFO_MAGIC64;
+    record->signature = SYSTEM_INFO_MAGIC;
     record->type = type;
     record->linkCnt = 0;
 
@@ -661,7 +661,7 @@ static Result __doDeleteInode(FileSystem* this, Index64 iNodeBlock, void** recor
         return RESULT_FAIL;
     }
 
-    if (record->signature != SYSTEM_INFO_MAGIC64) {  //Validation failed
+    if (record->signature != SYSTEM_INFO_MAGIC) {  //Validation failed
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
     }
