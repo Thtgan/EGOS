@@ -7,10 +7,8 @@ This file describes the Virtual Memory Map of the EGOS:
 | 0x0000000000001000 - 0x00007FFFFFFFFFFF | 128TB - 4KB  | For user program's code, stack and heap(not yet)                 |
 | 0x0000800000000000 - 0xFFFF7FFFFFFFFFFF | ???          | Hole from sign extension                                         |
 | 0xFFFF800000000000 - 0xFFFFFEFFFFFFFFFF | 127TB        | Unused                                                           |
-| 0xFFFFFF0000000000 - 0xFFFFFF1FFFFFFFFF | 128GB        | Physical memory mapping                                          |
+| 0xFFFFFF0000000000 - 0xFFFFFF1FFFFFFFFF | 128GB        | Identical physical memory mapping                                |
 | 0xFFFFFF2000000000 - 0xFFFFFFFFBFFFFFFF | 895GB        | Unused                                                           |
-| 0xFFFFFFFFC0000000 - 0xFFFFFFFFCFFFFFFF | 256MB        | Kernel stack(Mapping from 0x0)                                   |
-| 0xFFFFFFFFD0000000 - 0xFFFFFFFFDFFFFFFF | 256MB        | Unused                                                           |
-| 0xFFFFFFFFE0000000 - 0xFFFFFFFFEFFFFFFF | 256MB        | Kernel text                                                      |
-| 0xFFFFFFFFF0000000 - 0xFFFFFFFFFFFFFFFF | 256MB        | Unused                                                           |
+| 0xFFFFFFFFC0000000 - 0xFFFFFFFFDFFFFFFF | 512MB        | Kernel text, data...                                             |
+| 0xFFFFFFFFE0000000 - 0xFFFFFFFFFFFFFFFF | 512MB        | Unused                                                           |
 #=========================================#==============#==================================================================#

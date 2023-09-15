@@ -19,8 +19,8 @@ typedef struct {
 #define MEMORY_MAP_ENTRY_NUM 16
 
 typedef struct {
-    MemoryMapEntry memoryMapEntries[MEMORY_MAP_ENTRY_NUM];
     Uint32 entryNum;
+    MemoryMapEntry memoryMapEntries[MEMORY_MAP_ENTRY_NUM];
     Uint64 directPageTableBegin, directPageTableEnd;
     Uint64 physicalPageStructBegin, physicalPageStructEnd;
     Uint64 freePageBegin, freePageEnd;

@@ -26,6 +26,8 @@ OBJ_FILES_C					:=	$(patsubst ./%.c, $(BUILD_KERNEL_DIR)/%.o, $(SOURCE_FILES_C))
 SOURCE_FILES_ASM			:=	$(shell find ./ -type f -name '*.S' | sort)
 OBJ_FILES_ASM				:=  $(patsubst ./%.S, $(BUILD_KERNEL_DIR)/%.o, $(SOURCE_FILES_ASM))
 
+PROCESSED_LINKER_SCRIPT		:=	$(BUILD_KERNEL_DIR)/linker.ld
+
 .PHONY: all clean
 
 all: preBuild build postBuild
@@ -39,8 +41,8 @@ postBuild:
 buildDir:
 	@for i in $(OBJ_FILES_C) $(OBJ_FILES_ASM); do mkdir -p `dirname $$i`; done
 
-$(BUILD_KERNEL): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
-	@$(LD) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -T linker.ld -o $@ -nmagic
+$(BUILD_KERNEL): $(OBJ_FILES_C) $(OBJ_FILES_ASM) $(PROCESSED_LINKER_SCRIPT)
+	@$(LD) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -T $(PROCESSED_LINKER_SCRIPT) -o $@ -nmagic
 	@echo "LD -> $@"
 	@$(OBJDUMP) -d -S $@ > $(BUILD_KERNEL_MAP)
 	@echo "OBJDUMP -> $(BUILD_KERNEL_MAP)"
@@ -55,3 +57,6 @@ $(OBJ_FILES_C):$(BUILD_KERNEL_DIR)/%.o:%.c
 $(OBJ_FILES_ASM):$(BUILD_KERNEL_DIR)/%.o:%.S
 	@$(CC) $(CC_OPTIONS) -c ./$< -o $@
 	@echo "CC -> $@"
+
+$(PROCESSED_LINKER_SCRIPT): linker.lds.s
+	@$(CC) -E -P -x c -I../include $< > $(PROCESSED_LINKER_SCRIPT)

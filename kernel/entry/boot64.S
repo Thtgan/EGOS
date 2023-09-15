@@ -1,6 +1,7 @@
 #include<kit/asm.h>
 #include<system/memoryLayout.h>
 
+.section .init
 .code32
 FUNC_BEGIN(boot64)
     lgdt    GDTdesc64
@@ -25,7 +26,7 @@ __kernelEntryLoop:
     jmp __kernelEntryLoop
 FUNC_END(boot64)
 
-.section .data
+.section .init.data
 .align 8
 GDTdesc64:
     .word   8 * 16 - 1

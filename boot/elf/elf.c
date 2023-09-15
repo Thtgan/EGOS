@@ -90,13 +90,13 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     return RESULT_SUCCESS;
 }
 
-Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader, void* loadTo) {
-    memset((void*)(Uintptr)programHeader->vAddr, 0, (Size)programHeader->segmentSizeInMemory);
+Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader) {
+    memset((void*)(Uintptr)programHeader->pAddr, 0, (Size)programHeader->segmentSizeInMemory);
     if (rawFileSeek(file, (Size)programHeader->offset) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
-    return rawFileRead(file, (void*)(Uintptr)programHeader->vAddr, (Size)programHeader->segmentSizeInFile);
+    return rawFileRead(file, (void*)(Uintptr)programHeader->pAddr, (Size)programHeader->segmentSizeInFile);
 }
 
 void* loadKernel(Volume* v, ConstCstring kernelPath) {
@@ -124,7 +124,7 @@ void* loadKernel(Volume* v, ConstCstring kernelPath) {
             return NULL;
         }
 
-        if (loadELF64Program(&kernelFile, &programHeader, (void*)(Uintptr)programHeader.vAddr) == RESULT_FAIL) {
+        if (loadELF64Program(&kernelFile, &programHeader) == RESULT_FAIL) {
             return NULL;
         }
     }

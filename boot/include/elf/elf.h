@@ -225,7 +225,7 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
  * @param programHeader Program header describes program to load
  * @return Result Result of the operation
  */
-Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader, void* loadTo);
+Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Unload ELF program loaded

@@ -12,7 +12,6 @@
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 
-
 void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
 IDTentry IDTtable[256];
@@ -42,7 +41,7 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
 
 Result initIDT() {
     idtDesc.size = (Uint16)sizeof(IDTtable) - 1;  //Initialize the IDT desc
-    idtDesc.tablePtr = (Uint64)IDTtable;
+    idtDesc.tablePtr = CONVERT_VPADDR_KERNEL((Uint64)IDTtable);
 
     for (int vec = 0; vec < 256; ++vec) {
         handlers[vec] = __defaultISRHalt;

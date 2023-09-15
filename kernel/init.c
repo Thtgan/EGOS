@@ -30,7 +30,7 @@ static __InitFunc _initFuncs[] = {
     { initIDT, "Interrupt" },
     // { initMemory, "Memory" },
     // { initTSS, "TSS" },
-    // { __printBootSlogan, NULL },
+    { __printBootSlogan, NULL },
     { initKeyboard, "Keyboard" },
     // { initBlockDevice, "Block Device" },
     // { initSchedule, "Schedule" },

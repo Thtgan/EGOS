@@ -6,6 +6,7 @@
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 #include<system/address.h>
+#include<system/memoryLayout.h>
 #include<system/pageTable.h>
 
 /**
@@ -57,11 +58,13 @@ Uintptr pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level);
 
 #define SWITCH_TO_TABLE(__PAGE_TABLE)               \
 do {                                                \
-    currentPageTable = __PAGE_TABLE;                    \
-    writeRegister_CR3_64((Uint64)currentPageTable);   \
+    currentPageTable = __PAGE_TABLE;                \
+    writeRegister_CR3_64((Uint64)currentPageTable); \
 } while(0)
 
 //Flush the TLB
 #define FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
+
+#define CONVERT_VPADDR_KERNEL(__ADDR) (typeof(__ADDR))((Uintptr)__ADDR ^ MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN)
 
 #endif // __PAGING_H
