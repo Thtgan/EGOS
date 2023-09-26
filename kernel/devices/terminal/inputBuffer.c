@@ -2,11 +2,12 @@
 
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
 
-#define __NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(Uint16) - 16) //-16 for kMalloc padding
+#define __NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(Uint16))
 
 typedef struct {
     QueueNode node;
@@ -45,7 +46,7 @@ void inputChar(InputBuffer* buffer, char ch) {
             --buffer->bufferSize;
         }
 
-        if (deleted && buffer->bufferSize == 0) {
+        if (deleted && lastNode->end == 0) {
             SinglyLinkedListNode* last = &buffer->bufferQueue.q;
             while (last->next != &lastNode->node) {
                 last = last->next;
@@ -113,7 +114,7 @@ int bufferGetLine(InputBuffer* buffer, char* writeTo) {
 }
 
 static __InputBufferNode* __allocateNode() {
-    __InputBufferNode* ret = pageAlloc(1, MEMORY_TYPE_PUBLIC);
+    __InputBufferNode* ret = convertAddressP2V(pageAlloc(1, MEMORY_TYPE_PUBLIC));
 
     initQueueNode(&ret->node);
     ret->begin = ret->end = 0;
@@ -124,5 +125,5 @@ static __InputBufferNode* __allocateNode() {
 
 static void __releaseNode(__InputBufferNode* node) {
     memset(node, 0, PAGE_SIZE);
-    pageFree(node);
+    pageFree(convertAddressV2P(node));
 }

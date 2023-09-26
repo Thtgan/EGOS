@@ -32,12 +32,7 @@ void bootEntry32(int drive) {
     }
 
     if (initE820(&mMap) == RESULT_SUCCESS) {
-        printf("%d memory areas detected\n", mMap.entryNum);
-        print("| Base Address | Area Length | Type |\n");
-        for (int i = 0; i < mMap.entryNum; ++i) {
-            const MemoryMapEntry* e = mMap.memoryMapEntries + i;
-            printf("|  %#010X  | %#010X  | %#04X |\n", (Uint32)e->base, (Uint32)e->length, e->type);
-        }
+        printMemoryMap(&mMap);
     } else {
         blowup("Error occured when initializing E820.\n");
     }
@@ -65,10 +60,12 @@ void bootEntry32(int drive) {
 
     Volume* bootVolume = volumeGetChild(driveVolume, 0);
 
-    void* kernelEntry = loadKernel(bootVolume, "/boot/kernel.elf");
+    void* kernelEntry = loadKernel(bootVolume, "/boot/kernel.elf", &mMap);
 
     if (kernelEntry == NULL) {
-        blowup("Not valid kernel!\n");
+        blowup("Load kernel failed\n");
+    } else {
+        printMemoryMap(&mMap);
     }
 
     enterKernel(kernelEntry, &mMap);

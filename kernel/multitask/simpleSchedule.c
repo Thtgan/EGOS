@@ -67,7 +67,7 @@ static Process* __getStatusQueueHead(__SimpleScheduler* scheduler, ProcessStatus
 static Result __removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
 
 Scheduler* createSimpleScheduler() {
-    __SimpleScheduler* ret = kMallocSpecific(sizeof(__SimpleScheduler), MEMORY_TYPE_PUBLIC);    //Share between processes
+    __SimpleScheduler* ret = kMallocSpecific(sizeof(__SimpleScheduler), MEMORY_TYPE_PUBLIC, 16);    //Share between processes
     if (ret == NULL) {
         return NULL;
     }

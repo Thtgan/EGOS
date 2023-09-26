@@ -2,9 +2,9 @@
 
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
 #include<structs/singlyLinkedList.h>
-#include<system/pageTable.h>
 
 static Size _bufferSizes[] = {
     16, 32, 64, 128, 256, 512, 1024, 2048, 4096
@@ -71,6 +71,7 @@ Result __addPage(BufferSizes size) {
         return RESULT_FAIL;
     }
 
+    page = convertAddressP2V(page);
     for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[size]) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)(page + j);
         initSinglyLinkedListNode(node);

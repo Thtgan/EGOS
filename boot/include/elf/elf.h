@@ -4,6 +4,7 @@
 #include<fs/fileSystem.h>
 #include<fs/volume.h>
 #include<kit/types.h>
+#include<system/memoryMap.h>
 
 #define ELF_IDENTIFICATION_MAGIC            0x464C457F  //0x7F + "ELF"
 
@@ -235,6 +236,6 @@ Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader
  */
 Result unloadELF64Program(ELF64ProgramHeader* programHeader);
 
-void* loadKernel(Volume* v, ConstCstring kernelPath);
+void* loadKernel(Volume* v, ConstCstring kernelPath, MemoryMap* mMap);
 
 #endif // __ELF_H

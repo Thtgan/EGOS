@@ -1,115 +1,57 @@
 #include<memory/memory.h>
 
-#include<devices/terminal/terminalSwitch.h>
-#include<kernel.h>
 #include<kit/types.h>
-#include<memory/buffer.h>
-#include<memory/kMalloc.h>
-#include<memory/physicalPages.h>
-#include<memory/paging/paging.h>
-#include<system/address.h>
-#include<system/memoryMap.h>
 
-/**
- * @brief Prepare the necessary information for memory, not done in boot stage for limitation on instructions
- */
-void __E820Audit();
-
-Result initMemory() {
-    __E820Audit();
-
-    if (initPaging() == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-
-    if (initPhysicalPage() == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-
-    if (initKmalloc() == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-
-    if (initBuffer() == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-
-    return RESULT_SUCCESS;
-}
-
-void* memcpy(void* des, const void* src, Size n) {
-    while(n--) {
-        *((Uint8*)des) = *((Uint8*)src);
-        ++src, ++des;
-    }
-}
-
-void* memset(void* ptr, int b, Size n) {
-    void* ret = ptr;
-    while (n--) {
-        *((Uint8*)ptr) = b;
-        ++ptr;
-    }
+void* memset(void* dst, int byte, Size n) {
+    void* ret = dst;
+    asm volatile(
+        "rep stosb;"
+        :
+        : "D"(dst), "a"(byte), "c"(n)
+    );
     return ret;
 }
 
-int memcmp(const void* ptr1, const void* ptr2, Size n) {
+void* memcpy(void* dst, const void* src, Size n) {
+    void* ret = dst;
+    asm volatile(
+        "rep movsb;"
+        :
+        : "S"(src), "D"(dst), "c"(n)
+    );
+    return ret;
+}
+
+int memcmp(const void* src1, const void* src2, Size n) {
+    const char* p1 = src1, * p2 = src2;
     int ret = 0;
-    while (n--) {
-        if (*((Uint8*)ptr1) != *((Uint8*)ptr2)) {
-            ret = *((Uint8*)ptr1) < *((Uint8*)ptr2) ? -1 : 1;
-            break;
-        }
-        ++ptr1, ++ptr2;
-    }
+    for (int i = 0; i < n && ((ret = *p1 - *p2) == 0); ++i, ++p1, ++p2);
     return ret;
 }
 
 void* memchr(const void* ptr, int val, Size n) {
-    void* ret = NULL;
-    while (n--) {
-        if (*((Uint8*)ptr) == val) {
-            ret = (void*)ptr;
-            break;
-        }
-        ++ptr;
-    }
-    return ret;
+    const char* p = ptr;
+    for (; n > 0 && *p != val; --n, ++p);
+    return n == 0 ? NULL : (void*)p;
 }
 
-void* memmove(void* des, const void* src, Size n) {
-    void* ret = des;
-    if (des < src) {
-        while (n--) {
-            *((Uint8*)des) = *((Uint8*)src);
-            ++src, ++des;
-        }
-    } else if (des > src) {
-        src += (n - 1), des += (n - 1);
-        while (n--) {
-            *((Uint8*)des) = *((Uint8*)src);
-            --src, --des;
-        }
+void* memmove(void* dst, const void* src, Size n) {
+    void* ret = dst;
+    if (dst < src) {
+        asm volatile(
+            "rep movsb;"
+            :
+            : "S"(src), "D"(dst), "c"(n)
+        );
+    } else {
+        asm volatile(
+            "std;"
+            "rep movsb;"
+            "cld;"
+            :
+            : "S"(src + n - 1), "D"(dst + n - 1), "c"(n)
+        );
     }
+
     return ret;
-}
-
-void __E820Audit() {
-    MemoryMap* mMap = (MemoryMap*)sysInfo->memoryMap;
-
-    mMap->freePageBegin = FREE_PAGE_BEGIN >> PAGE_SIZE_SHIFT;
-    for (int i = 0; i < mMap->entryNum; ++i) {
-        MemoryMapEntry* e = mMap->memoryMapEntries + i;
-
-        if (e->type != MEMORY_MAP_ENTRY_TYPE_RAM) {
-            continue;
-        }
-
-        Uint32 endOfRegion = (e->base + e->length) >> PAGE_SIZE_SHIFT;
-
-        if ((e->base >> PAGE_SIZE_SHIFT) <= mMap->freePageBegin && mMap->freePageBegin < endOfRegion) {
-            mMap->freePageEnd = endOfRegion;
-            break;
-        }
-    }
 }

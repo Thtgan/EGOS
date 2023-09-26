@@ -103,7 +103,7 @@ Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
     memmove(nextEntry, nextEntry + 1, (mMap->entryNum - index - 1) * sizeof(MemoryMapEntry));
     --mMap->entryNum;
 
-    entry->length += nextEntry->length;
+    entry->length = length1 + length2;
 
     printf(
         "Combine E820 entry: (%#010X, %#010X), (%#010X, %#010X)\n -> (%#010X, %#010X)\n",
@@ -111,4 +111,19 @@ Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
         );
 
     return RESULT_SUCCESS;
+}
+
+void E820TidyUp(MemoryMap* mMap) {
+    for (int i = 0; i < mMap->entryNum; ++i) {
+        while (E820CombineNextEntry(mMap, mMap->memoryMapEntries + i) == RESULT_SUCCESS);
+    }
+}
+
+void printMemoryMap(MemoryMap* mMap) {
+    printf("%d memory areas detected\n", mMap->entryNum);
+    print("| Base Address | Area Length | Type |\n");
+    for (int i = 0; i < mMap->entryNum; ++i) {
+        const MemoryMapEntry* e = mMap->memoryMapEntries + i;
+        printf("|  %#010X  | %#010X  | %#04X |\n", (Uint32)e->base, (Uint32)e->length, e->type);
+    }
 }

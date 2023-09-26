@@ -13,7 +13,7 @@ typedef enum {
     BUFFER_SIZE_1024,
     BUFFER_SIZE_2048,
     BUFFER_SIZE_4096
-} BufferSizes;
+}  BufferSizes;
 
 /**
  * @brief Initialize the buffer allocation

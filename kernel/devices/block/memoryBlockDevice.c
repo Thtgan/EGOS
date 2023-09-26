@@ -4,6 +4,7 @@
 #include<error.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<string.h>
@@ -24,18 +25,18 @@ BlockDevice* createMemoryBlockDevice(void* region, Size size, ConstCstring name)
         return NULL;
     }
 
-    Size blockSize = (size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    Size blockSize = ALIGN_UP(size, BLOCK_SIZE);
     memset(region, 0, size);
 
-    return createBlockDevice(name, RAM, blockSize, &_operations, (Object)region);   //RAM block device's additional data is its memory region's begin
+    return createBlockDevice(name, blockSize, &_operations, (Object)region);   //RAM block device's additional data is its memory region's begin
 }
 
 static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n) {
-    memcpy(buffer, (void*)this->additionalData + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE);  //Just simple memcpy
+    memcpy(buffer, (void*)this->handle + blockIndex * BLOCK_SIZE, n * BLOCK_SIZE);  //Just simple memcpy
     return RESULT_SUCCESS;
 }
 
 static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n) {
-    memcpy((void*)this->additionalData + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE);  //Just simple memcpy
+    memcpy((void*)this->handle + blockIndex * BLOCK_SIZE, buffer, n * BLOCK_SIZE);  //Just simple memcpy
     return RESULT_SUCCESS;
 }

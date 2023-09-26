@@ -4,8 +4,11 @@
 #include<fs/volume.h>
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<lib/memory.h>
 #include<lib/print.h>
+#include<system/E820.h>
+#include<system/memoryMap.h>
 #include<system/pageTable.h>
 
 Result readELF64Header(FileSystemEntry* file, ELF64Header* header) {
@@ -99,7 +102,7 @@ Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader
     return rawFileRead(file, (void*)(Uintptr)programHeader->pAddr, (Size)programHeader->segmentSizeInFile);
 }
 
-void* loadKernel(Volume* v, ConstCstring kernelPath) {
+void* loadKernel(Volume* v, ConstCstring kernelPath, MemoryMap* mMap) {
     FileSystemEntry kernelFile;
     if (rawFileSystemEntryOpen(v, kernelPath, &kernelFile, FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_FAIL) {
         return NULL;
@@ -124,10 +127,43 @@ void* loadKernel(Volume* v, ConstCstring kernelPath) {
             return NULL;
         }
 
+        Uint32 l2 = ALIGN_DOWN((Uint32)programHeader.pAddr, PAGE_SIZE), r2 = ALIGN_UP((Uint32)programHeader.pAddr + (Uint32)programHeader.segmentSizeInMemory, PAGE_SIZE);
+        
+        MemoryMapEntry* entry = NULL;
+        for (int i = 0; i < mMap->entryNum; ++i) {
+            MemoryMapEntry* e = mMap->memoryMapEntries + i;
+
+            if (RANGE_WITHIN((Uint32)e->base, (Uint32)e->base + (Uint32)e->length, l2, r2, <=, <=)) {
+                entry = e;
+            }
+        }
+
+        if (entry == NULL || entry->type != MEMORY_MAP_ENTRY_TYPE_RAM) {
+            return NULL;
+        }
+
+        Uint32 l1 = (Uint32)entry->base, r1 = (Uint32)entry->base + (Uint32)entry->length;
+
+        if (l1 < l2) {
+            if (E820SplitEntry(mMap, entry, l2 - l1, &entry) == RESULT_FAIL) {
+                return NULL;
+            }
+        }
+
+        if (r2 < r1) {
+            if (E820SplitEntry(mMap, entry, r2 - l2, NULL) == RESULT_FAIL) {
+                return NULL;
+            }
+        }
+
+        entry->type = MEMORY_MAP_ENTRY_TYPE_RESERVED;
+
         if (loadELF64Program(&kernelFile, &programHeader) == RESULT_FAIL) {
             return NULL;
         }
     }
+
+    E820TidyUp(mMap);
 
     return (void*)(Uintptr)header.entryVaddr;
 }

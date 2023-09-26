@@ -4,11 +4,17 @@
 .section .init
 .code32
 FUNC_BEGIN(boot64)
-    lgdt    GDTdesc64
+    mov     $initPML4Table, %eax
+    mov     %eax, %cr3
+
+    lgdt    GDTdesc64 
     mov     $GDTdesc64, %edi
     ljmp    $0x08, $kernelEntryRelay
 .code64
 kernelEntryRelay:
+    movq    $GDTable64, 2(%rdi)
+    lgdt    GDTdesc64
+
     mov     $0x10, %ax
     mov     %ax, %ds
     mov     %ax, %es
@@ -20,14 +26,31 @@ kernelEntryRelay:
     xor     %rbx, %rbx
     xor     %rcx, %rcx
     xor     %rdx, %rdx
+
     jmp     kernelEntry
 __kernelEntryLoop:
     hlt
-    jmp __kernelEntryLoop
+    jmp     __kernelEntryLoop
 FUNC_END(boot64)
 
-.section .init.data
 .align 8
 GDTdesc64:
     .word   8 * 16 - 1
-    .quad   GDTable64
+    .quad   (GDTable64 - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN)
+
+.section .init.pageTables
+.org 0x0000
+.align 0x1000
+initPML4Table:
+    .quad   0x0000000000102003
+    .fill   510, 8, 0x0000000000000000
+    .quad   0x0000000000103003
+
+.org 0x1000
+    .quad   0x0000000000000083
+    .fill   511, 8, 0x0000000000000000
+
+.org 0x2000
+    .fill   511, 8, 0x0000000000000000
+    .quad   0x0000000000000083
+

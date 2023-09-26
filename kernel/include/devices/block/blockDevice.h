@@ -9,22 +9,15 @@
 
 STRUCT_PRE_DEFINE(BlockDeviceOperation);
 
-typedef enum {
-    RAM,
-    HDD,
-    UNKNOWN
-} BlockDeviceType;
-
-RECURSIVE_REFER_STRUCT(BlockDevice) {
+typedef struct {
     char name[32];
-    BlockDeviceType type;
     ID deviceID;            //ID of the device
     Size availableBlockNum;
 
-    Object additionalData;  //Something to assist the block device working, can be anything
+    Object handle;          //Something to assist the block device working, can be anything
     BlockDeviceOperation* operations;
     HashChainNode hashChainNode;
-};
+} BlockDevice;
 
 STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
     /**
@@ -61,12 +54,11 @@ Result initBlockDevice();
  * @brief Create a block device, with basic information set, other information lisk additional information must be set manually
  * 
  * @param name Name of the device, not allowed to be duplicated with registered device
- * @param type Type of the device
  * @param availableBlockNum Number of block that device contains
  * @param operations Operation functions for block device
  * @return BlockDevice* Created block device, NULL if device has duplicated name with registered device
  */
-BlockDevice* createBlockDevice(const char* name, BlockDeviceType type, Size availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
+BlockDevice* createBlockDevice(const char* name, Size availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
 
 /**
  * @brief Release created block device, be sure that this device is NOT REGISTERED

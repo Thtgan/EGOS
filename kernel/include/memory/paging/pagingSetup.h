@@ -8,6 +8,8 @@
  * 
  * @return PML4Table* Created page table
  */
-PML4Table* setupPML4Table();
+PML4Table* setupPaging();
+
+Result setupPagingType(PML4Table* table);
 
 #endif // PAGING_SETUP_H

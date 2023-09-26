@@ -5,15 +5,18 @@
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
+#include<memory/paging/paging.h>
 #include<multitask/context.h>
 #include<print.h>
 #include<real/flags/eflags.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
+#include<system/pageTable.h>
 
 void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
+__attribute__((aligned(PAGE_SIZE)))
 IDTentry IDTtable[256];
 IDTdesc idtDesc;
 
@@ -41,7 +44,7 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
 
 Result initIDT() {
     idtDesc.size = (Uint16)sizeof(IDTtable) - 1;  //Initialize the IDT desc
-    idtDesc.tablePtr = CONVERT_VPADDR_KERNEL((Uint64)IDTtable);
+    idtDesc.tablePtr = (Uintptr)IDTtable;
 
     for (int vec = 0; vec < 256; ++vec) {
         handlers[vec] = __defaultISRHalt;

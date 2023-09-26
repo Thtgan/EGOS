@@ -86,7 +86,7 @@ Result closeVitualDevices() {
         return RESULT_FAIL;
     }
 
-    void* region = (void*)memDevice->additionalData;
+    void* region = (void*)memDevice->handle;
     releaseBlockDevice(memDevice);
     pageFree(region);
 

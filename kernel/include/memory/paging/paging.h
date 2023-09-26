@@ -5,7 +5,6 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<system/address.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
 
@@ -56,15 +55,26 @@ Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, Ui
  */
 Uintptr pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level);
 
-#define SWITCH_TO_TABLE(__PAGE_TABLE)               \
-do {                                                \
-    currentPageTable = __PAGE_TABLE;                \
-    writeRegister_CR3_64((Uint64)currentPageTable); \
+#define SWITCH_TO_TABLE(__PAGE_TABLE)                   \
+do {                                                    \
+    mm->currentPageTable = __PAGE_TABLE;                \
+    writeRegister_CR3_64((Uint64)mm->currentPageTable); \
 } while(0)
 
 //Flush the TLB
 #define FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
-#define CONVERT_VPADDR_KERNEL(__ADDR) (typeof(__ADDR))((Uintptr)__ADDR ^ MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN)
+static inline void* convertAddressV2P(void* vAddr) {
+    Uintptr v = (Uintptr)vAddr;
+    if (v < MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN) {
+        return NULL;
+    }
+
+    return (void*)(v - ((v >= MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN) ? MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN : MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN));
+}
+
+static inline void* convertAddressP2V(void* pAddr) {
+    return ((Uintptr)pAddr > MEMORY_LAYOUT_PHYSICAL_LIMITATION) ? NULL : pAddr + MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN;
+}
 
 #endif // __PAGING_H

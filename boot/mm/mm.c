@@ -24,21 +24,24 @@ static __MemoryNode* __initMemoryNode(void* base, Size length);
 static SinglyLinkedListNode* __firstFitSearch(Size size, Size align);
 
 Result initMemoryManager(MemoryMap* mMap) {
-    MemoryMapEntry* bMemoryRegionEntry = findE820Entry(mMap, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, true);
-    if (bMemoryRegionEntry == NULL) {
+    MemoryMapEntry* entry = findE820Entry(mMap, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, true);
+    if (entry == NULL) {
         return RESULT_FAIL;
     }
 
-    if (E820SplitEntry(mMap, bMemoryRegionEntry, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN - bMemoryRegionEntry->base, &bMemoryRegionEntry) == RESULT_FAIL) {
+    entry->type = MEMORY_MAP_ENTRY_TYPE_RESERVED;
+    if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN - entry->base, &entry) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    if (E820SplitEntry(mMap, bMemoryRegionEntry, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, NULL) == RESULT_FAIL) {
+    if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, &entry) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
+
+    entry->type = MEMORY_MAP_ENTRY_TYPE_RAM;
 
     initSinglyLinkedList(&_freeList);
-    __MemoryNode* firstNode = __initMemoryNode((void*)(Uintptr)bMemoryRegionEntry->base, bMemoryRegionEntry->length);
+    __MemoryNode* firstNode = __initMemoryNode((void*)(Uintptr)entry->base, entry->length);
     singlyLinkedListInsertNext(&_freeList, &firstNode->node);
 
     return RESULT_SUCCESS;

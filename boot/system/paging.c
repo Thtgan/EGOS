@@ -5,7 +5,6 @@
 #include<real/flags/cr4.h>
 #include<real/flags/msr.h>
 #include<real/simpleAsmLines.h>
-#include<system/address.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
@@ -25,7 +24,7 @@ void initPaging() {
     for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
         _PML4Table.tableEntries[i] = EMPTY_PML4_ENTRY;
     }
-    _PML4Table.tableEntries[0] = _PML4Table.tableEntries[KERNEL_VIRTUAL_BEGIN / PDPT_SPAN] = BUILD_PML4_ENTRY((Uint32)&_firstPDPtable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+    _PML4Table.tableEntries[0] = BUILD_PML4_ENTRY((Uint32)&_firstPDPtable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
 
     //Setting up PDP table
     for (int i = 0; i < PDP_TABLE_SIZE; ++i) {

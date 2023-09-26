@@ -241,8 +241,8 @@ typedef Uint64 PageTableEntry;
 //Build a Page Table entry with protection key
 #define BUILD_PAGE_TABLE_ENTRY_WITH_PROTECTION_KEY(__PAGE_ADDR, __FLAGS, __PROTECTION_KEY)  \
 (                                                                                           \
-    TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, 12, 52)         |                             \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                       |                           \
+    TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, 12, 52)       |                               \
+    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                   |                               \
     TRIM_VAL_RANGE((Uint64)(__PROTECTION_KEY), 64, 59, 63)                                  \
 )
 

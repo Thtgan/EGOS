@@ -6,6 +6,7 @@
 #include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
 #include<memory/paging/pagingCopy.h>
@@ -28,7 +29,7 @@
  * @param name Name of process
  * @return Process* Created process
  */
-static Process* __createProcess(Uint16 pid, ConstCstring name);
+static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStackTop);
 
 /**
  * @brief Allocate a PID
@@ -48,14 +49,17 @@ static Uint16 _lastGeneratePID = 0;
 static Bitmap _pidBitmap;
 static Uint8 _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
 
+__attribute__((aligned(PAGE_SIZE)))
+char initKernelStack[PROCESS_KERNEL_STACK_SIZE];
+
 Process* initProcess() {
     memset(&_pidBitmapBits, 0, sizeof(_pidBitmapBits));
     initBitmap(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
     setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
 
-    Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Init");
+    Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Init", initKernelStack + PROCESS_KERNEL_STACK_SIZE);
     mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
-    mainProcess->context.pageTable = currentPageTable;
+    mainProcess->context.pageTable = mm->currentPageTable;
 
     return mainProcess;
 }
@@ -79,22 +83,23 @@ Process* fork(ConstCstring name) {
         return NULL;
     }
     
-    Process* newProcess = __createProcess(newPID, name);
+    void* newStack = convertAddressP2V(pageAlloc(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE), MEMORY_TYPE_NORMAL));
+
+    Process* newProcess = __createProcess(newPID, name, newStack + 4 * PAGE_SIZE);
     newProcess->ppid = oldPID;
     PML4Table* newTable = copyPML4Table(schedulerGetCurrentProcess()->context.pageTable);
 
-    void* newStack = pageAlloc(KERNEL_STACK_PAGE_NUM, MEMORY_TYPE_NORMAL);
-    memset(newStack, 0, KERNEL_STACK_SIZE);
-    for (Uintptr i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
-        mapAddr(newTable, (void*)KERNEL_STACK_BOTTOM - i, newStack + KERNEL_STACK_SIZE - i);
-    }
+    // memset(newStack, 0, KERNEL_STACK_SIZE);
+    // for (Uintptr i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
+    //     mapAddr(newTable, (void*)KERNEL_STACK_BOTTOM - i, newStack + KERNEL_STACK_SIZE - i);
+    // }
 
     SAVE_REGISTERS();
-    memcpy(newStack, (void*)KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE, KERNEL_STACK_SIZE);
+    memcpy(newStack, (void*)schedulerGetCurrentProcess()->kernelStackTop - PROCESS_KERNEL_STACK_SIZE, PROCESS_KERNEL_STACK_SIZE);
 
     newProcess->context.pageTable = newTable;
     newProcess->context.rip = (Uint64)&__fork_return;
-    newProcess->context.rsp = readRegister_RSP_64();
+    newProcess->context.rsp = newProcess->kernelStackTop - (schedulerGetCurrentProcess()->kernelStackTop - readRegister_RSP_64());
 
     schedulerAddProcess(newProcess);
 
@@ -114,9 +119,9 @@ void exitProcess() {
 
 void releaseProcess(Process* process) {
     PML4Table* pageTable = process->context.pageTable;
-    void* pAddr = translateVaddr(pageTable, (void*)(KERNEL_STACK_BOTTOM - KERNEL_STACK_SIZE));
-    memset(pAddr, 0, KERNEL_STACK_SIZE);
-    pageFree(pAddr);
+    void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
+    memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
+    pageFree(convertAddressV2P(stackBottom));
 
     // if (process->userStackTop != NULL) {
     //     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
@@ -132,22 +137,22 @@ void releaseProcess(Process* process) {
 
     __releasePID(process->pid);
 
-    for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
-        if (process->fileSlots[i] != NULL) {
-            fileClose(process->fileSlots[i]);
-        }
-    }
-    Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
-    memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    pageFree(process->fileSlots);
+    // for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
+    //     if (process->fileSlots[i] != NULL) {
+    //         fileClose(process->fileSlots[i]);
+    //     }
+    // }
+    // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
+    // memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    // pageFree(process->fileSlots);
 
 
     memset(process, 0, PAGE_SIZE);
-    pageFree(process);
+    pageFree(convertAddressV2P(process));
 }
 
-static Process* __createProcess(Uint16 pid, ConstCstring name) {
-    Process* ret = pageAlloc(1, MEMORY_TYPE_PRIVATE);
+static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStackTop) {
+    Process* ret = convertAddressP2V(pageAlloc(1, MEMORY_TYPE_PRIVATE));
     memset(ret, 0, PAGE_SIZE);
 
     ret->pid = pid, ret->ppid = 0;
@@ -156,6 +161,7 @@ static Process* __createProcess(Uint16 pid, ConstCstring name) {
     ret->remainTick = PROCESS_TICK;
     ret->status = PROCESS_STATUS_UNKNOWN;
 
+    ret->kernelStackTop = (Uintptr)kernelStackTop;
     memset(&ret->context, 0, sizeof(Context));
     ret->registers = NULL;
 
@@ -165,11 +171,11 @@ static Process* __createProcess(Uint16 pid, ConstCstring name) {
     initQueueNode(&ret->statusQueueNode);
     initQueueNode(&ret->semaWaitQueueNode);
 
-    Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
-    ret->fileSlots = pageAlloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
-    memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
+    // ret->fileSlots = pageAlloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
+    // memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
-    ret->fileSlots[0] = getStandardOutputFile();
+    // ret->fileSlots[0] = getStandardOutputFile();
 
     return ret;
 }

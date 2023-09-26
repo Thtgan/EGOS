@@ -13,3 +13,5 @@ MKFS		:=	mkfs
 MOUNT		:=	mount
 UMOUNT		:=  umount
 CP 			:=	cp
+MKDIR 		:=	mkdir
+RM 			:=	rm

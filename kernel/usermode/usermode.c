@@ -86,20 +86,20 @@ extern void* __execute_return;
 
 __attribute__((naked))
 void __syscallHandlerExit(int ret) {
-    asm volatile(
-        "pushq %1;"         //SS
-        "pushq %2;"         //RSP
-        "pushfq;"           //EFLAGS
-        "pushq %3;"         //CS
-        "lea %4, %%rax;"    //Inline assembly magic
-        "pushq %%rax;"      //RIP
-        "mov 32(%%rsp), %%ds;"
-        "mov 32(%%rsp), %%es;"
-        "mov %0, %%eax;"
-        "iretq;"
-        :
-        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedulerGetCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
-    );
+    // asm volatile(
+    //     "pushq %1;"         //SS
+    //     "pushq %2;"         //RSP
+    //     "pushfq;"           //EFLAGS
+    //     "pushq %3;"         //CS
+    //     "lea %4, %%rax;"    //Inline assembly magic
+    //     "pushq %%rax;"      //RIP
+    //     "mov 32(%%rsp), %%ds;"
+    //     "mov 32(%%rsp), %%es;"
+    //     "mov %0, %%eax;"
+    //     "iretq;"
+    //     :
+    //     : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedulerGetCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
+    // );
 }
 
 static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, int* retPtr) {
@@ -164,7 +164,7 @@ static Result __doExecute(ConstCstring path, iNode** iNodePtr, File** filePtr, i
     
     SAVE_REGISTERS();
     
-    process->userExitStackTop = (void*)readRegister_RSP_64();
+    // process->userExitStackTop = (void*)readRegister_RSP_64();
     __jumpToUserMode((void*)header.entryVaddr, (void*)USER_STACK_BOTTOM);
     asm volatile (
         "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately

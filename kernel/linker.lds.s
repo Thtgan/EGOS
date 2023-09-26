@@ -8,10 +8,13 @@ SECTIONS {
     . = 0x100000;
     .init : {
         *(.init)
-        *(.init.*)
+        . = 0x1000;
+        *(.init.pageTables)
     }
 
     . += MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN;
+    pKernelRangeBegin = LOADADDR(.text);
+
     .text ALIGN(0x1000) : AT (ALIGN(ADDR(.text) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, 0x1000)) {
         *(.text)
     }
@@ -27,4 +30,6 @@ SECTIONS {
     .bss ALIGN(0x1000) : AT (ALIGN(ADDR(.bss) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, 0x1000)) {
         *(.bss)
     }
+
+    pKernelRangeEnd = LOADADDR(.bss) + SIZEOF(.bss);
 }

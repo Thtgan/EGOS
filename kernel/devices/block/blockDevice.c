@@ -19,7 +19,7 @@ Result initBlockDevice() {
     return RESULT_SUCCESS;
 }
 
-BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, Size availableBlockNum, BlockDeviceOperation* operations, Object additionalData) {
+BlockDevice* createBlockDevice(ConstCstring name, Size availableBlockNum, BlockDeviceOperation* operations, Object handle) {
     ID deviceID = (Uint16)strhash(name, 13, 65536);
     while (hashTableFind(&_hashTable, (Object)deviceID) != NULL) {
         ++deviceID;
@@ -30,11 +30,10 @@ BlockDevice* createBlockDevice(ConstCstring name, BlockDeviceType type, Size ava
 
     strcpy(ret->name, name);
 
-    ret->type = type;
     ret->deviceID = deviceID;
     ret->availableBlockNum = availableBlockNum;
     ret->operations = operations;
-    ret->additionalData = additionalData;
+    ret->handle = handle;
     initHashChainNode(&ret->hashChainNode);
 
     return ret;

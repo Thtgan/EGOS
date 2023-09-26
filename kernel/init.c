@@ -10,7 +10,7 @@
 #include<interrupt/IDT.h>
 #include<interrupt/TSS.h>
 #include<kit/types.h>
-#include<memory/memory.h>
+#include<memory/mm.h>
 #include<multitask/schedule.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
@@ -27,16 +27,16 @@ static Result __enableInterrupt();
 
 static __InitFunc _initFuncs[] = {
     { initTerminalSwitch, "Terminal" },
-    { initIDT, "Interrupt" },
-    // { initMemory, "Memory" },
-    // { initTSS, "TSS" },
     { __printBootSlogan, NULL },
+    { initIDT, "Interrupt" },
+    { initMemoryManager, "Memory" },
+    { initTSS, "TSS" },
     { initKeyboard, "Keyboard" },
-    // { initBlockDevice, "Block Device" },
-    // { initSchedule, "Schedule" },
-    // { initTimer, "Timer" },
+    { initBlockDevice, "Block Device" },
+    { initSchedule, "Schedule" },
+    { initTimer, "Timer" },
     { __enableInterrupt, NULL },
-    // { initHardDisk, "Hard Disk" },
+    { initHardDisk, "Hard Disk" },
     // { initFileSystem, "File System" },
     // { initVirtualDevices, "Virtual Device" },
     // { initUsermode, "User Mode" },

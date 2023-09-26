@@ -85,19 +85,20 @@ $(BUILD_TARGET): bootBuild kernelBuild
 	@$(MKFS).fat -F 32 $(LOOP_DEVICE_PATH)p1
 	@$(MOUNT) $(LOOP_DEVICE_PATH)p1 $(MOUNT_DIR)
 	@$(CP) -rf $(FILES_DIR)/. $(MOUNT_DIR)
-	@$(CP) $(BUILD_KERNEL) $(MOUNT_DIR)/boot/
+	@$(MKDIR) -p $(MOUNT_DIR)/boot
+	@$(CP) -rf $(BUILD_KERNEL) $(MOUNT_DIR)/boot
 	@$(UMOUNT) $(MOUNT_DIR)
 	@$(LOSETUP) -d $(LOOP_DEVICE_PATH)
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))
 
 buildDir:
-	@mkdir -p $(BUILD_BASE_DIR)
-	@mkdir -p $(TMP_DIR)
-	@mkdir -p $(MOUNT_DIR)
+	@$(MKDIR) -p $(BUILD_BASE_DIR)
+	@$(MKDIR) -p $(TMP_DIR)
+	@$(MKDIR) -p $(MOUNT_DIR)
 
 removeTmp:
-	@rm -rf $(MOUNT_DIR)
-	@rm -rf $(TMP_DIR)
+	@$(RM) -rf $(MOUNT_DIR)
+	@$(RM) -rf $(TMP_DIR)
 
 bootBuild:
 	@$(MAKE) -C ./boot RELATIVE_BASE=$(shell realpath --relative-to ./boot .)/$(RELATIVE_BASE)
@@ -106,7 +107,7 @@ kernelBuild:
 	@$(MAKE) -C ./kernel RELATIVE_BASE=$(shell realpath --relative-to ./kernel .)/$(RELATIVE_BASE)
 
 clean:
-	@rm -rf $(BUILD_BASE_DIR)
+	@$(RM) -rf $(BUILD_BASE_DIR)
 
 updateBootloader: bootBuild
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))

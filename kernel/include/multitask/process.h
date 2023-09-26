@@ -11,7 +11,8 @@
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
-#define MAXIMUM_PROCESS_NUM (1u << 16)
+#define MAXIMUM_PROCESS_NUM         (1u << 16)
+#define PROCESS_KERNEL_STACK_SIZE   (4 * PAGE_SIZE)
 
 typedef enum {
     PROCESS_STATUS_UNKNOWN, //Default status for all brand-new created process(After memset 0), shouldn't be used for new status
@@ -35,10 +36,11 @@ typedef struct {
     Uint16 remainTick;
     ProcessStatus status;
 
+    Uintptr kernelStackTop;
     Context context;
     Registers* registers;
 
-    void* userExitStackTop;
+    // void* userExitStackTop;
     // , * userStackTop, * userProgramBegin;
     // Size userProgramPageSize;
     

@@ -11,9 +11,10 @@
 #include<real/simpleAsmLines.h>
 #include<string.h>
 #include<structs/queue.h>
+#include<system/memoryLayout.h>
 
 static Terminal* _currentTerminal = NULL;
-static TerminalDisplayUnit* const _videoMemory = (TerminalDisplayUnit*) TEXT_MODE_BUFFER_BEGIN;
+static TerminalDisplayUnit* const _videoMemory = (TerminalDisplayUnit*)(TEXT_MODE_BUFFER_BEGIN + MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN);
 
 #define __ROW_INDEX_ADD(__BASE, __ADD, __BUFFER_ROW_SIZE)   (((__BASE) + (__ADD)) % (__BUFFER_ROW_SIZE))
 #define __ROW_STRING_LENGTH(__TERMINAL, __BUFFERX)                                                                                                  \

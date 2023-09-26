@@ -35,7 +35,7 @@ typedef struct {
 
 typedef struct {
     Uint16 size;
-    Uint32 tablePtr;
+    Uintptr tablePtr;
 } __attribute__((packed)) IDTdesc;
 
 /**

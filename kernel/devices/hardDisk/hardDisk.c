@@ -17,34 +17,23 @@
 #include<real/ports/HDC.h>
 #include<real/simpleAsmLines.h>
 #include<string.h>
-#include<system/address.h>
 #include<system/deviceIdentify.h>
 #include<system/systemInfo.h>
 
-__attribute__((aligned(sizeof(DeviceIdentifyData))))
 DeviceIdentifyData deviceIdentifies[4];
 
 typedef Uint32 LBA28_t;
 
-typedef struct {
-    Uint16 cylinder;
-    Uint8 head;
-    Uint8 sector;
-} CHSAddress;
-
-struct __Channel;
-
-typedef struct __Channel Channel;
+STRUCT_PRE_DEFINE(Channel);
 
 typedef struct {
     char name[8];
-    bool available, isMaster, isBoot;
+    bool available, isMaster;
     Channel* channel;
-    LBA28_t freeSectorBegin;
     DeviceIdentifyData* parameters; //Data inside is meanful iff available is true
 } Disk;
 
-struct __Channel {
+STRUCT_PRIVATE_DEFINE(Channel) {
     Uint16 portBase;
     bool waitingForInterrupt;
     Disk disks[2];
@@ -225,7 +214,6 @@ const Uint16 _channelPortBases[2] = {
 };
 
 Channel _channels[2];
-static char* _nameTemplate = "hd_";
 
 ISR_FUNC_HEADER(__channel1Handler) {
     if (_channels[0].waitingForInterrupt) {
@@ -263,6 +251,8 @@ Result initHardDisk() {
             d->available = false;
             d->isMaster = (j == 0);
 
+            d->parameters = &deviceIdentifies[i * 2 + j];
+
             Uint8 identifyStatus = __identifyDevice(d);
             if (d->parameters->generalConfiguration.isNotATA) {
                 printf(TERMINAL_LEVEL_DEBUG, "%s hard disk is not an ATA device, ignored.\n", d->name);
@@ -273,10 +263,6 @@ Result initHardDisk() {
                 printf(TERMINAL_LEVEL_DEBUG, "%s hard disk not available, final status: %#02X.\n", d->name, identifyStatus);
                 continue;
             }
-
-            d->isBoot = __checkBootDisk(d);
-
-            d->freeSectorBegin = d->isBoot ? (BOOT_DISK_FREE_BEGIN / SECTOR_SIZE) : 0;
 
             __registerDiskBlockDevice(d);   //Register as the block device
         }
@@ -357,29 +343,18 @@ static void __writeSectors(Disk* d, LBA28_t lba, const void* buffer, Uint8 n) {
 }
 
 static void __registerDiskBlockDevice(Disk* d) {
-    BlockDevice* device = createBlockDevice(d->name, HDD, d->parameters->addressableSectorNum - d->freeSectorBegin, &_operations, (Object)d);
+    BlockDevice* device = createBlockDevice(d->name, d->parameters->addressableSectorNum, &_operations, (Object)d);
     registerBlockDevice(device);
 }
 
-static bool __checkBootDisk(Disk* d) {
-    Uint16* MBR = allocateBuffer(BUFFER_SIZE_512);
-    __readSectors(d, 0, MBR, 1);
-
-    bool ret = (MBR[219] == SYSTEM_INFO_MAGIC) && (MBR[255] == 0xAA55);
-
-    releaseBuffer(MBR, BUFFER_SIZE_512);
-
-    return ret;
-}
-
 static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n) {
-    Disk* d = (Disk*)this->additionalData;
-    __readSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+    Disk* d = (Disk*)this->handle;
+    __readSectors(d, blockIndex, buffer, n);
     return RESULT_SUCCESS;
 }
 
 static Result __writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n) {
-    Disk* d = (Disk*)this->additionalData;
-    __writeSectors(d, d->freeSectorBegin + blockIndex, buffer, n);
+    Disk* d = (Disk*)this->handle;
+    __writeSectors(d, blockIndex, buffer, n);
     return RESULT_SUCCESS;
 }

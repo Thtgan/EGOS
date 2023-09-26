@@ -19,4 +19,8 @@ Result E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, 
 
 Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry);
 
+void E820TidyUp(MemoryMap* mMap);
+
+void printMemoryMap(MemoryMap* mMap);
+
 #endif // __E820_H

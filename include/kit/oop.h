@@ -7,7 +7,7 @@
 
 #define STRUCT_PRE_DEFINE(__STRUCT_NAME)                            \
 STRUCT_PRIVATE_DEFINE(__STRUCT_NAME);                               \
-typedef struct MACRO_CONCENTRATE2(__, __STRUCT_NAME) __STRUCT_NAME;
+typedef struct MACRO_CONCENTRATE2(__, __STRUCT_NAME) __STRUCT_NAME
 
 #define RECURSIVE_REFER_STRUCT(__STRUCT_NAME)                       \
 STRUCT_PRIVATE_DEFINE(__STRUCT_NAME);                               \
