@@ -81,7 +81,6 @@ static void __E820Audit(MemoryManager* mm) {
 
 void* mmBasicAllocatePages(MemoryManager* mm, Size n) {
     if (mm->initialized) {
-        MARK_PRINT(MARK);
         return NULL;
     }
 
@@ -90,8 +89,6 @@ void* mmBasicAllocatePages(MemoryManager* mm, Size n) {
     }
 
     void* ret = (void*)((Uint64)(mm->freePageBegin++) << PAGE_SIZE_SHIFT);
-    if (ret != NULL) {
-        memset(ret, 0, n * PAGE_SIZE);
-    }
+    memset(ret, 0, n * PAGE_SIZE);
     return ret;
 }

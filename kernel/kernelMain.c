@@ -89,6 +89,27 @@ void kernelMain(SystemInfo* info) {
     kFree(arr1);
     kFree(arr2);
 
+    BlockDevice* device = getBlockDeviceByName("HDA");
+    char buffer[512];
+    if (blockDeviceReadBlocks(device, 0, buffer, 1) == RESULT_SUCCESS) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 16; ++j) {
+                printf(TERMINAL_LEVEL_OUTPUT, "%02X ", (Uint8)buffer[16 * i + j]);
+            }
+            putchar(TERMINAL_LEVEL_OUTPUT, '\n');
+        }
+
+        printf(TERMINAL_LEVEL_OUTPUT, "================\n");
+
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 16; ++j) {
+                printf(TERMINAL_LEVEL_OUTPUT, "%02X ", (Uint8)buffer[448 + 16 * i + j]);
+            }
+            putchar(TERMINAL_LEVEL_OUTPUT, '\n');
+        }
+    }
+    
+
 //     do {
 //         File* ttyFile = NULL;
 //         if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {

@@ -1,7 +1,7 @@
 #include<init.h>
 
 #include<devices/block/blockDevice.h>
-#include<devices/hardDisk/hardDisk.h>
+#include<devices/ata/ata.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<devices/timer/timer.h>
@@ -36,7 +36,7 @@ static __InitFunc _initFuncs[] = {
     { initSchedule, "Schedule" },
     { initTimer, "Timer" },
     { __enableInterrupt, NULL },
-    { initHardDisk, "Hard Disk" },
+    { initATAdevices, "ATA Devices" },
     // { initFileSystem, "File System" },
     // { initVirtualDevices, "Virtual Device" },
     // { initUsermode, "User Mode" },
