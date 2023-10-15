@@ -10,7 +10,7 @@ Result ATA_PIOreadData(ATAdevice* device, ATAcommand* command, void* buffer) {
         return RESULT_FAIL;
     }
 
-    if (ATA_sendCommand(channel, command) == RESULT_FAIL || ATA_PIOreadBlocks(portBase, 1, buffer) == RESULT_FAIL) {
+    if (ATA_sendCommand(channel, command) == RESULT_FAIL || ATA_PIOreadBlocks(portBase, command->sectorCount, buffer) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -24,7 +24,7 @@ Result ATA_PIOwriteData(ATAdevice* device, ATAcommand* command, const void* buff
         return RESULT_FAIL;
     }
 
-    if (ATA_sendCommand(channel, command) == RESULT_FAIL || ATA_PIOwriteBlocks(portBase, 1, buffer) == RESULT_FAIL) {
+    if (ATA_sendCommand(channel, command) == RESULT_FAIL || ATA_PIOwriteBlocks(portBase, command->sectorCount, buffer) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
