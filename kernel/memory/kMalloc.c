@@ -31,9 +31,9 @@ typedef struct {
 } __attribute__((packed)) __RegionHeader;
 
 #define MIN_REGION_LENGTH_BIT       5
-#define MIN_REGION_LENGTH           VAL_LEFT_SHIFT(1, MIN_REGION_LENGTH_BIT)    //32B
+#define MIN_REGION_LENGTH           POWER_2(MIN_REGION_LENGTH_BIT)  //32B
 #define MAX_REGION_LENGTH_BIT       (PAGE_SIZE_SHIFT - 1)
-#define MAX_REGION_LENGTH           VAL_LEFT_SHIFT(1, MAX_REGION_LENGTH_BIT)
+#define MAX_REGION_LENGTH           POWER_2(MAX_REGION_LENGTH_BIT)
 #define REGION_LIST_NUM             (MAX_REGION_LENGTH_BIT - MIN_REGION_LENGTH_BIT + 1)
 
 #define PAGE_ALLOCATE_BATCH_SIZE    4  //Power of 2 is strongly recommended
@@ -82,9 +82,9 @@ Result initKmalloc() {
         for (int j = 0; j < REGION_LIST_NUM; ++j) {
             __RegionList* attributedRegionList = attributedRegionLists + j;
             initSinglyLinkedList(&attributedRegionList->list);
-            attributedRegionList->length = VAL_LEFT_SHIFT(1, j + MIN_REGION_LENGTH_BIT);
+            attributedRegionList->length    = POWER_2(j + MIN_REGION_LENGTH_BIT);
             attributedRegionList->regionNum = 0;
-            attributedRegionList->freeCnt = 0;
+            attributedRegionList->freeCnt   = 0;
         }
     }
 
@@ -115,7 +115,7 @@ void* kMallocSpecific(Size n, MemoryType type, Uint16 align) {
         for (level = 0; level < REGION_LIST_NUM && attributedRegionLists[level].length < realSize; ++level);
 
         base = __getRegion(level, type);
-        if (base != NULL && attributedRegionLists[level].length - realSize > 0) {
+        if (base != NULL && attributedRegionLists[level].length - realSize > MIN_REGION_LENGTH) {
             __recycleFragment(base + realSize, attributedRegionLists[level].length - realSize, level, attributedRegionLists);
         }
     }
@@ -150,14 +150,17 @@ void kFree(void* ptr) {
         return;
     }
 
+    Size size = header->size;
+    Int8 level = header->level;
     MemoryType type = header->type;
-
     void* base = ptr - header->padding;
-    if (header->level == -1) {
+
+    memset(header, 0, sizeof(__RegionHeader));
+    
+    if (level == -1) {
         pageFree(convertAddressV2P(base));
     } else {
-        Int8 level = header->level;
-        __recycleFragment(base, header->size, level, _regionLists[header->type]);
+        __recycleFragment(base, size, level, _regionLists[type]);
 
         __RegionList* regionList = _regionLists[type] + level;
         if (++regionList->freeCnt == FREE_BEFORE_TIDY_UP) {     //If an amount of free are called on this region list
@@ -165,8 +168,6 @@ void kFree(void* ptr) {
             regionList->freeCnt = 0;                            //Counter roll back to 0
         }
     }
-
-    memset(header, 0, sizeof(__RegionHeader));
 }
 
 void* kRealloc(void *ptr, Size newSize) {
@@ -215,10 +216,11 @@ static void* __getRegionFromList(__RegionList* regionList) {
         singlyLinkedListDeleteNext(&regionList->list);
         --regionList->regionNum;
     }
+
     return ret;
 }
 
-static void __addRegionToList(void* regionBegin, __RegionList* regionList) {
+static void __addRegionToList(void* regionBegin, __RegionList* regionList) {    
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)regionBegin;
     initSinglyLinkedListNode(node);
 
