@@ -8,6 +8,7 @@
 #include<memory/memory.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
+#include<print.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 

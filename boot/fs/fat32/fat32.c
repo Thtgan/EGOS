@@ -631,7 +631,7 @@ static Result __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* B
 
     context->FATrange           = RANGE_N(BPB->FATnum, context->reservedSectorNum, BPB->sectorPerFAT);
 
-    Uint32 rootDirectorryBegin  = context->reservedSectorNum + BPB->FATnum * BPB->sectorPerFAT, rootDirectorryLength = DIVIDE_ROUND_UP(32 * BPB->rootDirectoryEntryNum, BPB->bytePerSector);
+    Uint32 rootDirectorryBegin  = context->reservedSectorNum + BPB->FATnum * BPB->sectorPerFAT, rootDirectorryLength = BPB->rootDirectoryClusterNum * BPB->sectorPerCluster;
     context->rootDirectoryRange = RANGE(rootDirectorryBegin, rootDirectorryLength);
 
     Uint32 dataBegin            = rootDirectorryBegin - BPB->rootDirectoryClusterNum * BPB->sectorPerCluster, dataLength = v->sectorNum - dataBegin;

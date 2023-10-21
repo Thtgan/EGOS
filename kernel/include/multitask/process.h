@@ -1,7 +1,7 @@
 #if !defined(__PROCESS_H)
 #define __PROCESS_H
 
-#include<fs/file.h>
+// #include<fs/file.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<multitask/context.h>
@@ -49,7 +49,7 @@ typedef struct {
 
     int errorCode;
 
-    File** fileSlots;
+    // File** fileSlots;
 } Process;
 
 /**
@@ -87,31 +87,31 @@ void exitProcess();
  */
 void releaseProcess(Process* process);
 
-/**
- * @brief Allocate a slot for file
- * 
- * @param process Process
- * @param file File pointer
- * @return int Index of slot for file, INVALID_INDEX if slots are full
- */
-int allocateFileSlot(Process* process, File* file);
+// /**
+//  * @brief Allocate a slot for file
+//  * 
+//  * @param process Process
+//  * @param file File pointer
+//  * @return int Index of slot for file, INVALID_INDEX if slots are full
+//  */
+// int allocateFileSlot(Process* process, File* file);
 
-/**
- * @brief Get file from slot
- * 
- * @param process Process
- * @param index Index of slot
- * @return File* File pointer in slot, NULL if slot is empty
- */
-File* getFileFromSlot(Process* process, int index);
+// /**
+//  * @brief Get file from slot
+//  * 
+//  * @param process Process
+//  * @param index Index of slot
+//  * @return File* File pointer in slot, NULL if slot is empty
+//  */
+// File* getFileFromSlot(Process* process, int index);
 
-/**
- * @brief Release a file slot
- * 
- * @param process Process
- * @param index Index of slot to release
- * @return File* File stored in slot, NULL if slot is empty
- */
-File* releaseFileSlot(Process* process, int index);
+// /**
+//  * @brief Release a file slot
+//  * 
+//  * @param process Process
+//  * @param index Index of slot to release
+//  * @return File* File stored in slot, NULL if slot is empty
+//  */
+// File* releaseFileSlot(Process* process, int index);
 
 #endif // __PROCESS_H

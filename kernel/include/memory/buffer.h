@@ -4,15 +4,15 @@
 #include<kit/types.h>
 
 typedef enum {
-    BUFFER_SIZE_16,
-    BUFFER_SIZE_32,
-    BUFFER_SIZE_64,
-    BUFFER_SIZE_128,
-    BUFFER_SIZE_256,
-    BUFFER_SIZE_512,
-    BUFFER_SIZE_1024,
-    BUFFER_SIZE_2048,
-    BUFFER_SIZE_4096
+    BUFFER_SIZE_16      = 4,
+    BUFFER_SIZE_32      = 5,
+    BUFFER_SIZE_64      = 6,
+    BUFFER_SIZE_128     = 7,
+    BUFFER_SIZE_256     = 8,
+    BUFFER_SIZE_512     = 9,
+    BUFFER_SIZE_1024    = 10,
+    BUFFER_SIZE_2048    = 11,
+    BUFFER_SIZE_4096    = 12
 }  BufferSizes;
 
 /**

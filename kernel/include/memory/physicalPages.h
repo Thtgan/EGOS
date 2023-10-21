@@ -1,7 +1,6 @@
 #if !defined(PHYSICAL_PAGE_H)
 #define PHYSICAL_PAGE_H
 
-#include<debug.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/oop.h>

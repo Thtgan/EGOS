@@ -85,8 +85,19 @@ Result initATAdevices() {
             ATAdevice->channel = channel;
             ATAdevice->type = __getATAdeviceType(channel, j);
 
-            BlockDevice* blockDevice = createBlockDevice(ATAdevice->name, ATAdevice->sectorNum, &_operations, (Object)ATAdevice);
+            BlockDeviceArgs args = {
+                .name               = ATAdevice->name,
+                .availableBlockNum  = ATAdevice->sectorNum,
+                .bytePerBlockShift  = DEFAULT_BLOCK_SIZE_SHIFT,
+                .parent             = NULL,
+                .specificInfo       = (Object)ATAdevice,
+                .operations         = &_operations
+            };
+
+            BlockDevice* blockDevice = createBlockDevice(&args);
             registerBlockDevice(blockDevice);
+
+            probePartitions(blockDevice);
         }
     }
 
@@ -253,7 +264,7 @@ static Result __identifyATAPIdevice(ATAchannel* channel, void* buffer) {
 }
 
 static Result __ATAreadBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n) {
-    ATAdevice* device = (ATAdevice*)this->handle;
+    ATAdevice* device = (ATAdevice*)this->specificInfo;
 
     Index32 LBA28 = blockIndex;
     ATAcommand command = {
@@ -269,7 +280,7 @@ static Result __ATAreadBlocks(BlockDevice* this, Index64 blockIndex, void* buffe
 }
 
 static Result __ATAwriteBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n) {
-    ATAdevice* device = (ATAdevice*)this->handle;
+    ATAdevice* device = (ATAdevice*)this->specificInfo;
 
     Index32 LBA28 = blockIndex;
     ATAcommand command = {

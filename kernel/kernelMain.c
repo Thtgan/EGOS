@@ -1,3 +1,4 @@
+#include<debug.h>
 // #include<fs/fsutil.h>
 #include<init.h>
 // #include<kit/types.h>
@@ -20,13 +21,17 @@ char str[128];
 
 int* arr1, * arr2;
 
-// static void printLOGO();
+static void printLOGO();
 
 #include<kit/util.h>
 #include<system/memoryLayout.h>
 #include<memory/paging/paging.h>
 #include<memory/physicalPages.h>
 #include<interrupt/IDT.h>
+#include<fs/fat32/fat32.h>
+#include<fs/fsutil.h>
+
+extern FileSystem* rootFileSystem;
 
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
@@ -38,13 +43,7 @@ void kernelMain(SystemInfo* info) {
         blowup("Initialization failed");
     }
 
-    printf(TERMINAL_LEVEL_OUTPUT, "TEST\n");\
-
-    printf(TERMINAL_LEVEL_OUTPUT, "%X %X\n", mm->directPageTableBegin, mm->directPageTableEnd);
-    printf(TERMINAL_LEVEL_OUTPUT, "%X %X\n", mm->physicalPageStructBegin, mm->physicalPageStructEnd);
-    printf(TERMINAL_LEVEL_OUTPUT, "%X %X\n", mm->freePageBegin, mm->freePageEnd);
-
-//     printLOGO();
+    printLOGO();
 
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
@@ -80,7 +79,7 @@ void kernelMain(SystemInfo* info) {
 
         // int ret = execute("/bin/test");
         // printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
-        printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM SHOULD RETURNED");
+        printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM SHOULD RETURNED\n");
 
         exitProcess();
         // die();
@@ -88,28 +87,6 @@ void kernelMain(SystemInfo* info) {
 
     kFree(arr1);
     kFree(arr2);
-
-    BlockDevice* device = getBlockDeviceByName("HDA");
-    char buffer[512];
-    if (blockDeviceReadBlocks(device, 0, buffer, 1) == RESULT_SUCCESS) {
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 16; ++j) {
-                printf(TERMINAL_LEVEL_OUTPUT, "%02X ", (Uint8)buffer[16 * i + j]);
-            }
-            putchar(TERMINAL_LEVEL_OUTPUT, '\n');
-        }
-
-        printf(TERMINAL_LEVEL_OUTPUT, "================\n");
-
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 16; ++j) {
-                printf(TERMINAL_LEVEL_OUTPUT, "%02X ", (Uint8)buffer[448 + 16 * i + j]);
-            }
-            putchar(TERMINAL_LEVEL_OUTPUT, '\n');
-        }
-    }
-    
-
 //     do {
 //         File* ttyFile = NULL;
 //         if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {
@@ -130,14 +107,20 @@ void kernelMain(SystemInfo* info) {
     die();
 }
 
-// static void printLOGO() {
-//     char* buffer = allocateBuffer(BUFFER_SIZE_512);
-//     File* file = fileOpen("/LOGO.txt", FILE_FLAG_READ_ONLY);
-//     fileSeek(file, 0, FSUTIL_SEEK_END);
-//     Size fileSize = fileGetPointer(file);
-//     fileSeek(file, 0, FSUTIL_SEEK_BEGIN);
-//     Size read = fileRead(file, buffer, fileSize);
-//     printf(TERMINAL_LEVEL_OUTPUT, "%u bytes read:\n%s\n", fileSize, buffer);
-//     fileClose(file);
-//     releaseBuffer(buffer, BUFFER_SIZE_512);
-// }
+static void printLOGO() {
+    char buffer[512];
+    FileSystemEntryDescriptor desc;
+    FileSystemEntry entry;
+    if (fileSystemEntryOpen(&entry, &desc, "\\LOGO.txt", FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_SUCCESS) {
+        fileSeek(&entry, 0, FILE_SEEK_END);
+        Size fileSize = fileGetPointer(&entry);
+        fileSeek(&entry, 0, FILE_SEEK_BEGIN);
+
+        if (fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
+            buffer[fileSize] = '\0';
+            printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
+        }
+
+        fileSystemEntryClose(&entry);
+    }
+}

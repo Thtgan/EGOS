@@ -2,8 +2,8 @@
 
 #include<debug.h>
 #include<devices/virtualDevice.h>
-#include<fs/file.h>
-#include<fs/fsutil.h>
+// #include<fs/file.h>
+// #include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -180,35 +180,35 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
     return ret;
 }
 
-int allocateFileSlot(Process* process, File* file) {
-    for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
-        if (process->fileSlots[i] == NULL) {
-            process->fileSlots[i] = file;
-            return i;
-        }
-    }
+// int allocateFileSlot(Process* process, File* file) {
+//     for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+//         if (process->fileSlots[i] == NULL) {
+//             process->fileSlots[i] = file;
+//             return i;
+//         }
+//     }
 
-    return INVALID_INDEX;
-}
+//     return INVALID_INDEX;
+// }
 
-File* getFileFromSlot(Process* process, int index) {
-    if (index >= MAX_OPENED_FILE_NUM) {
-        return NULL;
-    }
+// File* getFileFromSlot(Process* process, int index) {
+//     if (index >= MAX_OPENED_FILE_NUM) {
+//         return NULL;
+//     }
 
-    return process->fileSlots[index];
-}
+//     return process->fileSlots[index];
+// }
 
-File* releaseFileSlot(Process* process, int index) {
-    if (index >= MAX_OPENED_FILE_NUM) {
-        return NULL;
-    }
+// File* releaseFileSlot(Process* process, int index) {
+//     if (index >= MAX_OPENED_FILE_NUM) {
+//         return NULL;
+//     }
 
-    File* ret =  process->fileSlots[index];
-    process->fileSlots[index] = NULL;
+//     File* ret =  process->fileSlots[index];
+//     process->fileSlots[index] = NULL;
     
-    return ret;
-}
+//     return ret;
+// }
 
 static Uint16 __allocatePID() {
     Uint16 pid = findFirstClear(&_pidBitmap, _lastGeneratePID);

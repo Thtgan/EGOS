@@ -37,7 +37,7 @@ static __InitFunc _initFuncs[] = {
     { initTimer, "Timer" },
     { __enableInterrupt, NULL },
     { initATAdevices, "ATA Devices" },
-    // { initFileSystem, "File System" },
+    { initFileSystem, "File System" },
     // { initVirtualDevices, "Virtual Device" },
     // { initUsermode, "User Mode" },
     { NULL, NULL }

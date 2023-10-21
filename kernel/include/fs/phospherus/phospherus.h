@@ -24,9 +24,9 @@ Result phospherusDeployFileSystem(BlockDevice* device);
  * @brief Check if the device has phospherus deployed, sets errorcode to indicate error
  * 
  * @param device Device to check
- * @return Result Result of the operation
+ * @return bool Is file system on this device
  */
-Result phospherusCheckFileSystem(BlockDevice* device);
+bool phospherusCheckFileSystem(BlockDevice* device);
 
 /**
  * @brief Open phospherus file system on device, sets errorcode to indicate error

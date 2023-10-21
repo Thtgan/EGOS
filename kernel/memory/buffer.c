@@ -22,7 +22,7 @@ SinglyLinkedList bufferLists[9];
  * 
  * @return Result Result of the operation
  */
-Result __addPage(BufferSizes size);
+Result __addPage(Index8 level);
 
 Result initBuffer() {
     for (int i = 0; i < 9; ++i) {
@@ -38,20 +38,21 @@ Result initBuffer() {
 }
 
 Size getTotalBufferNum(BufferSizes size) {
-    return _bufferNums[size];
+    return _bufferNums[size - BUFFER_SIZE_16];
 }
 
 Size getFreeBufferNum(BufferSizes size) {
-    return _freeBufferNums[size];
+    return _freeBufferNums[size - BUFFER_SIZE_16];
 }
 
 void* allocateBuffer(BufferSizes size) {
-    if (isSinglyListEmpty(&bufferLists[size])) {
-        __addPage(size);
+    Index8 level = size - BUFFER_SIZE_16;
+    if (isSinglyListEmpty(&bufferLists[level])) {
+        __addPage(level);
     }
 
-    void* ret = singlyLinkedListGetNext(&bufferLists[size]);
-    singlyLinkedListDeleteNext(&bufferLists[size]);
+    void* ret = singlyLinkedListGetNext(&bufferLists[level]);
+    singlyLinkedListDeleteNext(&bufferLists[level]);
     return ret;
 }
 
@@ -59,12 +60,12 @@ void releaseBuffer(void* buffer, BufferSizes size) {
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)buffer;
 
     initSinglyLinkedListNode(node);
-    singlyLinkedListInsertNext(&bufferLists[size], node);
+    singlyLinkedListInsertNext(&bufferLists[size - BUFFER_SIZE_16], node);
 }
 
-Result __addPage(BufferSizes size) {
-    _bufferNums[size] += PAGE_SIZE / _bufferSizes[size];
-    _freeBufferNums[size] += PAGE_SIZE / _bufferSizes[size];
+Result __addPage(Index8 level) {
+    _bufferNums[level] += PAGE_SIZE / _bufferSizes[level];
+    _freeBufferNums[level] += PAGE_SIZE / _bufferSizes[level];
 
     void* page = pageAlloc(1, MEMORY_TYPE_NORMAL);
     if (page == NULL) {
@@ -72,11 +73,11 @@ Result __addPage(BufferSizes size) {
     }
 
     page = convertAddressP2V(page);
-    for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[size]) {
+    for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[level]) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)(page + j);
         initSinglyLinkedListNode(node);
 
-        singlyLinkedListInsertNext(&bufferLists[size], node);
+        singlyLinkedListInsertNext(&bufferLists[level], node);
     }
 
     return RESULT_SUCCESS;

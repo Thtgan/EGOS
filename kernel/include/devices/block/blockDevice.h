@@ -3,21 +3,47 @@
 
 #include<kit/oop.h>
 #include<kit/types.h>
+#include<memory/buffer.h>
 #include<structs/hashTable.h>
+#include<structs/singlyLinkedList.h>
 
-#define BLOCK_SIZE 512
+#define DEFAULT_BLOCK_SIZE          512
+#define DEFAULT_BLOCK_SIZE_SHIFT    9
+
+#define BLOCK_DEVICE_NAME_LENGTH    31
 
 STRUCT_PRE_DEFINE(BlockDeviceOperation);
 
-typedef struct {
-    char name[32];
-    ID deviceID;            //ID of the device
-    Size availableBlockNum;
+STRUCT_PRE_DEFINE(BlockDevice);
 
-    Object handle;          //Something to assist the block device working, can be anything
-    BlockDeviceOperation* operations;
-    HashChainNode hashChainNode;
-} BlockDevice;
+typedef struct {
+    ConstCstring            name;
+    Size                    availableBlockNum;
+    Uint8                   bytePerBlockShift;
+    BlockDevice*            parent;
+    Object                  specificInfo;
+    BlockDeviceOperation*   operations;
+} BlockDeviceArgs;
+
+STRUCT_PRIVATE_DEFINE(BlockDevice) {
+    char                        name[BLOCK_DEVICE_NAME_LENGTH];
+    ID                          deviceID;   //ID of the device
+    Size                        availableBlockNum;
+
+    Uint8                       bytePerBlockShift;
+
+    Flags8                      flags;
+#define BLOCK_DEVICE_FLAGS_BOOTABLE FLAG8(0)
+
+    BlockDevice*                parent;
+    Uint8                       childNum;
+    SinglyLinkedList            children;
+    SinglyLinkedListNode        node;
+
+    Object                      specificInfo; //Something to assist the block device working, can be anything
+    BlockDeviceOperation*       operations;
+    HashChainNode               hashChainNode;
+};
 
 STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
     /**
@@ -50,15 +76,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
  */
 Result initBlockDevice();
 
-/**
- * @brief Create a block device, with basic information set, other information lisk additional information must be set manually
- * 
- * @param name Name of the device, not allowed to be duplicated with registered device
- * @param availableBlockNum Number of block that device contains
- * @param operations Operation functions for block device
- * @return BlockDevice* Created block device, NULL if device has duplicated name with registered device
- */
-BlockDevice* createBlockDevice(const char* name, Size availableBlockNum, BlockDeviceOperation* operations, Object additionalData);
+BlockDevice* createBlockDevice(BlockDeviceArgs* args);
 
 /**
  * @brief Release created block device, be sure that this device is NOT REGISTERED
@@ -123,6 +141,8 @@ static inline Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockInd
  */
 static inline Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n) {
     return device->operations->writeBlocks(device, blockIndex, buffer, n);
-} 
+}
+
+Result probePartitions(BlockDevice* device);
 
 #endif // __BLOCK_DEVICE_H

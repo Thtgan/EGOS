@@ -1,16 +1,23 @@
 #if !defined(__UTIL_H)
 #define __UTIL_H
 
+#include<kit/bit.h>
+#include<kit/macro.h>
 #include<kit/types.h>
-#include<kit/util.h>
 
-#define PTR_TO_VALUE(__LENGTH, __PTR)                           (*(MACRO_EVAL(MACRO_CONCENTRATE2(Uint, __LENGTH))*)(__PTR))
+#define PTR_TO_VALUE(__LENGTH, __PTR)                           (*(UINT(__LENGTH)*)(__PTR))
 
 #define DIVIDE_ROUND_UP(__X, __Y)                               (((__X) + (__Y) - 1) / (__Y))
 #define DIVIDE_ROUND_DOWN(__X, __Y)                             ((__X) / (__Y))
 
-#define ALIGN_UP(__X, __Y)                                      (((__X) + (__Y) - 1) / (__Y) * (__Y))
-#define ALIGN_DOWN(__X, __Y)                                    ((__X) / (__Y) * (__Y))
+#define ALIGN_UP(__X, __Y)                                      (DIVIDE_ROUND_UP(__X, __Y) * (__Y))
+#define ALIGN_DOWN(__X, __Y)                                    (DIVIDE_ROUND_DOWN(__X, __Y) * (__Y))
+
+#define DIVIDE_ROUND_UP_SHIFT(__X, __SHIFT)                     (VAL_RIGHT_SHIFT(__X, __SHIFT) + (((__X) & MASK_SIMPLE(64, __SHIFT)) != 0))
+#define DIVIDE_ROUND_DOWN_SHIFT(__X, __SHIFT)                   VAL_RIGHT_SHIFT(__X, __SHIFT)
+
+#define ALIGN_UP_SHIFT(__X, __SHIFT)                            (DIVIDE_ROUND_UP_SHIFT(__X, __SHIFT) <<__SHIFT)
+#define ALIGN_DOWN_SHIFT(__X, __SHIFT)                          (DIVIDE_ROUND_DOWN_SHIFT(__X, __SHIFT) <<__SHIFT)
 
 //Get the host pointer containing the node
 #define HOST_POINTER(__NODE_PTR, __TYPE, __MEMBER)              ((__TYPE*)(((void*)(__NODE_PTR)) - offsetof(__TYPE, __MEMBER)))
@@ -23,6 +30,25 @@
 
 #define VALUE_WITHIN(__L1, __R1, __VAL, __CMP1, __CMP2)         ((__L1) __CMP1 (__VAL) && (__VAL) __CMP2 (__R1))
 
+#define POWER_2(__SHIFT)                                        (VAL_LEFT_SHIFT(ONE(64), __SHIFT))
 #define IS_POWER_2(__VAL)                                       (((__VAL) & ((__VAL) - 1)) == 0)
+
+#define __BATCH_ALLOCATE_SIZE(__TYPE)                           ALIGN_UP(sizeof(__TYPE), 16)
+
+#define BATCH_ALLOCATE_SIZE(...)                                FOREACH_MACRO_CALL(__BATCH_ALLOCATE_SIZE, +, __VA_ARGS__)
+
+#define __BATCH_ALLOCATE_DEFINE_PTRS_CALL(__PACKET)             __BATCH_ALLOCATE_DEFINE_PTRS __PACKET
+
+#define __BATCH_ALLOCATE_DEFINE_PTRS(__TYPE, __NAME)            __TYPE* __NAME = NULL;
+
+#define __BATCH_ALLOCATE_ASSIGN_PTRS_CALL(__PACKET)             __BATCH_ALLOCATE_ASSIGN_PTRS __PACKET
+
+#define __BATCH_ALLOCATE_ASSIGN_PTRS(__TYPE, __NAME)            __NAME = (__TYPE*)_tempPtr; _tempPtr += __BATCH_ALLOCATE_SIZE(__TYPE);
+
+#define BATCH_ALLOCATE_DEFINE_PTRS(__PTR, ...)                  FOREACH_MACRO_CALL(__BATCH_ALLOCATE_DEFINE_PTRS_CALL, , __VA_ARGS__)        \
+                                                                if ((__PTR) != NULL) {                                                      \
+                                                                    void* _tempPtr = __PTR;                                                 \
+                                                                    FOREACH_MACRO_CALL(__BATCH_ALLOCATE_ASSIGN_PTRS_CALL, , __VA_ARGS__)    \
+                                                                }                                                                           \
 
 #endif // __UTIL_H

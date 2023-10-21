@@ -13,7 +13,7 @@ __attribute__((noreturn))
  */
 void blowup(const Cstring format, ...);
 
-#define MARK_PRINT(__INFO)                          printf(TERMINAL_LEVEL_DEV, MACRO_STR(__INFO) " at %s, line %d\n", __FILE__, __LINE__)
+#define MARK_PRINT(__INFO)                          printf(TERMINAL_LEVEL_DEBUG, MACRO_STR(__INFO) " at %s, line %d\n", __FILE__, __LINE__)
 
 #define ASSERT_SILENT(__EXPRESSION)                 do { if (!(__EXPRESSION)) blowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
 

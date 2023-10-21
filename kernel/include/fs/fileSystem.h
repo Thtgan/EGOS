@@ -1,105 +1,42 @@
 #if !defined(__FILESYSTEM_H)
 #define __FILESYSTEM_H
 
-#include<fs/directory.h>
-#include<fs/file.h>
+#include<fs/fileSystemEntry.h>
+#include<fs/fsPreDefines.h>
 #include<fs/inode.h>
+#include<kit/oop.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
 
 typedef enum {
     FILE_SYSTEM_TYPE_PHOSPHERUS,
+    FILE_SYSTEM_TYPE_FAT32,
     FILE_SYSTEM_TYPE_NUM,
     FILE_SYSTEM_TYPE_UNKNOWN
 } FileSystemType;
 
 typedef struct {
-    /**
-     * @brief Open the file in iNode, sets errorcode to indicate error
-     * 
-     * @param iNode iNode contains the file
-     * @return File* File opened, NULL if error happens
-     */
-    File* (*fileOpen)(iNode* iNode, Flags8 flags);
+    Result  (*openInode)(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescripotor);
+    Result  (*closeInode)(SuperBlock* superBlock, iNode* iNode);
 
-    /**
-     * @brief Close the file opened, be awared that iNode is not closed, sets errorcode to indicate error
-     * 
-     * @param file File to close
-     * @return Result Result of the operation
-     */
-    Result (*fileClose)(File* file);
-} FileGlobalOperations;
+    Result  (*openFileSystemEntry)(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor);
+    Result  (*closeFileSystemEntry)(SuperBlock* superBlock, FileSystemEntry* entry);
+} SuperBlockOperations;
 
-typedef struct {
-    /**
-     * @brief Open the directory in iNode, sets errorcode to indicate error
-     * 
-     * @param iNode iNode contains the directory
-     * @return Directory* Directory opened, NULL if error happens
-     */
-    Directory* (*openDirectory)(iNode* iNode);
+STRUCT_PRIVATE_DEFINE(SuperBlock) { //TODO: Try fix this with a file with pre-defines
+    BlockDevice*                device;
+    SuperBlockOperations*       operations;
 
-    /**
-     * @brief Close the directory opened, be awared that iNode is not closed, sets errorcode to indicate error
-     * 
-     * @param directory Directory to close
-     * @return Result Result of the operation
-     */
-    Result (*closeDirectory)(Directory* directory);
-} DirectoryGlobalOperations;
-
-STRUCT_PRE_DEFINE(FileSystem);
-
-typedef struct {
-    /**
-     * @brief Create a iNode with given size on this file system, sets errorcode to indicate error
-     * 
-     * @param type type of the iNode
-     * @return Index64 The index of the block where the iNode is located, INVALID_INDEX if error happens
-     */
-    Index64 (*createInode)(FileSystem* fs, iNodeType type);
-
-    /**
-     * @brief Delete iNode from this file system, sets errorcode to indicate error
-     * 
-     * @param iNodeBlock Block index where the inode is located
-     * @return Result Result of the operation
-     */
-    Result (*deleteInode)(FileSystem* fs, Index64 iNodeBlock);
-
-    /**
-     * @brief Open a inode through on the given block, sets errorcode to indicate error
-     * 
-     * @param iNodeBlock Block where the inode is located
-     * @return iNode* Opened iNode, NULL if error happens
-     */
-    iNode* (*openInode)(FileSystem* fs, Index64 iNodeBlock);
-
-    /**
-     * @brief Close the inode opened, sets errorcode to indicate error
-     * 
-     * @param iNode iNode to close
-     * @return Result Result of the operation
-     */
-    Result (*closeInode)(iNode* iNode);
-} iNodeGlobalOperations;
-
-typedef struct {
-    iNodeGlobalOperations* iNodeGlobalOperations;
-    FileGlobalOperations* fileGlobalOperations;
-    DirectoryGlobalOperations* directoryGlobalOperations;
-} FileSystemOperations;
-
-STRUCT_PRIVATE_DEFINE(FileSystem) {
-    char name[32];
-    FileSystemType type;
-    FileSystemOperations* opearations;
-    HashChainNode managerNode;
-    ID device;
-    Index64 rootDirectoryInodeIndex;
-    void* data;
+    FileSystemEntry*            rootDirectory;
+    void*                       specificInfo;
 };
+
+typedef struct {
+    ConstCstring    name;
+    FileSystemType  type;
+    HashChainNode   managerNode;
+    SuperBlock*     superBlock;
+} FileSystem;
 
 /**
  * @brief Initialize the file system
@@ -140,5 +77,21 @@ FileSystem* openFileSystem(BlockDevice* device);
  * @return Result Result of the operation, NULL if error happens
  */
 Result closeFileSystem(FileSystem* fs);
+
+static inline Result rawSuperNodeOpenInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescripotor) {
+    return superBlock->operations->openInode(superBlock, iNode, entryDescripotor);
+}
+
+static inline Result rawSuperNodeCloseInode(SuperBlock* superBlock, iNode* iNode) {
+    return superBlock->operations->closeInode(superBlock, iNode);
+}
+
+static inline Result rawSuperNodeOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor) {
+    return superBlock->operations->openFileSystemEntry(superBlock, entry, entryDescripotor);
+}
+
+static inline Result rawSuperNodeCloseFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry) {
+    return superBlock->operations->closeFileSystemEntry(superBlock, entry);
+}
 
 #endif // __FILESYSTEM_H

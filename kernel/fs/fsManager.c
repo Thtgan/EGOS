@@ -17,13 +17,14 @@ void initFSManager() {
 }
 
 Result registerDeviceFS(FileSystem* fs) {
-    if (hashTableFind(&_hashTable, (Object)fs->device) != NULL) {
+    BlockDevice* device = fs->superBlock->device;
+    if (hashTableFind(&_hashTable, (Object)device->deviceID) != NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_ALREADY_EXIST);
         return RESULT_FAIL;
     }
 
     initHashChainNode(&fs->managerNode);
-    if (hashTableInsert(&_hashTable, (Object)fs->device, &fs->managerNode) == RESULT_FAIL) {
+    if (hashTableInsert(&_hashTable, (Object)device->deviceID, &fs->managerNode) == RESULT_FAIL) {
         SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
         return RESULT_FAIL;
     }

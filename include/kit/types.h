@@ -32,9 +32,9 @@ typedef __UINTPTR_TYPE__                Uintptr;
 typedef __INTMAX_TYPE__                 Intmax;
 typedef __UINTMAX_TYPE__                Uintmax;
 
-#define UINT(__LENGTH)                  MACRO_EVAL(MACRO_CONCENTRATE2(Uint, __LENGTH))
+#define UINT(__LENGTH)                  MACRO_RESCAN(MACRO_CONCENTRATE2(Uint, __LENGTH))
 
-#define PTR(__LENGTH)                   MACRO_EVAL(MACRO_CONCENTRATE2(PTR, __LENGTH))
+#define PTR(__LENGTH)                   MACRO_RESCAN(MACRO_CONCENTRATE2(PTR, __LENGTH)) //TODO: HAVE BUG
 
 #define PTR8(__PTR)                     (*((Uint8*)(__PTR)))
 #define PTR16(__PTR)                    (*((Uint16*)(__PTR)))
@@ -73,6 +73,7 @@ typedef __builtin_va_list               va_list;
 typedef Uint8                           Result;
 #define RESULT_FAIL                     ((Result)0)
 #define RESULT_SUCCESS                  ((Result)1)
+#define RESULT_CONTINUE                 ((Result)2)
 
 typedef Uint8                           Flags8;
 typedef Uint16                          Flags16;

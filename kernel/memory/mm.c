@@ -1,8 +1,8 @@
 #include<memory/mm.h>
 
+#include<debug.h>
 #include<kernel.h>
 #include<kit/util.h>
-#include<lib/debug.h>
 #include<system/pageTable.h>
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>

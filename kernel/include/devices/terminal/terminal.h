@@ -2,7 +2,6 @@
 #define __TERMINAL_H
 
 #include<devices/terminal/inputBuffer.h>
-#include<fs/file.h>
 #include<kit/types.h>
 #include<structs/queue.h>
 #include<multitask/semaphore.h>
@@ -254,11 +253,11 @@ int terminalGetline(Terminal* terminal, Cstring buffer);
  */
 int terminalGetChar(Terminal* terminal);
 
-/**
- * @brief Initialize terminal as a virtual device
- * 
- * @return FileOperations* Operation of virtual device file
- */
-FileOperations* initTerminalDevice();
+// /**
+//  * @brief Initialize terminal as a virtual device
+//  * 
+//  * @return FileOperations* Operation of virtual device file
+//  */
+// FileOperations* initTerminalDevice();
 
 #endif // __TERMINAL_H
