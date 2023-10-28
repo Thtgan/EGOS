@@ -32,28 +32,9 @@ void* translateVaddr(PML4Table* pageTable, void* vAddr);
  * @param pAddr Physical address to map to
  * @return Result Result of the operation
  */
-Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr);
+Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags);
 
-/**
- * @brief Set flags of page table entry
- * 
- * @param pageTable Page table contains entry to modify
- * @param vAddr Virtual address corresponded to entry
- * @param level Level of the entry
- * @param flags New entry flags
- * @return Result Result of the operation
- */
-Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, Uintptr flags);
-
-/**
- * @brief Get flags of page table entry
- * 
- * @param pageTable Page table contains entry to get
- * @param vAddr Virtual address corresponded to entry
- * @param level Level of the entry
- * @return Uintptr Flags of entry
- */
-Uintptr pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level);
+PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* levelOut);
 
 #define SWITCH_TO_TABLE(__PAGE_TABLE)                   \
 do {                                                    \

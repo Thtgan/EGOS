@@ -7,12 +7,6 @@
 //Reference: https://wiki.osdev.org/Paging
 //https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html#three-volume
 
-typedef enum {
-    PAGING_LEVEL_PML4,
-    PAGING_LEVEL_PDPT,
-    PAGING_LEVEL_PAGE_DIRECTORY,
-    PAGING_LEVEL_PAGE_TABLE
-} PagingLevel;
 
 /**
  * 48-bit virtual address --> 52-bit physical address
@@ -28,8 +22,50 @@ typedef enum {
  * +---------+-----------+----------------------+
  */
 
-#define PAGE_SIZE_SHIFT     12  //4KB page
-#define PAGE_SIZE           (1 << PAGE_SIZE_SHIFT)
+#define PAGE_SIZE_SHIFT                                     12  //4KB page
+#define PAGE_SIZE                                           (1 << PAGE_SIZE_SHIFT)
+
+typedef enum {
+    PAGING_LEVEL_PAGE,
+    PAGING_LEVEL_PAGE_TABLE,
+    PAGING_LEVEL_PAGE_DIRECTORY,
+    PAGING_LEVEL_PDPT,
+    PAGING_LEVEL_PML4,
+    PAGING_LEVEL_NUM
+} PagingLevel;
+
+typedef Uint64                                              PagingEntry;
+#define EMPTY_PAGING_ENTRY                                  0
+#define PAGING_ENTRY_BASE_ADDR_END                          52
+
+#define PAGING_ENTRY_FLAG_PRESENT                           FLAG64(0)
+#define PAGING_ENTRY_FLAG_RW                                FLAG64(1)   //Read and Write
+#define PAGING_ENTRY_FLAG_US                                FLAG64(2)   //User and Supervisor
+#define PAGING_ENTRY_FLAG_PWT                               FLAG64(3)   //Page write through
+#define PAGING_ENTRY_FLAG_PCD                               FLAG64(4)   //Page cache disabled
+#define PAGING_ENTRY_FLAG_A                                 FLAG64(5)   //Accessed
+#define PAGING_ENTRY_FLAG_PS                                FLAG64(7)   //Page Size
+#define PAGING_ENTRY_FLAG_R                                 FLAG64(11)  //HALT paging restart
+#define PAGING_ENTRY_FLAG_XD                                FLAG64(63)  //Execute Disable
+
+#define PAGING_TABLE_SIZE                                   (PAGE_SIZE / sizeof(PagingEntry))
+
+typedef struct {
+    PagingEntry tableEntries[PAGING_TABLE_SIZE];
+} __attribute__((packed)) PagingTable;
+
+#define PAGING_SPAN_SHIFT(__LEVEL)                          (PAGE_SIZE_SHIFT + 9 * (__LEVEL))
+#define PAGING_SPAN(__LEVEL)                                (1ull << PAGING_SPAN_SHIFT(__LEVEL)) //PML4-256TB, PDPT-512GB, PageDirecotry-1GB, Page Table-2MB, Page-4KB
+#define PAGING_INDEX(__LEVEL, __VA)                         EXTRACT_VAL((Uint64)(__VA), 64, PAGING_SPAN_SHIFT(__LEVEL - 1), PAGING_SPAN_SHIFT(__LEVEL))
+
+#define FLAGS_FROM_PAGING_ENTRY(__ENTRY)                    (CLEAR_VAL_RANGLE((__ENTRY), 64, PAGE_SIZE_SHIFT, PAGING_ENTRY_BASE_ADDR_END))
+
+#define BASE_FROM_ENTRY_PS(__LEVEL, __ENTRY)                ((void*)TRIM_VAL_RANGE((Uint64)(__ENTRY), 64, PAGING_SPAN_SHIFT(__LEVEL - 1), PAGING_ENTRY_BASE_ADDR_END))
+#define ADDR_FROM_ENTRY_PS(__LEVEL, __VA, __ENTRY)          ((void*)((Uint64)BASE_FROM_ENTRY_PS(__LEVEL, __ENTRY) | TRIM_VAL_SIMPLE((Uint64)(__VA), 64, PAGING_SPAN_SHIFT(__LEVEL - 1))))
+#define BUILD_ENTRY_PS(__LEVEL, __PAGE_ADDR, __FLAGS)       (TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, PAGING_SPAN_SHIFT(__LEVEL - 1), PAGING_ENTRY_BASE_ADDR_END) | CLEAR_VAL_RANGLE((__FLAGS), 64, PAGE_SIZE_SHIFT, PAGING_ENTRY_BASE_ADDR_END))
+
+#define PAGING_TABLE_FROM_PAGING_ENTRY(__ENTRY)             ((PagingTable*)BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, __ENTRY))
+#define BUILD_ENTRY_PAGING_TABLE(__PAGING_TABLE, __FLAGS)   BUILD_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, __PAGING_TABLE, __FLAGS)
 
 /**
  * @brief Level-4 Page Map entry
@@ -51,47 +87,8 @@ typedef enum {
  * | 3Fh-3Fh |     1     | Execute Disable bit                                              |
  * +---------+-----------+------------------------------------------------------------------+
  */
-typedef Uint64 PML4Entry;
 
-#define EMPTY_PML4_ENTRY    0
-
-#define PML4_SPAN_SHIFT     48
-#define PML4_SPAN           (1llu << PML4_SPAN_SHIFT)   //How much memory a PML4 table can cover (256TB)
-
-#define PML4_INDEX(__VA)    EXTRACT_VAL((Uint64)(__VA), 64, PDPT_SPAN_SHIFT, PML4_SPAN_SHIFT)
-
-//Build a PML4 entry
-#define BUILD_PML4_ENTRY(__PDPT_ADDR, __FLAGS)              \
-(                                                           \
-    TRIM_VAL_RANGE((Uint64)(__PDPT_ADDR), 64, 12, 52) |     \
-    CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                 \
-)
-
-#define PDPT_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY)         ((PDPtable*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 12, 52))
-#define FLAGS_FROM_PML4_ENTRY(__PML4_ENTRY)             (CLEAR_VAL_RANGLE((__PML4_ENTRY), 64, 12, 52))
-#define PS_BASE_FROM_PML4_ENTRY(__PML4_ENTRY)           ((void*)TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52))
-#define PS_ADDR_FROM_PML4_ENTRY(__PML4_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PML4_ENTRY), 64, 39, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 39)))
-
-#define PML4_ENTRY_FLAG_PRESENT FLAG64(0)
-#define PML4_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
-#define PML4_ENTRY_FLAG_US      FLAG64(2)   //User and Supervisor
-#define PML4_ENTRY_FLAG_PWT     FLAG64(3)   //Page write through
-#define PML4_ENTRY_FLAG_PCD     FLAG64(4)   //Page cache disabled
-#define PML4_ENTRY_FLAG_A       FLAG64(5)   //Accessed
-#define PML4_ENTRY_FLAG_PS      FLAG64(7)   //Page Size (DO NOT SET THIS, NO ONE KNOWS WHY)
-#define PML4_ENTRY_FLAG_R       FLAG64(11)  //HALT paging restart
-#define PML4_ENTRY_FLAG_XD      FLAG64(63)  //Execute Disable
-
-#define PML4_TABLE_SIZE         (PAGE_SIZE / sizeof(PML4Entry))
-
-/**
- * @brief A level-4 page map table
- * 
- * Should be aligned to the size of a page to ensure the table fit a whole physical page
- */
-typedef struct {
-    PML4Entry tableEntries[PML4_TABLE_SIZE];
-} __attribute__((packed)) PML4Table;
+typedef PagingTable PML4Table;
 
 /**
  * @brief Page Directory Pointer Table entry
@@ -113,42 +110,8 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                                |
  * +---------+-----------+----------------------------------------------------+
  */
-typedef Uint64 PDPtableEntry;
 
-#define EMPTY_PDPT_ENTRY    0
-
-#define PDPT_SPAN_SHIFT     39
-#define PDPT_SPAN           (1llu << PDPT_SPAN_SHIFT)   //How much memory a page directory pointer table can cover (512GB)
-
-#define PDPT_INDEX(__VA)    EXTRACT_VAL((Uint64)(__VA), 64, PAGE_DIRECTORY_SPAN_SHIFT, PDPT_SPAN_SHIFT)
-
-//Build a PDPT entry
-#define BUILD_PDPT_ENTRY(__PAGE_DIRECTORY_ADDR, __FLAGS)            \
-(                                                                   \
-    TRIM_VAL_RANGE((Uint64)(__PAGE_DIRECTORY_ADDR), 64, 12, 52) |   \
-    CLEAR_VAL_RANGLE((__FLAGS), 64, 12, 52)                         \
-)
-
-#define PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY)   ((PageDirectory*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 12, 52))
-#define FLAGS_FROM_PDPT_ENTRY(__PDPT_ENTRY)                 (CLEAR_VAL_RANGLE((__PDPT_ENTRY), 64, 12, 52))
-#define PS_BASE_FROM_PDPT_ENTRY(__PDPT_ENTRY)               ((void*)TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52))
-#define PS_ADDR_FROM_PDPT_ENTRY(__PDPT_ENTRY, __VADDR)      ((void*)(TRIM_VAL_RANGE((__PDPT_ENTRY), 64, 30, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 30)))
-
-#define PDPT_ENTRY_FLAG_PRESENT FLAG64(0)
-#define PDPT_ENTRY_FLAG_RW      FLAG64(1)   //Read and Write
-#define PDPT_ENTRY_FLAG_US      FLAG64(2)   //User and Supervisor
-#define PDPT_ENTRY_FLAG_PWT     FLAG64(3)   //Page write through
-#define PDPT_ENTRY_FLAG_PCD     FLAG64(4)   //Page cache disabled
-#define PDPT_ENTRY_FLAG_A       FLAG64(5)   //Accessed
-#define PDPT_ENTRY_FLAG_PS      FLAG64(7)   //Page Size
-#define PDPT_ENTRY_FLAG_R       FLAG64(11)  //HALT paging restart
-#define PDPT_ENTRY_FLAG_XD      FLAG64(63)  //Execute Disable
-
-#define PDP_TABLE_SIZE          (PAGE_SIZE / sizeof(PDPtableEntry))
-
-typedef struct {
-    PDPtableEntry tableEntries[PDP_TABLE_SIZE];
-} __attribute__((packed)) PDPtable;
+typedef PagingTable PDPtable;
 
 /**
  * @brief Page Directory entry
@@ -170,43 +133,8 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                            |
  * +---------+-----------+------------------------------------------------+
  */
-typedef Uint64 PageDirectoryEntry;
 
-#define EMPTY_PAGE_DIRECTORY_ENTRY  0
-
-#define PAGE_DIRECTORY_SPAN_SHIFT   30
-#define PAGE_DIRECTORY_SPAN         (1llu << PAGE_DIRECTORY_SPAN_SHIFT) //How much memory a page directory can cover (1GB)
-
-#define PAGE_DIRECTORY_INDEX(__VA)  EXTRACT_VAL((Uint64)(__VA), 64, PAGE_TABLE_SPAN_SHIFT, PAGE_DIRECTORY_SPAN_SHIFT)
-
-//Build a Page Directory entry
-#define BUILD_PAGE_DIRECTORY_ENTRY(__PAGE_TABLE_ADDR, __FLAGS)      \
-(                                                                   \
-    TRIM_VAL_RANGE((Uint64)(__PAGE_TABLE_ADDR), 64, 12, 52)   |     \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                           \
-)
-
-
-#define PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)   ((PageTable*)TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
-#define FLAGS_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_DIRECTORY_ENTRY), 64, 12, 52))
-#define PS_BASE_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY)           ((void*)TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52))
-#define PS_ADDR_FROM_PAGE_DIRECTORY_ENTRY(__PAGE_DIRECTORY_ENTRY, __VADDR)  ((void*)(TRIM_VAL_RANGE((__PAGE_DIRECTORY_ENTRY), 64, 21, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 21)))
-
-#define PAGE_DIRECTORY_ENTRY_FLAG_PRESENT   FLAG64(0)
-#define PAGE_DIRECTORY_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
-#define PAGE_DIRECTORY_ENTRY_FLAG_US        FLAG64(2)   //User and Supervisor
-#define PAGE_DIRECTORY_ENTRY_FLAG_PWT       FLAG64(3)   //Page write through
-#define PAGE_DIRECTORY_ENTRY_FLAG_PCD       FLAG64(4)   //Page cache disabled
-#define PAGE_DIRECTORY_ENTRY_FLAG_A         FLAG64(5)   //Accessed
-#define PAGE_DIRECTORY_ENTRY_FLAG_PS        FLAG64(7)   //Page Size
-#define PAGE_DIRECTORY_ENTRY_FLAG_R         FLAG64(11)  //HALT paging restart
-#define PAGE_DIRECTORY_ENTRY_FLAG_XD        FLAG64(63)  //Execute Disable
-
-#define PAGE_DIRECTORY_SIZE                 (PAGE_SIZE / sizeof(PageDirectoryEntry))
-
-typedef struct {
-    PageDirectoryEntry tableEntries[PAGE_DIRECTORY_SIZE];
-} __attribute__((packed)) PageDirectory;
+typedef PagingTable PageDirectory;
 
 /**
  * @brief Page Table entry
@@ -229,48 +157,7 @@ typedef struct {
  * | 3Fh-3Fh |     1     | Execute Disable bit                             |
  * +---------+-----------+-------------------------------------------------+
  */
-typedef Uint64 PageTableEntry;
 
-#define EMPTY_PAGE_TABLE_ENTRY  0
-
-#define PAGE_TABLE_SPAN_SHIFT   21
-#define PAGE_TABLE_SPAN         (1llu << PAGE_TABLE_SPAN_SHIFT) //How much memory a page table can cover (2MB)
-
-#define PAGE_TABLE_INDEX(__VA)  EXTRACT_VAL((Uint64)(__VA), 64, PAGE_SIZE_SHIFT, PAGE_TABLE_SPAN_SHIFT)
-
-//Build a Page Table entry with protection key
-#define BUILD_PAGE_TABLE_ENTRY_WITH_PROTECTION_KEY(__PAGE_ADDR, __FLAGS, __PROTECTION_KEY)  \
-(                                                                                           \
-    TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, 12, 52)       |                               \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                   |                               \
-    TRIM_VAL_RANGE((Uint64)(__PROTECTION_KEY), 64, 59, 63)                                  \
-)
-
-//Build a Page Table entry without protection key
-#define BUILD_PAGE_TABLE_ENTRY(__PAGE_ADDR, __FLAGS)        \
-(                                                           \
-    TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, 12, 52) |     \
-    CLEAR_VAL_RANGLE(__FLAGS, 64, 12, 52)                   \
-)
-
-#define PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)         ((void*)TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52))
-#define FLAGS_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY)             (CLEAR_VAL_RANGLE((__PAGE_TABLE_ENTRY), 64, 12, 52))
-#define ADDR_FROM_PAGE_TABLE_ENTRY(__PAGE_TABLE_ENTRY, __VADDR)     ((void*)(TRIM_VAL_RANGE((__PAGE_TABLE_ENTRY), 64, 12, 52) | TRIM_VAL_SIMPLE((Uintptr)(__VADDR), 64, 12)))
-
-#define PAGE_TABLE_ENTRY_FLAG_PRESENT   FLAG64(0)
-#define PAGE_TABLE_ENTRY_FLAG_RW        FLAG64(1)   //Read and Write
-#define PAGE_TABLE_ENTRY_FLAG_US        FLAG64(2)   //User and Supervisor
-#define PAGE_TABLE_ENTRY_FLAG_PWT       FLAG64(3)   //Page write through
-#define PAGE_TABLE_ENTRY_FLAG_PCD       FLAG64(4)   //Page cache disabled
-#define PAGE_TABLE_ENTRY_FLAG_A         FLAG64(5)   //Accessed
-#define PAGE_TABLE_ENTRY_FLAG_PS        FLAG64(7)   //Page Size
-#define PAGE_TABLE_ENTRY_FLAG_R         FLAG64(11)  //HALT paging restart
-#define PAGE_TABLE_ENTRY_FLAG_XD        FLAG64(63)  //Execute Disable
-
-#define PAGE_TABLE_SIZE                 (PAGE_SIZE / sizeof(PageTableEntry))
-
-typedef struct {
-    PageTableEntry tableEntries[PAGE_TABLE_SIZE];
-} __attribute__((packed)) PageTable;
+typedef PagingTable PageTable;
 
 #endif // __PAGE_TABLE_H

@@ -6,6 +6,7 @@
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging/pagingSetup.h>
@@ -26,105 +27,35 @@
 
 ISR_FUNC_HEADER(__pageFaultHandler) {
     void* vAddr = (void*)readRegister_CR2_64();
-    Index16 PML4Index = PML4_INDEX(vAddr),
-            PDPTindex = PDPT_INDEX(vAddr),
-            pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
-            pageTableIndex = PAGE_TABLE_INDEX(vAddr);
 
-    PhysicalPage* page;
+    PagingTable* table = convertAddressP2V(mm->currentPageTable);
+    PagingEntry entry = EMPTY_PAGING_ENTRY;
+    for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+        Index16 index = PAGING_INDEX(level, vAddr);
+        entry = table->tableEntries[index];
 
-    PML4Table* PML4TablePtr = convertAddressP2V(mm->currentPageTable);
-    PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
-    if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {
-        page = getPhysicalPageStruct(PS_BASE_FROM_PML4_ENTRY(PML4Entry));
-        if (
-            TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
-            PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
-            TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_RW)
+        if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
+            PhysicalPage* physicalPage = getPhysicalPageStruct(BASE_FROM_ENTRY_PS(level, entry));
+            if (
+                TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
+                PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(physicalPage->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
+                TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)
             ) {
-            if (page->cowCnt == 1) {
-                SET_FLAG_BACK(PML4TablePtr->tableEntries[PML4Index], PML4_ENTRY_FLAG_RW);
+                if (physicalPage->cowCnt == 1) {
+                    SET_FLAG_BACK(entry, PAGING_ENTRY_FLAG_RW);
+                } else {
+                    Size span = PAGING_SPAN(level - 1);
+                    void* copyTo = pageAlloc(span >> PAGE_SIZE_SHIFT, MEMORY_TYPE_COW); //Need align here
+                    memcpy(convertAddressP2V(copyTo), convertAddressP2V(BASE_FROM_ENTRY_PS(level, entry)), span);
+                    table->tableEntries[index] = BUILD_ENTRY_PS(level, copyTo, FLAGS_FROM_PAGING_ENTRY(entry) | PAGING_ENTRY_FLAG_RW);
+                }
+
+                --physicalPage->cowCnt;
                 return;
             }
-
-            void* copyTo = pageAlloc(PDPT_SPAN / PAGE_SIZE, MEMORY_TYPE_COW);
-            PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
-            memcpy(convertAddressP2V(copyTo), convertAddressP2V(PS_BASE_FROM_PML4_ENTRY(PML4Entry)), PDPT_SPAN);
-            PML4TablePtr->tableEntries[pageTableIndex] = BUILD_PML4_ENTRY(copyTo, FLAGS_FROM_PML4_ENTRY(PML4Entry) | PML4_ENTRY_FLAG_RW);
-            --page->cowCnt;
-
-            return;
-        }
-    }
-
-    PDPtable* PDPtablePtr = convertAddressP2V(PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry));
-    PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
-    if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
-        page = getPhysicalPageStruct(PS_BASE_FROM_PDPT_ENTRY(PDPtableEntry));
-        if (
-            TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
-            PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
-            TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_RW)
-            ) {
-            if (page->cowCnt == 1) {
-                SET_FLAG_BACK(PDPtablePtr->tableEntries[PDPTindex], PDPT_ENTRY_FLAG_RW);
-                return;
-            }
-
-            void* copyTo = pageAlloc(PAGE_DIRECTORY_SPAN / PAGE_SIZE, MEMORY_TYPE_COW);
-            PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
-            memcpy(convertAddressP2V(copyTo), convertAddressP2V(PS_BASE_FROM_PDPT_ENTRY(PDPtableEntry)), PAGE_DIRECTORY_SPAN);
-            PDPtablePtr->tableEntries[PDPTindex] = BUILD_PDPT_ENTRY(copyTo, FLAGS_FROM_PDPT_ENTRY(PDPtableEntry) | PDPT_ENTRY_FLAG_RW);
-            --page->cowCnt;
-
-            return;
-        }
-    }
-
-    PageDirectory* pageDirectoryPtr = convertAddressP2V(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry));
-    PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
-    if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
-        page = getPhysicalPageStruct(PS_BASE_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-        if (
-            TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
-            PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
-            TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_RW)
-            ) {
-            if (page->cowCnt == 1) {
-                SET_FLAG_BACK(pageDirectoryPtr->tableEntries[pageDirectoryIndex], PAGE_DIRECTORY_ENTRY_FLAG_RW);
-                return;
-            }
-
-            void* copyTo = pageAlloc(PAGE_TABLE_SPAN / PAGE_SIZE, MEMORY_TYPE_COW);
-            PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
-            memcpy(convertAddressP2V(copyTo), convertAddressP2V(PS_BASE_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry)), PAGE_TABLE_SPAN);
-            PDPtablePtr->tableEntries[pageDirectoryIndex] = BUILD_PAGE_DIRECTORY_ENTRY(copyTo, FLAGS_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry) | PAGE_DIRECTORY_ENTRY_FLAG_RW);
-            --page->cowCnt;
-
-            return;
-        }
-    }
-
-    PageTable* pageTablePtr = convertAddressP2V(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-    PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    page = getPhysicalPageStruct(PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry));
-    if (
-        TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
-        PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
-        TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_RW)
-        ) {
-        if (page->cowCnt == 1) {
-            SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_RW);
-            return;
         }
 
-        void* copyTo = pageAlloc(1, MEMORY_TYPE_COW);
-        PhysicalPage* physicalPageStruct = getPhysicalPageStruct(copyTo);
-        memcpy(copyTo, PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), PAGE_SIZE);
-        pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(copyTo, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW);
-        --page->cowCnt;
-
-        return;
+        table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
     // if (
@@ -159,207 +90,90 @@ Result initPaging() {
 }
 
 void* translateVaddr(PML4Table* pageTable, void* vAddr) {
-    Index16 PML4Index = PML4_INDEX(vAddr),
-            PDPTindex = PDPT_INDEX(vAddr),
-            pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
-            pageTableIndex = PAGE_TABLE_INDEX(vAddr);
+    PagingTable* table = convertAddressP2V(pageTable);
+    PagingEntry entry = EMPTY_PAGING_ENTRY;
+    for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+        Index16 index = PAGING_INDEX(level, vAddr);
+        entry = table->tableEntries[index];
 
-    PML4Table* PML4TablePtr = convertAddressP2V(pageTable);
-    PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
-    if (TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
-        return NULL;
+        if (TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
+            return NULL;
+        }
+
+        if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
+            return ADDR_FROM_ENTRY_PS(level, vAddr, entry);
+        }
+
+        table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
-    if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {
-        return PS_ADDR_FROM_PML4_ENTRY(PML4Entry, vAddr);
-    }
-
-    PDPtable* PDPtablePtr = convertAddressP2V(PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry));
-    PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
-    if (TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
-        return NULL;
-    }
-
-    if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
-        return PS_ADDR_FROM_PDPT_ENTRY(PDPtableEntry, vAddr);
-    }
-
-    PageDirectory* pageDirectoryPtr = convertAddressP2V(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry));
-    PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
-    if (TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
-        return NULL;
-    }
-
-    if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
-        return PS_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry, vAddr);
-    }
-
-    PageTable* pageTablePtr = convertAddressP2V(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-    PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    if (TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_PRESENT)) {
-        return NULL;
-    }
-
-    return ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry, vAddr);
+    //Not supposed to reach here
+    return NULL;
 }
 
-Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr) {
-    Index16 PML4Index = PML4_INDEX(vAddr),
-            PDPTindex = PDPT_INDEX(vAddr),
-            pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
-            pageTableIndex = PAGE_TABLE_INDEX(vAddr);
-
-    PML4Table* PML4TablePtr = convertAddressP2V(pageTable);
-    PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
-    if (TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
-        void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
-        if (page == NULL) {
-            return RESULT_FAIL;
-        }
-
-        memset(page, 0, PAGE_SIZE);
-        PML4Entry = PML4TablePtr->tableEntries[PML4Index] = 
-        BUILD_PML4_ENTRY(page, ((Uintptr)vAddr >= MEMORY_LAYOUT_KERNEL_USER_PROGRAM_END ? 0 : PML4_ENTRY_FLAG_US) | PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
-    }
-
-    if (TEST_FLAGS(PML4Entry, PML4_ENTRY_FLAG_PS)) {
-        if ((Uintptr)pAddr & (PDPT_SPAN - 1) != 0) {
-            return RESULT_FAIL;
-        }
-
-        PML4TablePtr->tableEntries[PML4Index] = BUILD_PML4_ENTRY(pAddr, FLAGS_FROM_PML4_ENTRY(PML4Entry));
-        return RESULT_SUCCESS;
-    }
-
-    PDPtable* PDPtablePtr = convertAddressP2V(PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry));
-    PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
-    if (TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
-        void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
-        if (page == NULL) {
-            return RESULT_FAIL;
-        }
-
-        memset(page, 0, PAGE_SIZE);
-        PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex] =
-        BUILD_PDPT_ENTRY(page, PDPT_ENTRY_FLAG_US | PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PRESENT);
-    }
-
-    if (TEST_FLAGS(PDPtableEntry, PDPT_ENTRY_FLAG_PS)) {
-        if ((Uintptr)pAddr & (PAGE_DIRECTORY_SPAN - 1) != 0) {
-            return RESULT_FAIL;
-        }
-
-        PDPtablePtr->tableEntries[PDPTindex] = BUILD_PDPT_ENTRY(pAddr, FLAGS_FROM_PDPT_ENTRY(PDPtableEntry));
-        return RESULT_SUCCESS;
-    }
-
-    PageDirectory* pageDirectoryPtr = convertAddressP2V(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry));
-    PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
-    if (TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
-        void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
-        if (page == NULL) {
-            return RESULT_FAIL;
-        }
-
-        memset(page, 0, PAGE_SIZE);
-        pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex] =
-        BUILD_PAGE_DIRECTORY_ENTRY(page, PAGE_DIRECTORY_ENTRY_FLAG_US | PAGE_DIRECTORY_ENTRY_FLAG_RW | PAGE_DIRECTORY_ENTRY_FLAG_PRESENT);
-    }
-
-    if (TEST_FLAGS(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PS)) {
-        if ((Uintptr)pAddr & (PAGE_TABLE_SPAN - 1) != 0) {
-            return RESULT_FAIL;
-        }
-
-        pageDirectoryPtr->tableEntries[pageDirectoryIndex] = BUILD_PAGE_DIRECTORY_ENTRY(pAddr, FLAGS_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-        return RESULT_SUCCESS;
-    }
-
-    PageTable* pageTablePtr = convertAddressP2V(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-    PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    pageTablePtr->tableEntries[pageTableIndex] = BUILD_PAGE_TABLE_ENTRY(pAddr, FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry) | PAGE_TABLE_ENTRY_FLAG_RW | PAGE_TABLE_ENTRY_FLAG_PRESENT);
-    
-    return RESULT_SUCCESS;
-}
-
-Result pageTableSetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level, Uint64 flags) {
-    Index16 PML4Index = PML4_INDEX(vAddr),
-            PDPTindex = PDPT_INDEX(vAddr),
-            pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
-            pageTableIndex = PAGE_TABLE_INDEX(vAddr);
-
-    PML4Table* PML4TablePtr = convertAddressP2V(pageTable);
-    PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
-    if (level == PAGING_LEVEL_PML4 || TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
-        if (level == PAGING_LEVEL_PML4) {
-            PML4TablePtr->tableEntries[PML4Index] = BUILD_PML4_ENTRY(PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry), flags);
-            return RESULT_SUCCESS;
-        }
+Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags) {
+    if (pageTable == NULL) {
         return RESULT_FAIL;
     }
 
-    PDPtable* PDPtablePtr = convertAddressP2V(PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry));
-    PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
-    if (level == PAGING_LEVEL_PDPT || TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
-        if (level == PAGING_LEVEL_PDPT) {
-            PDPtablePtr->tableEntries[PDPTindex] = BUILD_PDPT_ENTRY(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry), flags);
+    PagingTable* table = convertAddressP2V(pageTable);
+    PagingEntry entry = EMPTY_PAGING_ENTRY;
+    for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+        Index16 index = PAGING_INDEX(level, vAddr);
+        entry = table->tableEntries[index];
+
+        if (level > PAGING_LEVEL_PAGE_TABLE && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
+            void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
+            if (page == NULL) {
+                return RESULT_FAIL;
+            }
+
+            memset(convertAddressP2V(page), 0, PAGE_SIZE);
+            entry = table->tableEntries[index] = 
+            BUILD_ENTRY_PAGING_TABLE(page, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | (ALIGN_DOWN_SHIFT((Uintptr)vAddr, PAGING_SPAN_SHIFT(level - 1)) >= MEMORY_LAYOUT_KERNEL_USER_PROGRAM_END ? 0 : PAGING_ENTRY_FLAG_US));
+        }
+
+        if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
+            if ((Uintptr)pAddr & (PAGING_SPAN(level - 1) - 1) != 0) {
+                return RESULT_FAIL;
+            }
+
+            table->tableEntries[index] = BUILD_ENTRY_PS(level, pAddr, FLAGS_FROM_PAGING_ENTRY(entry) | flags);
+
             return RESULT_SUCCESS;
         }
-        return RESULT_FAIL;
+
+        table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
-    PageDirectory* pageDirectoryPtr = convertAddressP2V(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry));
-    PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
-    if (level == PAGING_LEVEL_PAGE_DIRECTORY || TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
-        if (level == PAGING_LEVEL_PAGE_DIRECTORY) {
-            pageDirectoryPtr->tableEntries[pageDirectoryIndex] = BUILD_PDPT_ENTRY(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry), flags);
-            return RESULT_SUCCESS;
-        }
-        return RESULT_FAIL;
-    }
-
-    PageTable* pageTablePtr = convertAddressP2V(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-    PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_PRESENT)) {
-        if (level == PAGING_LEVEL_PAGE_TABLE) {
-            pageTablePtr->tableEntries[pageTableIndex] = BUILD_PDPT_ENTRY(PAGE_ADDR_FROM_PAGE_TABLE_ENTRY(pageTableEntry), flags);
-            return RESULT_SUCCESS;
-        }
-        return RESULT_FAIL;
-    }
-
+    //Not supposed to reach here
     return RESULT_FAIL;
 }
 
-Uint64 pageTableGetFlag(PML4Table* pageTable, void* vAddr, PagingLevel level) {
-    Index16 PML4Index = PML4_INDEX(vAddr),
-            PDPTindex = PDPT_INDEX(vAddr),
-            pageDirectoryIndex = PAGE_DIRECTORY_INDEX(vAddr),
-            pageTableIndex = PAGE_TABLE_INDEX(vAddr);
-
-    PML4Table* PML4TablePtr = convertAddressP2V(pageTable);
-    PML4Entry PML4Entry = PML4TablePtr->tableEntries[PML4Index];
-    if (level == PAGING_LEVEL_PML4 || TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT)) {
-        return TEST_FLAGS_FAIL(PML4Entry, PML4_ENTRY_FLAG_PRESENT) ? -1 : FLAGS_FROM_PML4_ENTRY(PML4Entry);
+PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* levelOut) {
+    if (pageTable == NULL) {
+        return NULL;
     }
 
-    PDPtable* PDPtablePtr = convertAddressP2V(PDPT_ADDR_FROM_PML4_ENTRY(PML4Entry));
-    PDPtableEntry PDPtableEntry = PDPtablePtr->tableEntries[PDPTindex];
-    if (level == PAGING_LEVEL_PDPT || TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT)) {
-        return TEST_FLAGS_FAIL(PDPtableEntry, PDPT_ENTRY_FLAG_PRESENT) ? -1 : FLAGS_FROM_PDPT_ENTRY(PDPtableEntry);
+    PagingTable* table = convertAddressP2V(pageTable);
+    PagingEntry entry = EMPTY_PAGING_ENTRY;
+    for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+        Index16 index = PAGING_INDEX(level, vAddr);
+        entry = table->tableEntries[index];
+
+        if (TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
+            return NULL;
+        }
+
+        if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
+            if (levelOut != NULL) {
+                *levelOut = level;
+            }
+            return table->tableEntries + index;
+        }
+
+        table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
-    PageDirectory* pageDirectoryPtr = convertAddressP2V(PAGE_DIRECTORY_ADDR_FROM_PDPT_ENTRY(PDPtableEntry));
-    PageDirectoryEntry pageDirectoryEntry = pageDirectoryPtr->tableEntries[pageDirectoryIndex];
-    if (level == PAGING_LEVEL_PAGE_DIRECTORY || TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT)) {
-        return TEST_FLAGS_FAIL(pageDirectoryEntry, PAGE_DIRECTORY_ENTRY_FLAG_PRESENT) ? -1 : FLAGS_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry);
-    }
-
-    PageTable* pageTablePtr = convertAddressP2V(PAGE_TABLE_ADDR_FROM_PAGE_DIRECTORY_ENTRY(pageDirectoryEntry));
-    PageTableEntry pageTableEntry = pageTablePtr->tableEntries[pageTableIndex];
-    if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_PRESENT)) {
-        return TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_PRESENT) ? -1 : FLAGS_FROM_PAGE_TABLE_ENTRY(pageTableEntry);
-    }
-
-    return -1;
+    return NULL;
 }

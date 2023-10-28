@@ -21,16 +21,16 @@ void initPaging() {
     writeRegister_CR4_32(SET_FLAG(readRegister_CR4_32(), CR4_PAE));     //Setting up PAE
 
     //Setting up PML4 table
-    for (int i = 0; i < PML4_TABLE_SIZE; ++i) {
-        _PML4Table.tableEntries[i] = EMPTY_PML4_ENTRY;
+    for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
+        _PML4Table.tableEntries[i] = EMPTY_PAGING_ENTRY;
     }
-    _PML4Table.tableEntries[0] = BUILD_PML4_ENTRY((Uint32)&_firstPDPtable, PML4_ENTRY_FLAG_RW | PML4_ENTRY_FLAG_PRESENT);
+    _PML4Table.tableEntries[0] = BUILD_ENTRY_PAGING_TABLE((Uint32)&_firstPDPtable, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW);
 
     //Setting up PDP table
-    for (int i = 0; i < PDP_TABLE_SIZE; ++i) {
-        _firstPDPtable.tableEntries[i] = EMPTY_PDPT_ENTRY;
+    for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
+        _firstPDPtable.tableEntries[i] = EMPTY_PAGING_ENTRY;
     }
-    _firstPDPtable.tableEntries[0] = BUILD_PDPT_ENTRY(0, PDPT_ENTRY_FLAG_RW | PDPT_ENTRY_FLAG_PS | PDPT_ENTRY_FLAG_PRESENT);
+    _firstPDPtable.tableEntries[0] = BUILD_ENTRY_PS(PAGING_LEVEL_PDPT, 0, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_PS);
 
     //Setting up LME
     Uint32 eax, edx;

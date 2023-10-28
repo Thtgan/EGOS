@@ -42,7 +42,7 @@ Result initPhysicalPage() {
 
     return RESULT_SUCCESS;
 }
-#include<print.h>
+
 PhysicalPage* getPhysicalPageStruct(void* pAddr) {
     Index64 index = (Uintptr)pAddr >> PAGE_SIZE_SHIFT;
     return index >= mm->freePageEnd ? NULL : (_pages + index);
@@ -65,7 +65,6 @@ void* pageAlloc(Size n, MemoryType type) {
     }
 
     __initPhysicalPageNode(freePage, n, type | PHYSICAL_PAGE_ATTRIBUTE_FLAG_ALLOCATED);
-    // referPhysicalPage(freePage);
 
     return ret;
 }
@@ -75,11 +74,6 @@ void pageFree(void* pPageBegin) {
     if (pageToFree == NULL || TEST_FLAGS_FAIL(pageToFree->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_ALLOCATED)) {
         return;
     }
-    // if (pageToFree == NULL || pageToFree->referenceCnt != 1 || TEST_FLAGS_FAIL(pageToFree->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_ALLOCATED)) {
-    //     return;
-    // }
-
-    // cancelReferPhysicalPage(pageToFree);
 
     __initPhysicalPageNode(pageToFree, pageToFree->length, MEMORY_TYPE_NORMAL);
 
@@ -114,9 +108,9 @@ void pageFree(void* pPageBegin) {
 static void __initPhysicalPageNode(PhysicalPage* base, Size n, Flags16 attribute) {
     memset(base, 0, n * sizeof(PhysicalPage));
     initSinglyLinkedListNode(&base->listNode);
-    base->length = n;
+    base->length    = n;
     base->attribute = attribute;
-    // base->referenceCnt = 0;
+    base->cowCnt    = 0;
 }
 
 static SinglyLinkedListNode* __firstFitSearch(Size n) {
