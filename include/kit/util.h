@@ -33,17 +33,18 @@
 #define POWER_2(__SHIFT)                                        (VAL_LEFT_SHIFT(ONE(64), __SHIFT))
 #define IS_POWER_2(__VAL)                                       (((__VAL) & ((__VAL) - 1)) == 0)
 
-#define __BATCH_ALLOCATE_SIZE(__TYPE)                           ALIGN_UP(sizeof(__TYPE), 16)
+#define __BATCH_ALLOCATE_SIZE_N_CALL(__PACKET)                  __BATCH_ALLOCATE_SIZE_N __PACKET
+#define __BATCH_ALLOCATE_SIZE_N(__TYPE, __N)                    ALIGN_UP(sizeof(__TYPE) * (__N), 16)
 
-#define BATCH_ALLOCATE_SIZE(...)                                FOREACH_MACRO_CALL(__BATCH_ALLOCATE_SIZE, +, __VA_ARGS__)
+#define BATCH_ALLOCATE_SIZE(...)                                FOREACH_MACRO_CALL(__BATCH_ALLOCATE_SIZE_N_CALL, +, __VA_ARGS__)
 
 #define __BATCH_ALLOCATE_DEFINE_PTRS_CALL(__PACKET)             __BATCH_ALLOCATE_DEFINE_PTRS __PACKET
 
-#define __BATCH_ALLOCATE_DEFINE_PTRS(__TYPE, __NAME)            __TYPE* __NAME = NULL;
+#define __BATCH_ALLOCATE_DEFINE_PTRS(__TYPE, __NAME, __DUMMY)   __TYPE* __NAME = NULL;
 
 #define __BATCH_ALLOCATE_ASSIGN_PTRS_CALL(__PACKET)             __BATCH_ALLOCATE_ASSIGN_PTRS __PACKET
 
-#define __BATCH_ALLOCATE_ASSIGN_PTRS(__TYPE, __NAME)            __NAME = (__TYPE*)_tempPtr; _tempPtr += __BATCH_ALLOCATE_SIZE(__TYPE);
+#define __BATCH_ALLOCATE_ASSIGN_PTRS(__TYPE, __NAME, __N)       __NAME = (__TYPE*)_tempPtr; _tempPtr += __BATCH_ALLOCATE_SIZE_N(__TYPE, __N);
 
 #define BATCH_ALLOCATE_DEFINE_PTRS(__PTR, ...)                  FOREACH_MACRO_CALL(__BATCH_ALLOCATE_DEFINE_PTRS_CALL, , __VA_ARGS__)        \
                                                                 if ((__PTR) != NULL) {                                                      \

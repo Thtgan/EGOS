@@ -1,5 +1,6 @@
 #include<devices/block/blockDevice.h>
 
+#include<devices/block/blockBuffer.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -10,89 +11,144 @@
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
 
-static HashTable _hashTable;
-static SinglyLinkedList _hashChains[16];
-
 static Result __doProbePartitions(BlockDevice* device, void* buffer);
 
 static Result __partitionReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n);
 static Result __partitionWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n);
 
 static BlockDeviceOperation _partitionOperations = {
-    .readBlocks = __partitionReadBlocks,
-    .writeBlocks = __partitionWriteBlocks
+    .readBlocks     = __partitionReadBlocks,
+    .writeBlocks    = __partitionWriteBlocks
 };
 
-Result initBlockDevice() {
-    initHashTable(&_hashTable, 16, _hashChains, LAMBDA(Size, (HashTable* this, Object key) {
-        return (Size)key % 13;
-    }));
+Result initBlockDevice(BlockDevice* device, BlockDeviceArgs* args) {
+    memset(device, 0, sizeof(BlockDevice));
+
+    strncpy(device->name, args->name, BLOCK_DEVICE_NAME_LENGTH);
+
+    device->availableBlockNum   = args->availableBlockNum;
+    Size bytePerBlockShift      = args->bytePerBlockShift == 0 ? DEFAULT_BLOCK_SIZE_SHIFT : args->bytePerBlockShift;
+    device->bytePerBlockShift   = bytePerBlockShift;
+
+    device->flags               = EMPTY_FLAGS;
+
+    device->parent              = args->parent;
+    device->childNum = 0;
+    initSinglyLinkedList(&device->children);
+    initSinglyLinkedListNode(&device->node);
+    if (device->parent != NULL) {
+        ++device->parent->childNum;
+        singlyLinkedListInsertNext(&device->parent->children, &device->node);
+    }
+
+    if (args->buffered) {
+        BlockBuffer* blockBuffer = kMalloc(sizeof(BlockBuffer));
+        if (blockBuffer == NULL || initBlockBuffer(blockBuffer, BLOCK_BUFFER_DEFAULT_HASH_SIZE, BLOCK_BUFFER_DEFAULT_MAX_BLOCK_NUM, bytePerBlockShift) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        device->blockBuffer     = blockBuffer;
+        SET_FLAG_BACK(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED);
+    }
+
+    device->operations          = args->operations;
+    device->specificInfo        = args->specificInfo;
+    initHashChainNode(&device->hashChainNode);
 
     return RESULT_SUCCESS;
 }
 
-BlockDevice* createBlockDevice(BlockDeviceArgs* args) {
-    ID deviceID = (Uint16)strhash(args->name, 13, 65536);
-    while (hashTableFind(&_hashTable, (Object)deviceID) != NULL) {
-        ++deviceID;
+Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n) {
+    if (device->operations->readBlocks == NULL || blockIndex >= device->availableBlockNum) {
+        return RESULT_FAIL;
     }
 
-    BlockDevice* ret = kMalloc(sizeof(BlockDevice));
-    memset(ret, 0, sizeof(BlockDevice));
+    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
+        for (int i = 0; i < n; ++i) {
+            Index64 index = blockIndex + i;
+            Block* block = blockBufferPop(device->blockBuffer, index);
+            if (block == NULL) {
+                return RESULT_FAIL;
+            }
 
-    strncpy(ret->name, args->name, BLOCK_DEVICE_NAME_LENGTH);
+            if (TEST_FLAGS_FAIL(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_PRESENT)) {
+                if (device->operations->readBlocks(device, index, block->data, 1) == RESULT_FAIL) { //TODO: May be this happens too frequently?
+                    return RESULT_FAIL;
+                }
+            }
 
-    ret->deviceID           = deviceID;
-    ret->availableBlockNum  = args->availableBlockNum;
-    ret->bytePerBlockShift  = args->bytePerBlockShift == 0 ? DEFAULT_BLOCK_SIZE_SHIFT : args->bytePerBlockShift;
+            memcpy(buffer, block->data, 1 << device->bytePerBlockShift);
 
-    ret->flags              = EMPTY_FLAGS;
+            if (blockBufferPush(device->blockBuffer, index, block) == RESULT_FAIL) {
+                return RESULT_FAIL;
+            }
+        }
 
-    ret->parent             = args->parent;
-    ret->childNum = 0;
-    initSinglyLinkedList(&ret->children);
-    initSinglyLinkedListNode(&ret->node);
-    if (ret->parent != NULL) {
-        ++ret->parent->childNum;
-        singlyLinkedListInsertNext(&ret->parent->children, &ret->node);
+        return RESULT_SUCCESS;
     }
 
-    ret->operations         = args->operations;
-    ret->specificInfo       = args->specificInfo;
-    initHashChainNode(&ret->hashChainNode);
+    return device->operations->readBlocks(device, blockIndex, buffer, n);
+} 
 
-    return ret;
-}
-
-void releaseBlockDevice(BlockDevice* device) {
-    kFree(device);
-}
-
-Result registerBlockDevice(BlockDevice* device) {
-    return hashTableInsert(&_hashTable, (Object)device->deviceID, &device->hashChainNode);
-}
-
-BlockDevice* unregisterBlockDevice(ID deviceID) {
-    return HOST_POINTER(hashTableDelete(&_hashTable, (Object)deviceID), BlockDevice, hashChainNode);
-}
-
-BlockDevice* getBlockDeviceByName(ConstCstring name) {
-    Size deviceID = (Uint16)strhash(name, 13, 65536);
-    HashChainNode* node = NULL;
-    if ((node = hashTableFind(&_hashTable, (Object)deviceID)) != NULL) {
-        return HOST_POINTER(node, BlockDevice, hashChainNode);
+Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n) {
+    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_READONLY) || device->operations->writeBlocks == NULL || blockIndex >= device->availableBlockNum) {
+        return RESULT_FAIL;
     }
 
-    return NULL;
-}
+    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
+        for (int i = 0; i < n; ++i) {
+            Index64 index = blockIndex + i;
+            Block* block = blockBufferPop(device->blockBuffer, index);
+            if (block == NULL) {
+                return RESULT_FAIL;
+            }
 
-BlockDevice* getBlockDeviceByID(ID id) {
-    HashChainNode* node = NULL;
-    if ((node = hashTableFind(&_hashTable, (Object)id)) != NULL) {
-        return HOST_POINTER(node, BlockDevice, hashChainNode);
+            if (index != block->blockIndex && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
+                if (device->operations->writeBlocks(device, index, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
+                    return RESULT_FAIL;
+                }
+            }
+
+            memcpy(block->data, buffer, 1 << device->bytePerBlockShift);
+            SET_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
+
+            if (blockBufferPush(device->blockBuffer, index, block)) {
+                return RESULT_FAIL;
+            }
+        }
+
+        return RESULT_SUCCESS;
     }
 
-    return NULL;
+    return device->operations->writeBlocks(device, blockIndex, buffer, n);
+}
+
+Result blockDeviceSynchronize(BlockDevice* device) {
+    if (TEST_FLAGS_FAIL(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
+        BlockBuffer* blockBuffer = device->blockBuffer;
+        for (int i = 0; i < blockBuffer->blockNum; ++i) {
+            Block* block = blockBufferPop(device->blockBuffer, INVALID_INDEX);
+            if (block == NULL) {
+                return RESULT_FAIL;
+            }
+
+            if (block->blockIndex != INVALID_INDEX && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
+                if (device->operations->writeBlocks(device, block->blockIndex, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
+                    return RESULT_FAIL;
+                }
+
+                CLEAR_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
+            }
+
+            if (blockBufferPush(device->blockBuffer, block->blockIndex, block)) {
+                return RESULT_FAIL;
+            }
+        }
+
+        return RESULT_SUCCESS;
+    }
+
+    return RESULT_SUCCESS;
 }
 
 Result probePartitions(BlockDevice* device) {
@@ -120,6 +176,8 @@ typedef struct {
     Uint32  sectorNum;
 } __attribute__((packed)) __MBRpartitionEntry;
 
+BlockDevice* firstBootablePartition;    //TODO: Ugly, figure out a method to know which device we are booting from
+
 static Result __doProbePartitions(BlockDevice* device, void* buffer) {
     if (blockDeviceReadBlocks(device, 0, buffer, 1) == RESULT_FAIL) {
         return RESULT_FAIL;
@@ -142,19 +200,21 @@ static Result __doProbePartitions(BlockDevice* device, void* buffer) {
                 .bytePerBlockShift  = device->bytePerBlockShift,
                 .parent             = device,
                 .specificInfo       = entry->sectorBegin,
-                .operations         = &_partitionOperations
+                .operations         = &_partitionOperations,
+                .buffered           = true
             };
 
-            BlockDevice* partitionDevice = createBlockDevice(&args);
-            if (partitionDevice == NULL) {
+            BlockDevice* partitionDevice = kMalloc(sizeof(BlockDevice));
+            if (partitionDevice == NULL || initBlockDevice(partitionDevice, &args) == RESULT_FAIL) {
                 continue;
             }
             
             if (entry->driveArttribute == 0x80) {
                 SET_FLAG_BACK(partitionDevice->flags, BLOCK_DEVICE_FLAGS_BOOTABLE);
+                if (firstBootablePartition == NULL) {
+                    firstBootablePartition = partitionDevice;
+                }
             }
-
-            registerBlockDevice(partitionDevice);
         }
     }
 

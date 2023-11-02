@@ -46,8 +46,10 @@ bool FAT32checkFileSystem(BlockDevice* device) {
 
 static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated);
 
+#define __FAT32_BATCH_ALLOCATE_SIZE BATCH_ALLOCATE_SIZE((FileSystem, 1), (SuperBlock, 1), (FileSystemEntry, 1), (FileSystemEntryDescriptor, 1), (FAT32info, 1), (FAT32BPB, 1))
+
 FileSystem* FAT32openFileSystem(BlockDevice* device) {
-    void* batchAllocated = kMalloc(BATCH_ALLOCATE_SIZE(FileSystem, SuperBlock, FileSystemEntry, FileSystemEntryDescriptor, FAT32info, FAT32BPB));
+    void* batchAllocated = kMalloc(__FAT32_BATCH_ALLOCATE_SIZE);
     FileSystem* ret = (FileSystem*)batchAllocated;
 
     if (batchAllocated == NULL || __doFAT32openFileSystem(device, batchAllocated) == RESULT_FAIL) {
@@ -69,8 +71,11 @@ static SuperBlockOperations _FAT32superBlockOperations = {
     .closeFileSystemEntry       = genericCloseFileSystemEntry
 };
 
+
 static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated) {
-    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, (FileSystem, fileSystem), (SuperBlock, superBlock), (FileSystemEntry, rootDirectory), (FileSystemEntryDescriptor, entryDescriptor), (FAT32info, info), (FAT32BPB, BPB));
+    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
+        (FileSystem, fileSystem, 1), (SuperBlock, superBlock, 1), (FileSystemEntry, rootDirectory, 1), (FileSystemEntryDescriptor, entryDescriptor, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1)
+    );
 
     void* buffer = allocateBuffer(device->bytePerBlockShift);
     if (buffer == NULL || blockDeviceReadBlocks(device, 0, buffer, 1) == RESULT_FAIL) {
@@ -168,7 +173,7 @@ Result FAT32closeFileSystem(FileSystem* fs) {
     pageFree(info->FAT);
 
     void* batchAllocated = fs;
-    memset(batchAllocated, 0, BATCH_ALLOCATE_SIZE(FileSystem, SuperBlock, FAT32info, FileSystemEntry));
+    memset(batchAllocated, 0, __FAT32_BATCH_ALLOCATE_SIZE);
     kFree(fs);
 
     return RESULT_FAIL;

@@ -32,6 +32,10 @@ static BlockDeviceOperation _operations = {
     .writeBlocks = __ATAwriteBlocks
 };
 
+static ATAdevice _devices[4];
+static BlockDevice _blockDevices[4];
+static ATAchannel _channels[2];
+
 Result initATAdevices() {
     ATAchannel dummy1;
     ATAdevice dummy2;
@@ -50,11 +54,7 @@ Result initATAdevices() {
                 continue;
             }
 
-            ATAdevice* device = kMalloc(sizeof(ATAdevice));
-            if (device == NULL) {
-                return RESULT_FAIL;
-            }
-
+            ATAdevice* device = _devices + ((i << 1) | j);
             memcpy(device, &dummy2, sizeof(ATAdevice));
 
             dummy1.devices[j] = device;
@@ -66,11 +66,7 @@ Result initATAdevices() {
             continue;
         }
 
-        ATAchannel* channel = kMalloc(sizeof(ATAchannel));
-        if (channel == NULL) {
-            return RESULT_FAIL;
-        }
-
+        ATAchannel* channel = _channels + i;
         memcpy(channel, &dummy1, sizeof(ATAchannel));
 
         ATA_resetChannel(channel);
@@ -94,10 +90,11 @@ Result initATAdevices() {
                 .operations         = &_operations
             };
 
-            BlockDevice* blockDevice = createBlockDevice(&args);
-            registerBlockDevice(blockDevice);
 
-            probePartitions(blockDevice);
+            BlockDevice* blockDevice = _blockDevices + ((i << 1) | j);
+            if (initBlockDevice(blockDevice, &args) == RESULT_FAIL || probePartitions(blockDevice) == RESULT_FAIL) {
+                continue;
+            }
         }
     }
 

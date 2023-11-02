@@ -1,6 +1,5 @@
 #include<init.h>
 
-#include<devices/block/blockDevice.h>
 #include<devices/ata/ata.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
@@ -32,7 +31,6 @@ static __InitFunc _initFuncs[] = {
     { initMemoryManager, "Memory" },
     { initTSS, "TSS" },
     { initKeyboard, "Keyboard" },
-    { initBlockDevice, "Block Device" },
     { initSchedule, "Schedule" },
     { initTimer, "Timer" },
     { __enableInterrupt, NULL },

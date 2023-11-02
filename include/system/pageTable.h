@@ -44,8 +44,10 @@ typedef Uint64                                              PagingEntry;
 #define PAGING_ENTRY_FLAG_PWT                               FLAG64(3)   //Page write through
 #define PAGING_ENTRY_FLAG_PCD                               FLAG64(4)   //Page cache disabled
 #define PAGING_ENTRY_FLAG_A                                 FLAG64(5)   //Accessed
+#define PAGING_ENTRY_FLAG_D                                 FLAG64(6)   //Dirty
 #define PAGING_ENTRY_FLAG_PS                                FLAG64(7)   //Page Size
-#define PAGING_ENTRY_FLAG_R                                 FLAG64(11)  //HALT paging restart
+#define PAGING_ENTRY_FLAG_PAT                               FLAG64(7)   //Page Attribute Table
+#define PAGING_ENTRY_FLAG_G                                 FLAG64(8)   //HALT paging restart
 #define PAGING_ENTRY_FLAG_XD                                FLAG64(63)  //Execute Disable
 
 #define PAGING_TABLE_SIZE                                   (PAGE_SIZE / sizeof(PagingEntry))

@@ -3,10 +3,10 @@
 #include<devices/block/blockDevice.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<error.h>
-#include<fs/fsManager.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsSyscall.h>
 #include<fs/phospherus/phospherus.h>
+#include<kernel.h>
 
 FileSystem* rootFileSystem = NULL;
 
@@ -35,17 +35,13 @@ static __FileSystemSupport _supports[FILE_SYSTEM_TYPE_NUM] = {
     }
 };
 
-static BlockDevice* __getBootFromDevice();
-
 Result initFileSystem() {
-    initFSManager();
-    BlockDevice* blockDevice = __getBootFromDevice();
-    if (blockDevice == NULL) {
+    if (firstBootablePartition == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
         return RESULT_FAIL;
     }
 
-    FileSystemType type = checkFileSystem(blockDevice);
+    FileSystemType type = checkFileSystem(firstBootablePartition);
     if (type == FILE_SYSTEM_TYPE_UNKNOWN) {
         SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
@@ -55,7 +51,7 @@ Result initFileSystem() {
         return RESULT_FAIL;
     }
 
-    rootFileSystem = openFileSystem(blockDevice);
+    rootFileSystem = openFileSystem(firstBootablePartition);
     if (rootFileSystem == NULL) {
         return RESULT_FAIL;
     }
@@ -81,32 +77,10 @@ FileSystemType checkFileSystem(BlockDevice* device) {
 }
 
 FileSystem* openFileSystem(BlockDevice* device) {
-    FileSystem* ret = getDeviceFS(device->deviceID);
-    if (ret != NULL) {
-        return ret;
-    }
-
     FileSystemType type = checkFileSystem(device);
-    ret = _supports[type].openFileSystem(device);
-
-    if (ret != NULL) {
-        if (registerDeviceFS(ret) == RESULT_FAIL) {
-            return RESULT_FAIL;
-        }
-    }
-
-    return ret;
+    return _supports[type].openFileSystem(device);
 }
 
 Result closeFileSystem(FileSystem* fs) {
-    BlockDevice* device = fs->superBlock->device;
-    if (unregisterDeviceFS(device->deviceID) == NULL) {
-        return RESULT_FAIL;
-    }
-
     return _supports[fs->type].closeFileSystem(fs);
-}
-
-static BlockDevice* __getBootFromDevice() {
-    return getBlockDeviceByName("HDA-p0");  //TODO: Ugly, figure out a method to know which device we are booting from
 }

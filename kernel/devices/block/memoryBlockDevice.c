@@ -19,10 +19,10 @@ static BlockDeviceOperation _operations = {
     .writeBlocks = __writeBlocks
 };
 
-BlockDevice* createMemoryBlockDevice(void* region, Size size, ConstCstring name) {
+Result createMemoryBlockDevice(BlockDevice* device, void* region, Size size, ConstCstring name) {
     if (region == NULL) {
         SET_ERROR_CODE(ERROR_OBJECT_ARGUMENT, ERROR_STATUS_IS_NULL);
-        return NULL;
+        return RESULT_FAIL;
     }
 
     Size blockNum = DIVIDE_ROUND_DOWN(size, DEFAULT_BLOCK_SIZE);
@@ -33,11 +33,11 @@ BlockDevice* createMemoryBlockDevice(void* region, Size size, ConstCstring name)
         .availableBlockNum  = blockNum,
         .bytePerBlockShift  = DEFAULT_BLOCK_SIZE_SHIFT,
         .parent             = NULL,
-        .specificInfo       = (Object)region,
+        .specificInfo       = (Object)region,   //RAM block device's additional data is its memory region's begin
         .operations         = &_operations
     };
 
-    return createBlockDevice(&args);    //RAM block device's additional data is its memory region's begin
+    return initBlockDevice(device, &args);
 }
 
 static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n) {

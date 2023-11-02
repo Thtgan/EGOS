@@ -68,11 +68,11 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
     //     return;
     // }
 
-    printf(TERMINAL_LEVEL_DEV, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
-    printf(TERMINAL_LEVEL_DEV, "FRAME: %#018llX\n", handlerStackFrame);
-    printf(TERMINAL_LEVEL_DEV, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
-    printf(TERMINAL_LEVEL_DEV, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
-    printRegisters(TERMINAL_LEVEL_DEV, registers);
+    printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
+    printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
+    printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
+    printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
+    printRegisters(TERMINAL_LEVEL_DEBUG, registers);
     blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (Uint64)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 

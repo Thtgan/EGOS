@@ -1,6 +1,7 @@
 #if !defined(__KERNEL_H)
 #define __KERNEL_H
 
+#include<devices/block/blockDevice.h>
 #include<fs/fileSystem.h>
 #include<kit/types.h>
 #include<memory/mm.h>
@@ -16,5 +17,7 @@ extern char pKernelRangeBegin;
 
 extern char pKernelRangeEnd;
 #define PHYSICAL_KERNEL_RANGE_END (&pKernelRangeEnd)
+
+extern BlockDevice* firstBootablePartition;
 
 #endif // __KERNEL_H
