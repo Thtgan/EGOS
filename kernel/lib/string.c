@@ -5,19 +5,19 @@
 
 static bool _flags[256];
 
-Size strlen(const char* str) {
-    const char* ptr = str;
+Size strlen(ConstCstring str) {
+    ConstCstring ptr = str;
     for (; *ptr != '\0'; ++ptr);
     return ptr - str;
 }
 
-Size strspn(const char* str1, const char* str2) {
+Size strspn(ConstCstring str1, ConstCstring str2) {
     memset(_flags, 0, sizeof(_flags));
     for (; *str2 != '\0'; ++str2) {
         _flags[*str2] = true;
     }
 
-    const char* ptr = str1;
+    ConstCstring ptr = str1;
     for (; *ptr != '\0'; ++ptr) {
         if (!_flags[*ptr]) {
             break;
@@ -26,13 +26,13 @@ Size strspn(const char* str1, const char* str2) {
     return ptr - str1;
 }
 
-Size strcspn(const char* str1, const char* str2) {
+Size strcspn(ConstCstring str1, ConstCstring str2) {
     memset(_flags, 0, sizeof(_flags));
     for (; *str2 != '\0'; ++str2) {
         _flags[*str2] = true;
     }
 
-    const char* ptr = str1;
+    ConstCstring ptr = str1;
     for (; *ptr != '\0'; ++ptr) {
         if (_flags[*ptr]) {
             break;
@@ -41,7 +41,7 @@ Size strcspn(const char* str1, const char* str2) {
     return ptr - str1;
 }
 
-char* strstr(const char* str1, const char* str2) {
+char* strstr(ConstCstring str1, ConstCstring str2) {
     if (str2 == NULL) {
         return (char*)str1;
     }
@@ -55,7 +55,7 @@ char* strstr(const char* str1, const char* str2) {
 
     Uint32 sum = 0;
     bool identical = true;
-    const char* front1 = str1, * front2 = str2;
+    ConstCstring front1 = str1, front2 = str2;
     for (; *str1 != '\0' && *str2 != '\0'; ++str1, ++str2) {
         sum += *str1;
         sum -= *str2;
@@ -81,8 +81,8 @@ char* strstr(const char* str1, const char* str2) {
     return NULL;
 }
 
-char* strtok(char* str, const char* delimiters) {
-    static char* beginning = NULL;
+Cstring strtok(Cstring str, ConstCstring delimiters) {
+    static Cstring beginning = NULL;
 
     memset(_flags, 0, sizeof(_flags));
     for (; *delimiters != '\0'; ++delimiters) {
@@ -95,7 +95,7 @@ char* strtok(char* str, const char* delimiters) {
 
     for (; *beginning != '\0' && _flags[*beginning]; ++beginning);
 
-    char* ret = *beginning == '\0' ? NULL : beginning;
+    Cstring ret = *beginning == '\0' ? NULL : beginning;
 
     if (ret != NULL) {
         for (; *beginning != '\0' && !_flags[*beginning]; ++beginning);
@@ -107,7 +107,7 @@ char* strtok(char* str, const char* delimiters) {
     return ret;
 }
 
-char* strpbrk(const char* str1, const char* str2) {
+Cstring strpbrk(ConstCstring str1, ConstCstring str2) {
     memset(_flags, 0, sizeof(_flags));
     for (; *str2 != '\0'; ++str2) {
         _flags[*str2] = true;
@@ -121,7 +121,7 @@ char* strpbrk(const char* str1, const char* str2) {
     return NULL;
 }
 
-char* strchr(const char* str, int ch) {
+char* strchr(ConstCstring str, int ch) {
     for (; *str != '\0'; ++str) {
         if (*str == (Uint8)ch) {
             return (char*)str;
@@ -130,7 +130,7 @@ char* strchr(const char* str, int ch) {
     return NULL;
 }
 
-char* strrchr(const char* str, int ch) {
+char* strrchr(ConstCstring str, int ch) {
     char* ret = NULL;
     for (; *str != '\0'; ++str) {
         if (*str == (Uint8)ch) {
@@ -140,8 +140,8 @@ char* strrchr(const char* str, int ch) {
     return ret;
 }
 
-char* strcpy(char* des, const char* src) {
-    char* ret = des;
+Cstring strcpy(Cstring des, ConstCstring src) {
+    Cstring ret = des;
     for (; *src != '\0'; ++src, ++des) {
         *des = *src;
     }
@@ -149,8 +149,8 @@ char* strcpy(char* des, const char* src) {
     return ret;
 }
 
-char* strncpy(char* des, const char* src, Size n) {
-    char* ret = des;
+Cstring strncpy(Cstring des, ConstCstring src, Size n) {
+    Cstring ret = des;
     for (; *src != '\0' && n != 0; ++src, ++des, --n) {
         *des = *src;
     }
@@ -158,29 +158,23 @@ char* strncpy(char* des, const char* src, Size n) {
     return ret;
 }
 
-int strcmp(const char* str1, const char* str2) { //TODO: Critical bug, strcmp("a", "a1") returns 0
-    int ret = 0;
-    for (; *str1 != '\0' && *str2 != '\0'; ++str1, ++str2) {
-        if (*str1 != *str2) {
-            ret = *str1 < *str2 ? -1 : 1;
-            break;
-        }
+int strcmp(ConstCstring str1, ConstCstring str2) {
+    while (*str1 == *str2 && *str1 != '\0') {
+        ++str1, ++str2;
     }
-    return ret;
+    
+    return *str1 - *str2;
 }
 
-int strncmp(const char* str1, const char* str2, Size n) {
-    int ret = 0;
-    for (; *str1 != '\0' && *str2 != '\0' && n != 0; ++str1, ++str2, --n) {
-        if (*str1 != *str2) {
-            ret = *str1 < *str2 ? -1 : 1;
-            break;
-        }
+int strncmp(ConstCstring str1, ConstCstring str2, Size n) {
+    for (int i = 0; i < n && *str1 == *str2 && *str1 != '\0'; ++i) {
+        ++str1, ++str2;
     }
-    return ret;
+    
+    return *str1 - *str2;
 }
 
-Size strhash(const char* str, Size p, Size mod) {
+Size strhash(ConstCstring str, Size p, Size mod) {
     Size pp = 1, ret = 0;
 
     for (int i = 0; str[i] != '\0'; ++i) {
