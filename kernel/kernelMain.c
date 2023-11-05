@@ -121,10 +121,8 @@ static void printLOGO() {
             printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
 
-        printf(TERMINAL_LEVEL_DEBUG, "%p\n", entry.iNode);
         BlockDevice* device = entry.iNode->superBlock->device;
         fileSystemEntryClose(&entry);
-        printf(TERMINAL_LEVEL_DEBUG, "========%s\n", device->name);
         blockDeviceSynchronize(device);
     }
 }

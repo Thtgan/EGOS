@@ -174,7 +174,7 @@ Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, S
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
     Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = n;
-    if (DIVIDE_ROUND_UP_SHIFT(entry->descriptor->dataRange.length, device->bytePerBlockShift) < DIVIDE_ROUND_UP_SHIFT(entry->pointer + n, device->bytePerBlockShift)) {
+    if (entry->pointer + n > entry->descriptor->dataRange.length) {
         if (rawFileSystemEntryResize(entry, entry->pointer + n) == RESULT_FAIL) {
             return RESULT_FAIL;
         }

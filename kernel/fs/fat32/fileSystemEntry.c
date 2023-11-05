@@ -111,7 +111,7 @@ static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte) {
     FAT32info* info = (FAT32info*)iNode->superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
     FAT32iNodeInfo* iNodeInfo = (FAT32iNodeInfo*)iNode->specificInfo;
-    Size newSizeInCluster = ALIGN_UP(ALIGN_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster), oldSizeInCluster = ALIGN_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
+    Size newSizeInCluster = DIVIDE_ROUND_UP(DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster), oldSizeInCluster = DIVIDE_ROUND_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
 
     if (newSizeInCluster < oldSizeInCluster) {
         Index32 tail = FAT32getCluster(info, iNodeInfo->firstCluster, newSizeInCluster - 1);
@@ -300,6 +300,7 @@ static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIden
         return RESULT_FAIL;
     }
 
+    Index64 oldPointer = directory->pointer;
     rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
 
     Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer;
@@ -308,6 +309,7 @@ static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIden
         return RESULT_FAIL;
     }
 
+    rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
     if (rawFileSystemEntryWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -316,26 +318,28 @@ static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIden
 }
 
 static Result __FAT32updateChild(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild) {
-    FileSystemEntryDescriptor descriptor;
     Size oldDirectoryEntrySize;
-    if (directoryLookup(directory, &descriptor, &oldDirectoryEntrySize, oldChild) != RESULT_SUCCESS) {
+    if (directoryLookup(directory, NULL, &oldDirectoryEntrySize, oldChild) != RESULT_SUCCESS) {
         return RESULT_FAIL;
     }
 
-    Size directoryEntrySize = __FAT32getDirectoryEntrySize(&descriptor);
+    Size directoryEntrySize = __FAT32getDirectoryEntrySize(newChild);
     void* directoryEntry = kMalloc(directoryEntrySize); //TODO: Bad memory management
     FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
-    if (directoryEntry == NULL || __FAT32descToDirectoryEntry(info, &descriptor, directoryEntry) == RESULT_FAIL) {
+    if (directoryEntry == NULL || __FAT32descToDirectoryEntry(info, newChild, directoryEntry) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer;
+    Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer - oldDirectoryEntrySize;
     void* followedData;
     if (oldDirectoryEntrySize != directoryEntrySize) {
+        Index64 oldPointer = directory->pointer;
+        rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
         followedData = kMalloc(followedDataSize); //TODO: Bad memory management
         if (followedData == NULL || rawFileSystemEntryRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
+        rawFileSystemEntrySeek(directory, oldPointer);
     }
 
     if (rawFileSystemEntryWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
