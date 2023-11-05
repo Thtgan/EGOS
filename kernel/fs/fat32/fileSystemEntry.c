@@ -1,47 +1,30 @@
 #include<fs/fat32/fileSystemEntry.h>
 
+#include<algorithms.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fat32/inode.h>
 #include<fs/fileSystem.h>
 #include<fs/fileSystemEntry.h>
+#include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<memory/kMalloc.h>
+#include<string.h>
 
-static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte);
-
-static Result __FAT32readChildren(FileSystemEntry* directory, FileSystemEntryDescriptor* buffer, Size n);
-
-static FileSystemEntryOperations _FAT32fileSystemEntryOperations = {
-    .seek           = genericFileSystemEntrySeek,
-    .read           = genericFileSystemEntryRead,
-    .write          = genericFileSystemEntryWrite,
-    .resize         = __FAT32resize,
-    .readChildren   = __FAT32readChildren
-};
-
-Result FAT32openFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor) {
-    if (genericOpenFileSystemEntry(superBlock, entry, entryDescripotor) == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-
-    entry->operations = &_FAT32fileSystemEntryOperations;
-
-    return RESULT_SUCCESS;
-}
-
+typedef struct {
+#define __FAT32_DIRECTORY_ENTRY_NAME_MAIN_LENGTH    8
+#define __FAT32_DIRECTORY_ENTRY_NAME_EXT_LENGTH     3
+#define __FAT32_DIRECTORY_ENTRY_NAME_LENGTH         (__FAT32_DIRECTORY_ENTRY_NAME_MAIN_LENGTH + __FAT32_DIRECTORY_ENTRY_NAME_EXT_LENGTH)
+    char    name[__FAT32_DIRECTORY_ENTRY_NAME_LENGTH];
+    Uint8   attribute;
 #define __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY FLAG8(0)
 #define __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN    FLAG8(1)
 #define __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_SYSTEM    FLAG8(2)
 #define __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_VOLUME_ID FLAG8(3)
 #define __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY FLAG8(4)
 #define __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_ARCHIVE   FLAG8(5)
-
-typedef struct {
-    char    name[11];
-    Uint8   attribute;
     Uint8   reserved;
     Uint8   createTimeTengthSec;    //Second in tength of second
     Uint16  createTime;             //5 bits hours, 6 bits minutes, 5 bits seconds(Multiply by 2)
@@ -54,8 +37,6 @@ typedef struct {
     Uint32  size;
 } __attribute__((packed)) __FAT32DirectoryEntry;
 
-#define __FAT32_LONG_NAME_ENTRY_FLAG                FLAG8(6)
-#define __FAT32_LONG_NAME_ENTRY_ATTRIBUTE           (__FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_SYSTEM | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_VOLUME_ID)
 #define __FAT32_LONG_NAME_ENTRY_LEN1                5
 #define __FAT32_LONG_NAME_ENTRY_LEN2                6
 #define __FAT32_LONG_NAME_ENTRY_LEN3                2
@@ -64,32 +45,84 @@ typedef struct {
 
 typedef struct {
     Uint8   order;
-    Uint16  doubleBytes1[5];
+#define __FAT32_LONG_NAME_ENTRY_FLAG                FLAG8(6)
+    Uint16  doubleBytes1[__FAT32_LONG_NAME_ENTRY_LEN1];
     Uint8   attribute;
+#define __FAT32_LONG_NAME_ENTRY_ATTRIBUTE           (__FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_SYSTEM | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_VOLUME_ID)
     Uint8   type;
     Uint8   checksum;
-    Uint16  doubleBytes2[6];
+    Uint16  doubleBytes2[__FAT32_LONG_NAME_ENTRY_LEN2];
     Uint16  reserved;
-    Uint16  doubleBytes3[2];
+    Uint16  doubleBytes3[__FAT32_LONG_NAME_ENTRY_LEN3];
 } __attribute__((packed)) __FAT32LongNameEntry;
+
+static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte);
+
+static Result __FAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr);
+
+static Result __FAT32addChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childToAdd);
+
+static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIdentifier* childToRemove);
+
+static Result __FAT32updateChild(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild);
+
+static FileSystemEntryOperations _FAT32fileSystemEntryOperations = {
+    .seek           = genericFileSystemEntrySeek,
+    .read           = genericFileSystemEntryRead,
+    .write          = genericFileSystemEntryWrite,
+    .resize         = __FAT32resize,
+    .readChild      = __FAT32readChild,
+    .addChild       = __FAT32addChild,
+    .removeChild    = __FAT32removeChild,
+    .updateChild    = __FAT32updateChild
+};
+
+Result FAT32openFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor) {
+    if (genericOpenFileSystemEntry(superBlock, entry, entryDescripotor) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    entry->operations = &_FAT32fileSystemEntryOperations;
+    if (entry->descriptor->identifier.type == FILE_SYSTEM_ENTRY_TYPE_DIRECTOY) {
+        Size directoryDataSize = 0, entrySize;
+        Result res = RESULT_FAIL;
+        rawFileSystemEntrySeek(entry, 0);
+        while((res = rawFileSystemEntryReadChild(entry, NULL, &entrySize)) != RESULT_FAIL) {
+            directoryDataSize += entrySize;
+            rawFileSystemEntrySeek(entry, entry->pointer + entrySize);
+
+            if (res == RESULT_SUCCESS) {
+                break;
+            }
+        }
+
+        if (res == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        entry->descriptor->dataRange.length = directoryDataSize;
+    }
+
+    return RESULT_SUCCESS;
+}
 
 static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte) {
     iNode* iNode = entry->iNode;
     FAT32info* info = (FAT32info*)iNode->superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
     FAT32iNodeInfo* iNodeInfo = (FAT32iNodeInfo*)iNode->specificInfo;
-    Size newSizeInBlock = ALIGN_UP(ALIGN_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster);
+    Size newSizeInCluster = ALIGN_UP(ALIGN_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster), oldSizeInCluster = ALIGN_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
 
-    if (newSizeInBlock < iNode->sizeInBlock) {
-        Index32 tail = FAT32getCluster(info, iNodeInfo->firstCluster, newSizeInBlock / BPB->sectorPerCluster - 1);
+    if (newSizeInCluster < oldSizeInCluster) {
+        Index32 tail = FAT32getCluster(info, iNodeInfo->firstCluster, newSizeInCluster - 1);
         if (FAT32getClusterType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) == FAT32_END_OF_CLUSTER_CHAIN) {
             return RESULT_FAIL;
         }
 
         Index32 cut = FAT32cutClusterChain(info, tail);
         FAT32releaseClusterChain(info, cut);
-    } else if (newSizeInBlock > iNode->sizeInBlock) {
-        Index32 freeClusterChain = FAT32allocateClusterChain(info, (newSizeInBlock - iNode->sizeInBlock) / BPB->sectorPerCluster);
+    } else if (newSizeInCluster > oldSizeInCluster) {
+        Index32 freeClusterChain = FAT32allocateClusterChain(info, newSizeInCluster - oldSizeInCluster);
         Index32 tail = FAT32getCluster(info, iNodeInfo->firstCluster, iNode->sizeInBlock / BPB->sectorPerCluster - 1);
 
         if (FAT32getClusterType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || FAT32getClusterType(info, freeClusterChain) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) != FAT32_END_OF_CLUSTER_CHAIN) {
@@ -99,35 +132,34 @@ static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte) {
         FAT32insertClusterChain(info, tail, freeClusterChain);
     }
 
-    iNode->sizeInBlock = newSizeInBlock;
+    iNode->sizeInBlock = newSizeInCluster * BPB->sectorPerCluster;
     entry->descriptor->dataRange.length = newSizeInByte;
 
     return RESULT_SUCCESS;
 }
 
-static Result __doFAT32readChildren(FileSystemEntry* directory, FileSystemEntryDescriptor* descs, char* buffer, Size n);
+static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr, char* buffer);
 
-static Result __FAT32readChildren(FileSystemEntry* directory, FileSystemEntryDescriptor* descs, Size n) {
+static Result __FAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr) {
     void* buffer = allocateBuffer(BUFFER_SIZE_512);
     if (buffer == NULL) {
         return RESULT_FAIL;
     }
 
-    Result res = __doFAT32readChildren(directory, descs, buffer, n);
+    Result res = __doFAT32readChild(directory, childDesc, entrySizePtr, buffer);
     releaseBuffer(buffer, BUFFER_SIZE_512);
 
     return res;
 }
+#include<real/simpleAsmLines.h>
+static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr, char* buffer) {
+    if (rawFileSystemEntryRead(directory, buffer, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
-static Result __doFAT32readChildren(FileSystemEntry* directory, FileSystemEntryDescriptor* descs, char* buffer, Size n) {
-    for (int i = 0; i < n; ++i) {
-        FileSystemEntryDescriptor* desc = descs + i;
-        if (rawFileSystemEntryRead(directory, buffer, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
-            return RESULT_FAIL;
-        }
-
-        FileSystemEntryDescriptorInitArgs args;
-        if (buffer[0] == 0x00 || buffer[0] == 0xE5) {
+    FileSystemEntryDescriptorInitArgs args;
+    if (buffer[0] == 0x00 || buffer[0] == 0xE5) {
+        if (childDesc != NULL) {
             args = (FileSystemEntryDescriptorInitArgs) {
                 .name       = NULL,
                 .type       = FILE_SYSTEM_ENTRY_TYPE_DUMMY,
@@ -136,23 +168,30 @@ static Result __doFAT32readChildren(FileSystemEntry* directory, FileSystemEntryD
                 .flags      = EMPTY_FLAGS
             };
 
-            initFileSystemEntryDescriptor(desc, &args);
-
-            return buffer[0] == 0x00 ? RESULT_SUCCESS : RESULT_CONTINUE;
+            initFileSystemEntryDescriptor(childDesc, &args);
         }
 
-        Uint8 longNameEntryNum = 0;
-        if (((__FAT32LongNameEntry*)buffer)->attribute == __FAT32_LONG_NAME_ENTRY_ATTRIBUTE) {
-            __FAT32LongNameEntry* longNameEntry = (__FAT32LongNameEntry*)(buffer);
-
-            if (TEST_FLAGS_FAIL(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG)) {
-                return RESULT_FAIL;
-            }
-
-            longNameEntryNum = (Uint8)VAL_XOR(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG);
+        if (buffer[0] != 0x00 && entrySizePtr != NULL) {
+            *entrySizePtr = 32;
         }
 
-        Size entrySize = longNameEntryNum * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
+        return buffer[0] == 0x00 ? RESULT_SUCCESS : RESULT_CONTINUE;
+    }
+
+    Uint8 longNameEntryNum = 0;
+    if (((__FAT32LongNameEntry*)buffer)->attribute == __FAT32_LONG_NAME_ENTRY_ATTRIBUTE) {
+        __FAT32LongNameEntry* longNameEntry = (__FAT32LongNameEntry*)(buffer);
+
+        if (TEST_FLAGS_FAIL(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG)) {
+            return RESULT_FAIL;
+        }
+
+        longNameEntryNum = (Uint8)VAL_XOR(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG);
+    }
+
+    Size entrySize = longNameEntryNum * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
+
+    if (childDesc != NULL) {
         if (rawFileSystemEntryRead(directory, buffer, entrySize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
@@ -222,10 +261,195 @@ static Result __doFAT32readChildren(FileSystemEntry* directory, FileSystemEntryD
             SET_FLAG_BACK(args.flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_HIDDEN);
         }
 
-        initFileSystemEntryDescriptor(desc, &args);
+        initFileSystemEntryDescriptor(childDesc, &args);
+    }
 
-        rawFileSystemEntrySeek(directory, directory->pointer + entrySize);
+
+    if (entrySizePtr != NULL) {
+        *entrySizePtr = entrySize;
     }
 
     return RESULT_CONTINUE;
+}
+
+static Size __FAT32getDirectoryEntrySize(FileSystemEntryDescriptor* descriptor);
+
+static Result __FAT32descToDirectoryEntry(FAT32info* info, FileSystemEntryDescriptor* descriptor, void* buffer);
+
+static Result __FAT32addChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childToAdd) {
+    Size directoryEntrySize = __FAT32getDirectoryEntrySize(childToAdd);
+    void* directoryEntry = kMalloc(directoryEntrySize);
+    FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
+    if (directoryEntry == NULL || __FAT32descToDirectoryEntry(info, childToAdd, directoryEntry) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    rawFileSystemEntrySeek(directory, directory->descriptor->dataRange.length);
+
+    if (rawFileSystemEntryWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    return RESULT_SUCCESS;
+
+}
+
+static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIdentifier* childToRemove) {
+    Size oldDirectoryEntrySize;
+    if (directoryLookup(directory, NULL, &oldDirectoryEntrySize, childToRemove) != RESULT_SUCCESS) {
+        return RESULT_FAIL;
+    }
+
+    rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
+
+    Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer;
+    void* followedData = kMalloc(followedDataSize);
+    if (followedData == NULL || rawFileSystemEntryRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    if (rawFileSystemEntryWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    return RESULT_SUCCESS;
+}
+
+static Result __FAT32updateChild(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild) {
+    FileSystemEntryDescriptor descriptor;
+    Size oldDirectoryEntrySize;
+    if (directoryLookup(directory, &descriptor, &oldDirectoryEntrySize, oldChild) != RESULT_SUCCESS) {
+        return RESULT_FAIL;
+    }
+
+    Size directoryEntrySize = __FAT32getDirectoryEntrySize(&descriptor);
+    void* directoryEntry = kMalloc(directoryEntrySize); //TODO: Bad memory management
+    FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
+    if (directoryEntry == NULL || __FAT32descToDirectoryEntry(info, &descriptor, directoryEntry) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer;
+    void* followedData;
+    if (oldDirectoryEntrySize != directoryEntrySize) {
+        followedData = kMalloc(followedDataSize); //TODO: Bad memory management
+        if (followedData == NULL || rawFileSystemEntryRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
+    if (rawFileSystemEntryWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    if (oldDirectoryEntrySize != directoryEntrySize) {
+        if (rawFileSystemEntryWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
+    return RESULT_SUCCESS;
+}
+
+static Result __FAT32descToDirectoryEntry(FAT32info* info, FileSystemEntryDescriptor* descriptor, void* buffer) {
+    ConstCstring name = descriptor->identifier.name;
+    if (name == NULL) {
+        return RESULT_FAIL;
+    }
+
+    Size nameLength = strlen(descriptor->identifier.name); 
+    if (nameLength > __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH) {
+        return RESULT_FAIL;
+    }
+
+    for (int i = 0; i < nameLength; ++i) {
+        if (name[i] == '+' || name[i] == ',' || name[i] == ';' || name[i] == '=' || name[i] == '[' || name[i] == ']') {
+            return RESULT_FAIL;
+        }
+    }
+
+    Uint8 longNameEntryNum = DIVIDE_ROUND_UP(nameLength + 1, __FAT32_LONG_NAME_ENTRY_LEN);
+    __FAT32DirectoryEntry* directoryEntry = (__FAT32DirectoryEntry*)(buffer + longNameEntryNum * sizeof(__FAT32LongNameEntry));
+    memset(directoryEntry->name, ' ', sizeof(directoryEntry->name));
+    for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_NAME_MAIN_LENGTH && name[i] != '\0' && name[i] != '.'; ++i) {
+        char ch = name[i];
+        if ('a' <= ch && ch <= 'z') {
+            ch += ('A' - 'a');
+        }
+
+        directoryEntry->name[i] = ch;
+    }
+
+    for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_NAME_EXT_LENGTH; ++i) {
+        char ch = name[nameLength - i - 1];
+        if ('a' <= ch && ch <= 'z') {   //TODO: Use character functions
+            ch += ('A' - 'a');
+        }
+
+        directoryEntry->name[__FAT32_DIRECTORY_ENTRY_NAME_LENGTH - i - 1] = ch;
+    }
+
+    directoryEntry->attribute           = EMPTY_FLAGS;
+    if (TEST_FLAGS(descriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_READ_ONLY)) {
+        SET_FLAG_BACK(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY);
+    }
+
+    if (TEST_FLAGS(descriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_HIDDEN)) {
+        SET_FLAG_BACK(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN);
+    }
+
+    SET_FLAG_BACK(
+        directoryEntry->attribute, 
+        descriptor->identifier.type == FILE_SYSTEM_ENTRY_TYPE_DIRECTOY ? __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_ARCHIVE
+    );
+
+    directoryEntry->reserved            = 0;
+    directoryEntry->createTimeTengthSec = 0;    //TODO: Implement timestamp;
+    directoryEntry->createTime          = 0;
+    directoryEntry->createDate          = 0;
+    directoryEntry->lastAccessDate      = 0;
+    FAT32BPB* BPB = info->BPB;
+    Index32 beginCluster = (descriptor->dataRange.begin / BPB->bytePerSector - info->dataBlockRange.begin) / BPB->sectorPerCluster;
+    directoryEntry->clusterBeginHigh    = EXTRACT_VAL(beginCluster, 32, 16, 32);
+    directoryEntry->lastModifyTime      = 0;
+    directoryEntry->lastModifyDate      = 0;
+    directoryEntry->clusterBeginLow     = EXTRACT_VAL(beginCluster, 32, 0, 16);
+    directoryEntry->size                = descriptor->dataRange.length;
+
+    Uint8 checkSum = 0;
+    for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_NAME_LENGTH; ++i) {
+        checkSum = ((checkSum & 1) ? 0x80 : 0) + (checkSum >> 1) + directoryEntry->name[i];
+    }
+
+    for (int i = longNameEntryNum; i >= 1; --i) {
+        __FAT32LongNameEntry* longNameEntry = ((__FAT32LongNameEntry*)buffer) + longNameEntryNum - i;
+        longNameEntry->order = (i == longNameEntryNum ? (Uint8)VAL_XOR(longNameEntryNum, __FAT32_LONG_NAME_ENTRY_FLAG) : i);
+        Uint8 offset = (i - 1) * __FAT32_LONG_NAME_ENTRY_LEN, partLen = umin8(__FAT32_LONG_NAME_ENTRY_LEN, nameLength  + 1 - offset);
+        ConstCstring part = name + offset;
+
+        int current = 0;    //Trailing 0 is included
+        for (int j = 0; j < __FAT32_LONG_NAME_ENTRY_LEN1; ++j, ++current) {
+            longNameEntry->doubleBytes1[j] = current < partLen ? (Uint16)part[current] : 0xFFFF;
+        }
+
+        for (int j = 0; j < __FAT32_LONG_NAME_ENTRY_LEN2; ++j, ++current) {
+            longNameEntry->doubleBytes2[j] = current < partLen ? (Uint16)part[current] : 0xFFFF;
+        }
+
+        for (int j = 0; j < __FAT32_LONG_NAME_ENTRY_LEN3; ++j, ++current) {
+            longNameEntry->doubleBytes3[j] = current < partLen ? (Uint16)part[current] : 0xFFFF;
+        }
+
+        longNameEntry->attribute    = __FAT32_LONG_NAME_ENTRY_ATTRIBUTE;
+        longNameEntry->type         = 0;
+        longNameEntry->checksum     = checkSum;
+        longNameEntry->reserved     = 0;
+    }
+
+    return RESULT_SUCCESS;
+}
+
+static Size __FAT32getDirectoryEntrySize(FileSystemEntryDescriptor* descriptor) {
+    Size nameLength = strlen(descriptor->identifier.name);
+    return DIVIDE_ROUND_UP(nameLength, __FAT32_LONG_NAME_ENTRY_LEN) * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
 }

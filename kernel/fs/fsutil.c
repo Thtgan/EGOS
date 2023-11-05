@@ -4,18 +4,34 @@
 #include<fs/fileSystemEntry.h>
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<string.h>
+#include<string.h> 
 
-Result directoryLookup(Directory directory, FileSystemEntryDescriptor* desc) {
+Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descriptor, Size* entrySizePtr, FileSystemEntryIdentifier* identifier) {
     FileSystemEntryDescriptor tmpDesc;
+    Size entrySize;
     rawFileSystemEntrySeek(directory, 0);
-    while (rawFileSystemEntryReadChildren(directory, &tmpDesc, 1) == RESULT_CONTINUE) {
-        if (strcmp(desc->name, tmpDesc.name) == 0 && desc->type == tmpDesc.type) {
-            memcpy(desc, &tmpDesc, sizeof(FileSystemEntryDescriptor));
+    Result res = RESULT_FAIL;
+
+    while ((res = rawFileSystemEntryReadChild(directory, &tmpDesc, &entrySize)) != RESULT_FAIL) {
+        if (res == RESULT_SUCCESS) {
+            return RESULT_CONTINUE; //TODO: Bad, set a new result for failed but no error
+        }
+
+        if (strcmp(identifier->name, tmpDesc.identifier.name) == 0 && identifier->type == tmpDesc.identifier.type) {
+            if (descriptor != NULL) {
+                memcpy(descriptor, &tmpDesc, sizeof(FileSystemEntryDescriptor));
+            }
+
+            if (entrySizePtr != NULL) {
+                *entrySizePtr = entrySize;
+            }
             return RESULT_SUCCESS;
         }
+
         clearFileSystemEntryDescriptor(&tmpDesc);
+        rawFileSystemEntrySeek(directory, directory->pointer + entrySize);
     }
+
     return RESULT_FAIL;
 }
 

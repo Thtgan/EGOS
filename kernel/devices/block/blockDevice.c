@@ -112,7 +112,7 @@ Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const voi
             memcpy(block->data, buffer, 1 << device->bytePerBlockShift);
             SET_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
 
-            if (blockBufferPush(device->blockBuffer, index, block)) {
+            if (blockBufferPush(device->blockBuffer, index, block) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
         }
@@ -124,7 +124,7 @@ Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const voi
 }
 
 Result blockDeviceSynchronize(BlockDevice* device) {
-    if (TEST_FLAGS_FAIL(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
+    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
         BlockBuffer* blockBuffer = device->blockBuffer;
         for (int i = 0; i < blockBuffer->blockNum; ++i) {
             Block* block = blockBufferPop(device->blockBuffer, INVALID_INDEX);
@@ -140,11 +140,10 @@ Result blockDeviceSynchronize(BlockDevice* device) {
                 CLEAR_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
             }
 
-            if (blockBufferPush(device->blockBuffer, block->blockIndex, block)) {
+            if (blockBufferPush(device->blockBuffer, block->blockIndex, block) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
         }
-
         return RESULT_SUCCESS;
     }
 

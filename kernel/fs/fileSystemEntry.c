@@ -19,8 +19,10 @@
 
 Result initFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc, FileSystemEntryDescriptorInitArgs* args) {
     ConstCstring name = args->name;
+
+    FileSystemEntryIdentifier* identifier = &desc->identifier;
     if (name == NULL) {
-        desc->name = NULL;
+        identifier->name    = NULL;
     } else {
         Cstring copy = kMalloc(strlen(name) + 1);
         if (copy == NULL) {
@@ -28,27 +30,29 @@ Result initFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc, FileSystem
         }
 
         strcpy(copy, name);
-        desc->name = copy;
+        identifier->name    = copy;
     }
 
-    desc->type      = args->type;
-    desc->dataRange = args->dataRange;
-    desc->parent    = args->parent;
-    desc->flags     = args->flags;
-    desc->entry     = NULL;
+    identifier->type        = args->type;
+    identifier->parent      = args->parent;
+    desc->dataRange         = args->dataRange;
+    desc->flags             = args->flags;
+    desc->entry             = NULL;
 
     return RESULT_SUCCESS;
 }
 
 void clearFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc) {
-    if (desc->name != NULL) {
-        kFree((void*)desc->name);
+    if (desc->identifier.name != NULL) {
+        kFree((void*)desc->identifier.name);
     }
 
     memset(desc, 0, sizeof(FileSystemEntryDescriptor));
 }
 
 Result genericOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor) {
+    //TODO: What if descriptor already open?
+
     entry->descriptor       = entryDescripotor;
     
     entry->pointer          = 0;
@@ -169,9 +173,14 @@ Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, S
     }
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
-    Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = min64(n, entry->descriptor->dataRange.length - entry->pointer);
-    Range range;
+    Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = n;
+    if (DIVIDE_ROUND_UP_SHIFT(entry->descriptor->dataRange.length, device->bytePerBlockShift) < DIVIDE_ROUND_UP_SHIFT(entry->pointer + n, device->bytePerBlockShift)) {
+        if (rawFileSystemEntryResize(entry, entry->pointer + n) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
 
+    Range range;
     if (offsetInBlock != 0) {
         Size tmpN = 1;
         if (rawInodeMapBlockPosition(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
@@ -244,7 +253,7 @@ Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* de
     Directory currentDirectory = superBlock->rootDirectory;
     FileSystemEntry tmpEntry;
     while (true) {
-        if (*path != '\\') {
+        if (*path != '\\') {    //TODO: Seperator should be '/'
             res = RESULT_FAIL;
             break;
         }
@@ -263,9 +272,13 @@ Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* de
 
         strncpy(buffer, path, len);
         
-        desc->name = buffer;
-        desc->type = *next == '\0' ? type : FILE_SYSTEM_ENTRY_TYPE_DIRECTOY;
-        if (directoryLookup(currentDirectory, desc) == RESULT_FAIL) {
+        FileSystemEntryIdentifier identifier = {
+            .name   = buffer,
+            .type   = *next == '\0' ? type : FILE_SYSTEM_ENTRY_TYPE_DIRECTOY,
+            .parent = entry->descriptor
+        };
+
+        if (directoryLookup(currentDirectory, desc, NULL, &identifier) != RESULT_SUCCESS) {
             res = RESULT_FAIL;
             break;
         }
@@ -297,5 +310,13 @@ Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* de
 
 Result fileSystemEntryClose(FileSystemEntry* entry) {
     SuperBlock* superBlock = entry->iNode->superBlock;
+    FileSystemEntryIdentifier* identifier = &entry->descriptor->identifier;
+    if (identifier->type != FILE_SYSTEM_ENTRY_TYPE_DIRECTOY) {
+        FileSystemEntry* parentEntry = identifier->parent->entry;
+        if (parentEntry == NULL || rawFileSystemEntryUpdateChild(parentEntry, identifier, entry->descriptor) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
     return superBlock->operations->closeFileSystemEntry(superBlock, entry);
 }

@@ -26,20 +26,37 @@ typedef struct {
     Result (*resize)(FileSystemEntry* entry, Size newSizeInByte);
 
     //Pointer points to current entry
-    Result (*readChildren)(FileSystemEntry* directory, FileSystemEntryDescriptor* buffer, Size n);
+    Result (*readChild)(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr);
+
+    Result (*addChild)(FileSystemEntry* directory, FileSystemEntryDescriptor* childToAdd);
+
+    //Pointer points to entry to remove
+    Result (*removeChild)(FileSystemEntry* directory, FileSystemEntryIdentifier* childToRemove);
+
+    //Pointer points to entry to uipdate
+    Result (*updateChild)(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild);
 } FileSystemEntryOperations;
 
-STRUCT_PRIVATE_DEFINE(FileSystemEntryDescriptor) {
+STRUCT_PRIVATE_DEFINE(FileSystemEntryIdentifier) {
     ConstCstring                name;
     FileSystemEntryType         type;
+    FileSystemEntryDescriptor*  parent;
+};
+
+STRUCT_PRIVATE_DEFINE(FileSystemEntryDescriptor) {
+    FileSystemEntryIdentifier   identifier;
     Range                       dataRange;  //In byte
 #define FILE_SYSTEM_ENTRY_INVALID_POSITION  -1
 #define FILE_SYSTEM_ENTRY_INVALID_SIZE      -1
-    FileSystemEntryDescriptor*  parent;
     Flags16                     flags;
 #define FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT     FLAG8(0)
 #define FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_READ_ONLY   FLAG8(1)
 #define FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_HIDDEN      FLAG8(2)
+
+    Uint64                      createTime;
+    Uint64                      lastAccessTime;
+    Uint64                      lastModifyTime;
+
     FileSystemEntry*            entry;
 };
 
@@ -67,8 +84,20 @@ static inline Result rawFileSystemEntryResize(FileSystemEntry* entry, Size newBl
     return entry->operations->resize(entry, newBlockSize);
 }
 
-static inline Result rawFileSystemEntryReadChildren(FileSystemEntry* directory, FileSystemEntryDescriptor* buffer, Size n) {
-    return directory->operations->readChildren(directory, buffer, n);
+static inline Result rawFileSystemEntryReadChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr) {
+    return directory->operations->readChild(directory, childDesc, entrySizePtr);
+}
+
+static inline Result rawFileSystemEntryAddChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childToAdd) {
+    return directory->operations->addChild(directory, childToAdd);
+}
+
+static inline Result rawFileSystemEntryRemoveChild(FileSystemEntry* directory, FileSystemEntryIdentifier* childToRemove) {
+    return directory->operations->removeChild(directory, childToRemove);
+}
+
+static inline Result rawFileSystemEntryUpdateChild(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild) {
+    return directory->operations->updateChild(directory, oldChild, newChild);
 }
 
 typedef struct {

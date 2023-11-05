@@ -71,7 +71,6 @@ static SuperBlockOperations _FAT32superBlockOperations = {
     .closeFileSystemEntry       = genericCloseFileSystemEntry
 };
 
-
 static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated) {
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
         (FileSystem, fileSystem, 1), (SuperBlock, superBlock, 1), (FileSystemEntry, rootDirectory, 1), (FileSystemEntryDescriptor, entryDescriptor, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1)
@@ -102,12 +101,17 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
     info->BPB                           = BPB;
 
     Size FATsizeInByte                  = BPB->sectorPerFAT << device->bytePerBlockShift;
-    Index32* FAT                        = convertAddressP2V(pageAlloc(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT), MEMORY_TYPE_NORMAL));
-    info->FAT                           = FAT;
-    blockDeviceReadBlocks(device, info->FATrange.begin, info->FAT, info->FATrange.length);
-    if (info->FAT == NULL || blockDeviceReadBlocks(device, info->FATrange.begin, info->FAT, info->FATrange.length) == RESULT_FAIL) {
+    void* pFAT = pageAlloc(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT), MEMORY_TYPE_NORMAL);
+    if (pFAT == NULL) {
         return RESULT_FAIL;
     }
+
+    Index32* FAT                        = convertAddressP2V(pFAT);
+    if (blockDeviceReadBlocks(device, info->FATrange.begin, FAT, info->FATrange.length) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    info->FAT                           = FAT;
 
     Index32 firstFreeCluster = INVALID_INDEX, last = INVALID_INDEX;
     for (Index32 i = 0; i < clusterNum; ++i) {

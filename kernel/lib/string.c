@@ -158,7 +158,7 @@ char* strncpy(char* des, const char* src, Size n) {
     return ret;
 }
 
-int strcmp(const char* str1, const char* str2) {
+int strcmp(const char* str1, const char* str2) { //TODO: Critical bug, strcmp("a", "a1") returns 0
     int ret = 0;
     for (; *str1 != '\0' && *str2 != '\0'; ++str1, ++str2) {
         if (*str1 != *str2) {

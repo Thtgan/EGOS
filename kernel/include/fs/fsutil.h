@@ -7,7 +7,7 @@
 typedef FileSystemEntry* Directory;
 typedef FileSystemEntry* File;
 
-Result directoryLookup(Directory directory, FileSystemEntryDescriptor* desc);
+Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descriptor, Size* entrySizePtr, FileSystemEntryIdentifier* identifier);
 
 #define FILE_SEEK_BEGIN     0
 #define FILE_SEEK_CURRENT   1

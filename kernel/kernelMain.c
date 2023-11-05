@@ -115,12 +115,16 @@ static void printLOGO() {
         fileSeek(&entry, 0, FILE_SEEK_END);
         Size fileSize = fileGetPointer(&entry);
         fileSeek(&entry, 0, FILE_SEEK_BEGIN);
-
+ 
         if (fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
             buffer[fileSize] = '\0';
             printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
 
+        printf(TERMINAL_LEVEL_DEBUG, "%p\n", entry.iNode);
+        BlockDevice* device = entry.iNode->superBlock->device;
         fileSystemEntryClose(&entry);
+        printf(TERMINAL_LEVEL_DEBUG, "========%s\n", device->name);
+        blockDeviceSynchronize(device);
     }
 }
