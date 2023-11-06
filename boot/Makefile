@@ -10,6 +10,7 @@ CC_OPTIONS 					:= 	-nostdlib			\
 								-mno-sse2			\
 								-m32				\
 								-I./include			\
+								-I./include/lib		\
 								-I../include		\
 								-O2					\
 								-g					\
