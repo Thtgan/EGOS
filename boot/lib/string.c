@@ -1,6 +1,6 @@
 #include<string.h>
 
-#include<memory/memory.h>
+#include<lib/memory.h>
 #include<kit/types.h>
 
 static bool _flags[256];
@@ -41,9 +41,9 @@ Size strcspn(ConstCstring str1, ConstCstring str2) {
     return ptr - str1;
 }
 
-char* strstr(ConstCstring str1, ConstCstring str2) {
+Cstring strstr(ConstCstring str1, ConstCstring str2) {
     if (str2 == NULL) {
-        return (char*)str1;
+        return (Cstring)str1;
     }
 
     const char firstCh = *str2;
@@ -65,7 +65,7 @@ char* strstr(ConstCstring str1, ConstCstring str2) {
     if (*str2 != '\0') {
         return NULL;
     } else if (identical) {
-        return (char*)front1;
+        return (Cstring)front1;
     }
 
     Size subLen = str2 - front2 - 1;
@@ -74,7 +74,7 @@ char* strstr(ConstCstring str1, ConstCstring str2) {
         sum += *str1++;
 
         if (sum == 0 && *front1 == firstCh && memcmp(front1, front2, subLen) == 0) {
-            return (char*)front1;
+            return (Cstring)front1;
         }
     }
 
@@ -115,7 +115,7 @@ Cstring strpbrk(ConstCstring str1, ConstCstring str2) {
 
     for (; *str1 != '\0'; ++str1) {
         if (_flags[*str1]) {
-            return (char*)str1;
+            return (Cstring)str1;
         }
     }
     return NULL;
