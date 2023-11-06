@@ -104,22 +104,28 @@ void kernelMain(SystemInfo* info) {
 
 //     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
+    closeFileSystem(rootFileSystem);
+
     die();
 }
 
 static void printLOGO() {
-    char buffer[512];
+    char buffer[1024];
     FileSystemEntryDescriptor desc;
     FileSystemEntry entry;
     if (fileSystemEntryOpen(&entry, &desc, "\\LOGO.txt", FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_SUCCESS) {
         fileSeek(&entry, 0, FILE_SEEK_END);
         Size fileSize = fileGetPointer(&entry);
         fileSeek(&entry, 0, FILE_SEEK_BEGIN);
- 
+
         if (fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
             buffer[fileSize] = '\0';
             printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
+
+        // if (fileSize < 0x200) {
+        //     fileWrite(&entry, "Per Aspera Ad Astra\nPer Aspera Ad Astra\nPer Aspera Ad Astra\n", 60);
+        // }
 
         BlockDevice* device = entry.iNode->superBlock->device;
         fileSystemEntryClose(&entry);

@@ -77,7 +77,7 @@ Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buff
                 }
             }
 
-            memcpy(buffer, block->data, 1 << device->bytePerBlockShift);
+            memcpy(buffer + (((Index64)i) << device->bytePerBlockShift), block->data, 1 << device->bytePerBlockShift);
 
             if (blockBufferPush(device->blockBuffer, index, block) == RESULT_FAIL) {
                 return RESULT_FAIL;
@@ -104,12 +104,12 @@ Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const voi
             }
 
             if (index != block->blockIndex && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
-                if (device->operations->writeBlocks(device, index, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
+                if (device->operations->writeBlocks(device, block->blockIndex, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
                     return RESULT_FAIL;
                 }
             }
 
-            memcpy(block->data, buffer, 1 << device->bytePerBlockShift);
+            memcpy(block->data, buffer + (((Index64)i) << device->bytePerBlockShift), 1 << device->bytePerBlockShift);
             SET_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
 
             if (blockBufferPush(device->blockBuffer, index, block) == RESULT_FAIL) {

@@ -115,7 +115,8 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
 
     Index32 firstFreeCluster = INVALID_INDEX, last = INVALID_INDEX;
     for (Index32 i = 0; i < clusterNum; ++i) {
-        if (FAT32getClusterType(info, i) != FAT32_CLUSTER_TYPE_FREE) {
+        Index32 nextCluster = PTR_TO_VALUE(32, FAT + i);
+        if (FAT32getClusterType(info, nextCluster) != FAT32_CLUSTER_TYPE_FREE) {
             continue;
         }
 
@@ -172,6 +173,19 @@ Result FAT32closeFileSystem(FileSystem* fs) {
     }
     clearFileSystemEntryDescriptor(descriptor);
     FAT32info* info = fs->superBlock->specificInfo;
+
+    for (int i = info->firstFreeCluster, next; i != FAT32_END_OF_CLUSTER_CHAIN; i = next) {
+        next = PTR_TO_VALUE(32, info->FAT + i);
+        PTR_TO_VALUE(32, info->FAT + i) = 0;
+    }
+
+    for (int i = 0; i < info->FATrange.n; ++i) {
+        if (blockDeviceWriteBlocks(superBlock->device, info->FATrange.begin + i * info->FATrange.length, info->FAT, info->FATrange.length) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+    blockDeviceSynchronize(superBlock->device);
+
     Size FATsizeInByte = info->FATrange.length << fs->superBlock->device->bytePerBlockShift;
     memset(info->FAT, 0, DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
     pageFree(info->FAT);

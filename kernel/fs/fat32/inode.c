@@ -46,6 +46,10 @@ Result FAT32closeInode(SuperBlock* superBlock, iNode* iNode) {
 }
 
 static Result __FAT32mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
+    if (*n == 0) {
+        return RESULT_SUCCESS;
+    }
+
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
     Index32 vBlockEnd = iNode->sizeInBlock;
@@ -105,5 +109,5 @@ static Result __FAT32mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* 
     *vBlockIndex += (*n - remain);
     *n = remain;
 
-    return remain > 0 ? RESULT_CONTINUE : RESULT_SUCCESS;
+    return RESULT_CONTINUE;
 }

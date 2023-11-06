@@ -151,7 +151,7 @@ static Result __FAT32readChild(FileSystemEntry* directory, FileSystemEntryDescri
 
     return res;
 }
-#include<real/simpleAsmLines.h>
+
 static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr, char* buffer) {
     if (rawFileSystemEntryRead(directory, buffer, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
         return RESULT_FAIL;
