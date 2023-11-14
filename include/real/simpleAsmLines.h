@@ -490,4 +490,13 @@ static void writeEFlags64(Uint64 eflags) {
     popfq();
 }
 
+static inline Uint64 rdtsc(void) {
+	Uint32 eax, edx;
+    asm volatile (
+        "rdtsc"
+        : "=a"(eax), "=d"(edx)
+    );
+	return ((Uint64)edx << 32) | eax;
+}
+
 #endif // __SIMPLE_ASM_LINES_H

@@ -3,7 +3,6 @@
 #include<devices/ata/ata.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
-#include<devices/timer/timer.h>
 #include<devices/virtualDevice.h>
 #include<fs/fileSystem.h>
 #include<interrupt/IDT.h>
@@ -13,6 +12,7 @@
 #include<multitask/schedule.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
+#include<time/time.h>
 #include<usermode/usermode.h>
 
 typedef struct {
@@ -25,17 +25,17 @@ static Result __printBootSlogan();
 static Result __enableInterrupt();
 
 static __InitFunc _initFuncs[] = {
-    { initTerminalSwitch, "Terminal" },
-    { __printBootSlogan, NULL },
-    { initIDT, "Interrupt" },
-    { initMemoryManager, "Memory" },
-    { initTSS, "TSS" },
-    { initKeyboard, "Keyboard" },
-    { initSchedule, "Schedule" },
-    { initTimer, "Timer" },
-    { __enableInterrupt, NULL },
-    { initATAdevices, "ATA Devices" },
-    { initFileSystem, "File System" },
+    { initTerminalSwitch, "Terminal"    },
+    { __printBootSlogan , NULL          },
+    { initIDT           , "Interrupt"   },
+    { initMemoryManager , "Memory"      },
+    { initTSS           , "TSS"         },
+    { initKeyboard      , "Keyboard"    },
+    { initTime          , "Time"        },
+    { initSchedule      , "Schedule"    },
+    { __enableInterrupt , NULL          },
+    { initATAdevices    , "ATA Devices" },
+    { initFileSystem    , "File System" },
     // { initVirtualDevices, "Virtual Device" },
     // { initUsermode, "User Mode" },
     { NULL, NULL }
