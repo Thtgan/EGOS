@@ -36,6 +36,7 @@ STRUCT_PRIVATE_DEFINE(ClockSource) {
 #define CLOCK_SOURCE_HZ_TO_TICK_CONVERT_MULTIPLER(__HZ)                         (((Uint64)TIME_UNIT_SECOND << 32) / (__HZ))
 #define CLOCK_SOURCE_CONVERT_TICK_TO_TIME(__CLOCK_SOURCE, __TICK, __UNIT)       (((__TICK) * ((__CLOCK_SOURCE)->tickConvertMultiplier / (__UNIT))) >> 32)
 #define CLOCK_SOURCE_GET_TICK_REMAIN(__CLOCK_SOURCE, __TIME, __TICK, __UNIT)    ((__TICK) - ((__TIME) * (__CLOCK_SOURCE)->hz) / (TIME_UNIT_SECOND / (__UNIT)))
+#define CLOCK_SOURCE_CONVERT_TIME_TO_TICK(__CLOCK_SOURCE, __TIME, __UNIT)       ((__TIME) * (__UNIT) * (__CLOCK_SOURCE)->hz / TIME_UNIT_SECOND)
 
 void initClockSources();
 

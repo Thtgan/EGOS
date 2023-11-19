@@ -6,6 +6,7 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<multitask/schedule.h>
+#include<time/timer.h>
 
 #define __DAYS_IN_ERA       146097ll
 #define __DAYS_IN_4_YEARS   1461ll
@@ -114,6 +115,8 @@ ISR_FUNC_HEADER(__timerHandler) {   //TODO: This timer is a little slower than e
     if (getScheduler()->started) {  //TODO: Ugly code
         schedulerTick();
     }
+
+    updateTimers();
 }
 
 Result initTime() {
@@ -151,6 +154,8 @@ Result initTime() {
     _clock.lastMainTick         = rawClockSourceReadTick(mainClockSource);
     _clock.beatTickTime         = TIME_UNIT_SECOND / beatClockSource->hz;
     _clock.timeAdjust           = 0;
+
+    initTimers(beatClockSource);
 
     if (rawClockSourceStart(beatClockSource) == RESULT_FAIL) {
         return RESULT_FAIL;

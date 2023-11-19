@@ -37,7 +37,7 @@ static Uint64 __CMOSreadTick(ClockSource* this) {
     spinlockLock(&this->lock);
 
     Uint32 retry = 1000000;
-    while (retry > 0 && TEST_FLAGS(__CMOSreadVal(CMOS_STATUS_A), CMOS_STATUS_A_RTC_UPGRADING));
+    while (retry-- > 0 && TEST_FLAGS(__CMOSreadVal(CMOS_STATUS_A), CMOS_STATUS_A_RTC_UPGRADING));
 
     if (retry == 0) {
         return CLOCK_SOURCE_INVALID_TICK;
