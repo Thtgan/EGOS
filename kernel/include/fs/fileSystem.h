@@ -16,10 +16,10 @@ typedef enum {
 } FileSystemType;
 
 typedef struct {
-    Result  (*openInode)(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescripotor);
+    Result  (*openInode)(SuperBlock* superBlock, iNode* iNodePtr, FileSystemEntryDescriptor* entryDescriptor);
     Result  (*closeInode)(SuperBlock* superBlock, iNode* iNode);
 
-    Result  (*openFileSystemEntry)(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor);
+    Result  (*openFileSystemEntry)(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescriptor);
     Result  (*closeFileSystemEntry)(SuperBlock* superBlock, FileSystemEntry* entry);
 } SuperBlockOperations;
 
@@ -29,12 +29,12 @@ STRUCT_PRIVATE_DEFINE(SuperBlock) { //TODO: Try fix this with a file with pre-de
 
     FileSystemEntry*            rootDirectory;
     void*                       specificInfo;
+    HashTable                   openedInode;
 };
 
 typedef struct {
     ConstCstring    name;
     FileSystemType  type;
-    HashChainNode   managerNode;
     SuperBlock*     superBlock;
 } FileSystem;
 
@@ -78,16 +78,22 @@ FileSystem* openFileSystem(BlockDevice* device);
  */
 Result closeFileSystem(FileSystem* fs);
 
-static inline Result rawSuperNodeOpenInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescripotor) {
-    return superBlock->operations->openInode(superBlock, iNode, entryDescripotor);
+iNode* openInodeFromOpened(SuperBlock* superblock, FileSystemEntryDescriptor* entryDescriptor);
+
+Result registerInode(SuperBlock* superblock, iNode* iNode, FileSystemEntryDescriptor* entryDescriptor);
+
+Result unregisterInode(SuperBlock* superblock, FileSystemEntryDescriptor* entryDescriptor);
+
+static inline Result rawSuperNodeOpenInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescriptor) {
+    return superBlock->operations->openInode(superBlock, iNode, entryDescriptor);
 }
 
 static inline Result rawSuperNodeCloseInode(SuperBlock* superBlock, iNode* iNode) {
     return superBlock->operations->closeInode(superBlock, iNode);
 }
 
-static inline Result rawSuperNodeOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor) {
-    return superBlock->operations->openFileSystemEntry(superBlock, entry, entryDescripotor);
+static inline Result rawSuperNodeOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescriptor) {
+    return superBlock->operations->openFileSystemEntry(superBlock, entry, entryDescriptor);
 }
 
 static inline Result rawSuperNodeCloseFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry) {

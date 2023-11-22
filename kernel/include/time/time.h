@@ -34,7 +34,7 @@ void timeConvertTimestampToRealTime(Timestamp* timestamp, RealTime* realTime);
 
 void timestampStep(Timestamp* timestamp, Uint64 time, TimeUnit unit);
 
-Int64 timesampCompare(Timestamp* ts1, Timestamp* ts2);
+Int64 timestampCompare(Timestamp* ts1, Timestamp* ts2);
 
 Result initTime();
 

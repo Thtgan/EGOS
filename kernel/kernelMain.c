@@ -10,6 +10,7 @@
 #include<real/simpleAsmLines.h>
 #include<string.h>
 #include<system/systemInfo.h>
+#include<time/time.h>
 #include<time/timer.h>
 // #include<usermode/usermode.h>
 
@@ -150,6 +151,9 @@ static void printLOGO() {
         // if (fileSize < 0x200) {
         //     fileWrite(&entry, "Per Aspera Ad Astra\nPer Aspera Ad Astra\nPer Aspera Ad Astra\n", 60);
         // }
+        // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.createTime);
+        // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastAccessTime);
+        // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastModifyTime);
 
         BlockDevice* device = entry.iNode->superBlock->device;
         fileSystemEntryClose(&entry);

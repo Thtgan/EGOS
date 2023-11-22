@@ -3,6 +3,7 @@
 
 #include<devices/block/blockDevice.h>
 #include<fs/fileSystem.h>
+#include<fs/fileSystemEntry.h>
 #include<fs/fsPreDefines.h>
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -27,5 +28,9 @@ STRUCT_PRIVATE_DEFINE(iNode) {
 static inline Result rawInodeMapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
     return iNode->operations->mapBlockPosition(iNode, vBlockIndex, n, pBlockRanges, rangeN);
 }
+
+iNode* openInodeBuffered(SuperBlock* superBlock, FileSystemEntryDescriptor* entryDescriptor);
+
+Result closeInodeBuffered(iNode* iNode, FileSystemEntryDescriptor* entryDescriptor);
 
 #endif // __INODE_H

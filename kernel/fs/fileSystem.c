@@ -7,6 +7,8 @@
 #include<fs/fsSyscall.h>
 #include<fs/phospherus/phospherus.h>
 #include<kernel.h>
+#include<kit/util.h>
+#include<structs/hashTable.h>
 
 FileSystem* rootFileSystem = NULL;
 
@@ -83,4 +85,17 @@ FileSystem* openFileSystem(BlockDevice* device) {
 
 Result closeFileSystem(FileSystem* fs) {
     return _supports[fs->type].closeFileSystem(fs);
+}
+
+iNode* openInodeFromOpened(SuperBlock* superblock, FileSystemEntryDescriptor* entryDescriptor) {
+    HashChainNode* found = hashTableFind(&superblock->openedInode, (Object)entryDescriptor->dataRange.begin >> superblock->device->bytePerBlockShift);
+    return found == NULL ? NULL : HOST_POINTER(found, iNode, hashChainNode);
+}
+
+Result registerInode(SuperBlock* superblock, iNode* iNode, FileSystemEntryDescriptor* entryDescriptor) {
+    return hashTableInsert(&superblock->openedInode, (Object)entryDescriptor->dataRange.begin >> superblock->device->bytePerBlockShift, &iNode->hashChainNode);
+}
+
+Result unregisterInode(SuperBlock* superblock, FileSystemEntryDescriptor* entryDescriptor) {
+    return hashTableDelete(&superblock->openedInode, (Object)entryDescriptor->dataRange.begin >> superblock->device->bytePerBlockShift) != NULL;
 }

@@ -18,7 +18,7 @@ static iNodeOperations _FAT32iNodeOperations = {
     .mapBlockPosition   = __FAT32mapBlockPosition
 };
 
-Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescripotor) {
+Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescriptor) {
     FAT32iNodeInfo* iNodeInfo = kMalloc(sizeof(FAT32iNodeInfo));
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
@@ -27,12 +27,12 @@ Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescr
     FAT32info* info         = superBlock->specificInfo;
     FAT32BPB* BPB           = info->BPB;
     BlockDevice* device     = superBlock->device;
-    iNodeInfo->firstCluster = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(entryDescripotor->dataRange.begin, superBlock->device->bytePerBlockShift) - info->dataBlockRange.begin, BPB->sectorPerCluster);
+    iNodeInfo->firstCluster = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(entryDescriptor->dataRange.begin, superBlock->device->bytePerBlockShift) - info->dataBlockRange.begin, BPB->sectorPerCluster);
 
     iNode->signature        = INODE_SIGNATURE;
-    iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(entryDescripotor->dataRange.begin + entryDescripotor->dataRange.length, device->bytePerBlockShift) - DIVIDE_ROUND_DOWN_SHIFT(entryDescripotor->dataRange.begin, device->bytePerBlockShift);
+    iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(entryDescriptor->dataRange.begin + entryDescriptor->dataRange.length, device->bytePerBlockShift) - DIVIDE_ROUND_DOWN_SHIFT(entryDescriptor->dataRange.begin, device->bytePerBlockShift);
     iNode->superBlock       = superBlock;
-    iNode->openCnt          = 0;
+    iNode->openCnt          = 1;
     iNode->operations       = &_FAT32iNodeOperations;
     initHashChainNode(&iNode->hashChainNode);
     iNode->specificInfo     = (Object)iNodeInfo;

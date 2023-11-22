@@ -37,7 +37,10 @@ Result initFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc, FileSystem
     identifier->parent      = args->parent;
     desc->dataRange         = args->dataRange;
     desc->flags             = args->flags;
-    desc->entry             = NULL;
+
+    desc->createTime        = args->createTime;
+    desc->lastAccessTime    = args->lastAccessTime;
+    desc->lastModifyTime    = args->lastModifyTime;
 
     return RESULT_SUCCESS;
 }
@@ -50,35 +53,27 @@ void clearFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc) {
     memset(desc, 0, sizeof(FileSystemEntryDescriptor));
 }
 
-Result genericOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor) {
-    //TODO: What if descriptor already open?
-
-    entry->descriptor       = entryDescripotor;
-    
+Result genericOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescriptor) {
+    entry->descriptor       = entryDescriptor;
     entry->pointer          = 0;
-    iNode* iNodePtr         = kMalloc(sizeof(iNode));
-    if (rawSuperNodeOpenInode(superBlock, iNodePtr, entryDescripotor) == RESULT_FAIL) {
+    entry->iNode            = openInodeBuffered(superBlock, entryDescriptor);
+    if (entry->iNode == NULL) {
         return RESULT_FAIL;
     }
 
-    entry->iNode            = iNodePtr;
-
-    entryDescripotor->entry = entry;
-    SET_FLAG_BACK(entryDescripotor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT);
+    SET_FLAG_BACK(entryDescriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT);
 
     return RESULT_SUCCESS;
 }
 
 Result genericCloseFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry) {
-    FileSystemEntryDescriptor* entryDescripotor = entry->descriptor;
+    FileSystemEntryDescriptor* entryDescriptor = entry->descriptor;
 
-    CLEAR_FLAG_BACK(entryDescripotor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT);
-    entryDescripotor->entry = NULL;
+    CLEAR_FLAG_BACK(entryDescriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT);
 
-    if (rawSuperNodeCloseInode(superBlock, entry->iNode) == RESULT_FAIL) {
+    if (closeInodeBuffered(entry->iNode, entryDescriptor) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
-    kFree(entry->iNode);
 
     memset(entry, 0, sizeof(FileSystemEntry));
 
@@ -312,8 +307,16 @@ Result fileSystemEntryClose(FileSystemEntry* entry) {
     SuperBlock* superBlock = entry->iNode->superBlock;
     FileSystemEntryIdentifier* identifier = &entry->descriptor->identifier;
     if (identifier->type != FILE_SYSTEM_ENTRY_TYPE_DIRECTOY) {
-        FileSystemEntry* parentEntry = identifier->parent->entry;
-        if (parentEntry == NULL || rawFileSystemEntryUpdateChild(parentEntry, identifier, entry->descriptor) == RESULT_FAIL) {
+        FileSystemEntry parentEntry;
+        if (rawSuperNodeOpenFileSystemEntry(superBlock, &parentEntry, identifier->parent) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        if (rawFileSystemEntryUpdateChild(&parentEntry, identifier, entry->descriptor) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        if (rawSuperNodeCloseFileSystemEntry(superBlock, &parentEntry) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
     }

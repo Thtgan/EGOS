@@ -4,7 +4,8 @@
 #include<fs/fileSystemEntry.h>
 #include<kit/types.h>
 #include<memory/memory.h>
-#include<string.h> 
+#include<string.h>
+#include<time/time.h>
 
 Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descriptor, Size* entrySizePtr, FileSystemEntryIdentifier* identifier) {
     FileSystemEntryDescriptor tmpDesc;
@@ -72,6 +73,11 @@ Result fileRead(File file, void* buffer, Size n) {
         return RESULT_FAIL;
     }
 
+    Timestamp timestamp;
+    readTimestamp(&timestamp);
+
+    file->descriptor->lastAccessTime = timestamp.second;
+
     return RESULT_SUCCESS;
 }    
 
@@ -79,6 +85,11 @@ Result fileWrite(File file, const void* buffer, Size n) {
     if (rawFileSystemEntryWrite(file, buffer, n) == RESULT_FAIL || rawFileSystemEntrySeek(file, file->pointer + n) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
+
+    Timestamp timestamp;
+    readTimestamp(&timestamp);
+
+    file->descriptor->lastAccessTime = file->descriptor->lastModifyTime = timestamp.second;
 
     return RESULT_SUCCESS;
 }

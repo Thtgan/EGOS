@@ -9,9 +9,6 @@
 #include<structs/heap.h>
 #include<time/time.h>
 
-
-#include<print.h>
-
 static ClockSource* _timerClockSource;
 static Heap _timerHeap;
 #define __TIMER_MAXIMUM_NUM 1023
@@ -38,7 +35,6 @@ Result timerStart(Timer* timer) {
     }
 
     timer->until    = rawClockSourceReadTick(_timerClockSource) + timer->tick;
-    // printf(TERMINAL_LEVEL_OUTPUT, "%lu %lu %lu\n", timer->until, rawClockSourceReadTick(_timerClockSource), timer->tick);
     heapPush(&_timerHeap, (Object)timer);
     SET_FLAG_BACK(timer->flags, TIMER_FLAGS_PRESENT);
     
@@ -69,8 +65,6 @@ void updateTimers() {
             if (topTimer->handler != NULL) {
                 topTimer->handler(topTimer);
             }
-
-            // printf(TERMINAL_LEVEL_OUTPUT, "%lu %lu\n", topTimer->until, currentTick);
             
             heapPop(&_timerHeap);
 

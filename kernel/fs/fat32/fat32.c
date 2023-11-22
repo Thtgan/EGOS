@@ -46,7 +46,7 @@ bool FAT32checkFileSystem(BlockDevice* device) {
 
 static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated);
 
-#define __FAT32_BATCH_ALLOCATE_SIZE BATCH_ALLOCATE_SIZE((FileSystem, 1), (SuperBlock, 1), (FileSystemEntry, 1), (FileSystemEntryDescriptor, 1), (FAT32info, 1), (FAT32BPB, 1))
+#define __FAT32_BATCH_ALLOCATE_SIZE BATCH_ALLOCATE_SIZE((FileSystem, 1), (SuperBlock, 1), (FileSystemEntry, 1), (FileSystemEntryDescriptor, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, 16))
 
 FileSystem* FAT32openFileSystem(BlockDevice* device) {
     void* batchAllocated = kMalloc(__FAT32_BATCH_ALLOCATE_SIZE);
@@ -73,7 +73,7 @@ static SuperBlockOperations _FAT32superBlockOperations = {
 
 static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated) {
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
-        (FileSystem, fileSystem, 1), (SuperBlock, superBlock, 1), (FileSystemEntry, rootDirectory, 1), (FileSystemEntryDescriptor, entryDescriptor, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1)
+        (FileSystem, fileSystem, 1), (SuperBlock, superBlock, 1), (FileSystemEntry, rootDirectory, 1), (FileSystemEntryDescriptor, entryDescriptor, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1), (SinglyLinkedList, iNodeHashChains, 16)
     );
 
     void* buffer = allocateBuffer(device->bytePerBlockShift);
@@ -151,16 +151,19 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
     superBlock->operations              = &_FAT32superBlockOperations;
     superBlock->rootDirectory           = NULL;
     superBlock->specificInfo            = info;
+    initHashTable(&superBlock->openedInode, 16, iNodeHashChains, LAMBDA(Size, (HashTable* this, Object key) {
+        return key % this->hashSize;
+    }));
 
-    if (rawSuperNodeOpenFileSystemEntry(superBlock, rootDirectory, entryDescriptor) == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
     superBlock->rootDirectory           = rootDirectory;
 
     fileSystem->name                    = _name;
     fileSystem->type                    = FILE_SYSTEM_TYPE_FAT32;
     fileSystem->superBlock              = superBlock;
-    initHashChainNode(&fileSystem->managerNode);
+    
+    if (rawSuperNodeOpenFileSystemEntry(superBlock, rootDirectory, entryDescriptor) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
 
     return RESULT_SUCCESS;
 }

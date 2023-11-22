@@ -9,7 +9,7 @@ typedef struct {
     Index64 firstCluster;
 } FAT32iNodeInfo;
 
-Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescripotor);
+Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescriptor);
 
 Result FAT32closeInode(SuperBlock* superBlock, iNode* iNode);
 

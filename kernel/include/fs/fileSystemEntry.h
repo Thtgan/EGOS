@@ -56,11 +56,9 @@ STRUCT_PRIVATE_DEFINE(FileSystemEntryDescriptor) {
     Uint64                      createTime;
     Uint64                      lastAccessTime;
     Uint64                      lastModifyTime;
-
-    FileSystemEntry*            entry;
 };
 
-STRUCT_PRIVATE_DEFINE(FileSystemEntry) {
+STRUCT_PRIVATE_DEFINE(FileSystemEntry) {    //TODO: Add RW lock
     FileSystemEntryDescriptor*  descriptor;
 
     Index64                     pointer;
@@ -106,13 +104,16 @@ typedef struct {
     Range dataRange;
     FileSystemEntryDescriptor* parent;
     Flags16 flags;
+    Uint64                      createTime;
+    Uint64                      lastAccessTime;
+    Uint64                      lastModifyTime;
 } FileSystemEntryDescriptorInitArgs;
 
 Result initFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc, FileSystemEntryDescriptorInitArgs* args);
 
 void clearFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc);
 
-Result genericOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescripotor);
+Result genericOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescriptor);
 
 Result genericCloseFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry);
 

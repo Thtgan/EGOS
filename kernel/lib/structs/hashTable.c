@@ -5,6 +5,7 @@
 #include<kit/util.h>
 #include<structs/singlyLinkedList.h>
 
+//TODO: Make a default hash function
 void initHashTable(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC) {
     table->size = 0;
     table->hashSize = hashSize;

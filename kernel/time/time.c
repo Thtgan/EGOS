@@ -78,7 +78,7 @@ void timestampStep(Timestamp* timestamp, Uint64 time, TimeUnit unit) {
     }
 }
 
-Int64 timesampCompare(Timestamp* ts1, Timestamp* ts2) {
+Int64 timestampCompare(Timestamp* ts1, Timestamp* ts2) {
     return TIME_UNIT_SECOND * (ts1->second - ts2->second) + ((Int64)ts1->nanosecond - (Int64)ts2->nanosecond);
 }
 
@@ -107,7 +107,7 @@ ISR_FUNC_HEADER(__timerHandler) {   //TODO: This timer is a little slower than e
     timestampStep(time, dNanosecond, TIME_UNIT_NANOSECOND);
 
     timestampStep(expectedTime, _clock.beatTickTime, TIME_UNIT_NANOSECOND);
-    _clock.timeAdjust = (_clock.timeAdjust + timesampCompare(expectedTime, time)) >> 1;
+    _clock.timeAdjust = (_clock.timeAdjust + timestampCompare(expectedTime, time)) >> 1;
     _clock.lastMainTick = currentMainTick;
 
     spinlockUnlock(&_clock.timeLock);
