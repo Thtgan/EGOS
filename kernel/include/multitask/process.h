@@ -40,7 +40,7 @@ typedef struct {
     Context context;
     Registers* registers;
 
-    // void* userExitStackTop;
+    void* userExitStackTop;
     // , * userStackTop, * userProgramBegin;
     // Size userProgramPageSize;
     

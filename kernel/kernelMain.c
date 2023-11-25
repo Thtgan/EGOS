@@ -12,7 +12,7 @@
 #include<system/systemInfo.h>
 #include<time/time.h>
 #include<time/timer.h>
-// #include<usermode/usermode.h>
+#include<usermode/usermode.h>
 
 // #include<memory/physicalPages.h>
 
@@ -79,12 +79,11 @@ void kernelMain(SystemInfo* info) {
         }
         up(&sema2);
 
-        // int ret = execute("/bin/test");
-        // printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
-        printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM SHOULD RETURNED\n");
+        int ret = execute("\\bin\\test");
+        printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
+        closeFileSystem(rootFileSystem); //TODO: Move to better place
         exitProcess();
-        // die();
     }
 
     kFree(arr1);
@@ -106,7 +105,6 @@ void kernelMain(SystemInfo* info) {
 
 //     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
-    closeFileSystem(rootFileSystem);
 
     Timer timer1, timer2;
     initTimer(&timer1, 500, TIME_UNIT_MILLISECOND);

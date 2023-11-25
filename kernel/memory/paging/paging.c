@@ -25,7 +25,7 @@
 #define __PAGE_FAULT_ERROR_CODE_FLAG_HLAT   FLAG32(7)   //Occurred during ordinary(0) or HALT(1) paging?
 #define __PAGE_FAULT_ERROR_CODE_FLAG_SGX    FLAG32(15)  //Fault related to SGX?
 
-ISR_FUNC_HEADER(__pageFaultHandler) {
+ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page faults for somehow
     void* vAddr = (void*)readRegister_CR2_64();
 
     PagingTable* table = convertAddressP2V(mm->currentPageTable);
@@ -34,8 +34,8 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
         Index16 index = PAGING_INDEX(level, vAddr);
         entry = table->tableEntries[index];
 
+        PhysicalPage* physicalPage = getPhysicalPageStruct(BASE_FROM_ENTRY_PS(level, entry));
         if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
-            PhysicalPage* physicalPage = getPhysicalPageStruct(BASE_FROM_ENTRY_PS(level, entry));
             if (
                 TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
                 PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(physicalPage->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
@@ -55,18 +55,18 @@ ISR_FUNC_HEADER(__pageFaultHandler) {
             }
         }
 
+        if (
+            TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_US) && 
+            TEST_FLAGS(physicalPage->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_USER) &&
+            TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_US)
+            ) {
+            SET_FLAG_BACK(table->tableEntries[index], PAGING_ENTRY_FLAG_US);
+
+            return;
+        }
+
         table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
-
-    // if (
-    //     TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_US) && 
-    //     TEST_FLAGS(oldPhysicalPageStruct->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_USER) &&
-    //     TEST_FLAGS_FAIL(pageTableEntry, PAGE_TABLE_ENTRY_FLAG_US)
-    //     ) {
-    //     SET_FLAG_BACK(pageTablePtr->tableEntries[pageTableIndex], PAGE_TABLE_ENTRY_FLAG_US);
-
-    //     return;
-    // }
 
     printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
     printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
@@ -138,7 +138,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags) {
                 return RESULT_FAIL;
             }
 
-            table->tableEntries[index] = BUILD_ENTRY_PS(level, pAddr, FLAGS_FROM_PAGING_ENTRY(entry) | flags);
+            table->tableEntries[index] = BUILD_ENTRY_PS(level, pAddr, FLAGS_FROM_PAGING_ENTRY(entry) | flags);  //TODO: Not sure if we should abolish old flags
 
             return RESULT_SUCCESS;
         }
@@ -151,7 +151,9 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags) {
 }
 
 PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* levelOut) {
+    // printf(TERMINAL_LEVEL_DEBUG, "%p\n", vAddr);
     if (pageTable == NULL) {
+        // MARK_PRINT(MARK);
         return NULL;
     }
 
@@ -160,8 +162,10 @@ PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* l
     for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
         Index16 index = PAGING_INDEX(level, vAddr);
         entry = table->tableEntries[index];
-
+        // MARK_PRINT(MARK);
         if (TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
+            // printf(TERMINAL_LEVEL_DEBUG, "%lX\n", entry);
+            // MARK_PRINT(MARK);
             return NULL;
         }
 

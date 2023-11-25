@@ -123,8 +123,4 @@ Result genericFileSystemEntryRead(FileSystemEntry* entry, void* buffer, Size n);
 
 Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, Size n);
 
-Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* desc, ConstCstring path, FileSystemEntryType type);
-
-Result fileSystemEntryClose(FileSystemEntry* entry);
-
 #endif // __FILE_SYSTEM_ENTRY

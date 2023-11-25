@@ -67,8 +67,4 @@ void* pageAlloc(Size n, MemoryType type);
  */
 void pageFree(void* pPageBegin);
 
-void referPhysicalRange(void* pBase, Size n);
-
-void cancelReferPhysicalRange(void* pBase, Size n);
-
 #endif // PHYSICAL_PAGE_H

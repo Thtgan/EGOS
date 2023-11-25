@@ -4,7 +4,11 @@
 #include<fs/fileSystemEntry.h>
 #include<kit/types.h>
 
-typedef FileSystemEntry* Directory;
+Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* desc, ConstCstring path, FileSystemEntryType type); //TODO: Remove desc argument?
+
+Result fileSystemEntryClose(FileSystemEntry* entry);
+
+typedef FileSystemEntry* Directory; //TODO: Maybe shouldn't use pointer in typdef
 typedef FileSystemEntry* File;
 
 Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descriptor, Size* entrySizePtr, FileSystemEntryIdentifier* identifier);

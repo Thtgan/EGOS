@@ -182,7 +182,7 @@ Result FAT32closeFileSystem(FileSystem* fs) {
         PTR_TO_VALUE(32, info->FAT + i) = 0;
     }
 
-    for (int i = 0; i < info->FATrange.n; ++i) {
+    for (int i = 0; i < info->FATrange.n; ++i) {    //TODO: FAT is only saved here, maybe we can make it save at anytime
         if (blockDeviceWriteBlocks(superBlock->device, info->FATrange.begin + i * info->FATrange.length, info->FAT, info->FATrange.length) == RESULT_FAIL) {
             return RESULT_FAIL;
         }

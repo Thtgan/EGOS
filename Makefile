@@ -76,7 +76,7 @@ postBuild: removeTmp
 LOOP_DEVICE_PATH_STORAGE	:=	$(TMP_DIR)/loopDevice
 LOOP_DEVICE_PATH			:=	$$(cat $(LOOP_DEVICE_PATH_STORAGE))
 
-$(BUILD_TARGET): bootBuild kernelBuild
+$(BUILD_TARGET): bootBuild kernelBuild userPrograms
 	@$(DD) if=/dev/zero bs=1M count=$(TARGET_SIZE_MB) > $(BUILD_TARGET)
 	@$(PARTED) -s $(BUILD_TARGET) mklabel msdos
 	@$(PARTED) -s $(BUILD_TARGET) mkpart primary 2048s $$(expr $$(expr $(TARGET_SIZE_MB) \* 2048) - 1)s
@@ -87,6 +87,8 @@ $(BUILD_TARGET): bootBuild kernelBuild
 	@$(CP) -rf $(FILES_DIR)/. $(MOUNT_DIR)
 	@$(MKDIR) -p $(MOUNT_DIR)/boot
 	@$(CP) -rf $(BUILD_KERNEL) $(MOUNT_DIR)/boot
+	@$(MKDIR) -p $(MOUNT_DIR)/bin
+	@$(CP) -rf $(BUILD_USERPROGS) $(MOUNT_DIR)/bin
 	@$(UMOUNT) $(MOUNT_DIR)
 	@$(LOSETUP) -d $(LOOP_DEVICE_PATH)
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))
@@ -106,8 +108,12 @@ bootBuild:
 kernelBuild:
 	@$(MAKE) -C ./kernel RELATIVE_BASE=$(shell realpath --relative-to ./kernel .)/$(RELATIVE_BASE)
 
+userPrograms:
+	@$(MAKE) -C ./userprogs RELATIVE_BASE=$(shell realpath --relative-to ./userprogs .)/$(RELATIVE_BASE)
+
 clean:
 	@$(RM) -rf $(BUILD_BASE_DIR)
+	@$(RM) -rf ./files/bin/*
 
 updateBootloader: bootBuild
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))

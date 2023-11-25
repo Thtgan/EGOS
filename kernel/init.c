@@ -37,7 +37,7 @@ static __InitFunc _initFuncs[] = {
     { initATAdevices    , "ATA Devices" },
     { initFileSystem    , "File System" },
     // { initVirtualDevices, "Virtual Device" },
-    // { initUsermode, "User Mode" },
+    { initUsermode      , "User Mode"   },
     { NULL, NULL }
 };
 

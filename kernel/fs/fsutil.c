@@ -3,9 +3,95 @@
 #include<error.h>
 #include<fs/fileSystemEntry.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<memory/memory.h>
 #include<string.h>
 #include<time/time.h>
+
+Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* desc, ConstCstring path, FileSystemEntryType type) {
+    char* buffer = allocateBuffer(BUFFER_SIZE_512);
+
+    Result res = RESULT_SUCCESS;
+
+    SuperBlock* superBlock = rootFileSystem->superBlock;
+    Directory currentDirectory = superBlock->rootDirectory;
+    FileSystemEntry tmpEntry;
+    while (true) {
+        if (*path != '\\') {    //TODO: Seperator should be '/'
+            res = RESULT_FAIL;
+            break;
+        }
+        ++path;
+
+        ConstCstring next = path;
+        while (*next != '\\' && *next != '\0') {
+            ++next;
+        }
+
+        Size len = ARRAY_POINTER_TO_INDEX(path, next);
+        if (len >= POWER_2(BUFFER_SIZE_512)) {
+            res = RESULT_FAIL;
+            break;
+        }
+
+        strncpy(buffer, path, len);
+        
+        FileSystemEntryIdentifier identifier = {
+            .name   = buffer,
+            .type   = *next == '\0' ? type : FILE_SYSTEM_ENTRY_TYPE_DIRECTOY,
+            .parent = entry->descriptor
+        };
+
+        if (directoryLookup(currentDirectory, desc, NULL, &identifier) != RESULT_SUCCESS) {
+            res = RESULT_FAIL;
+            break;
+        }
+
+        if (rawSuperNodeOpenFileSystemEntry(superBlock, &tmpEntry, desc) == RESULT_FAIL) {
+            res = RESULT_FAIL;
+            break;
+        }
+        
+        if (*next == '\0') {
+            memcpy(entry, &tmpEntry, sizeof(FileSystemEntry));
+            break;
+        } else {
+            path = next;
+            if (currentDirectory != superBlock->rootDirectory) {
+                if (superBlock->operations->closeFileSystemEntry(superBlock, entry) == RESULT_FAIL) {
+                    res = RESULT_FAIL;
+                    break;
+                }
+            }
+            currentDirectory = &tmpEntry;
+        }
+    }
+
+    releaseBuffer(buffer, BUFFER_SIZE_512);
+
+    return res;
+}
+
+Result fileSystemEntryClose(FileSystemEntry* entry) {
+    SuperBlock* superBlock = entry->iNode->superBlock;
+    FileSystemEntryIdentifier* identifier = &entry->descriptor->identifier;
+    if (identifier->type != FILE_SYSTEM_ENTRY_TYPE_DIRECTOY) {
+        FileSystemEntry parentEntry;
+        if (rawSuperNodeOpenFileSystemEntry(superBlock, &parentEntry, identifier->parent) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        if (rawFileSystemEntryUpdateChild(&parentEntry, identifier, entry->descriptor) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+
+        if (rawSuperNodeCloseFileSystemEntry(superBlock, &parentEntry) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
+    }
+
+    return superBlock->operations->closeFileSystemEntry(superBlock, entry);
+}
 
 Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descriptor, Size* entrySizePtr, FileSystemEntryIdentifier* identifier) {
     FileSystemEntryDescriptor tmpDesc;

@@ -1,43 +1,39 @@
-PROGRAMS = test
+include $(RELATIVE_BASE)/global.mk
+include $(RELATIVE_BASE)/tools.mk
 
-CC 							= 	x86_64-elf-gcc
+USERPROGS 					= test
+USERPROGS_BUILD 			= $(foreach i, $(USERPROGS), $(BUILD_USERPROGS_BIN_DIR)/$(i))
+
 CC_OPTIONS 					= 	-nostdlib			\
 								-nostdinc			\
 								-ffreestanding		\
 								-mcmodel=large		\
 								-I./lib/include	 	\
 
-LD 							= 	x86_64-elf-ld
+SOURCE_FILES_C				:=	$(shell find ./ -type f -name '*.c' | sort)
+OBJ_FILES_C					:=	$(patsubst ./%.c, $(BUILD_USERPROGS_DIR)/%.o, $(SOURCE_FILES_C))
 
-BUILD_DIR 					= 	./build
-TARGET_DIR					= 	../kernel/files/bin
+SOURCE_FILES_ASM			:=	$(shell find ./ -type f -name '*.S' | sort)
+OBJ_FILES_ASM				:=  $(patsubst ./%.S, $(BUILD_USERPROGS_DIR)/%.o, $(SOURCE_FILES_ASM))
 
-C_FILES 					:= 	$(shell find ./ -type f -name '*.c' | sort)
-ASM_FILES					:=	$(shell find ./ -type f -name '*.asm' | sort)
-
-OBJ_FILES_C					:=	$(C_FILES:.c=.o)
-OBJ_FILES_ASM				:=  $(ASM_FILES:.asm=.o)
-BUILD_OBJ_FILES				:=	$(subst ./, $(BUILD_DIR)/, $(OBJ_FILES_ASM) $(OBJ_FILES_C))
-BUILD_LIB_OBJ_FILES			:=	$(filter $(BUILD_DIR)/lib/%, $(BUILD_OBJ_FILES))
+OBJ_FILES_LIB				:=	$(filter $(BUILD_USERPROGS_DIR)/lib/%, $(OBJ_FILES_C) $(OBJ_FILES_ASM))
 
 .PHONY: all clean
 
-all: buildDir $(PROGRAMS)
+all: buildDir $(USERPROGS_BUILD)
 
 buildDir:
-	@mkdir -p $(TARGET_DIR)
-	@for i in $(BUILD_OBJ_FILES); do mkdir -p `dirname $$i`; done
+	@for i in $(OBJ_FILES_C) $(OBJ_FILES_ASM); do mkdir -p `dirname $$i`; done
+	@$(MKDIR) -p $(BUILD_USERPROGS_BIN_DIR)
 
-$(PROGRAMS): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
-	$(foreach i, $(PROGRAMS), @$(LD) $(BUILD_LIB_OBJ_FILES) $(filter $(BUILD_DIR)/$(i)/%, $(BUILD_OBJ_FILES)) -T ./lib/linker.ld -o $(BUILD_DIR)/$(i)/$(i))
-	$(foreach i, $(PROGRAMS), @mv $(BUILD_DIR)/$(i)/$(i) $(TARGET_DIR))
+$(USERPROGS_BUILD):$(OBJ_FILES_C) $(OBJ_FILES_ASM)
+	@$(LD) $(OBJ_FILES_LIB) $(filter $(BUILD_USERPROGS_DIR)/$(subst $(BUILD_USERPROGS_BIN_DIR)/,,$@)/%, $(OBJ_FILES_C) $(OBJ_FILES_ASM)) -o $@
+	@echo "LD -> $@"
 
-$(OBJ_FILES_C):%.o:%.c
-	@$(CC) $(CC_OPTIONS) -I./$(firstword $(subst /, ,$<)) -c $< -o $(BUILD_DIR)/$@
+$(OBJ_FILES_C):$(BUILD_USERPROGS_DIR)/%.o:%.c
+	@$(CC) $(CC_OPTIONS) -I./$(firstword $(subst /, ,$<)) -c $< -o $@
+	@echo "CC -> $@"
 
-$(OBJ_FILES_ASM):%.o:%.asm
-	@$(NASM) $< -f elf64 -o $(BUILD_DIR)/$@
-
-clean:
-	@rm -rf $(BUILD_DIR)
-	@rm -rf $(TARGET_DIR)
+$(OBJ_FILES_ASM):$(BUILD_USERPROGS_DIR)/%.o:%.S
+	@$(CC) $(CC_OPTIONS) -I./$(firstword $(subst /, ,$<)) -c $< -o $@
+	@echo "CC -> $@"
