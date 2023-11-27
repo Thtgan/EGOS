@@ -26,14 +26,14 @@ typedef struct {
  * @param chains Hash chain list
  * @param hashFunc Hash function to apply
  */
-void initHashTable(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC);
+void hashTable_initStruct(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC);
 
 /**
  * @brief Initialize hash chain node
  * 
  * @param node Hash chain node
  */
-void initHashChainNode(HashChainNode* node);
+void hashChainNode_initStruct(HashChainNode* node);
 
 /**
  * @brief Insert value to hash table
@@ -43,7 +43,7 @@ void initHashChainNode(HashChainNode* node);
  * @param node Value's hash chain node to insert
  * @return Result Result of the operation
  */
-Result hashTableInsert(HashTable* table, Object key, HashChainNode* node);
+Result hashTable_insert(HashTable* table, Object key, HashChainNode* node);
 
 /**
  * @brief Delete a value corresponded to key
@@ -52,7 +52,7 @@ Result hashTableInsert(HashTable* table, Object key, HashChainNode* node);
  * @param key Key of value to delete
  * @return HashChainNode* Deleted value's hash chain node, NULL if key not exist
  */
-HashChainNode* hashTableDelete(HashTable* table, Object key);
+HashChainNode* hashTable_delete(HashTable* table, Object key);
 
 /**
  * @brief Find value correspond to key
@@ -61,6 +61,6 @@ HashChainNode* hashTableDelete(HashTable* table, Object key);
  * @param key Key of value to find
  * @return HashChainNode* Value's hash chain node, NULL if key not exist
  */
-HashChainNode* hashTableFind(HashTable* table, Object key);
+HashChainNode* hashTable_find(HashTable* table, Object key);
 
 #endif // __HASH_TABLE_H

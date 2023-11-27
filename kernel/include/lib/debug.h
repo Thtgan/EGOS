@@ -11,26 +11,12 @@ __attribute__((noreturn))
  * @param format: Format of info
  * @param ...: Values printed by func
  */
-void blowup(const Cstring format, ...);
+void debug_belowup(const Cstring format, ...);
 
-#define MARK_PRINT(__INFO)                          printf(TERMINAL_LEVEL_DEBUG, MACRO_STR(__INFO) " at %s, line %d\n", __FILE__, __LINE__)
+#define DEBUG_MARK_PRINT(__FORMAT, ...)                 printf(TERMINAL_LEVEL_DEBUG, "[" MACRO_STR(__FILE__) ":" MACRO_STR(__LINE__) "] " __FORMAT, __VA_ARGS__)
 
-#define ASSERT_SILENT(__EXPRESSION)                 do { if (!(__EXPRESSION)) blowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
+#define DEBUG_ASSERT_SILENT(__EXPRESSION)               do { if (!(__EXPRESSION)) debug_belowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
 
-#define ASSERT(__EXPRESSION, __LAST_WORD, ...)      do { if (!(__EXPRESSION)) blowup("Assertion failed at %s, line %d\n" __LAST_WORD "\n", __FILE__, __LINE__, ##__VA_ARGS__); } while(0)
-
-#define TMP_CODE_FOR_DEBUG_BEGIN    {
-#define TMP_CODE_FOR_DEBUG_END      }
-
-typedef struct {
-    union {
-        Uint8 bytes[256];
-        Uint16 words[128];
-        Uint32 dwords[64];
-        Uint64 quads[32];
-    };
-} DataSharer;
-
-#define ACCESS_DATA_SHARER()    extern DataSharer dataSharer
+#define DEBUG_ASSERT(__EXPRESSION, __LAST_WORD, ...)    do { if (!(__EXPRESSION)) debug_belowup("Assertion failed at %s, line %d\n" __LAST_WORD "\n", __FILE__, __LINE__, ##__VA_ARGS__); } while(0)
 
 #endif // __DEBUG_H

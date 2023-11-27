@@ -14,14 +14,14 @@ typedef struct {
  * 
  * @param vector Vector struct
  */
-void initVector(Vector* vector);
+void vector_init(Vector* vector);
 
 /**
  * @brief Release vector
  * 
  * @param vector vector initialized
  */
-void releaseVector(Vector* vector);
+void vector_clearStruct(Vector* vector);
 
 /**
  * @brief Is vector empty?
@@ -29,14 +29,14 @@ void releaseVector(Vector* vector);
  * @param vector Vector
  * @return bool True if vector is empty
  */
-bool vectorIsEmpty(Vector* vector);
+bool vector_isEmpty(Vector* vector);
 
 /**
  * @brief Clear the vector
  * 
  * @param vector Vector
  */
-void vectorClear(Vector* vector);
+void vector_clear(Vector* vector);
 
 /**
  * @brief Resize the capacity of vector
@@ -45,7 +45,7 @@ void vectorClear(Vector* vector);
  * @param newCapacity New capacity to resize to, if capacity less than curretn size, data at the end will lost
  * @return Result Result of the operation
  */
-Result vectorResize(Vector* vector, Size newCapacity);
+Result vector_resize(Vector* vector, Size newCapacity);
 
 /**
  * @brief Get object in vector
@@ -55,7 +55,7 @@ Result vectorResize(Vector* vector, Size newCapacity);
  * @param retPtr Pointer to object
  * @return Result Result of the operation
  */
-Result vectorGet(Vector* vector, Index64 index, Object* retPtr);
+Result vector_get(Vector* vector, Index64 index, Object* retPtr);
 
 /**
  * @brief Set object in vector
@@ -65,7 +65,7 @@ Result vectorGet(Vector* vector, Index64 index, Object* retPtr);
  * @param item Object to set
  * @return Result Result of the operation
  */
-Result vectorSet(Vector* vector, Index64 index, Object item);
+Result vector_set(Vector* vector, Index64 index, Object item);
 
 /**
  * @brief Erase object in vector
@@ -74,7 +74,7 @@ Result vectorSet(Vector* vector, Index64 index, Object item);
  * @param index Index of object to erase
  * @return Result Result of the operation
  */
-Result vectorErase(Vector* vector, Index64 index);
+Result vector_erease(Vector* vector, Index64 index);
 
 /**
  * @brief Get last object of vector
@@ -83,7 +83,7 @@ Result vectorErase(Vector* vector, Index64 index);
  * @param retPtr Pointer to object
  * @return Result Result of the operation
  */
-Result vectorBack(Vector* vector, Object* retPtr);
+Result vector_back(Vector* vector, Object* retPtr);
 
 /**
  * @brief Push object to the end of vector
@@ -92,7 +92,7 @@ Result vectorBack(Vector* vector, Object* retPtr);
  * @param item Object to push
  * @return Result Result of the operation
  */
-Result vectorPush(Vector* vector, Object item);
+Result vector_push(Vector* vector, Object item);
 
 /**
  * @brief Pop object from end of vector
@@ -100,6 +100,6 @@ Result vectorPush(Vector* vector, Object item);
  * @param vector Vector
  * @return Result Result of the operation
  */
-Result vectorPop(Vector* vector);
+Result vector_pop(Vector* vector);
 
 #endif // __VECTOR_H

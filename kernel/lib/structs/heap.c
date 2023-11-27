@@ -3,14 +3,14 @@
 #include<algorithms.h>
 #include<kit/types.h>
 
-void initHeap(Heap* heap, Object* objectArray, Size n, CompareFunc compareFunc) {
+void heap_initStruct(Heap* heap, Object* objectArray, Size n, CompareFunc compareFunc) {
     heap->objectArray   = objectArray;
     heap->capacity      = n - 1;
     heap->size          = 0;
     heap->compareFunc   = compareFunc;
 }
 
-Result heapPush(Heap* heap, Object object) {
+Result heap_push(Heap* heap, Object object) {
     if (heap->size == heap->capacity) {
         return RESULT_FAIL;
     }
@@ -24,7 +24,7 @@ Result heapPush(Heap* heap, Object object) {
     return RESULT_SUCCESS;
 }
 
-Result heapTop(Heap* heap, Object* object) {
+Result heap_top(Heap* heap, Object* object) {
     if (heap->size == 0 || object == NULL) {
         return RESULT_FAIL;
     }
@@ -34,7 +34,7 @@ Result heapTop(Heap* heap, Object* object) {
     return RESULT_SUCCESS;
 }
 
-Result heapPop(Heap* heap) {
+Result heap_pop(Heap* heap) {
     if (heap->size == 0) {
         return RESULT_FAIL;
     }

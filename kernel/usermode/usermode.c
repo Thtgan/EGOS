@@ -111,7 +111,7 @@ static int __doExecute(ConstCstring path, File* file) {
         }
 
         if (checkELF64ProgramHeader(&programHeader) == RESULT_FAIL) {
-            SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_VERIFIVCATION_FAIL);
+            ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
             return -1;
         }
 

@@ -26,7 +26,7 @@ Result __addPage(Index8 level);
 
 Result initBuffer() {
     for (int i = 0; i < 9; ++i) {
-        initSinglyLinkedList(&bufferLists[i]);
+        singlyLinkedList_initStruct(&bufferLists[i]);
 
         _bufferNums[i] = _freeBufferNums[i] = 0;
         if (__addPage((BufferSizes)i) == RESULT_FAIL) {
@@ -47,20 +47,20 @@ Size getFreeBufferNum(BufferSizes size) {
 
 void* allocateBuffer(BufferSizes size) {
     Index8 level = size - BUFFER_SIZE_16;
-    if (isSinglyListEmpty(&bufferLists[level])) {
+    if (singlyLinkedList_isEmpty(&bufferLists[level])) {
         __addPage(level);
     }
 
-    void* ret = singlyLinkedListGetNext(&bufferLists[level]);
-    singlyLinkedListDeleteNext(&bufferLists[level]);
+    void* ret = singlyLinkedList_getNext(&bufferLists[level]);
+    singlyLinkedList_deleteNext(&bufferLists[level]);
     return ret;
 }
 
 void releaseBuffer(void* buffer, BufferSizes size) {
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)buffer;
 
-    initSinglyLinkedListNode(node);
-    singlyLinkedListInsertNext(&bufferLists[size - BUFFER_SIZE_16], node);
+    singlyLinkedListNode_initStruct(node);
+    singlyLinkedList_insertNext(&bufferLists[size - BUFFER_SIZE_16], node);
 }
 
 Result __addPage(Index8 level) {
@@ -75,9 +75,9 @@ Result __addPage(Index8 level) {
     page = convertAddressP2V(page);
     for (int j = 0; j < PAGE_SIZE; j += _bufferSizes[level]) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)(page + j);
-        initSinglyLinkedListNode(node);
+        singlyLinkedListNode_initStruct(node);
 
-        singlyLinkedListInsertNext(&bufferLists[level], node);
+        singlyLinkedList_insertNext(&bufferLists[level], node);
     }
 
     return RESULT_SUCCESS;

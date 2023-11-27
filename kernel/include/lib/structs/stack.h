@@ -15,7 +15,7 @@ typedef struct {
  * @param buffer Buffer of stack
  * @param maxSize Maximum capacity of stack
  */
-static inline void initStack(Stack* stack, Object* buffer, Size maxSize) {
+static inline void stack_init(Stack* stack, Object* buffer, Size maxSize) {
     stack->stack = buffer;
     stack->maxSize = maxSize;
     stack->size = 0;
@@ -27,7 +27,7 @@ static inline void initStack(Stack* stack, Object* buffer, Size maxSize) {
  * @param stack Stack
  * @return bool True if stack is empty
  */
-static inline bool isStackEmpty(Stack* stack) {
+static inline bool stack_isEmpty(Stack* stack) {
     return stack->size == 0;
 }
 
@@ -38,7 +38,7 @@ static inline bool isStackEmpty(Stack* stack) {
  * @param obj Object to push
  * @return Result Result of the operation
  */
-static inline Result stackPush(Stack* stack, Object obj) {
+static inline Result stack_push(Stack* stack, Object obj) {
     if (stack->size == stack->maxSize) {
         return RESULT_FAIL;
     }
@@ -54,7 +54,7 @@ static inline Result stackPush(Stack* stack, Object obj) {
  * @param retPtr Pointer to object
  * @return Result Result of the operation
  */
-static inline Result stackTop(Stack* stack, Object* retPtr) {
+static inline Result stack_top(Stack* stack, Object* retPtr) {
     if (stack->size == 0) {
         return RESULT_FAIL;
     }
@@ -70,8 +70,8 @@ static inline Result stackTop(Stack* stack, Object* retPtr) {
  * @param stack Stack
  * @return Result Result of the operation
  */
-static inline Result stackPop(Stack* stack) {
-    if (isStackEmpty(stack)) {
+static inline Result stack_pop(Stack* stack) {
+    if (stack_isEmpty(stack)) {
         return RESULT_FAIL;
     }
 

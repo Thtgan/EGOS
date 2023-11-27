@@ -6,16 +6,16 @@
 #include<kit/util.h>
 
 iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
-    HashChainNode* found = hashTableFind(table, (Object)blockIndex);
+    HashChainNode* found = hashTable_find(table, (Object)blockIndex);
     return found == NULL ? NULL : HOST_POINTER(found, iNode, hashChainNode);
 }
 
 Result iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
-    return hashTableInsert(table, (Object)blockIndex, &iNode->hashChainNode);
+    return hashTable_insert(table, (Object)blockIndex, &iNode->hashChainNode);
 }
 
 Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
-    return hashTableDelete(table, (Object)blockIndex) != NULL;
+    return hashTable_delete(table, (Object)blockIndex) != NULL;
 }
 
 iNode* iNode_open(SuperBlock* superBlock, FSentryDesc* desc) {

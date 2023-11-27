@@ -115,7 +115,7 @@ static inline void swap64(Uint64* a, Uint64* b) {
  * @param len Length of the list
  * @param comparator Comparator applied to compare the elements in the list
  */
-void linkedListMergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode));
+void algo_linkedList_mergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode));
 
 /**
  * @brief Sort the singly linked list using merge sort
@@ -124,6 +124,6 @@ void linkedListMergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, 
  * @param len Length of the list
  * @param comparator Comparator applied to compare the elements in the list
  */
-void singlyLinkedListMergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
+void algo_singlyLinkedList_mergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
 
 #endif // __ALGORITHMS_H

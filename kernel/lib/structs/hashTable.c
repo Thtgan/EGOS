@@ -6,18 +6,18 @@
 #include<structs/singlyLinkedList.h>
 
 //TODO: Make a default hash function
-void initHashTable(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC) {
+void hashTable_initStruct(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC) {
     table->size = 0;
     table->hashSize = hashSize;
     table->hashFunc = hashFunc;
     table->chains = chains;
 
     for (int i = 0; i < hashSize; i++) {
-        initSinglyLinkedList(table->chains + i);
+        singlyLinkedList_initStruct(table->chains + i);
     }
 }
 
-Result hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
+Result hashTable_insert(HashTable* table, Object key, HashChainNode* newNode) {
     Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
@@ -30,20 +30,20 @@ Result hashTableInsert(HashTable* table, Object key, HashChainNode* newNode) {
     }
 
     newNode->key = key;
-    initSinglyLinkedListNode(&newNode->node);
-    singlyLinkedListInsertNext(chain, &newNode->node);
+    singlyLinkedListNode_initStruct(&newNode->node);
+    singlyLinkedList_insertNext(chain, &newNode->node);
 
     ++table->size;
 
     return RESULT_SUCCESS;
 }
 
-void initHashChainNode(HashChainNode* node) {
-    initSinglyLinkedListNode(&node->node);
+void hashChainNode_initStruct(HashChainNode* node) {
+    singlyLinkedListNode_initStruct(&node->node);
     node->key = 0;
 }
 
-HashChainNode* hashTableDelete(HashTable* table, Object key) {
+HashChainNode* hashTable_delete(HashTable* table, Object key) {
     Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
@@ -51,10 +51,10 @@ HashChainNode* hashTableDelete(HashTable* table, Object key) {
         HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
-            singlyLinkedListDeleteNext(last);
+            singlyLinkedList_deleteNext(last);
             --table->size;
 
-            initSinglyLinkedListNode(&chainNode->node);
+            singlyLinkedListNode_initStruct(&chainNode->node);
             return chainNode;
         }
     }
@@ -62,7 +62,7 @@ HashChainNode* hashTableDelete(HashTable* table, Object key) {
     return NULL;
 }
 
-HashChainNode* hashTableFind(HashTable* table, Object key) {
+HashChainNode* hashTable_find(HashTable* table, Object key) {
     Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;

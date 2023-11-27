@@ -21,7 +21,7 @@ static BlockDeviceOperation _operations = {
 
 Result createMemoryBlockDevice(BlockDevice* device, void* region, Size size, ConstCstring name) {
     if (region == NULL) {
-        SET_ERROR_CODE(ERROR_OBJECT_ARGUMENT, ERROR_STATUS_IS_NULL);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_ARGUMENT, ERROR_CODE_STATUS_IS_NULL);
         return RESULT_FAIL;
     }
 

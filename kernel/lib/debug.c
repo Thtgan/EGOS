@@ -5,10 +5,8 @@
 #include<real/simpleAsmLines.h>
 #include<print.h>
 
-DataSharer dataSharer;
-
 __attribute__((noreturn))
-void blowup(const Cstring format, ...) {
+void debug_belowup(const Cstring format, ...) {
     va_list args;
     va_start(args, format);
 

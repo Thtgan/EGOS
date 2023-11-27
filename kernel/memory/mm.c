@@ -85,7 +85,7 @@ void* mmBasicAllocatePages(MemoryManager* mm, Size n) {
     }
 
     if (mm->freePageBegin + n > mm->freePageEnd) {
-        blowup("No enough memory for basic allocation\n");
+        debug_belowup("No enough memory for basic allocation\n");
     }
 
     void* ret = (void*)((Uint64)(mm->freePageBegin++) << PAGE_SIZE_SHIFT);

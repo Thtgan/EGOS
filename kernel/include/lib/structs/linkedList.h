@@ -18,7 +18,7 @@ typedef struct __LinkedListNode LinkedList;
  * 
  * @param list Header of the double linked list
  */
-static inline void initLinkedList(LinkedList* list) {
+static inline void linkedList_initStruct(LinkedList* list) {
     list->prev = list->next = list;
 }
 
@@ -27,7 +27,7 @@ static inline void initLinkedList(LinkedList* list) {
  * 
  * @param node Node of the double linked list
  */
-static inline void initLinkedListNode(LinkedListNode* node) {
+static inline void linkedListNode_initStruct(LinkedListNode* node) {
     node->prev = node->next = NULL;
 }
 
@@ -37,7 +37,7 @@ static inline void initLinkedListNode(LinkedListNode* node) {
  * @param list Header of the double linked list
  * @return bool is the double linked list empty
  */
-static inline bool isListEmpty(LinkedListNode* list) {
+static inline bool linkedList_isEmpty(LinkedListNode* list) {
     return list->next == list;
 }
 
@@ -47,7 +47,7 @@ static inline bool isListEmpty(LinkedListNode* list) {
  * @param node The double linked list node, could be list header
  * @return LinkedListNode* Next node
  */
-static inline LinkedListNode* linkedListGetNext(LinkedListNode* node) {
+static inline LinkedListNode* linkedListNode_getNext(LinkedListNode* node) {
     return node->next;
 }
 
@@ -57,7 +57,7 @@ static inline LinkedListNode* linkedListGetNext(LinkedListNode* node) {
  * @param node The double linked list node, could be list header
  * @return LinkedListNode* Previous node
  */
-static inline LinkedListNode* linkedListGetPrev(LinkedListNode* node) {
+static inline LinkedListNode* linkedListNode_getPrev(LinkedListNode* node) {
     return node->prev;
 }
 
@@ -67,7 +67,7 @@ static inline LinkedListNode* linkedListGetPrev(LinkedListNode* node) {
  * @param node New node will be inserted to the next position of this double linked list node
  * @param newNode New double linked list to insert
  */
-static inline void linkedListInsertBack(LinkedListNode* node, LinkedListNode* newNode) {
+static inline void linkedListNode_insertBack(LinkedListNode* node, LinkedListNode* newNode) {
     LinkedListNode* next = node->next;
     newNode->prev = node, newNode->next = next;
     node->next = next->prev = newNode;
@@ -79,7 +79,7 @@ static inline void linkedListInsertBack(LinkedListNode* node, LinkedListNode* ne
  * @param node New node will be inserted to the previous position of this double linked list node
  * @param newNode New double linked list to insert
  */
-static inline void linkedListInsertFront(LinkedListNode* node, LinkedListNode* newNode) {
+static inline void linkedListNode_insertFront(LinkedListNode* node, LinkedListNode* newNode) {
     LinkedListNode* prev = node->prev;
     newNode->prev = prev, newNode->next = node;
     prev->next = node->prev = newNode;
@@ -90,7 +90,7 @@ static inline void linkedListInsertFront(LinkedListNode* node, LinkedListNode* n
  * 
  * @param node Node to remove
  */
-static inline void linkedListDelete(LinkedListNode* node) {
+static inline void linkedListNode_delete(LinkedListNode* node) {
     node->prev->next = node->next;
     node->next->prev = node->prev;
 }

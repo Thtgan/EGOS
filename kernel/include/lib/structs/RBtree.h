@@ -31,7 +31,7 @@ typedef struct {
  * @param cmpFunc Comparation function between nodes
  * @param searchFunc Comparation function between node and value
  */
-void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, Uint64));
+void RBtree_initStruct(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, Uint64));
 
 /**
  * @brief Initialize the RB tree node
@@ -39,7 +39,7 @@ void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*se
  * @param tree RB tree
  * @param node RB tree to initialize
  */
-void initRBtreeNode(RBtree* tree, RBtreeNode* node);
+void RBtreeNode_initStruct(RBtree* tree, RBtreeNode* node);
 
 /**
  * @brief Search node with key
@@ -48,7 +48,7 @@ void initRBtreeNode(RBtree* tree, RBtreeNode* node);
  * @param val Can be anything, a integer or a pointer, depending on how is the comparation function designed
  * @return RBtreeNode* Founded node, NULL if node not exist
  */
-RBtreeNode* searchNode(RBtree* tree, Uint64 val);
+RBtreeNode* RBtree_search(RBtree* tree, Uint64 val);
 
 /**
  * @brief Insert new node
@@ -57,7 +57,7 @@ RBtreeNode* searchNode(RBtree* tree, Uint64 val);
  * @param newNode New node to insert
  * @return Result Result of the operation(Theoretically, failure happens only when duplicated value)
  */
-Result insertNode(RBtree* tree, RBtreeNode* newNode);
+Result RBtree_insert(RBtree* tree, RBtreeNode* newNode);
 
 /**
  * @brief Delete node
@@ -66,7 +66,7 @@ Result insertNode(RBtree* tree, RBtreeNode* newNode);
  * @param val Can be anything, a integer or a pointer, depending on how is the comparation function designed
  * @return RBtreeNode* Deleted node, NULL if node not exist
  */
-RBtreeNode* deleteNode(RBtree* tree, Uint64 val);
+RBtreeNode* RBtree_delete(RBtree* tree, Uint64 val);
 
 /**
  * @brief Get the predecessor of a node
@@ -75,7 +75,7 @@ RBtreeNode* deleteNode(RBtree* tree, Uint64 val);
  * @param node RB tree node
  * @return RBtreeNode* predecessor of the node
  */
-RBtreeNode* getPredecessor(RBtree* tree, RBtreeNode* node);
+RBtreeNode* RBtree_getPredecessor(RBtree* tree, RBtreeNode* node);
 
 /**
  * @brief Get the successor of a node
@@ -84,6 +84,6 @@ RBtreeNode* getPredecessor(RBtree* tree, RBtreeNode* node);
  * @param node RB tree node
  * @return RBtreeNode* successor of the node
  */
-RBtreeNode* getSuccessor(RBtree* tree, RBtreeNode* node);
+RBtreeNode* RBtree_getSuccessor(RBtree* tree, RBtreeNode* node);
 
 #endif // __RB_TREE_H

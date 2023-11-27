@@ -12,12 +12,12 @@ typedef struct {
     CompareFunc compareFunc;
 } Heap;
 
-void initHeap(Heap* heap, Object* objectArray, Size n, CompareFunc compareFunc);
+void heap_initStruct(Heap* heap, Object* objectArray, Size n, CompareFunc compareFunc);
 
-Result heapPush(Heap* heap, Object object);
+Result heap_push(Heap* heap, Object object);
 
-Result heapTop(Heap* heap, Object* object);
+Result heap_top(Heap* heap, Object* object);
 
-Result heapPop(Heap* heap);
+Result heap_pop(Heap* heap);
 
 #endif // __HEAP_H

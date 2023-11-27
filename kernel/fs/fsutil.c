@@ -139,7 +139,7 @@ Result fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
     base += offset;
 
     if ((Int64)base < 0 || base > file->desc->dataRange.length) {
-        SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
         return RESULT_FAIL;
     }
 

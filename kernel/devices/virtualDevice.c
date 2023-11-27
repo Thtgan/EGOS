@@ -83,7 +83,7 @@
 //     // }
 
 //     // if (unregisterBlockDevice(memDevice->deviceID) == NULL) {
-//     //     SET_ERROR_CODE(ERROR_OBJECT_ITEM, ERROR_STATUS_NOT_FOUND);
+//     //     ERROR_CODE_SET(ERROR_CODE_OBJECT_ITEM, ERROR_CODE_STATUS_NOT_FOUND);
 //     //     return RESULT_FAIL;
 //     // }
 
@@ -134,19 +134,19 @@
 
 //     // BlockDevice* memDevice = getBlockDeviceByID(INODE_ID_GET_DEVICE_ID(entry.iNodeID));
 //     // if (memDevice == NULL) {
-//     //     SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
+//     //     ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_NOT_FOUND);
 //     //     return RESULT_FAIL;
 //     // }
 
 //     // FS* fs = fs_open(memDevice);
 //     // if (fs == NULL) {
-//     //     SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+//     //     ERROR_CODE_SET(ERROR_CODE_OBJECT_EXECUTION, ERROR_CODE_STATUS_OPERATION_FAIL);
 //     //     return RESULT_FAIL;
 //     // }
 
 //     // Index64 iNodeIndex = fs->opearations->iNodeGlobalOperations->createInode(fs, INODE_TYPE_DEVICE);
 //     // if (iNodeIndex == INVALID_INDEX) {
-//     //     SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
+//     //     ERROR_CODE_SET(ERROR_CODE_OBJECT_EXECUTION, ERROR_CODE_STATUS_OPERATION_FAIL);
 //     //     return RESULT_FAIL;
 //     // }
 

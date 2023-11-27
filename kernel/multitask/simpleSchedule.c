@@ -73,7 +73,7 @@ Scheduler* createSimpleScheduler() {
     }
 
     for (int i = 0; i < PROCESS_STATUS_NUM; ++i) {
-        initQueue(&ret->statusQueues[i]);
+        queue_initStruct(&ret->statusQueues[i]);
     }
 
     ret->queueLock = SPINLOCK_UNLOCKED;
@@ -135,7 +135,7 @@ Result __terminateProcess(Scheduler* this, Process* process) {
 
     if (process == schedulerGetCurrentProcess(this)) {
         __schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_DYING);
-        blowup("Terminated process still alive\n");
+        debug_belowup("Terminated process still alive\n");
     }
 
     __setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_DYING);
@@ -178,7 +178,7 @@ static void __schedule(__SimpleScheduler* scheduler, ProcessStatus newStatus) {
         }
     }
 
-    while (!isQueueEmpty(&scheduler->statusQueues[PROCESS_STATUS_DYING])) {
+    while (!queue_isEmpty(&scheduler->statusQueues[PROCESS_STATUS_DYING])) {
         Process* dyingProcess = __getStatusQueueHead(scheduler, PROCESS_STATUS_DYING);
         __removeProcessFromQueue(scheduler, dyingProcess);
         releaseProcess(dyingProcess);
@@ -191,15 +191,15 @@ static void __setProcessStatus(__SimpleScheduler* scheduler, Process* process, P
     }
 
     if (process->status != PROCESS_STATUS_UNKNOWN && __removeProcessFromQueue(scheduler, process) == RESULT_FAIL) {
-        blowup("Remove process from queue failed\n");
+        debug_belowup("Remove process from queue failed\n");
     }
 
     process->status = status;
 
     spinlockLock(&scheduler->queueLock);
 
-    initQueueNode(&process->statusQueueNode);
-    queuePush(&scheduler->statusQueues[status], &process->statusQueueNode);
+    queueNode_initStruct(&process->statusQueueNode);
+    queue_push(&scheduler->statusQueues[status], &process->statusQueueNode);
 
     spinlockUnlock(&scheduler->queueLock);
 
@@ -210,7 +210,7 @@ static void __setProcessStatus(__SimpleScheduler* scheduler, Process* process, P
 
 static Process* __getStatusQueueHead(__SimpleScheduler* scheduler, ProcessStatus status) {
     spinlockLock(&scheduler->queueLock);
-    Process* ret = isQueueEmpty(&scheduler->statusQueues[status]) ? NULL : HOST_POINTER(queueFront(&scheduler->statusQueues[status]), Process, statusQueueNode);
+    Process* ret = queue_isEmpty(&scheduler->statusQueues[status]) ? NULL : HOST_POINTER(queue_front(&scheduler->statusQueues[status]), Process, statusQueueNode);
     spinlockUnlock(&scheduler->queueLock);
 
     return ret;
@@ -225,13 +225,13 @@ static Result __removeProcessFromQueue(__SimpleScheduler* scheduler, Process* pr
     for (QueueNode* i = &queue->q; i->next != &queue->q; i = i->next) {
         void* next = i->next;
         if (next == nodeAddr) {
-            singlyLinkedListDeleteNext(i);
+            singlyLinkedList_deleteNext(i);
 
             if (next == queue->qTail) {
                 queue->qTail = i;
             }
 
-            initQueueNode(&process->statusQueueNode);
+            queueNode_initStruct(&process->statusQueueNode);
 
             spinlockUnlock(&scheduler->queueLock);
 

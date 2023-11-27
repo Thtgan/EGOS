@@ -24,7 +24,7 @@ void __up_handler(Semaphore* sema);
 void initSemaphore(Semaphore* sema, int count) {
     sema->counter = count;
     sema->queueLock = SPINLOCK_UNLOCKED;
-    initQueue(&sema->waitQueue);
+    queue_initStruct(&sema->waitQueue);
 }
 
 void down(Semaphore* sema) {
@@ -70,12 +70,12 @@ void __down_handler(Semaphore* sema) {
     spinlockLock(&sema->queueLock);
 
     QueueNode* node = &schedulerGetCurrentProcess()->semaWaitQueueNode;
-    initQueueNode(node);
+    queueNode_initStruct(node);
 
     bool loop = true;
     do {
         //Add current process to wait list
-        queuePush(&sema->waitQueue, node);
+        queue_push(&sema->waitQueue, node);
 
         spinlockUnlock(&sema->queueLock);
         schedulerBlockProcess(schedulerGetCurrentProcess());
@@ -98,11 +98,11 @@ __attribute__((regparm(1)))
 void __up_handler(Semaphore* sema) {
     spinlockLock(&sema->queueLock);
 
-    if (!isQueueEmpty(&sema->waitQueue)) {
-        Process* p = HOST_POINTER(queueFront(&sema->waitQueue), Process, semaWaitQueueNode);
-        queuePop(&sema->waitQueue);
+    if (!queue_isEmpty(&sema->waitQueue)) {
+        Process* p = HOST_POINTER(queue_front(&sema->waitQueue), Process, semaWaitQueueNode);
+        queue_pop(&sema->waitQueue);
 
-        initQueueNode(&p->semaWaitQueueNode);
+        queueNode_initStruct(&p->semaWaitQueueNode);
         schedulerWakeProcess(p);
 
         spinlockUnlock(&sema->queueLock);

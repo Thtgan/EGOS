@@ -34,11 +34,11 @@ Result initBlockDevice(BlockDevice* device, BlockDeviceArgs* args) {
 
     device->parent              = args->parent;
     device->childNum = 0;
-    initSinglyLinkedList(&device->children);
-    initSinglyLinkedListNode(&device->node);
+    singlyLinkedList_initStruct(&device->children);
+    singlyLinkedListNode_initStruct(&device->node);
     if (device->parent != NULL) {
         ++device->parent->childNum;
-        singlyLinkedListInsertNext(&device->parent->children, &device->node);
+        singlyLinkedList_insertNext(&device->parent->children, &device->node);
     }
 
     if (args->buffered) {
@@ -53,7 +53,7 @@ Result initBlockDevice(BlockDevice* device, BlockDeviceArgs* args) {
 
     device->operations          = args->operations;
     device->specificInfo        = args->specificInfo;
-    initHashChainNode(&device->hashChainNode);
+    hashChainNode_initStruct(&device->hashChainNode);
 
     return RESULT_SUCCESS;
 }
@@ -184,7 +184,7 @@ static Result __doProbePartitions(BlockDevice* device, void* buffer) {
 
     char nameBuffer[16];
     if (PTR_TO_VALUE(16, buffer + 0x1FE) == 0xAA55) {
-        initSinglyLinkedList(&device->children);
+        singlyLinkedList_initStruct(&device->children);
         for (int i = 0; i < 4; ++i) {
             __MBRpartitionEntry* entry = (__MBRpartitionEntry*)(buffer + 0x1BE + i * sizeof(__MBRpartitionEntry));
             if (entry->systemID == 0) {

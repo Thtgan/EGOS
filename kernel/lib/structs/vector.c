@@ -7,27 +7,27 @@
 
 #define __VECTOR_INIT_STORAGE_SIZE  48
 
-void initVector(Vector* vector) {
+void vector_init(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
     vector->storage = kMalloc(__VECTOR_INIT_STORAGE_SIZE);
     memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
 }
 
-void releaseVector(Vector* vector) {
+void vector_clearStruct(Vector* vector) {
     kFree(vector->storage);
 }
 
-bool vectorIsEmpty(Vector* vector) {
+bool vector_isEmpty(Vector* vector) {
     return vector->size == 0;
 }
 
-void vectorClear(Vector* vector) {
+void vector_clear(Vector* vector) {
     vector->size = 0;
     memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
 }
 
-Result vectorResize(Vector* vector, Size newCapacity) {
+Result vector_resize(Vector* vector, Size newCapacity) {
     Object* newStorage = kMalloc(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
         return RESULT_FAIL;
@@ -42,7 +42,7 @@ Result vectorResize(Vector* vector, Size newCapacity) {
     return RESULT_SUCCESS;
 }
 
-Result vectorGet(Vector* vector, Index64 index, Object* retPtr) {
+Result vector_get(Vector* vector, Index64 index, Object* retPtr) {
     if (index >= vector->size) {
         return RESULT_FAIL;
     }
@@ -51,7 +51,7 @@ Result vectorGet(Vector* vector, Index64 index, Object* retPtr) {
     return RESULT_SUCCESS;
 }
 
-Result vectorSet(Vector* vector, Index64 index, Object item) {
+Result vector_set(Vector* vector, Index64 index, Object item) {
     if (index >= vector->size) {
         return RESULT_FAIL;
     }
@@ -60,7 +60,7 @@ Result vectorSet(Vector* vector, Index64 index, Object item) {
     return RESULT_SUCCESS;
 }
 
-Result vectorErase(Vector* vector, Index64 index) {
+Result vector_erease(Vector* vector, Index64 index) {
     if (index >= vector->size) {
         return RESULT_FAIL;
     }
@@ -69,8 +69,8 @@ Result vectorErase(Vector* vector, Index64 index) {
     return RESULT_SUCCESS;
 }
 
-Result vectorBack(Vector* vector, Object* retPtr) {
-    if (vectorIsEmpty(vector)) {
+Result vector_back(Vector* vector, Object* retPtr) {
+    if (vector_isEmpty(vector)) {
         return RESULT_FAIL;
     }
 
@@ -78,8 +78,8 @@ Result vectorBack(Vector* vector, Object* retPtr) {
     return RESULT_SUCCESS;
 }
 
-Result vectorPush(Vector* vector, Object item) {
-    if (vector->size == vector->capacity && vectorResize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) == RESULT_FAIL) {
+Result vector_push(Vector* vector, Object item) {
+    if (vector->size == vector->capacity && vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -87,8 +87,8 @@ Result vectorPush(Vector* vector, Object item) {
     return RESULT_SUCCESS;
 }
 
-Result vectorPop(Vector* vector) {
-    if (vectorIsEmpty(vector)) {
+Result vector_pop(Vector* vector) {
+    if (vector_isEmpty(vector)) {
         return RESULT_FAIL;
     }
 

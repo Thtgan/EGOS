@@ -145,7 +145,7 @@ static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocate
     superBlock->operations              = &__FAT32_fs_superBlockOperations;
     superBlock->rootDirectory           = NULL;
     superBlock->specificInfo            = info;
-    initHashTable(&superBlock->openedInode, 16, iNodeHashChains, LAMBDA(Size, (HashTable* this, Object key) {
+    hashTable_initStruct(&superBlock->openedInode, 16, iNodeHashChains, LAMBDA(Size, (HashTable* this, Object key) {
         return key % this->hashSize;
     }));
 

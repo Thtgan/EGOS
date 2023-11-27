@@ -33,7 +33,7 @@ Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, FSentryDesc* desc)
     iNode->superBlock       = superBlock;
     iNode->openCnt          = 1;
     iNode->operations       = &_FAT32iNodeOperations;
-    initHashChainNode(&iNode->hashChainNode);
+    hashChainNode_initStruct(&iNode->hashChainNode);
     iNode->specificInfo     = (Object)iNodeInfo;
 
     return RESULT_SUCCESS;

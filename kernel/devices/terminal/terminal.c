@@ -128,7 +128,7 @@ void switchCursor(Terminal* terminal, bool enable) {
         return;
     }
 
-    ASSERT_SILENT(_currentTerminal != NULL);
+    DEBUG_ASSERT_SILENT(_currentTerminal != NULL);
     down(&_currentTerminal->outputLock);
     Index16 cursorRow = __ROW_INDEX_ADD(_currentTerminal->loopRowBegin, _currentTerminal->cursorPosX, _currentTerminal->bufferRowSize);
     if (_currentTerminal->cursorEnabled && __checkRowInWindow(_currentTerminal, cursorRow)) {
@@ -146,7 +146,7 @@ void switchCursor(Terminal* terminal, bool enable) {
 }
 
 void flushDisplay() {
-    ASSERT_SILENT(_currentTerminal != NULL);
+    DEBUG_ASSERT_SILENT(_currentTerminal != NULL);
     down(&_currentTerminal->outputLock);
     for (int i = 0; i < _currentTerminal->windowHeight; ++i) {
         char* src = _currentTerminal->buffer + __ROW_INDEX_ADD(_currentTerminal->windowRowBegin, i, _currentTerminal->bufferRowSize) * _currentTerminal->windowWidth;
@@ -375,7 +375,7 @@ static void __putCharacter(Terminal* terminal, char ch) {
         }
     }
 
-    ASSERT(
+    DEBUG_ASSERT(
         nextCursorPosX <= terminal->bufferRowSize && nextCursorPosY < terminal->windowWidth,
         "Invalid next posX or posY: %u, %u",
         nextCursorPosX, nextCursorPosY

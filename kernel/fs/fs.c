@@ -29,13 +29,13 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
 
 Result fs_init() {
     if (firstBootablePartition == NULL) {
-        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_NOT_FOUND);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_NOT_FOUND);
         return RESULT_FAIL;
     }
 
     FStype type = fs_checkType(firstBootablePartition);
     if (type == FS_TYPE_UNKNOWN) {
-        SET_ERROR_CODE(ERROR_OBJECT_DEVICE, ERROR_STATUS_VERIFIVCATION_FAIL);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
     }
 

@@ -38,11 +38,11 @@ extern FS* rootFS;
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
     if (sysInfo->magic != SYSTEM_INFO_MAGIC) {
-        blowup("Boot magic not match");
+        debug_belowup("Boot magic not match");
     }
 
     if (initKernel() == RESULT_FAIL) {
-        blowup("Initialization failed");
+        debug_belowup("Initialization failed");
     }
 
     printLOGO();

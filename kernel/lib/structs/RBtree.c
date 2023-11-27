@@ -12,14 +12,14 @@
  * 5. All nodes to its leaves contains same number of Black nodes
  */
 
-static void __lRotate(RBtree* tree, RBtreeNode* node);
-static void __rRotate(RBtree* tree, RBtreeNode* node);
-static void __updateParent(RBtree* tree, RBtreeNode* oldChild, RBtreeNode* newChild);
-static RBtreeNode* __getSibling(RBtreeNode* node);
-static void __insertFix(RBtree* tree, RBtreeNode* newNode);
-static void __deleteFix(RBtree* tree, RBtreeNode* newNode);
+static void __RBtree_lRotate(RBtree* tree, RBtreeNode* node);
+static void __RBtree_rRotate(RBtree* tree, RBtreeNode* node);
+static void __RBtree_updateParent(RBtree* tree, RBtreeNode* oldChild, RBtreeNode* newChild);
+static RBtreeNode* __RBtree_getSibling(RBtreeNode* node);
+static void __RBtree_insertFix(RBtree* tree, RBtreeNode* newNode);
+static void __RBtree_deleteFix(RBtree* tree, RBtreeNode* newNode);
 
-void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, Uint64)) {
+void RBtree_initStruct(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*searchFunc)(RBtreeNode*, Uint64)) {
     RBtreeNode* NIL = &tree->NIL;
     NIL->color = RB_TREE_COLOR_BLACK;
     NIL->left = NIL->right = NIL->parent = NULL;
@@ -30,13 +30,13 @@ void initRBtree(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), int (*se
     tree->root = &tree->NIL;
 }
 
-void initRBtreeNode(RBtree* tree, RBtreeNode* node) {
+void RBtreeNode_initStruct(RBtree* tree, RBtreeNode* node) {
     node->color = RB_TREE_COLOR_RED;
     node->parent = NULL;
     node->left = node->right = &tree->NIL;
 }
 
-RBtreeNode* searchNode(RBtree* tree, Uint64 val) {
+RBtreeNode* RBtree_search(RBtree* tree, Uint64 val) {
     int cmp;
     for (RBtreeNode* node = tree->root; node != &tree->NIL;) {
         cmp = tree->searchFunc(node, val);
@@ -52,7 +52,7 @@ RBtreeNode* searchNode(RBtree* tree, Uint64 val) {
     return NULL;
 }
 
-Result insertNode(RBtree* tree, RBtreeNode* newNode) {
+Result RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = NULL;
 
     int cmp;
@@ -76,13 +76,13 @@ Result insertNode(RBtree* tree, RBtreeNode* newNode) {
         parent->right = newNode;
     }
 
-    __insertFix(tree, newNode);
+    __RBtree_insertFix(tree, newNode);
 
     return RESULT_SUCCESS;
 }
 
-RBtreeNode* deleteNode(RBtree* tree, Uint64 val) {
-    RBtreeNode* found = searchNode(tree, val);
+RBtreeNode* RBtree_delete(RBtree* tree, Uint64 val) {
+    RBtreeNode* found = RBtree_search(tree, val);
 
     if (found == NULL) {
         return NULL;
@@ -93,19 +93,19 @@ RBtreeNode* deleteNode(RBtree* tree, Uint64 val) {
     if (found->left == &tree->NIL) { //If node has no child or has a right child
         replaceNode = found->right; //If no child, this is a NIL
         removedColor = found->color;
-        __updateParent(tree, found, replaceNode);
+        __RBtree_updateParent(tree, found, replaceNode);
     } else if (found->right == &tree->NIL) { //If node has a left child
         replaceNode = found->left;
         removedColor = found->color;
-        __updateParent(tree, found, replaceNode);
+        __RBtree_updateParent(tree, found, replaceNode);
     } else { //Node has two children
-        RBtreeNode* successor = getSuccessor(tree, found);
+        RBtreeNode* successor = RBtree_getSuccessor(tree, found);
 
         replaceNode = successor->right;
         removedColor = successor->color;
-        __updateParent(tree, successor, replaceNode);
+        __RBtree_updateParent(tree, successor, replaceNode);
 
-        __updateParent(tree, found, successor);
+        __RBtree_updateParent(tree, found, successor);
 
         successor->color = found->color;
         successor->left = found->left;
@@ -115,7 +115,7 @@ RBtreeNode* deleteNode(RBtree* tree, Uint64 val) {
     }
 
     if (removedColor == RB_TREE_COLOR_BLACK) {
-        __deleteFix(tree, replaceNode);
+        __RBtree_deleteFix(tree, replaceNode);
     }
 
     if (replaceNode == &tree->NIL) {
@@ -127,7 +127,7 @@ RBtreeNode* deleteNode(RBtree* tree, Uint64 val) {
     return found;
 }
 
-RBtreeNode* getPredecessor(RBtree* tree, RBtreeNode* node) {
+RBtreeNode* RBtree_getPredecessor(RBtree* tree, RBtreeNode* node) {
     if (node->left != &tree->NIL) {
         RBtreeNode* ret = node->left;
         while (ret->right != &tree->NIL) {
@@ -145,7 +145,7 @@ RBtreeNode* getPredecessor(RBtree* tree, RBtreeNode* node) {
     return parent;
 }
 
-RBtreeNode* getSuccessor(RBtree* tree, RBtreeNode* node) {
+RBtreeNode* RBtree_getSuccessor(RBtree* tree, RBtreeNode* node) {
     if (node->right != &tree->NIL) {
         RBtreeNode* ret = node->right;
         while (ret->left != &tree->NIL) {
@@ -163,7 +163,7 @@ RBtreeNode* getSuccessor(RBtree* tree, RBtreeNode* node) {
     return parent;
 }
 
-static void __lRotate(RBtree* tree, RBtreeNode* node) {
+static void __RBtree_lRotate(RBtree* tree, RBtreeNode* node) {
     RBtreeNode* parent = node->parent;
     RBtreeNode* right = node->right;
 
@@ -172,13 +172,13 @@ static void __lRotate(RBtree* tree, RBtreeNode* node) {
         node->right->parent = node;
     }
 
-    __updateParent(tree, node, right);
+    __RBtree_updateParent(tree, node, right);
 
     right->left = node;
     node->parent = right;
 }
 
-static void __rRotate(RBtree* tree, RBtreeNode* node) {
+static void __RBtree_rRotate(RBtree* tree, RBtreeNode* node) {
     RBtreeNode* parent = node->parent;
     RBtreeNode* left = node->left;
 
@@ -187,13 +187,13 @@ static void __rRotate(RBtree* tree, RBtreeNode* node) {
         node->left->parent = node;
     }
 
-    __updateParent(tree, node, left);
+    __RBtree_updateParent(tree, node, left);
 
     left->right = node;
     node->parent = left;
 }
 
-static void __updateParent(RBtree* tree, RBtreeNode* oldChild, RBtreeNode* newChild) {
+static void __RBtree_updateParent(RBtree* tree, RBtreeNode* oldChild, RBtreeNode* newChild) {
     RBtreeNode* parent = oldChild->parent;
     if (parent == NULL) {
         tree->root = newChild;
@@ -208,18 +208,18 @@ static void __updateParent(RBtree* tree, RBtreeNode* oldChild, RBtreeNode* newCh
     }
 }
 
-static RBtreeNode* __getSibling(RBtreeNode* node) {
+static RBtreeNode* __RBtree_getSibling(RBtreeNode* node) {
     RBtreeNode* parent = node->parent;
     return node == parent->right ? parent->left : parent->right;
 }
 
-static void __insertFix(RBtree* tree, RBtreeNode* newNode) {
+static void __RBtree_insertFix(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = newNode->parent;
 
     //newNode is not root, and is red
 
     for (; parent != NULL && parent->color == RB_TREE_COLOR_RED; parent = newNode->parent) {
-        RBtreeNode* grandparent = parent->parent, * uncle = __getSibling(parent);
+        RBtreeNode* grandparent = parent->parent, * uncle = __RBtree_getSibling(parent);
 
         if (uncle->color == RB_TREE_COLOR_RED) {
             parent->color = uncle->color = RB_TREE_COLOR_BLACK;
@@ -229,7 +229,7 @@ static void __insertFix(RBtree* tree, RBtreeNode* newNode) {
         } else {
             if (parent == grandparent->left) {
                 if (newNode == parent->right) {
-                    __lRotate(tree, parent);
+                    __RBtree_lRotate(tree, parent);
 
                     parent = newNode;
                     grandparent = parent->parent;
@@ -238,10 +238,10 @@ static void __insertFix(RBtree* tree, RBtreeNode* newNode) {
                 parent->color = RB_TREE_COLOR_BLACK;
                 grandparent->color = RB_TREE_COLOR_RED;
 
-                __rRotate(tree, grandparent);
+                __RBtree_rRotate(tree, grandparent);
             } else {
                 if (newNode == parent->left) {
-                    __rRotate(tree, parent);
+                    __RBtree_rRotate(tree, parent);
 
                     parent = newNode;
                     grandparent = parent->parent;
@@ -250,19 +250,19 @@ static void __insertFix(RBtree* tree, RBtreeNode* newNode) {
                 parent->color = RB_TREE_COLOR_BLACK;
                 grandparent->color = RB_TREE_COLOR_RED;
 
-                __lRotate(tree, grandparent);
+                __RBtree_lRotate(tree, grandparent);
             }
         }
     }
     tree->root->color = RB_TREE_COLOR_BLACK;
 }
 
-static void __deleteFix(RBtree* tree, RBtreeNode* newNode) {
+static void __RBtree_deleteFix(RBtree* tree, RBtreeNode* newNode) {
     //We want to fix the tree we cut exactly one black node to maintain rule 5
     //newNode stands for the sub-tree follows rule 5, we want to fix the higher tree
     //However, if newNode is red, we can simply set it to black, so we have 1 black node back (LINK kernel/lib/structs/RBtree.c#RBtree_deletion_end_set_red)
     while (newNode != tree->root && newNode->color == RB_TREE_COLOR_BLACK) {
-        RBtreeNode* sibling = __getSibling(newNode);
+        RBtreeNode* sibling = __RBtree_getSibling(newNode);
         RBtreeNode* parent = newNode->parent;
 
         if (sibling->color == RB_TREE_COLOR_RED) {
@@ -270,9 +270,9 @@ static void __deleteFix(RBtree* tree, RBtreeNode* newNode) {
             parent->color = RB_TREE_COLOR_RED;
 
             if (newNode == parent->left) {
-                __lRotate(tree, parent);
+                __RBtree_lRotate(tree, parent);
             } else {
-                __rRotate(tree, parent);
+                __RBtree_rRotate(tree, parent);
             }
 
             continue;
@@ -287,29 +287,29 @@ static void __deleteFix(RBtree* tree, RBtreeNode* newNode) {
                     sibling->color = RB_TREE_COLOR_RED;
                     sibling->left->color = RB_TREE_COLOR_BLACK;
 
-                    __rRotate(tree, sibling);
-                    sibling = __getSibling(newNode);
+                    __RBtree_rRotate(tree, sibling);
+                    sibling = __RBtree_getSibling(newNode);
                     parent = newNode->parent;
                 }
 
                 //Right child of sibling must be red
                 sibling->color = parent->color;
                 parent->color = sibling->right->color = RB_TREE_COLOR_BLACK;
-                __lRotate(tree, parent);
+                __RBtree_lRotate(tree, parent);
             } else if (newNode == parent->right) {
                 if (sibling->left->color == RB_TREE_COLOR_BLACK) { //Right child of sibling must be red
                     sibling->color = RB_TREE_COLOR_RED;
                     sibling->right->color = RB_TREE_COLOR_BLACK;
 
-                    __lRotate(tree, sibling);
-                    sibling = __getSibling(newNode);
+                    __RBtree_lRotate(tree, sibling);
+                    sibling = __RBtree_getSibling(newNode);
                     parent = newNode->parent;
                 }
 
                 //Left child of sibling must be red
                 sibling->color = parent->color;
                 parent->color = sibling->left->color = RB_TREE_COLOR_BLACK;
-                __rRotate(tree, parent);
+                __RBtree_rRotate(tree, parent);
             }
 
             break;

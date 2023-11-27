@@ -23,7 +23,7 @@ Result readELF64Header(File* file, ELF64Header* header) {
     }
 
     if (header->identification.magic != ELF_IDENTIFICATION_MAGIC) {
-        SET_ERROR_CODE(ERROR_OBJECT_FILE, ERROR_STATUS_VERIFIVCATION_FAIL);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
     }
 
@@ -54,12 +54,12 @@ void printELF64Header(TerminalLevel level, ELF64Header* header) {
 
 Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
     if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
-        SET_ERROR_CODE(ERROR_OBJECT_DATA, ERROR_STATUS_VERIFIVCATION_FAIL);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_DATA, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
     }
 
     if (index >= elfHeader->programHeaderEntryNum) {
-        SET_ERROR_CODE(ERROR_OBJECT_INDEX, ERROR_STATUS_OUT_OF_BOUND);
+        ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
         return RESULT_FAIL;
     }
 

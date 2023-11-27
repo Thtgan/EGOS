@@ -54,8 +54,8 @@ char initKernelStack[PROCESS_KERNEL_STACK_SIZE];
 
 Process* initProcess() {
     memset(&_pidBitmapBits, 0, sizeof(_pidBitmapBits));
-    initBitmap(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
-    setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
+    bitmap_initStruct(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
+    bitmap_setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
 
     Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Init", initKernelStack + PROCESS_KERNEL_STACK_SIZE);
     mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
@@ -114,7 +114,7 @@ Process* fork(ConstCstring name) {
 void exitProcess() {
     schedulerTerminateProcess(schedulerGetCurrentProcess());
 
-    blowup("Func exitProcess is trying to return\n");
+    debug_belowup("Func exitProcess is trying to return\n");
 }
 
 void releaseProcess(Process* process) {
@@ -168,8 +168,8 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
     // ret->userStackTop = ret->userProgramBegin = NULL;
     // ret->userProgramPageSize = 0;
 
-    initQueueNode(&ret->statusQueueNode);
-    initQueueNode(&ret->semaWaitQueueNode);
+    queueNode_initStruct(&ret->statusQueueNode);
+    queueNode_initStruct(&ret->semaWaitQueueNode);
 
     // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
     // ret->fileSlots = pageAlloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
@@ -211,14 +211,14 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
 // }
 
 static Uint16 __allocatePID() {
-    Uint16 pid = findFirstClear(&_pidBitmap, _lastGeneratePID);
+    Uint16 pid = bitmap_findFirstClear(&_pidBitmap, _lastGeneratePID);
     if (pid != INVALID_PID) {
-        setBit(&_pidBitmap, pid);
+        bitmap_setBit(&_pidBitmap, pid);
         _lastGeneratePID = pid;
     }
     return pid;
 }
 
 static void __releasePID(Uint16 pid) {
-    clearBit(&_pidBitmap, pid);
+    bitmap_clearBit(&_pidBitmap, pid);
 }

@@ -39,7 +39,7 @@ ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
     printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
     printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
     printRegisters(TERMINAL_LEVEL_DEBUG, registers);
-    blowup("DEAD\n");
+    debug_belowup("DEAD\n");
 }
 
 Result initIDT() {

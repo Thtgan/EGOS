@@ -16,7 +16,7 @@ static Object _heapObjects[1023 + 1];
 
 void initTimers(ClockSource* timerClockSource) {
     _timerClockSource = timerClockSource;
-    initHeap(&_timerHeap, _heapObjects, __TIMER_MAXIMUM_NUM, LAMBDA(Int64, (Object o1, Object o2) {
+    heap_initStruct(&_timerHeap, _heapObjects, __TIMER_MAXIMUM_NUM, LAMBDA(Int64, (Object o1, Object o2) {
         return ((Timer*)o1)->until - ((Timer*)o2)->until;
     }));
 }
@@ -35,7 +35,7 @@ Result timerStart(Timer* timer) {
     }
 
     timer->until    = rawClockSourceReadTick(_timerClockSource) + timer->tick;
-    heapPush(&_timerHeap, (Object)timer);
+    heap_push(&_timerHeap, (Object)timer);
     SET_FLAG_BACK(timer->flags, TIMER_FLAGS_PRESENT);
     
     if (TEST_FLAGS(timer->flags, TIMER_FLAGS_SYNCHRONIZE)) {
@@ -59,22 +59,22 @@ Result timerStop(Timer* timer) {
 void updateTimers() {
     Timer* topTimer;
     Uint64 currentTick = rawClockSourceReadTick(_timerClockSource);
-    while (_timerHeap.size > 0 && heapTop(&_timerHeap, (Object*)&topTimer) == RESULT_SUCCESS && topTimer->until <= currentTick) {
+    while (_timerHeap.size > 0 && heap_top(&_timerHeap, (Object*)&topTimer) == RESULT_SUCCESS && topTimer->until <= currentTick) {
         if (TEST_FLAGS(topTimer->flags, TIMER_FLAGS_PRESENT)) {
             CLEAR_FLAG_BACK(topTimer->flags, TIMER_FLAGS_PRESENT);
             if (topTimer->handler != NULL) {
                 topTimer->handler(topTimer);
             }
             
-            heapPop(&_timerHeap);
+            heap_pop(&_timerHeap);
 
             if (TEST_FLAGS(topTimer->flags, TIMER_FLAGS_REPEAT)) {
                 topTimer->until = currentTick + topTimer->tick;
                 SET_FLAG_BACK(topTimer->flags, TIMER_FLAGS_PRESENT);
-                heapPush(&_timerHeap, (Object)topTimer);
+                heap_push(&_timerHeap, (Object)topTimer);
             }
         } else {
-            heapPop(&_timerHeap);
+            heap_pop(&_timerHeap);
         }
     }
 }

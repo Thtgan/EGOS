@@ -82,7 +82,7 @@ Result initKmalloc() {
         __RegionList* attributedRegionLists = _regionLists[i];
         for (int j = 0; j < REGION_LIST_NUM; ++j) {
             __RegionList* attributedRegionList = attributedRegionLists + j;
-            initSinglyLinkedList(&attributedRegionList->list);
+            singlyLinkedList_initStruct(&attributedRegionList->list);
             attributedRegionList->length    = POWER_2(j + MIN_REGION_LENGTH_BIT);
             attributedRegionList->regionNum = 0;
             attributedRegionList->freeCnt   = 0;
@@ -214,7 +214,7 @@ static void* __getRegionFromList(__RegionList* regionList) {
     void* ret = NULL;
     if (regionList->regionNum > 0) {
         ret = (void*)regionList->list.next;
-        singlyLinkedListDeleteNext(&regionList->list);
+        singlyLinkedList_deleteNext(&regionList->list);
         --regionList->regionNum;
     }
 
@@ -223,9 +223,9 @@ static void* __getRegionFromList(__RegionList* regionList) {
 
 static void __addRegionToList(void* regionBegin, __RegionList* regionList) {    
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)regionBegin;
-    initSinglyLinkedListNode(node);
+    singlyLinkedListNode_initStruct(node);
 
-    singlyLinkedListInsertNext(&regionList->list, node);
+    singlyLinkedList_insertNext(&regionList->list, node);
     ++regionList->regionNum;
 }
 
@@ -274,7 +274,7 @@ static void __regionListTidyUp(Int8 level, MemoryType type) {
             pageFree(convertAddressV2P(pagesBegin));
         }
     } else { //Sort before combination
-        singlyLinkedListMergeSort(&regionList->list, regionList->regionNum, 
+        algo_singlyLinkedList_mergeSort(&regionList->list, regionList->regionNum, 
             LAMBDA(int, (const SinglyLinkedListNode* node1, const SinglyLinkedListNode* node2) {
                 return (Uintptr)node1 - (Uintptr)node2;
             })
@@ -287,8 +287,8 @@ static void __regionListTidyUp(Int8 level, MemoryType type) {
                 VAL_AND((Uintptr)node, regionList->length) == 0 && 
                 ((void*)node) + regionList->length == (void*)node->next
             ) { //Two node may combine and release to higher level region list
-                singlyLinkedListDeleteNext(prev);
-                singlyLinkedListDeleteNext(prev);
+                singlyLinkedList_deleteNext(prev);
+                singlyLinkedList_deleteNext(prev);
                 regionList->regionNum -= 2;
 
                 __addRegionToList((void*)node, _regionLists[type] + level + 1);
