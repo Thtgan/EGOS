@@ -13,7 +13,7 @@ __attribute__((noreturn))
  */
 void debug_belowup(const Cstring format, ...);
 
-#define DEBUG_MARK_PRINT(__FORMAT, ...)                 printf(TERMINAL_LEVEL_DEBUG, "[" MACRO_STR(__FILE__) ":" MACRO_STR(__LINE__) "] " __FORMAT, __VA_ARGS__)
+#define DEBUG_MARK_PRINT(__FORMAT, ...)                 printf(TERMINAL_LEVEL_DEBUG, "[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
 #define DEBUG_ASSERT_SILENT(__EXPRESSION)               do { if (!(__EXPRESSION)) debug_belowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
 
