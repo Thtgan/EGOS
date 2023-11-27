@@ -5,8 +5,11 @@
 
 STRUCT_PRE_DEFINE(SuperBlock);
 STRUCT_PRE_DEFINE(iNode);
-STRUCT_PRE_DEFINE(FileSystemEntry);
-STRUCT_PRE_DEFINE(FileSystemEntryDescriptor);
-STRUCT_PRE_DEFINE(FileSystemEntryIdentifier);
+STRUCT_PRE_DEFINE(FSentry);
+STRUCT_PRE_DEFINE(FSentryDesc);
+STRUCT_PRE_DEFINE(FSentryIdentifier);
+
+typedef FSentry Directory;
+typedef FSentry File;
 
 #endif // __FS_PRE_DEFINES

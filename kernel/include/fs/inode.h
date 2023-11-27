@@ -2,15 +2,14 @@
 #define __INODE_H
 
 #include<devices/block/blockDevice.h>
-#include<fs/fileSystem.h>
-#include<fs/fileSystemEntry.h>
+#include<fs/fs.h>
+#include<fs/fsEntry.h>
 #include<fs/fsPreDefines.h>
-#include<kit/bit.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
 
 typedef struct {
-    Result (*mapBlockPosition)(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
+    Result (*translateBlockPos)(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
 } iNodeOperations;
 
 STRUCT_PRIVATE_DEFINE(iNode) {
@@ -25,12 +24,18 @@ STRUCT_PRIVATE_DEFINE(iNode) {
     Object              specificInfo;
 };
 
-static inline Result rawInodeMapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
-    return iNode->operations->mapBlockPosition(iNode, vBlockIndex, n, pBlockRanges, rangeN);
+static inline Result iNode_rawTranslateBlockPos(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
+    return iNode->operations->translateBlockPos(iNode, vBlockIndex, n, pBlockRanges, rangeN);
 }
 
-iNode* openInodeBuffered(SuperBlock* superBlock, FileSystemEntryDescriptor* entryDescriptor);
+iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex);
 
-Result closeInodeBuffered(iNode* iNode, FileSystemEntryDescriptor* entryDescriptor);
+Result iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex);
+
+Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex);
+
+iNode* iNode_open(SuperBlock* superBlock, FSentryDesc* desc);
+
+Result iNode_close(iNode* iNode, FSentryDesc* desc);
 
 #endif // __INODE_H

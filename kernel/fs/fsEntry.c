@@ -1,9 +1,9 @@
-#include<fs/fileSystemEntry.h>
+#include<fs/fsEntry.h>
 
 #include<algorithms.h>
 #include<devices/block/blockDevice.h>
 #include<fs/fsutil.h>
-#include<fs/fileSystem.h>
+#include<fs/fs.h>
 #include<fs/fsPreDefines.h>
 #include<fs/inode.h>
 #include<kernel.h>
@@ -17,10 +17,10 @@
 #include<string.h>
 #include<system/pageTable.h>
 
-Result initFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc, FileSystemEntryDescriptorInitArgs* args) {
+Result FSentryDesc_initStruct(FSentryDesc* desc, FSentryDescInitStructArgs* args) {
     ConstCstring name = args->name;
 
-    FileSystemEntryIdentifier* identifier = &desc->identifier;
+    FSentryIdentifier* identifier = &desc->identifier;
     if (name == NULL) {
         identifier->name    = NULL;
     } else {
@@ -45,50 +45,50 @@ Result initFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc, FileSystem
     return RESULT_SUCCESS;
 }
 
-void clearFileSystemEntryDescriptor(FileSystemEntryDescriptor* desc) {
+void FSentryDesc_clearStruct(FSentryDesc* desc) {
     if (desc->identifier.name != NULL) {
         kFree((void*)desc->identifier.name);
     }
 
-    memset(desc, 0, sizeof(FileSystemEntryDescriptor));
+    memset(desc, 0, sizeof(FSentryDesc));
 }
 
-Result genericOpenFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescriptor) {
-    entry->descriptor       = entryDescriptor;
-    entry->pointer          = 0;
-    entry->iNode            = openInodeBuffered(superBlock, entryDescriptor);
+Result fsEntry_genericOpen(SuperBlock* superBlock, FSentry* entry, FSentryDesc* desc) {
+    entry->desc     = desc;
+    entry->pointer  = 0;
+    entry->iNode    = iNode_open(superBlock, desc);
     if (entry->iNode == NULL) {
         return RESULT_FAIL;
     }
 
-    SET_FLAG_BACK(entryDescriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT);
+    SET_FLAG_BACK(desc->flags, FS_ENTRY_DESC_FLAGS_PRESENT);
 
     return RESULT_SUCCESS;
 }
 
-Result genericCloseFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry) {
-    FileSystemEntryDescriptor* entryDescriptor = entry->descriptor;
+Result fsEntry_genericClose(SuperBlock* superBlock, FSentry* entry) {
+    FSentryDesc* desc = entry->desc;
 
-    CLEAR_FLAG_BACK(entryDescriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_PRESENT);
+    CLEAR_FLAG_BACK(desc->flags, FS_ENTRY_DESC_FLAGS_PRESENT);
 
-    if (closeInodeBuffered(entry->iNode, entryDescriptor) == RESULT_FAIL) {
+    if (iNode_close(entry->iNode, desc) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    memset(entry, 0, sizeof(FileSystemEntry));
+    memset(entry, 0, sizeof(FSentry));
 
     return RESULT_SUCCESS;
 }
 
-Index64 genericFileSystemEntrySeek(FileSystemEntry* entry, Index64 seekTo) {
-    if (seekTo > entry->descriptor->dataRange.length) {
+Index64 fsEntry_genericSeek(FSentry* entry, Index64 seekTo) {
+    if (seekTo > entry->desc->dataRange.length) {
         return INVALID_INDEX;
     }
     
     return entry->pointer = seekTo;
 }
 
-Result genericFileSystemEntryRead(FileSystemEntry* entry, void* buffer, Size n) {
+Result fsEntry_genericRead(FSentry* entry, void* buffer, Size n) {
     iNode* iNode = entry->iNode;
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
@@ -99,12 +99,12 @@ Result genericFileSystemEntryRead(FileSystemEntry* entry, void* buffer, Size n) 
     }
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
-    Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = min64(n, entry->descriptor->dataRange.length - entry->pointer);
+    Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = min64(n, entry->desc->dataRange.length - entry->pointer);
     Range range;
 
     if (offsetInBlock != 0) {
         Size tmpN = 1;
-        if (rawInodeMapBlockPosition(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -122,7 +122,7 @@ Result genericFileSystemEntryRead(FileSystemEntry* entry, void* buffer, Size n) 
     if (remainByteNum >= blockSize) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, device->bytePerBlockShift);
         Result res;
-        while ((res = rawInodeMapBlockPosition(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
+        while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
             if (blockDeviceReadBlocks(device, range.begin, buffer, range.length) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
@@ -139,7 +139,7 @@ Result genericFileSystemEntryRead(FileSystemEntry* entry, void* buffer, Size n) 
 
     if (remainByteNum > 0) {
         Size tmpN = 1;
-        if (rawInodeMapBlockPosition(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -157,7 +157,7 @@ Result genericFileSystemEntryRead(FileSystemEntry* entry, void* buffer, Size n) 
     return RESULT_SUCCESS;
 }
 
-Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, Size n) {
+Result fsEntry_genericWrite(FSentry* entry, const void* buffer, Size n) {
     iNode* iNode = entry->iNode;
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
@@ -169,8 +169,8 @@ Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, S
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
     Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = n;
-    if (entry->pointer + n > entry->descriptor->dataRange.length) {
-        if (rawFileSystemEntryResize(entry, entry->pointer + n) == RESULT_FAIL) {
+    if (entry->pointer + n > entry->desc->dataRange.length) {
+        if (fsEntry_rawResize(entry, entry->pointer + n) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
     }
@@ -178,7 +178,7 @@ Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, S
     Range range;
     if (offsetInBlock != 0) {
         Size tmpN = 1;
-        if (rawInodeMapBlockPosition(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -200,7 +200,7 @@ Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, S
     if (remainByteNum >= blockSize) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, device->bytePerBlockShift);
         Result res;
-        while ((res = rawInodeMapBlockPosition(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
+        while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
             if (blockDeviceWriteBlocks(device, range.begin, buffer, range.length) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
@@ -217,7 +217,7 @@ Result genericFileSystemEntryWrite(FileSystemEntry* entry, const void* buffer, S
 
     if (remainByteNum > 0) {
         Size tmpN = 1;
-        if (rawInodeMapBlockPosition(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 

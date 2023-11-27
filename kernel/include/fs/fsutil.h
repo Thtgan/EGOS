@@ -1,17 +1,14 @@
 #if !defined(__FSUTIL_H)
 #define __FSUTIL_H
 
-#include<fs/fileSystemEntry.h>
+#include<fs/fsEntry.h>
 #include<kit/types.h>
 
-Result fileSystemEntryOpen(FileSystemEntry* entry, FileSystemEntryDescriptor* desc, ConstCstring path, FileSystemEntryType type); //TODO: Remove desc argument?
+Result fsutil_openFSentry(FSentry* entry, FSentryDesc* desc, ConstCstring path, FSentryType type); //TODO: Remove desc argument?
 
-Result fileSystemEntryClose(FileSystemEntry* entry);
+Result fsutil_closeFSentry(FSentry* entry);
 
-typedef FileSystemEntry* Directory; //TODO: Maybe shouldn't use pointer in typdef
-typedef FileSystemEntry* File;
-
-Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descriptor, Size* entrySizePtr, FileSystemEntryIdentifier* identifier);
+Result fsutil_dirLookup(Directory* directory, FSentryDesc* desc, Size* entrySizePtr, FSentryIdentifier* identifier);
 
 #define FILE_SEEK_BEGIN     0
 #define FILE_SEEK_CURRENT   1
@@ -25,7 +22,7 @@ Result directoryLookup(Directory directory, FileSystemEntryDescriptor* descripto
  * @param begin Begin of the seek
  * @return Result Result of the operation
  */
-Result fileSeek(File file, Int64 offset, Uint8 begin);
+Result fsutil_fileSeek(File* file, Int64 offset, Uint8 begin);
 
 /**
  * @brief Get current pointer of file
@@ -33,7 +30,7 @@ Result fileSeek(File file, Int64 offset, Uint8 begin);
  * @param file File
  * @return Index64 Pointer position of file
  */
-Index64 fileGetPointer(File file);
+Index64 fsutil_fileGetPointer(File* file);
 
 /**
  * @brief Read from file, sets errorcode to indicate error
@@ -43,7 +40,7 @@ Index64 fileGetPointer(File file);
  * @param n Num of byte(s) to read
  * @return Result Result of the operation
  */
-Result fileRead(File file, void* buffer, Size n);
+Result fsutil_fileRead(File* file, void* buffer, Size n);
 
 /**
  * @brief Write to file, sets errorcode to indicate error
@@ -53,6 +50,6 @@ Result fileRead(File file, void* buffer, Size n);
  * @param n Num of byte(s) to write
  * @return Result Result of the operation
  */
-Result fileWrite(File file, const void* buffer, Size n);
+Result fsutil_fileWrite(File* file, const void* buffer, Size n);
 
 #endif // __FSUTIL_H

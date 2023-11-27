@@ -188,7 +188,7 @@ typedef struct {
  * @param header Header struct
  * @return Result Result of the operation
  */
-Result readELF64Header(File file, ELF64Header* header);
+Result readELF64Header(File* file, ELF64Header* header);
 
 /**
  * @brief Print ELF header for debug 
@@ -207,7 +207,7 @@ void printELF64Header(TerminalLevel level, ELF64Header* header);
  * @param index Index of program header
  * @return Result Result of the operation
  */
-Result readELF64ProgramHeader(File file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
+Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
 
 /**
  * @brief Print ELF program header for debug 
@@ -232,7 +232,7 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
  * @param programHeader Program header describes program to load
  * @return Result Result of the operation
  */
-Result loadELF64Program(File file, ELF64ProgramHeader* programHeader);
+Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Unload ELF program loaded

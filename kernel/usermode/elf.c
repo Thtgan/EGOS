@@ -13,12 +13,12 @@
 #include<system/address.h>
 #include<system/pageTable.h>
 
-Result readELF64Header(File file, ELF64Header* header) {
-    if (fileSeek(file, 0, FILE_SEEK_BEGIN) == INVALID_INDEX) {
+Result readELF64Header(File* file, ELF64Header* header) {
+    if (fsutil_fileSeek(file, 0, FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
-    if (fileRead(file, header, sizeof(ELF64Header)) == RESULT_FAIL) {
+    if (fsutil_fileRead(file, header, sizeof(ELF64Header)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -52,7 +52,7 @@ void printELF64Header(TerminalLevel level, ELF64Header* header) {
     printf(level, "NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
 }
 
-Result readELF64ProgramHeader(File file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
+Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
     if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
         SET_ERROR_CODE(ERROR_OBJECT_DATA, ERROR_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
@@ -63,11 +63,11 @@ Result readELF64ProgramHeader(File file, ELF64Header* elfHeader, ELF64ProgramHea
         return RESULT_FAIL;
     }
 
-    if (fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fsutil_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
-    if (fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) == RESULT_FAIL) {
+    if (fsutil_fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -102,7 +102,7 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     return RESULT_SUCCESS;
 }
 
-Result loadELF64Program(File file, ELF64ProgramHeader* programHeader) {
+Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     Uintptr
         pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT),
         fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
@@ -112,7 +112,7 @@ Result loadELF64Program(File file, ELF64ProgramHeader* programHeader) {
         memoryRemain = programHeader->segmentSizeInMemory;
 
     PML4Table* pageTable = schedulerGetCurrentProcess()->context.pageTable;
-    if (fileSeek(file, fileBegin, FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fsutil_fileSeek(file, fileBegin, FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
@@ -141,7 +141,7 @@ Result loadELF64Program(File file, ELF64ProgramHeader* programHeader) {
 
         Size readN = min64(readRemain, to - from);
         if (readN > 0) {
-            if (fileRead(file, (void*)from, readN) == RESULT_FAIL) {
+            if (fsutil_fileRead(file, (void*)from, readN) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
             readRemain -= readN;

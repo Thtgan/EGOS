@@ -2,7 +2,7 @@
 #define __KERNEL_H
 
 #include<devices/block/blockDevice.h>
-#include<fs/fileSystem.h>
+#include<fs/fs.h>
 #include<kit/types.h>
 #include<memory/mm.h>
 #include<system/pageTable.h>
@@ -10,7 +10,7 @@
 
 extern SystemInfo* sysInfo;
 extern MemoryManager* mm;
-extern FileSystem* rootFileSystem;
+extern FS* rootFS;
 
 extern char pKernelRangeBegin;
 #define PHYSICAL_KERNEL_RANGE_BEGIN (&pKernelRangeBegin)

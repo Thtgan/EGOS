@@ -33,7 +33,7 @@ static void printLOGO();
 #include<fs/fat32/fat32.h>
 #include<fs/fsutil.h>
 
-extern FileSystem* rootFileSystem;
+extern FS* rootFS;
 
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
@@ -82,7 +82,7 @@ void kernelMain(SystemInfo* info) {
         int ret = execute("\\bin\\test");
         printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
-        closeFileSystem(rootFileSystem); //TODO: Move to better place
+        fs_close(rootFS); //TODO: Move to better place
         exitProcess();
     }
 
@@ -95,9 +95,9 @@ void kernelMain(SystemInfo* info) {
 //             break;
 //         }
 
-//         fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
+//         fsutil_fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
 
-//         fileRead(ttyFile, str, -1);
+//         fsutil_fileRead(ttyFile, str, -1);
 //         printf(TERMINAL_LEVEL_OUTPUT, "TTY READ: %s\n", str);
 
 //         fileClose(ttyFile);
@@ -134,27 +134,27 @@ void kernelMain(SystemInfo* info) {
 
 static void printLOGO() {
     char buffer[1024];
-    FileSystemEntryDescriptor desc;
-    FileSystemEntry entry;
-    if (fileSystemEntryOpen(&entry, &desc, "\\LOGO.txt", FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_SUCCESS) {
-        fileSeek(&entry, 0, FILE_SEEK_END);
-        Size fileSize = fileGetPointer(&entry);
-        fileSeek(&entry, 0, FILE_SEEK_BEGIN);
+    FSentryDesc desc;
+    FSentry entry;
+    if (fsutil_openFSentry(&entry, &desc, "\\LOGO.txt", FS_ENTRY_TYPE_FILE) == RESULT_SUCCESS) {
+        fsutil_fileSeek(&entry, 0, FILE_SEEK_END);
+        Size fileSize = fsutil_fileGetPointer(&entry);
+        fsutil_fileSeek(&entry, 0, FILE_SEEK_BEGIN);
 
-        if (fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
+        if (fsutil_fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
             buffer[fileSize] = '\0';
             printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
 
         // if (fileSize < 0x200) {
-        //     fileWrite(&entry, "Per Aspera Ad Astra\nPer Aspera Ad Astra\nPer Aspera Ad Astra\n", 60);
+        //     fsutil_fileWrite(&entry, "Per Aspera Ad Astra\nPer Aspera Ad Astra\nPer Aspera Ad Astra\n", 60);
         // }
         // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.createTime);
         // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastAccessTime);
         // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastModifyTime);
 
         BlockDevice* device = entry.iNode->superBlock->device;
-        fileSystemEntryClose(&entry);
+        fsutil_closeFSentry(&entry);
         blockDeviceSynchronize(device);
     }
 }

@@ -49,7 +49,7 @@
 //     //     deleteEntry(__DEVICE_DIR_PATH, INODE_TYPE_DIRECTORY);
 //     // }
     
-//     // FileSystem* fs = openFileSystem(memDevice);
+//     // FS* fs = fs_open(memDevice);
 //     // if (fs == NULL || createEntry(__DEVICE_DIR_PARENT, __DEVICE_DIR_NAME, BUILD_INODE_ID(fs->device, fs->rootDirectoryInodeIndex), INODE_TYPE_DIRECTORY) == RESULT_FAIL) {
 //     //     return RESULT_FAIL;
 //     // }
@@ -77,8 +77,8 @@
 //     //     return RESULT_FAIL;
 //     // }
 
-//     // FileSystem* fs = openFileSystem(memDevice);
-//     // if (fs == NULL || closeFileSystem(fs) == RESULT_FAIL) {
+//     // FS* fs = fs_open(memDevice);
+//     // if (fs == NULL || fs_close(fs) == RESULT_FAIL) {
 //     //     return RESULT_FAIL;
 //     // }
 
@@ -138,7 +138,7 @@
 //     //     return RESULT_FAIL;
 //     // }
 
-//     // FileSystem* fs = openFileSystem(memDevice);
+//     // FS* fs = fs_open(memDevice);
 //     // if (fs == NULL) {
 //     //     SET_ERROR_CODE(ERROR_OBJECT_EXECUTION, ERROR_STATUS_OPERATION_FAIL);
 //     //     return RESULT_FAIL;

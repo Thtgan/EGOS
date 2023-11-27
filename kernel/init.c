@@ -4,7 +4,7 @@
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<devices/virtualDevice.h>
-#include<fs/fileSystem.h>
+#include<fs/fs.h>
 #include<interrupt/IDT.h>
 #include<interrupt/TSS.h>
 #include<kit/types.h>
@@ -35,7 +35,7 @@ static __InitFunc _initFuncs[] = {
     { initSchedule      , "Schedule"    },
     { __enableInterrupt , NULL          },
     { initATAdevices    , "ATA Devices" },
-    { initFileSystem    , "File System" },
+    { fs_init           , "File System" },
     // { initVirtualDevices, "Virtual Device" },
     { initUsermode      , "User Mode"   },
     { NULL, NULL }

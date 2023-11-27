@@ -1,24 +1,23 @@
 #include<fs/fat32/inode.h>
 
 #include<algorithms.h>
+#include<fs/fat32/cluster.h>
 #include<fs/fat32/fat32.h>
-#include<fs/fileSystem.h>
-#include<fs/fileSystemEntry.h>
+#include<fs/fs.h>
+#include<fs/fsEntry.h>
 #include<fs/inode.h>
 #include<kit/util.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>
 
-static Result __FAT32mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
-
-static Result __FAT32resize(iNode* iNode, Size newBlockSize);
+static Result __iNode_FAT32_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
 
 static iNodeOperations _FAT32iNodeOperations = {
-    .mapBlockPosition   = __FAT32mapBlockPosition
+    .translateBlockPos   = __iNode_FAT32_mapBlockPosition
 };
 
-Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescriptor* entryDescriptor) {
+Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, FSentryDesc* desc) {
     FAT32iNodeInfo* iNodeInfo = kMalloc(sizeof(FAT32iNodeInfo));
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
@@ -27,10 +26,10 @@ Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescr
     FAT32info* info         = superBlock->specificInfo;
     FAT32BPB* BPB           = info->BPB;
     BlockDevice* device     = superBlock->device;
-    iNodeInfo->firstCluster = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(entryDescriptor->dataRange.begin, superBlock->device->bytePerBlockShift) - info->dataBlockRange.begin, BPB->sectorPerCluster);
+    iNodeInfo->firstCluster = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlock->device->bytePerBlockShift) - info->dataBlockRange.begin, BPB->sectorPerCluster);
 
     iNode->signature        = INODE_SIGNATURE;
-    iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(entryDescriptor->dataRange.begin + entryDescriptor->dataRange.length, device->bytePerBlockShift) - DIVIDE_ROUND_DOWN_SHIFT(entryDescriptor->dataRange.begin, device->bytePerBlockShift);
+    iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, device->bytePerBlockShift) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, device->bytePerBlockShift);
     iNode->superBlock       = superBlock;
     iNode->openCnt          = 1;
     iNode->operations       = &_FAT32iNodeOperations;
@@ -40,12 +39,12 @@ Result FAT32openInode(SuperBlock* superBlock, iNode* iNode, FileSystemEntryDescr
     return RESULT_SUCCESS;
 }
 
-Result FAT32closeInode(SuperBlock* superBlock, iNode* iNode) {
+Result FAT32_iNode_close(SuperBlock* superBlock, iNode* iNode) {
     kFree((void*)iNode->specificInfo);
     return RESULT_SUCCESS;
 }
 
-static Result __FAT32mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
+static Result __iNode_FAT32_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
     if (*n == 0) {
         return RESULT_SUCCESS;
     }
@@ -64,14 +63,14 @@ static Result __FAT32mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* 
 
     Index64 offsetInCluster = *vBlockIndex;
     Index32 current = iNodeInfo->firstCluster;
-    if (FAT32getClusterType(info, current) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
+    if (FAT32_cluster_getType(info, current) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
         return RESULT_FAIL;
     }
 
     while (offsetInCluster >= BPB->sectorPerCluster) {
-        current = FAT32getCluster(info, current, 1);
+        current = FAT32_cluster_get(info, current, 1);
 
-        if (FAT32getClusterType(info, current) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
+        if (FAT32_cluster_getType(info, current) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
             return RESULT_FAIL;
         }
 
@@ -94,8 +93,8 @@ static Result __FAT32mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* 
                 break;
             }
 
-            Index32 next = FAT32getCluster(info, current, 1);
-            if (FAT32getClusterType(info, next) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
+            Index32 next = FAT32_cluster_get(info, current, 1);
+            if (FAT32_cluster_getType(info, next) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
                 return RESULT_FAIL;
             }
             current = next;

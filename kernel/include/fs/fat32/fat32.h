@@ -2,7 +2,7 @@
 #define __FAT32_H
 
 #include<devices/block/blockDevice.h>
-#include<fs/fileSystem.h>
+#include<fs/fs.h>
 #include<kit/types.h>
 
 typedef struct {
@@ -47,39 +47,12 @@ typedef struct {
     Index32     firstFreeCluster;
 } FAT32info;
 
-Result FAT32initFileSystem();
+Result FAT32_fs_init();
 
-Result FAT32deployFileSystem(BlockDevice* device);
+Result FAT32_fs_checkType(BlockDevice* device);
 
-bool FAT32checkFileSystem(BlockDevice* device);
+Result FAT32_fs_open(FS* fs, BlockDevice* device);
 
-FileSystem* FAT32openFileSystem(BlockDevice* device);
-
-Result FAT32closeFileSystem(FileSystem* fs);
-
-typedef enum {
-    FAT32_CLUSTER_TYPE_FREE,
-    FAT32_CLUSTER_TYPE_ALLOCATERD,
-    FAT32_CLUSTER_TYPE_RESERVED,
-    FAT32_CLUSTER_TYPE_BAD,
-    FAT32_CLUSTER_TYPE_EOF,
-    FAT32_CLUSTER_TYPE_NOT_CLUSTER
-} FAT32ClusterType;
-
-#define FAT32_END_OF_CLUSTER_CHAIN 0x0FFFFFFF
-
-FAT32ClusterType FAT32getClusterType(FAT32info* info, Index32 cluster);
-
-Index32 FAT32getCluster(FAT32info* info, Index32 firstCluster, Index32 index);
-
-Size FAT32getClusterChainLength(FAT32info* info, Index32 firstCluster);
-
-Index32 FAT32allocateClusterChain(FAT32info* info, Size length);
-
-void FAT32releaseClusterChain(FAT32info* info, Index32 clusterChainFirst);
-
-Index32 FAT32cutClusterChain(FAT32info* info, Index32 cluster);
-
-void FAT32insertClusterChain(FAT32info* info, Index32 cluster, Index32 clusterChainFirst);
+Result FAT32_fs_close(FS* fs);
 
 #endif // __FAT32_H

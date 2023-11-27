@@ -1,18 +1,32 @@
 #include<fs/inode.h>
 
-#include<fs/fileSystem.h>
-#include<fs/fileSystemEntry.h>
+#include<fs/fs.h>
+#include<fs/fsEntry.h>
 #include<kit/types.h>
+#include<kit/util.h>
 
-iNode* openInodeBuffered(SuperBlock* superBlock, FileSystemEntryDescriptor* entryDescriptor) {
-    iNode* ret = openInodeFromOpened(superBlock, entryDescriptor);
+iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
+    HashChainNode* found = hashTableFind(table, (Object)blockIndex);
+    return found == NULL ? NULL : HOST_POINTER(found, iNode, hashChainNode);
+}
+
+Result iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
+    return hashTableInsert(table, (Object)blockIndex, &iNode->hashChainNode);
+}
+
+Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
+    return hashTableDelete(table, (Object)blockIndex) != NULL;
+}
+
+iNode* iNode_open(SuperBlock* superBlock, FSentryDesc* desc) {
+    iNode* ret = iNode_openFromOpened(&superBlock->openedInode, desc->dataRange.begin >> superBlock->device->bytePerBlockShift);
     if (ret == NULL) {
         ret = kMalloc(sizeof(iNode));
-        if (ret == NULL || rawSuperNodeOpenInode(superBlock, ret, entryDescriptor) == RESULT_FAIL) {
+        if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) == RESULT_FAIL) {
             return NULL;
         }
 
-        if (registerInode(superBlock, ret, entryDescriptor) == RESULT_FAIL) {
+        if (iNode_addToOpened(&superBlock->openedInode, ret, desc->dataRange.begin >> superBlock->device->bytePerBlockShift) == RESULT_FAIL) {
             kFree(ret);
             return NULL;
         }
@@ -23,14 +37,14 @@ iNode* openInodeBuffered(SuperBlock* superBlock, FileSystemEntryDescriptor* entr
     return ret;
 }
 
-Result closeInodeBuffered(iNode* iNode, FileSystemEntryDescriptor* entryDescriptor) {
+Result iNode_close(iNode* iNode, FSentryDesc* desc) {
     SuperBlock* superBlock = iNode->superBlock;
     if (--iNode->openCnt == 0) {
-        if (unregisterInode(superBlock, entryDescriptor) == RESULT_FAIL) {
+        if (iNode_removeFromOpened(&superBlock->openedInode, desc->dataRange.begin >> superBlock->device->bytePerBlockShift) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
         
-        if (rawSuperNodeCloseInode(superBlock, iNode) == RESULT_FAIL) {
+        if (superBlock_rawCloseInode(superBlock, iNode) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
         kFree(iNode);

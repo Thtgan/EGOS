@@ -22,7 +22,7 @@
 
 // static int __syscall_read(int fileDescriptor, void* buffer, Size n) {
 //     File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
-//     if (file == NULL || fileRead(file, buffer, n) == RESULT_FAIL) {
+//     if (file == NULL || fsutil_fileRead(file, buffer, n) == RESULT_FAIL) {
 //         return -1;
 //     }
 
@@ -31,7 +31,7 @@
 
 // static int __syscall_write(int fileDescriptor, const void* buffer, Size n) {
 //     File* file = getFileFromSlot(schedulerGetCurrentProcess(), fileDescriptor);
-//     if (file == NULL || fileWrite(file, buffer, n) == RESULT_FAIL) {
+//     if (file == NULL || fsutil_fileWrite(file, buffer, n) == RESULT_FAIL) {
 //         return -1;
 //     }
 

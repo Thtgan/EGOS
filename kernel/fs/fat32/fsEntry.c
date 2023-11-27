@@ -1,10 +1,11 @@
-#include<fs/fat32/fileSystemEntry.h>
+#include<fs/fat32/fsEntry.h>
 
 #include<algorithms.h>
+#include<fs/fat32/cluster.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fat32/inode.h>
-#include<fs/fileSystem.h>
-#include<fs/fileSystemEntry.h>
+#include<fs/fs.h>
+#include<fs/fsEntry.h>
 #include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -57,40 +58,40 @@ typedef struct {
     Uint16  doubleBytes3[__FAT32_LONG_NAME_ENTRY_LEN3];
 } __attribute__((packed)) __FAT32LongNameEntry;
 
-static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte);
+static Result __FAT32_fsEntry_resize(FSentry* entry, Size newSizeInByte);
 
-static Result __FAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr);
+static Result __FAT32_fsEntry_readChild(FSentry* directory, FSentryDesc* childDesc, Size* entrySizePtr);
 
-static Result __FAT32addChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childToAdd);
+static Result __FAT32_fsEntry_addChild(FSentry* directory, FSentryDesc* childToAdd);
 
-static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIdentifier* childToRemove);
+static Result __FAT32_fsEntry_removeChild(FSentry* directory, FSentryIdentifier* childToRemove);
 
-static Result __FAT32updateChild(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild);
+static Result __FAT32_fsEntry_updateChild(FSentry* directory, FSentryIdentifier* oldChild, FSentryDesc* newChild);
 
-static FileSystemEntryOperations _FAT32fileSystemEntryOperations = {
-    .seek           = genericFileSystemEntrySeek,
-    .read           = genericFileSystemEntryRead,
-    .write          = genericFileSystemEntryWrite,
-    .resize         = __FAT32resize,
-    .readChild      = __FAT32readChild,
-    .addChild       = __FAT32addChild,
-    .removeChild    = __FAT32removeChild,
-    .updateChild    = __FAT32updateChild
+static FSentryOperations _FAT32fileSystemEntryOperations = {
+    .seek           = fsEntry_genericSeek,
+    .read           = fsEntry_genericRead,
+    .write          = fsEntry_genericWrite,
+    .resize         = __FAT32_fsEntry_resize,
+    .readChild      = __FAT32_fsEntry_readChild,
+    .addChild       = __FAT32_fsEntry_addChild,
+    .removeChild    = __FAT32_fsEntry_removeChild,
+    .updateChild    = __FAT32_fsEntry_updateChild
 };
 
-Result FAT32openFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, FileSystemEntryDescriptor* entryDescriptor) {
-    if (genericOpenFileSystemEntry(superBlock, entry, entryDescriptor) == RESULT_FAIL) {
+Result FAT32_fsEntry_open(SuperBlock* superBlock, FSentry* entry, FSentryDesc* desc) {
+    if (fsEntry_genericOpen(superBlock, entry, desc) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     entry->operations = &_FAT32fileSystemEntryOperations;
-    if (entry->descriptor->identifier.type == FILE_SYSTEM_ENTRY_TYPE_DIRECTOY) {
+    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
         Size directoryDataSize = 0, entrySize;
         Result res = RESULT_FAIL;
-        rawFileSystemEntrySeek(entry, 0);
-        while((res = rawFileSystemEntryReadChild(entry, NULL, &entrySize)) != RESULT_FAIL) {
+        fsEntry_rawSeek(entry, 0);
+        while((res = fsEntry_rawReadChild(entry, NULL, &entrySize)) != RESULT_FAIL) {
             directoryDataSize += entrySize;
-            rawFileSystemEntrySeek(entry, entry->pointer + entrySize);
+            fsEntry_rawSeek(entry, entry->pointer + entrySize);
 
             if (res == RESULT_SUCCESS) {
                 break;
@@ -101,13 +102,13 @@ Result FAT32openFileSystemEntry(SuperBlock* superBlock, FileSystemEntry* entry, 
             return RESULT_FAIL;
         }
 
-        entry->descriptor->dataRange.length = directoryDataSize;
+        entry->desc->dataRange.length = directoryDataSize;
     }
 
     return RESULT_SUCCESS;
 }
 
-static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte) {
+static Result __FAT32_fsEntry_resize(FSentry* entry, Size newSizeInByte) {
     iNode* iNode = entry->iNode;
     FAT32info* info = (FAT32info*)iNode->superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
@@ -115,69 +116,69 @@ static Result __FAT32resize(FileSystemEntry* entry, Size newSizeInByte) {
     Size newSizeInCluster = DIVIDE_ROUND_UP(DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster), oldSizeInCluster = DIVIDE_ROUND_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
 
     if (newSizeInCluster < oldSizeInCluster) {
-        Index32 tail = FAT32getCluster(info, iNodeInfo->firstCluster, newSizeInCluster - 1);
-        if (FAT32getClusterType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) == FAT32_END_OF_CLUSTER_CHAIN) {
+        Index32 tail = FAT32_cluster_get(info, iNodeInfo->firstCluster, newSizeInCluster - 1);
+        if (FAT32_cluster_getType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) == FAT32_CLSUTER_END_OF_CHAIN) {
             return RESULT_FAIL;
         }
 
-        Index32 cut = FAT32cutClusterChain(info, tail);
-        FAT32releaseClusterChain(info, cut);
+        Index32 cut = FAT32_cluster_cutChain(info, tail);
+        FAT32_cluster_freeChain(info, cut);
     } else if (newSizeInCluster > oldSizeInCluster) {
-        Index32 freeClusterChain = FAT32allocateClusterChain(info, newSizeInCluster - oldSizeInCluster);
-        Index32 tail = FAT32getCluster(info, iNodeInfo->firstCluster, iNode->sizeInBlock / BPB->sectorPerCluster - 1);
+        Index32 freeClusterChain = FAT32_cluster_allocChain(info, newSizeInCluster - oldSizeInCluster);
+        Index32 tail = FAT32_cluster_get(info, iNodeInfo->firstCluster, iNode->sizeInBlock / BPB->sectorPerCluster - 1);
 
-        if (FAT32getClusterType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || FAT32getClusterType(info, freeClusterChain) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) != FAT32_END_OF_CLUSTER_CHAIN) {
+        if (FAT32_cluster_getType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || FAT32_cluster_getType(info, freeClusterChain) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) != FAT32_CLSUTER_END_OF_CHAIN) {
             return RESULT_FAIL;
         }
 
-        FAT32insertClusterChain(info, tail, freeClusterChain);
+        FAT32_cluster_insertChain(info, tail, freeClusterChain);
     }
 
     iNode->sizeInBlock = newSizeInCluster * BPB->sectorPerCluster;
-    entry->descriptor->dataRange.length = newSizeInByte;
+    entry->desc->dataRange.length = newSizeInByte;
 
     return RESULT_SUCCESS;
 }
 
-static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr, char* buffer);
+static Result __FAT32_fsEntry_doReadChild(FSentry* directory, FSentryDesc* childDesc, Size* entrySizePtr, char* buffer);
 
-static Result __FAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr) {
+static Result __FAT32_fsEntry_readChild(FSentry* directory, FSentryDesc* childDesc, Size* entrySizePtr) {
     void* buffer = allocateBuffer(BUFFER_SIZE_512);
     if (buffer == NULL) {
         return RESULT_FAIL;
     }
 
-    Result res = __doFAT32readChild(directory, childDesc, entrySizePtr, buffer);
+    Result res = __FAT32_fsEntry_doReadChild(directory, childDesc, entrySizePtr, buffer);
     releaseBuffer(buffer, BUFFER_SIZE_512);
 
     return res;
 }
 
-static void __FAT32convertDateFieldToRealTime(Uint16 date, RealTime* realTime);
+static void __FAT32_fsEntry_convertDateFieldToRealTime(Uint16 date, RealTime* realTime);
 
-static void __FAT32convertTimeFieldToRealTime(Uint16 time, RealTime* realTime);
+static void __FAT32_fsEntry_convertTimeFieldToRealTime(Uint16 time, RealTime* realTime);
 
-static Uint16 __FAT32convertRealTimeToDateField(RealTime* realTime);
+static Uint16 __FAT32_fsEntry_convertRealTimeToDateField(RealTime* realTime);
 
-static Uint16 __FAT32convertRealTimeToTimeField(RealTime* realTime);
+static Uint16 __FAT32_fsEntry_convertRealTimeToTimeField(RealTime* realTime);
 
-static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childDesc, Size* entrySizePtr, char* buffer) {
-    if (rawFileSystemEntryRead(directory, buffer, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
+static Result __FAT32_fsEntry_doReadChild(FSentry* directory, FSentryDesc* childDesc, Size* entrySizePtr, char* buffer) {
+    if (fsEntry_rawRead(directory, buffer, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    FileSystemEntryDescriptorInitArgs args;
+    FSentryDescInitStructArgs args;
     if (buffer[0] == 0x00 || buffer[0] == 0xE5) {
         if (childDesc != NULL) {
-            args = (FileSystemEntryDescriptorInitArgs) {
+            args = (FSentryDescInitStructArgs) {
                 .name       = NULL,
-                .type       = FILE_SYSTEM_ENTRY_TYPE_DUMMY,
-                .dataRange  = RANGE(FILE_SYSTEM_ENTRY_INVALID_POSITION, FILE_SYSTEM_ENTRY_INVALID_SIZE),
-                .parent     = directory->descriptor,
+                .type       = FS_ENTRY_TYPE_DUMMY,
+                .dataRange  = RANGE(FS_ENTRY_INVALID_POSITION, FS_ENTRY_INVALID_SIZE),
+                .parent     = directory->desc,
                 .flags      = EMPTY_FLAGS
             };
 
-            initFileSystemEntryDescriptor(childDesc, &args);
+            FSentryDesc_initStruct(childDesc, &args);
         }
 
         if (buffer[0] != 0x00 && entrySizePtr != NULL) {
@@ -201,7 +202,7 @@ static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDesc
     Size entrySize = longNameEntryNum * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
 
     if (childDesc != NULL) {
-        if (rawFileSystemEntryRead(directory, buffer, entrySize) == RESULT_FAIL) {
+        if (fsEntry_rawRead(directory, buffer, entrySize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -249,34 +250,34 @@ static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDesc
         FAT32BPB* BPB               = info->BPB;
 
         Index32 clusterBegin        = ((Uint32)directoryEntry->clusterBeginHigh << 16) | directoryEntry->clusterBeginLow;
-        FileSystemEntryType type    = TEST_FLAGS(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FILE_SYSTEM_ENTRY_TYPE_DIRECTOY : FILE_SYSTEM_ENTRY_TYPE_FILE;
+        FSentryType type    = TEST_FLAGS(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
 
         Uint64 createTime, lastAccessTime, lastModifyTime;
         RealTime realTime;
         Timestamp timestamp;
-        __FAT32convertDateFieldToRealTime(directoryEntry->createDate, &realTime);
-        __FAT32convertTimeFieldToRealTime(directoryEntry->createTime, &realTime);
+        __FAT32_fsEntry_convertDateFieldToRealTime(directoryEntry->createDate, &realTime);
+        __FAT32_fsEntry_convertTimeFieldToRealTime(directoryEntry->createTime, &realTime);
         realTime.second += directoryEntry->createTimeTengthSec / 10;
         timeConvertRealTimeToTimestamp(&realTime, &timestamp);
         createTime = timestamp.second;
         
-        __FAT32convertDateFieldToRealTime(directoryEntry->lastAccessDate, &realTime);
+        __FAT32_fsEntry_convertDateFieldToRealTime(directoryEntry->lastAccessDate, &realTime);
         timeConvertRealTimeToTimestamp(&realTime, &timestamp);
         lastAccessTime = timestamp.second;
         
-        __FAT32convertDateFieldToRealTime(directoryEntry->lastModifyDate, &realTime);
-        __FAT32convertTimeFieldToRealTime(directoryEntry->lastModifyTime, &realTime);
+        __FAT32_fsEntry_convertDateFieldToRealTime(directoryEntry->lastModifyDate, &realTime);
+        __FAT32_fsEntry_convertTimeFieldToRealTime(directoryEntry->lastModifyTime, &realTime);
         timeConvertRealTimeToTimestamp(&realTime, &timestamp);
         lastModifyTime = timestamp.second;
 
-        args = (FileSystemEntryDescriptorInitArgs) {
+        args = (FSentryDescInitStructArgs) {
             .name           = nameBuffer,
             .type           = type,
             .dataRange      = RANGE(
                 (clusterBegin * BPB->sectorPerCluster + info->dataBlockRange.begin) << superBlock->device->bytePerBlockShift,
-                type == FILE_SYSTEM_ENTRY_TYPE_FILE ? directoryEntry->size : ((FAT32getClusterChainLength(info, clusterBegin) * BPB->sectorPerCluster) << superBlock->device->bytePerBlockShift)
+                type == FS_ENTRY_TYPE_FILE ? directoryEntry->size : ((FAT32_cluster_getChainLength(info, clusterBegin) * BPB->sectorPerCluster) << superBlock->device->bytePerBlockShift)
             ),
-            .parent         = directory->descriptor,
+            .parent         = directory->desc,
             .flags          = EMPTY_FLAGS,
             .createTime     = createTime,
             .lastAccessTime = lastAccessTime,
@@ -284,14 +285,14 @@ static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDesc
         };
 
         if (TEST_FLAGS(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY)) {
-            SET_FLAG_BACK(args.flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_READ_ONLY);
+            SET_FLAG_BACK(args.flags, FS_ENTRY_DESC_FLAGS_READ_ONLY);
         }
 
         if (TEST_FLAGS(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN)) {
-            SET_FLAG_BACK(args.flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_HIDDEN);
+            SET_FLAG_BACK(args.flags, FS_ENTRY_DESC_FLAGS_HIDDEN);
         }
 
-        initFileSystemEntryDescriptor(childDesc, &args);
+        FSentryDesc_initStruct(childDesc, &args);
     }
 
 
@@ -302,21 +303,21 @@ static Result __doFAT32readChild(FileSystemEntry* directory, FileSystemEntryDesc
     return RESULT_CONTINUE;
 }
 
-static Size __FAT32getDirectoryEntrySize(FileSystemEntryDescriptor* descriptor);
+static Size __FAT32_fsEntry_getDirectoryEntrySize(FSentryDesc* desc);
 
-static Result __FAT32descToDirectoryEntry(FAT32info* info, FileSystemEntryDescriptor* descriptor, void* buffer);
+static Result __FAT32_fsEntry_descToDirectoryEntry(FAT32info* info, FSentryDesc* desc, void* buffer);
 
-static Result __FAT32addChild(FileSystemEntry* directory, FileSystemEntryDescriptor* childToAdd) {
-    Size directoryEntrySize = __FAT32getDirectoryEntrySize(childToAdd);
+static Result __FAT32_fsEntry_addChild(FSentry* directory, FSentryDesc* childToAdd) {
+    Size directoryEntrySize = __FAT32_fsEntry_getDirectoryEntrySize(childToAdd);
     void* directoryEntry = kMalloc(directoryEntrySize);
     FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
-    if (directoryEntry == NULL || __FAT32descToDirectoryEntry(info, childToAdd, directoryEntry) == RESULT_FAIL) {
+    if (directoryEntry == NULL || __FAT32_fsEntry_descToDirectoryEntry(info, childToAdd, directoryEntry) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    rawFileSystemEntrySeek(directory, directory->descriptor->dataRange.length);
+    fsEntry_rawSeek(directory, directory->desc->dataRange.length);
 
-    if (rawFileSystemEntryWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
+    if (fsEntry_rawWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -324,61 +325,61 @@ static Result __FAT32addChild(FileSystemEntry* directory, FileSystemEntryDescrip
 
 }
 
-static Result __FAT32removeChild(FileSystemEntry* directory, FileSystemEntryIdentifier* childToRemove) {
+static Result __FAT32_fsEntry_removeChild(FSentry* directory, FSentryIdentifier* childToRemove) {
     Size oldDirectoryEntrySize;
-    if (directoryLookup(directory, NULL, &oldDirectoryEntrySize, childToRemove) != RESULT_SUCCESS) {
+    if (fsutil_dirLookup(directory, NULL, &oldDirectoryEntrySize, childToRemove) != RESULT_SUCCESS) {
         return RESULT_FAIL;
     }
 
     Index64 oldPointer = directory->pointer;
-    rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
+    fsEntry_rawSeek(directory, directory->pointer + oldDirectoryEntrySize);
 
-    Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer;
+    Size followedDataSize = directory->desc->dataRange.length - directory->pointer;
     void* followedData = kMalloc(followedDataSize);
-    if (followedData == NULL || rawFileSystemEntryRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
+    if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
-    if (rawFileSystemEntryWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
+    fsEntry_rawSeek(directory, directory->pointer + oldDirectoryEntrySize);
+    if (fsEntry_rawWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-static Result __FAT32updateChild(FileSystemEntry* directory, FileSystemEntryIdentifier* oldChild, FileSystemEntryDescriptor* newChild) {
+static Result __FAT32_fsEntry_updateChild(FSentry* directory, FSentryIdentifier* oldChild, FSentryDesc* newChild) {
     Size oldDirectoryEntrySize;
-    if (directoryLookup(directory, NULL, &oldDirectoryEntrySize, oldChild) != RESULT_SUCCESS) {
+    if (fsutil_dirLookup(directory, NULL, &oldDirectoryEntrySize, oldChild) != RESULT_SUCCESS) {
         return RESULT_FAIL;
     }
 
-    Size directoryEntrySize = __FAT32getDirectoryEntrySize(newChild);
+    Size directoryEntrySize = __FAT32_fsEntry_getDirectoryEntrySize(newChild);
     void* directoryEntry = kMalloc(directoryEntrySize); //TODO: Bad memory management
     FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
-    if (directoryEntry == NULL || __FAT32descToDirectoryEntry(info, newChild, directoryEntry) == RESULT_FAIL) {
+    if (directoryEntry == NULL || __FAT32_fsEntry_descToDirectoryEntry(info, newChild, directoryEntry) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    Size followedDataSize = directory->descriptor->dataRange.length - directory->pointer - oldDirectoryEntrySize;
+    Size followedDataSize = directory->desc->dataRange.length - directory->pointer - oldDirectoryEntrySize;
     void* followedData;
     if (oldDirectoryEntrySize != directoryEntrySize) {
         Index64 oldPointer = directory->pointer;
-        rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
+        fsEntry_rawSeek(directory, directory->pointer + oldDirectoryEntrySize);
         followedData = kMalloc(followedDataSize); //TODO: Bad memory management
-        if (followedData == NULL || rawFileSystemEntryRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
+        if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
-        rawFileSystemEntrySeek(directory, oldPointer);
+        fsEntry_rawSeek(directory, oldPointer);
     }
 
-    if (rawFileSystemEntryWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
+    if (fsEntry_rawWrite(directory, directoryEntry, directoryEntrySize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     if (oldDirectoryEntrySize != directoryEntrySize) {
-        rawFileSystemEntrySeek(directory, directory->pointer + oldDirectoryEntrySize);
-        if (rawFileSystemEntryWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
+        fsEntry_rawSeek(directory, directory->pointer + oldDirectoryEntrySize);
+        if (fsEntry_rawWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
     }
@@ -386,13 +387,13 @@ static Result __FAT32updateChild(FileSystemEntry* directory, FileSystemEntryIden
     return RESULT_SUCCESS;
 }
 
-static Result __FAT32descToDirectoryEntry(FAT32info* info, FileSystemEntryDescriptor* descriptor, void* buffer) {
-    ConstCstring name = descriptor->identifier.name;
+static Result __FAT32_fsEntry_descToDirectoryEntry(FAT32info* info, FSentryDesc* desc, void* buffer) {
+    ConstCstring name = desc->identifier.name;
     if (name == NULL) {
         return RESULT_FAIL;
     }
 
-    Size nameLength = strlen(descriptor->identifier.name); 
+    Size nameLength = strlen(desc->identifier.name); 
     if (nameLength > __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH) {
         return RESULT_FAIL;
     }
@@ -425,44 +426,44 @@ static Result __FAT32descToDirectoryEntry(FAT32info* info, FileSystemEntryDescri
     }
 
     directoryEntry->attribute           = EMPTY_FLAGS;
-    if (TEST_FLAGS(descriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_READ_ONLY)) {
+    if (TEST_FLAGS(desc->flags, FS_ENTRY_DESC_FLAGS_READ_ONLY)) {
         SET_FLAG_BACK(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY);
     }
 
-    if (TEST_FLAGS(descriptor->flags, FILE_SYSTEM_ENTRY_DESCRIPTOR_FLAGS_HIDDEN)) {
+    if (TEST_FLAGS(desc->flags, FS_ENTRY_DESC_FLAGS_HIDDEN)) {
         SET_FLAG_BACK(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN);
     }
 
     SET_FLAG_BACK(
         directoryEntry->attribute, 
-        descriptor->identifier.type == FILE_SYSTEM_ENTRY_TYPE_DIRECTOY ? __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_ARCHIVE
+        desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY ? __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_ARCHIVE
     );
 
     directoryEntry->reserved            = 0;
 
     RealTime realTime;
     Timestamp timestamp;
-    timestamp.second = descriptor->createTime;
+    timestamp.second = desc->createTime;
     timeConvertTimestampToRealTime(&timestamp, &realTime);
     directoryEntry->createTimeTengthSec = (realTime.second % 2) * 10;
-    directoryEntry->createTime          = __FAT32convertRealTimeToTimeField(&realTime);
-    directoryEntry->createDate          = __FAT32convertRealTimeToDateField(&realTime);
+    directoryEntry->createTime          = __FAT32_fsEntry_convertRealTimeToTimeField(&realTime);
+    directoryEntry->createDate          = __FAT32_fsEntry_convertRealTimeToDateField(&realTime);
 
-    timestamp.second = descriptor->lastAccessTime;
+    timestamp.second = desc->lastAccessTime;
     timeConvertTimestampToRealTime(&timestamp, &realTime);
-    directoryEntry->lastAccessDate      = __FAT32convertRealTimeToDateField(&realTime);
+    directoryEntry->lastAccessDate      = __FAT32_fsEntry_convertRealTimeToDateField(&realTime);
 
     FAT32BPB* BPB = info->BPB;
-    Index32 beginCluster = (descriptor->dataRange.begin / BPB->bytePerSector - info->dataBlockRange.begin) / BPB->sectorPerCluster;
+    Index32 beginCluster = (desc->dataRange.begin / BPB->bytePerSector - info->dataBlockRange.begin) / BPB->sectorPerCluster;
     directoryEntry->clusterBeginHigh    = EXTRACT_VAL(beginCluster, 32, 16, 32);
 
-    timestamp.second = descriptor->lastModifyTime;
+    timestamp.second = desc->lastModifyTime;
     timeConvertTimestampToRealTime(&timestamp, &realTime);
-    directoryEntry->lastModifyTime      = __FAT32convertRealTimeToTimeField(&realTime);
-    directoryEntry->lastModifyDate      = __FAT32convertRealTimeToDateField(&realTime);
+    directoryEntry->lastModifyTime      = __FAT32_fsEntry_convertRealTimeToTimeField(&realTime);
+    directoryEntry->lastModifyDate      = __FAT32_fsEntry_convertRealTimeToDateField(&realTime);
 
     directoryEntry->clusterBeginLow     = EXTRACT_VAL(beginCluster, 32, 0, 16);
-    directoryEntry->size                = descriptor->dataRange.length;
+    directoryEntry->size                = desc->dataRange.length;
 
     Uint8 checkSum = 0;
     for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_NAME_LENGTH; ++i) {
@@ -497,27 +498,27 @@ static Result __FAT32descToDirectoryEntry(FAT32info* info, FileSystemEntryDescri
     return RESULT_SUCCESS;
 }
 
-static Size __FAT32getDirectoryEntrySize(FileSystemEntryDescriptor* descriptor) {
-    Size nameLength = strlen(descriptor->identifier.name);
+static Size __FAT32_fsEntry_getDirectoryEntrySize(FSentryDesc* desc) {
+    Size nameLength = strlen(desc->identifier.name);
     return DIVIDE_ROUND_UP(nameLength, __FAT32_LONG_NAME_ENTRY_LEN) * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
 }
 
-static void __FAT32convertDateFieldToRealTime(Uint16 date, RealTime* realTime) {
+static void __FAT32_fsEntry_convertDateFieldToRealTime(Uint16 date, RealTime* realTime) {
     realTime->year  = 1980 + EXTRACT_VAL(date, 16, 9, 16);
     realTime->month = EXTRACT_VAL(date, 16, 5, 9);
     realTime->day   = EXTRACT_VAL(date, 16, 0, 5);
 }
 
-static void __FAT32convertTimeFieldToRealTime(Uint16 time, RealTime* realTime) {
+static void __FAT32_fsEntry_convertTimeFieldToRealTime(Uint16 time, RealTime* realTime) {
     realTime->hour      = EXTRACT_VAL(time, 16, 11, 15);
     realTime->minute    = EXTRACT_VAL(time, 16, 5, 11);
     realTime->second    = EXTRACT_VAL(time, 16, 0, 5) << 1;
 }
 
-static Uint16 __FAT32convertRealTimeToDateField(RealTime* realTime) {
+static Uint16 __FAT32_fsEntry_convertRealTimeToDateField(RealTime* realTime) {
     return VAL_LEFT_SHIFT(umax16((Uint16)realTime->year, 1980) - 1980, 9) | VAL_LEFT_SHIFT((Uint16)realTime->month, 5) | ((Uint16)realTime->day);
 }
 
-static Uint16 __FAT32convertRealTimeToTimeField(RealTime* realTime) {
+static Uint16 __FAT32_fsEntry_convertRealTimeToTimeField(RealTime* realTime) {
     return VAL_LEFT_SHIFT((Uint16)realTime->hour, 11) | VAL_LEFT_SHIFT((Uint16)realTime->minute, 5) | ((Uint16)realTime->second >> 1);
 }

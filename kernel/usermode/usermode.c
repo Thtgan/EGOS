@@ -32,7 +32,7 @@ __attribute__((naked))
  */
 void __syscallHandlerExit(int ret);
 
-static int __doExecute(ConstCstring path, File file);
+static int __doExecute(ConstCstring path, File* file);
 
 Result initUsermode() {
     initSyscall();
@@ -42,20 +42,17 @@ Result initUsermode() {
     return RESULT_SUCCESS;
 }
 
-#include<debug.h>
-#include<kit/util.h>
-
 int execute(ConstCstring path) {
-    FileSystemEntry entry;
-    FileSystemEntryDescriptor desc;
+    FSentry entry;
+    FSentryDesc desc;
 
-    if (fileSystemEntryOpen(&entry, &desc, path, FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_FAIL) {
+    if (fsutil_openFSentry(&entry, &desc, path, FS_ENTRY_TYPE_FILE) == RESULT_FAIL) {
         return -1;
     }
 
     int ret = __doExecute(path, &entry);
 
-    fileSystemEntryClose(&entry);
+    fsutil_closeFSentry(&entry);
 
     return ret;
 }
@@ -96,7 +93,7 @@ void __syscallHandlerExit(int ret) {
     );
 }
 
-static int __doExecute(ConstCstring path, File file) {
+static int __doExecute(ConstCstring path, File* file) {
     Uint64 old = readRegister_RSP_64();
     ELF64Header header;
     if (readELF64Header(file, &header) == RESULT_FAIL) {
@@ -134,7 +131,6 @@ static int __doExecute(ConstCstring path, File file) {
 
         void* pAddr = pageAlloc(1, MEMORY_TYPE_USER_STACK);
         if (pAddr == NULL || mapAddr(pageTable, (void*)USER_STACK_BOTTOM - i, pAddr, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US) == RESULT_FAIL) {
-            MARK_PRINT(MARK);
             return -1;
         }
     }

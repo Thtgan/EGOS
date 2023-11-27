@@ -1,10 +1,11 @@
 #include<fs/fat32/fat32.h>
 
 #include<devices/block/blockDevice.h>
-#include<fs/fat32/fileSystemEntry.h>
+#include<fs/fat32/cluster.h>
+#include<fs/fat32/fsEntry.h>
 #include<fs/fat32/inode.h>
-#include<fs/fileSystem.h>
-#include<fs/fileSystemEntry.h>
+#include<fs/fs.h>
+#include<fs/fsEntry.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/buffer.h>
@@ -15,65 +16,58 @@
 #include<structs/hashTable.h>
 #include<system/pageTable.h>
 
-Result FAT32initFileSystem() {
+Result FAT32_fs_init() {
     return RESULT_SUCCESS;
 }
 
-Result FAT32deployFileSystem(BlockDevice* device) {
-    //TODO: Not implemented yet
-    return RESULT_FAIL;
-}
+#define __FS_FAT32_BPB_SIGNATURE        0x29
+#define __FS_FAT32_MINIMUM_CLUSTER_NUM  65525
 
-#define __FAT32_BPB_SIGNATURE           0x29
-#define __FAT32_MINIMUM_CLUSTER_NUM     65525
-
-bool FAT32checkFileSystem(BlockDevice* device) {
+Result FAT32_fs_checkType(BlockDevice* device) {
     void* BPBbuffer = allocateBuffer(device->bytePerBlockShift);
     if (BPBbuffer == NULL || blockDeviceReadBlocks(device, 0, BPBbuffer, 1) == RESULT_FAIL) {
-        return false;
+        return RESULT_FAIL;
     }
 
     FAT32BPB* BPB = (FAT32BPB*)BPBbuffer;
     Uint32 clusterNum = (device->availableBlockNum - BPB->reservedSectorNum - BPB->FATnum * BPB->sectorPerFAT) / BPB->sectorPerCluster - BPB->rootDirectoryClusterIndex;
-    if (!(BPB->bytePerSector == POWER_2(device->bytePerBlockShift) && BPB->signature == __FAT32_BPB_SIGNATURE && memcmp(BPB->systemIdentifier, "FAT32   ", 8) == 0 && clusterNum > __FAT32_MINIMUM_CLUSTER_NUM)) {
-        return false;
+    if (!(BPB->bytePerSector == POWER_2(device->bytePerBlockShift) && BPB->signature == __FS_FAT32_BPB_SIGNATURE && memcmp(BPB->systemIdentifier, "FAT32   ", 8) == 0 && clusterNum > __FS_FAT32_MINIMUM_CLUSTER_NUM)) {
+        return RESULT_FAIL;
     }
 
     releaseBuffer(BPBbuffer, device->bytePerBlockShift);
 
-    return true;
+    return RESULT_SUCCESS;
 }
 
-static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated);
+static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocated);
 
-#define __FAT32_BATCH_ALLOCATE_SIZE BATCH_ALLOCATE_SIZE((FileSystem, 1), (SuperBlock, 1), (FileSystemEntry, 1), (FileSystemEntryDescriptor, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, 16))
+#define __FS_FAT32_BATCH_ALLOCATE_SIZE BATCH_ALLOCATE_SIZE((SuperBlock, 1), (FSentry, 1), (FSentryDesc, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, 16))
 
-FileSystem* FAT32openFileSystem(BlockDevice* device) {
-    void* batchAllocated = kMalloc(__FAT32_BATCH_ALLOCATE_SIZE);
-    FileSystem* ret = (FileSystem*)batchAllocated;
-
-    if (batchAllocated == NULL || __doFAT32openFileSystem(device, batchAllocated) == RESULT_FAIL) {
+Result FAT32_fs_open(FS* fs, BlockDevice* device) {
+    void* batchAllocated = kMalloc(__FS_FAT32_BATCH_ALLOCATE_SIZE);
+    if (batchAllocated == NULL || __FAT32_fs_doOpen(fs, device, batchAllocated) == RESULT_FAIL) {
         if (batchAllocated != NULL) {
             kFree(batchAllocated);
         }
 
-        ret = NULL;
+        return RESULT_FAIL;
     }
     
-    return ret;
+    return RESULT_SUCCESS;
 }
 
-static ConstCstring _name = "FAT32";
-static SuperBlockOperations _FAT32superBlockOperations = {
-    .openInode                  = FAT32openInode,
-    .closeInode                 = FAT32closeInode,
-    .openFileSystemEntry        = FAT32openFileSystemEntry,
-    .closeFileSystemEntry       = genericCloseFileSystemEntry
+static ConstCstring __FAT32_fs_name = "FAT32";
+static SuperBlockOperations __FAT32_fs_superBlockOperations = {
+    .openInode      = FAT32_iNode_open,
+    .closeInode     = FAT32_iNode_close,
+    .openFSentry    = FAT32_fsEntry_open,
+    .closeFSentry   = fsEntry_genericClose
 };
 
-static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated) {
+static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocated) {
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
-        (FileSystem, fileSystem, 1), (SuperBlock, superBlock, 1), (FileSystemEntry, rootDirectory, 1), (FileSystemEntryDescriptor, entryDescriptor, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1), (SinglyLinkedList, iNodeHashChains, 16)
+        (SuperBlock, superBlock, 1), (FSentry, rootDirectory, 1), (FSentryDesc, desc, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1), (SinglyLinkedList, iNodeHashChains, 16)
     );
 
     void* buffer = allocateBuffer(device->bytePerBlockShift);
@@ -91,7 +85,7 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
 
     info->FATrange                      = RANGE_N(BPB->FATnum, BPB->reservedSectorNum, BPB->sectorPerFAT);
 
-    Uint32 rootDirectorrySectorBegin    = BPB->reservedSectorNum + BPB->FATnum * BPB->sectorPerFAT, rootDirectorrySectorLength = DIVIDE_ROUND_UP(FAT32_DIRECTORY_ENTRY_SIZE * BPB->rootDirectoryEntryNum, BPB->bytePerSector);
+    Uint32 rootDirectorrySectorBegin    = BPB->reservedSectorNum + BPB->FATnum * BPB->sectorPerFAT, rootDirectorrySectorLength = DIVIDE_ROUND_UP(FS_ENTRY_FAT32_DIRECTORY_ENTRY_SIZE * BPB->rootDirectoryEntryNum, BPB->bytePerSector);
 
     Uint32 dataBegin                    = BPB->reservedSectorNum + BPB->FATnum * BPB->sectorPerFAT - 2 * BPB->sectorPerCluster, dataLength = device->availableBlockNum - dataBegin;
     info->dataBlockRange                = RANGE(dataBegin, dataLength);
@@ -116,7 +110,7 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
     Index32 firstFreeCluster = INVALID_INDEX, last = INVALID_INDEX;
     for (Index32 i = 0; i < clusterNum; ++i) {
         Index32 nextCluster = PTR_TO_VALUE(32, FAT + i);
-        if (FAT32getClusterType(info, nextCluster) != FAT32_CLUSTER_TYPE_FREE) {
+        if (FAT32_cluster_getType(info, nextCluster) != FAT32_CLUSTER_TYPE_FREE) {
             continue;
         }
 
@@ -128,27 +122,27 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
 
         last = i;
     }
-    PTR_TO_VALUE(32, FAT + last) = FAT32_END_OF_CLUSTER_CHAIN;
+    PTR_TO_VALUE(32, FAT + last) = FAT32_CLSUTER_END_OF_CHAIN;
 
     info->firstFreeCluster              = firstFreeCluster;
 
-    FileSystemEntryDescriptorInitArgs args = {
+    FSentryDescInitStructArgs args = {
         .name       = NULL,
-        .type       = FILE_SYSTEM_ENTRY_TYPE_DIRECTOY,
+        .type       = FS_ENTRY_TYPE_DIRECTORY,
         .dataRange  = RANGE(
             (BPB->rootDirectoryClusterIndex * BPB->sectorPerCluster + info->dataBlockRange.begin) << device->bytePerBlockShift, 
-            (FAT32getClusterChainLength(info, BPB->rootDirectoryClusterIndex) * BPB->sectorPerCluster) << device->bytePerBlockShift
+            (FAT32_cluster_getChainLength(info, BPB->rootDirectoryClusterIndex) * BPB->sectorPerCluster) << device->bytePerBlockShift
             ),
         .parent     = NULL,
         .flags      = EMPTY_FLAGS,
     };
 
-    if (initFileSystemEntryDescriptor(entryDescriptor, &args) == RESULT_FAIL) {
+    if (FSentryDesc_initStruct(desc, &args) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     superBlock->device                  = device;
-    superBlock->operations              = &_FAT32superBlockOperations;
+    superBlock->operations              = &__FAT32_fs_superBlockOperations;
     superBlock->rootDirectory           = NULL;
     superBlock->specificInfo            = info;
     initHashTable(&superBlock->openedInode, 16, iNodeHashChains, LAMBDA(Size, (HashTable* this, Object key) {
@@ -157,27 +151,27 @@ static Result __doFAT32openFileSystem(BlockDevice* device, void* batchAllocated)
 
     superBlock->rootDirectory           = rootDirectory;
 
-    fileSystem->name                    = _name;
-    fileSystem->type                    = FILE_SYSTEM_TYPE_FAT32;
-    fileSystem->superBlock              = superBlock;
+    fs->name                            = __FAT32_fs_name;
+    fs->type                            = FS_TYPE_FAT32;
+    fs->superBlock                      = superBlock;
     
-    if (rawSuperNodeOpenFileSystemEntry(superBlock, rootDirectory, entryDescriptor) == RESULT_FAIL) {
+    if (superBlock_rawOpenFSentry(superBlock, rootDirectory, desc) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Result FAT32closeFileSystem(FileSystem* fs) {
+Result FAT32_fs_close(FS* fs) {
     SuperBlock* superBlock = fs->superBlock;
-    FileSystemEntryDescriptor* descriptor = superBlock->rootDirectory->descriptor;
-    if (rawSuperNodeCloseFileSystemEntry(superBlock, superBlock->rootDirectory) == RESULT_FAIL) {
+    FSentryDesc* desc = superBlock->rootDirectory->desc;
+    if (superBlock_rawCloseFSentry(superBlock, superBlock->rootDirectory) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
-    clearFileSystemEntryDescriptor(descriptor);
+    FSentryDesc_clearStruct(desc);
     FAT32info* info = fs->superBlock->specificInfo;
 
-    for (int i = info->firstFreeCluster, next; i != FAT32_END_OF_CLUSTER_CHAIN; i = next) {
+    for (int i = info->firstFreeCluster, next; i != FAT32_CLSUTER_END_OF_CHAIN; i = next) {
         next = PTR_TO_VALUE(32, info->FAT + i);
         PTR_TO_VALUE(32, info->FAT + i) = 0;
     }
@@ -194,122 +188,8 @@ Result FAT32closeFileSystem(FileSystem* fs) {
     pageFree(info->FAT);
 
     void* batchAllocated = fs;
-    memset(batchAllocated, 0, __FAT32_BATCH_ALLOCATE_SIZE);
+    memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);
     kFree(fs);
 
     return RESULT_FAIL;
-}
-
-FAT32ClusterType FAT32getClusterType(FAT32info* info, Index32 physicalClusterIndex) {
-    if (physicalClusterIndex == 0x00000000) {
-        return FAT32_CLUSTER_TYPE_FREE;
-    }
-
-    if (0x00000002 <= physicalClusterIndex && physicalClusterIndex < info->clusterNum) {
-        return FAT32_CLUSTER_TYPE_ALLOCATERD;
-    }
-
-    if (info->clusterNum <= physicalClusterIndex && physicalClusterIndex < 0x0FFFFFF7) {
-        return FAT32_CLUSTER_TYPE_RESERVED;
-    }
-
-    if (physicalClusterIndex == 0x0FFFFFF7) {
-        return FAT32_CLUSTER_TYPE_BAD;
-    }
-
-    if (0x0FFFFFF8 <= physicalClusterIndex && physicalClusterIndex < 0x10000000) {
-        return FAT32_CLUSTER_TYPE_EOF;
-    }
-
-    return FAT32_CLUSTER_TYPE_NOT_CLUSTER;
-}
-
-Index32 FAT32getCluster(FAT32info* info, Index32 firstCluster, Index32 index) {
-    if (FAT32getClusterType(info, firstCluster) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-        return INVALID_INDEX;
-    }
-
-    Index32* FAT = info->FAT;
-    Index32 ret = firstCluster;
-    for (int i = 0; i < index; ++i) {
-        ret = PTR_TO_VALUE(32, FAT + ret);
-    }
-    return ret;
-}
-
-Size FAT32getClusterChainLength(FAT32info* info, Index32 firstCluster) {
-    if (FAT32getClusterType(info, firstCluster) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-        return -1;
-    }
-
-    Size ret = 1;
-    Index32* FAT = info->FAT;
-
-    Index32 current = firstCluster;
-    while (true) {
-        current = PTR_TO_VALUE(32, FAT + current);
-        if (FAT32getClusterType(info, current) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-            break;
-        }
-        ++ret;
-    }
-
-    return ret;
-}
-
-Index32 FAT32allocateClusterChain(FAT32info* info, Size length) {
-    Index32* FAT = info->FAT;
-    Index32 current = info->firstFreeCluster, last = INVALID_INDEX;
-    for (int i = 0; i < length; ++i) {
-        if (current == FAT32_END_OF_CLUSTER_CHAIN) {
-            return INVALID_INDEX;
-        }
-
-        last = current;
-        current = PTR_TO_VALUE(32, FAT + current);
-    }
-
-    Index32 ret = info->firstFreeCluster;
-    info->firstFreeCluster = current;
-    PTR_TO_VALUE(32, FAT + last) = FAT32_END_OF_CLUSTER_CHAIN;
-
-    return ret;
-}
-
-void FAT32releaseClusterChain(FAT32info* info, Index32 clusterChainFirst) {
-    Index32* FAT = info->FAT;
-    Index32 current = info->firstFreeCluster, last = INVALID_INDEX;
-    while (current != FAT32_END_OF_CLUSTER_CHAIN) {
-        last = current;
-        current = PTR_TO_VALUE(32, FAT + current);
-    }
-
-    PTR_TO_VALUE(32, FAT + last) = info->firstFreeCluster;
-    info->firstFreeCluster = clusterChainFirst;
-}
-
-Index32 FAT32cutClusterChain(FAT32info* info, Index32 cluster) {
-    if (FAT32getClusterType(info, cluster) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-        return -1;
-    }
-
-    Index32* FAT = info->FAT;
-    Index32 ret = PTR_TO_VALUE(32, FAT + cluster);
-    PTR_TO_VALUE(32, FAT + cluster) = FAT32_END_OF_CLUSTER_CHAIN;
-    return ret;
-}
-
-void FAT32insertClusterChain(FAT32info* info, Index32 cluster, Index32 clusterChainToInsert) {
-    if (FAT32getClusterType(info, cluster) != FAT32_CLUSTER_TYPE_ALLOCATERD || FAT32getClusterType(info, clusterChainToInsert) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-        return;
-    }
-
-    Index32* FAT = info->FAT;
-    Index32 current = clusterChainToInsert;
-    while (PTR_TO_VALUE(32, FAT + current) != FAT32_END_OF_CLUSTER_CHAIN) {
-        current = PTR_TO_VALUE(32, FAT + current);
-    }
-
-    PTR_TO_VALUE(32, FAT + current) = PTR_TO_VALUE(32, FAT + cluster);
-    PTR_TO_VALUE(32, FAT + cluster) = clusterChainToInsert;
 }
