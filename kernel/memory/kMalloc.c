@@ -13,22 +13,22 @@
 #include<system/pageTable.h>
 
 typedef struct {
-    SinglyLinkedList list;  //Region list, singly lnked list to save space
-    Size length;            //Length of regions in this list
-    Size regionNum;         //Num of regions this list contains
-    Size freeCnt;           //How many times is the free function called on this list
+    SinglyLinkedList    list;       //Region list, singly lnked list to save space
+    Size                length;     //Length of regions in this list
+    Size                regionNum;  //Num of regions this list contains
+    Size                freeCnt;    //How many times is the free function called on this list
 } __RegionList;
 
 #define MEMORY_HEADER_MAGIC 0x3E30
 
 typedef struct {
-    Uint32 size;        //If level == -1, this field means number of pages
-    MemoryType type;
-    Uint16 magic;
-    Int8 level;         //-1 means multiple page
-    Uint8 reserved[1];  //Fill size to 16 for alignment
-    Uint16 padding;
-    Uint16 align;
+    Uint32              size;           //If level == -1, this field means number of pages
+    PhysicalPageType    type;           //TODO: Maybe remove this?
+    Uint16              magic;
+    Int8                level;          //-1 means multiple page
+    Uint8               reserved[1];    //Fill size to 16 for alignment
+    Uint16              padding;
+    Uint16              align;
 } __attribute__((packed)) __RegionHeader;
 
 #define MIN_REGION_LENGTH_BIT       5
@@ -41,7 +41,7 @@ typedef struct {
 #define MIN_NUN_PAGE_REGION_KEEP    8
 #define FREE_BEFORE_TIDY_UP         32
 
-static __RegionList _regionLists[PHYSICAL_PAGE_ATTRIBUTE_SPACE_SIZE][REGION_LIST_NUM];
+static __RegionList _regionLists[PHYSICAL_PAGE_ATTRIBUTE_TYPE_NUM][REGION_LIST_NUM];
 
 /**
  * @brief Get region at the given level, if the region list is empty, get regions from higher level region list
@@ -50,7 +50,7 @@ static __RegionList _regionLists[PHYSICAL_PAGE_ATTRIBUTE_SPACE_SIZE][REGION_LIST
  * @param type Type of the memory
  * @return void* Beginning of the region
  */
-static void* __getRegion(Size level, MemoryType type);
+static void* __getRegion(Size level, PhysicalPageAttribute attribute);
 
 /**
  * @brief Get a region from the region list
@@ -75,10 +75,10 @@ static void __recycleFragment(void* fragmentBegin, Size fragmentSize, Int8 maxLe
  * 
  * @param level Level of the region list
  */
-static void __regionListTidyUp(Int8 level, MemoryType type);
+static void __regionListTidyUp(Int8 level, PhysicalPageType type);
 
 Result initKmalloc() {
-    for (int i = 0; i < PHYSICAL_PAGE_ATTRIBUTE_SPACE_SIZE; ++i) {
+    for (int i = 0; i < PHYSICAL_PAGE_ATTRIBUTE_TYPE_NUM; ++i) {
         __RegionList* attributedRegionLists = _regionLists[i];
         for (int j = 0; j < REGION_LIST_NUM; ++j) {
             __RegionList* attributedRegionList = attributedRegionLists + j;
@@ -93,29 +93,33 @@ Result initKmalloc() {
 }
 
 void* kMalloc(Size n) {
-    return kMallocSpecific(n, MEMORY_TYPE_NORMAL, 16);
+    return kMallocSpecific(n, PHYSICAL_PAGE_ATTRIBUTE_COW, 16);
 }
 
-void* kMallocSpecific(Size n, MemoryType type, Uint16 align) {
+void* kMallocSpecific(Size n, PhysicalPageAttribute attribute, Uint16 align) {
     if (n == 0 || !IS_POWER_2(align)) {
         return NULL;
     }
 
     Size realSize = ALIGN_UP(n + ALIGN_UP(sizeof(__RegionHeader), align), MIN_REGION_LENGTH);
 
+    PhysicalPageType type = PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(attribute);
     __RegionList* attributedRegionLists = _regionLists[type];
 
     Int8 level = -1;
     void* base = NULL;
     if (realSize > MAX_REGION_LENGTH) { //Required size is greater than maximum region size
         realSize = DIVIDE_ROUND_UP(realSize, PAGE_SIZE);
-        base = convertAddressP2V(pageAlloc(realSize, type));   //Specially allocated
+        base = convertAddressP2V(physicalPage_alloc(realSize, attribute));   //Specially allocated
+        for (int i = 0; i < realSize; ++i) {
+            paging_updatePageType(mm->currentPageTable, base + i * PAGE_SIZE, type);
+        }
     } else {
         realSize = ALIGN_UP(realSize, MIN_REGION_LENGTH);
         
         for (level = 0; level < REGION_LIST_NUM && attributedRegionLists[level].length < realSize; ++level);
 
-        base = __getRegion(level, type);
+        base = __getRegion(level, attribute);
         if (base != NULL && attributedRegionLists[level].length - realSize > MIN_REGION_LENGTH) {
             __recycleFragment(base + realSize, attributedRegionLists[level].length - realSize, level, attributedRegionLists);
         }
@@ -153,13 +157,13 @@ void kFree(void* ptr) {
 
     Size size = header->size;
     Int8 level = header->level;
-    MemoryType type = header->type;
+    PhysicalPageType type = header->type;
     void* base = ptr - header->padding;
 
-    memset(header, 0, sizeof(__RegionHeader));
+    memset(header, 0, sizeof(__RegionHeader)); //TODO: When free the COW area not handled by page fault
     
     if (level == -1) {
-        pageFree(convertAddressV2P(base));
+        physicalPage_free(convertAddressV2P(base));
     } else {
         __recycleFragment(base, size, level, _regionLists[type]);
 
@@ -185,16 +189,20 @@ void* kRealloc(void *ptr, Size newSize) {
     return ret;
 }
 
-static void* __getRegion(Size level, MemoryType type) {
+static void* __getRegion(Size level, PhysicalPageAttribute attribute) {
+    PhysicalPageType type = PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(attribute);
     __RegionList* regionList = _regionLists[type] + level;
 
     if (regionList->regionNum == 0) { //If region list is empty
         void* newRegionBase = NULL;
         bool needMorePage = (level == REGION_LIST_NUM - 1);
         if (needMorePage) {
-            newRegionBase = convertAddressP2V(pageAlloc(PAGE_ALLOCATE_BATCH_SIZE, type));   //Allocate new pages or get region from higher level region list
+            newRegionBase = convertAddressP2V(physicalPage_alloc(PAGE_ALLOCATE_BATCH_SIZE, attribute));   //Allocate new pages or get region from higher level region list
+            for (int i = 0; i < PAGE_ALLOCATE_BATCH_SIZE; ++i) {
+                paging_updatePageType(mm->currentPageTable, newRegionBase + i * PAGE_SIZE, type);
+            }
         } else {
-            newRegionBase = __getRegion(level + 1, type);
+            newRegionBase = __getRegion(level + 1, attribute);
         }
 
         if (newRegionBase == NULL) {
@@ -221,7 +229,7 @@ static void* __getRegionFromList(__RegionList* regionList) {
     return ret;
 }
 
-static void __addRegionToList(void* regionBegin, __RegionList* regionList) {    
+static void __addRegionToList(void* regionBegin, __RegionList* regionList) {
     SinglyLinkedListNode* node = (SinglyLinkedListNode*)regionBegin;
     singlyLinkedListNode_initStruct(node);
 
@@ -265,13 +273,13 @@ static void __recycleFragment(void* fragmentBegin, Size fragmentSize, Int8 maxLe
     }
 }
 
-static void __regionListTidyUp(Int8 level, MemoryType type) {
+static void __regionListTidyUp(Int8 level, PhysicalPageType type) {
     __RegionList* regionList = _regionLists[type] + level;
 
     if (level == REGION_LIST_NUM - 1) { //Just reduce to a limitation, no need to sort
         while (regionList->regionNum > PAGE_ALLOCATE_BATCH_SIZE) {
             void* pagesBegin = __getRegionFromList(regionList);
-            pageFree(convertAddressV2P(pagesBegin));
+            physicalPage_free(convertAddressV2P(pagesBegin));
         }
     } else { //Sort before combination
         algo_singlyLinkedList_mergeSort(&regionList->list, regionList->regionNum, 

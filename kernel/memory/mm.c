@@ -38,7 +38,7 @@ Result initMemoryManager() {
     mm->directPageTableEnd = mm->freePageBegin;
 
     mm->physicalPageStructBegin = mm->freePageBegin;
-    if (initPhysicalPage() == RESULT_FAIL) {
+    if (physicalPage_init() == RESULT_FAIL) {
         return RESULT_FAIL;
     }
     mm->physicalPageStructEnd = mm->freePageBegin;
@@ -85,7 +85,7 @@ void* mmBasicAllocatePages(MemoryManager* mm, Size n) {
     }
 
     if (mm->freePageBegin + n > mm->freePageEnd) {
-        debug_belowup("No enough memory for basic allocation\n");
+        debug_blowup("No enough memory for basic allocation\n");
     }
 
     void* ret = (void*)((Uint64)(mm->freePageBegin++) << PAGE_SIZE_SHIFT);

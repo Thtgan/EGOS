@@ -123,21 +123,11 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     while (memoryRemain > 0) {
         void* pAddr = NULL;
         if ((pAddr = translateVaddr(pageTable, base)) == NULL) {
-            pAddr = pageAlloc(1, MEMORY_TYPE_USER_PROGRAM);
-            if (pAddr == NULL || mapAddr(pageTable, base, pAddr, flags) == RESULT_FAIL) {
+            pAddr = physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_USER_PROGRAM);
+            if (pAddr == NULL || mapAddr(pageTable, base, pAddr, PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_PRESENT) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
         }
-
-        PagingLevel level;
-        PagingEntry* entry = pageTableGetEntry(pageTable, base, &level);
-        if (entry == NULL || level != PAGING_LEVEL_PAGE_TABLE) {    //TODO: Ugly code
-            return RESULT_FAIL;
-        }
-
-        *entry = BUILD_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, *entry), flags);
-
-        base += PAGE_SIZE;
 
         Size readN = min64(readRemain, to - from);
         if (readN > 0) {
@@ -154,6 +144,15 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
             memoryRemain -= (to - from - readN);
         }
 
+        PagingLevel level;
+        PagingEntry* entry = pageTableGetEntry(pageTable, base, &level);
+        if (entry == NULL || level != PAGING_LEVEL_PAGE_TABLE) {    //TODO: Ugly code
+            return RESULT_FAIL;
+        }
+
+        *entry = BUILD_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, *entry), flags);
+
+        base += PAGE_SIZE;
         from = to;
         to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, to + PAGE_SIZE);
     }
@@ -173,7 +172,7 @@ Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
         if (pAddr == NULL) {
             return RESULT_FAIL;
         }
-        pageFree(pAddr);
+        physicalPage_free(pAddr);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 

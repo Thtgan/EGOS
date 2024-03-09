@@ -67,7 +67,7 @@ Result __addPage(Index8 level) {
     _bufferNums[level] += PAGE_SIZE / _bufferSizes[level];
     _freeBufferNums[level] += PAGE_SIZE / _bufferSizes[level];
 
-    void* page = pageAlloc(1, MEMORY_TYPE_NORMAL);
+    void* page = physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
     if (page == NULL) {
         return RESULT_FAIL;
     }

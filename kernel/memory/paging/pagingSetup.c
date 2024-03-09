@@ -114,12 +114,8 @@ static Result __setupPDPTrange(PagingEntry* entry, Uintptr vAddr, Uintptr pAddr,
         Uintptr nextV = umin64(ALIGN_DOWN(v + span, span), vAddrEnd), nextP = umin64(ALIGN_DOWN(p + span, span), pAddrEnd);
 
         Uintptr entryN = umin64(remain, nextV - v);
-        if (nextV - v == span && nextP - p == span && remain >= span) {
-            table->tableEntries[i] = BUILD_ENTRY_PS(PAGING_LEVEL_PDPT, p, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_PS);
-        } else {
-            if (__setupPageDirectoryRange(table->tableEntries + i, v, p, entryN) == RESULT_FAIL) {
-                return RESULT_FAIL;
-            }
+        if (__setupPageDirectoryRange(table->tableEntries + i, v, p, entryN) == RESULT_FAIL) {
+            return RESULT_FAIL;
         }
 
         v = nextV, p = nextP;
@@ -156,12 +152,8 @@ static Result __setupPageDirectoryRange(PagingEntry* entry, Uintptr vAddr, Uintp
         Uintptr nextV = umin64(ALIGN_DOWN(v + span, span), vAddrEnd), nextP = umin64(ALIGN_DOWN(p + span, span), pAddrEnd);
         
         Uintptr entryN = umin64(remain, nextV - v);
-        if (nextV - v == span && nextP - p == span && remain >= span) {
-            table->tableEntries[i] = BUILD_ENTRY_PS(PAGING_LEVEL_PAGE_DIRECTORY, p, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_PS);
-        } else {
-            if (__setupPageTableRange(table->tableEntries + i, v, p, entryN) == RESULT_FAIL) {
-                return RESULT_FAIL;
-            }
+        if (__setupPageTableRange(table->tableEntries + i, v, p, entryN) == RESULT_FAIL) {
+            return RESULT_FAIL;
         }
 
         v = nextV, p = nextP;

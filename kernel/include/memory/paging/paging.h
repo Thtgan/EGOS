@@ -36,13 +36,15 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags);
 
 PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* levelOut);
 
+Result paging_updatePageType(PML4Table* pageTable, void* vAddr, PhysicalPageType type);
+
 #define SWITCH_TO_TABLE(__PAGE_TABLE)                   \
 do {                                                    \
     mm->currentPageTable = __PAGE_TABLE;                \
     writeRegister_CR3_64((Uint64)mm->currentPageTable); \
 } while(0)
 
-//Flush the TLB
+//Flush the TLB, If page table update not working, try this
 #define FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
 static inline void* convertAddressV2P(void* vAddr) {

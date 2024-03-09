@@ -27,7 +27,7 @@ void* kMalloc(Size n);
  * @param type Type of the memory
  * @return void* Allocated memory
  */
-void* kMallocSpecific(Size n, MemoryType type, Uint16 align);
+void* kMallocSpecific(Size n, PhysicalPageAttribute attribute, Uint16 align);
 
 /**
  * @brief Free the memory allocated by kMalloc

@@ -31,7 +31,7 @@ static PageDirectory* __copyPageDirectory(PageDirectory* source);
 static PageTable* __copyPageTable(PageTable* source);
 
 PML4Table* copyPML4Table(PML4Table* source) {
-    PML4Table* ret = pageAlloc(1, getPhysicalPageStruct(source)->attribute);                  
+    PML4Table* ret = physicalPage_alloc(1, physicalPage_getStruct(source)->attribute);
     source = convertAddressP2V(source);
     if (source == NULL || ret == NULL) {
         return NULL;
@@ -45,15 +45,19 @@ PML4Table* copyPML4Table(PML4Table* source) {
         }
 
         void* mapTo = PAGING_TABLE_FROM_PAGING_ENTRY(source->tableEntries[i]);
-        PhysicalPage* page = getPhysicalPageStruct(mapTo);
+        PhysicalPage* page = physicalPage_getStruct(mapTo);
         if (page == NULL) {
             return NULL;
         }
 
-        switch (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute)) {
+        switch (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute)) {
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW: {
                 CLEAR_FLAG_BACK(source->tableEntries[i], PAGING_ENTRY_FLAG_RW);
                 ++page->cowCnt;
+                if (TEST_FLAGS(source->tableEntries[i], PAGING_ENTRY_FLAG_PS)) {
+                    ret->tableEntries[i] = source->tableEntries[i];
+                }
+                break;
             }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE: {
                 ret->tableEntries[i] = source->tableEntries[i];
@@ -61,7 +65,7 @@ PML4Table* copyPML4Table(PML4Table* source) {
             }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_IGNORE: {
                 ret->tableEntries[i] = EMPTY_PAGING_ENTRY;
-            continue;
+                break;
             }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_MIXED: {
                 PDPtable* copied = __copyPDPtable((PDPtable*)mapTo);
@@ -81,7 +85,7 @@ PML4Table* copyPML4Table(PML4Table* source) {
 }
 
 static PDPtable* __copyPDPtable(PDPtable* source) {
-    PDPtable* ret = pageAlloc(1, getPhysicalPageStruct(source)->attribute);
+    PDPtable* ret = physicalPage_alloc(1, physicalPage_getStruct(source)->attribute);
     source = convertAddressP2V(source);
     if (source == NULL || ret == NULL) {
         return NULL;
@@ -95,15 +99,19 @@ static PDPtable* __copyPDPtable(PDPtable* source) {
         }
 
         void* mapTo = PAGING_TABLE_FROM_PAGING_ENTRY(source->tableEntries[i]);
-        PhysicalPage* page = getPhysicalPageStruct(mapTo);
+        PhysicalPage* page = physicalPage_getStruct(mapTo);
         if (page == NULL) {
             return NULL;
         }
 
-        switch (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute)) {
+        switch (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute)) {
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW: {
                 CLEAR_FLAG_BACK(source->tableEntries[i], PAGING_ENTRY_FLAG_RW);
                 ++page->cowCnt;
+                if (TEST_FLAGS(source->tableEntries[i], PAGING_ENTRY_FLAG_PS)) {
+                    ret->tableEntries[i] = source->tableEntries[i];
+                }
+                break;
             }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE: {
                 ret->tableEntries[i] = source->tableEntries[i];
@@ -135,7 +143,7 @@ static PDPtable* __copyPDPtable(PDPtable* source) {
 }
 
 static PageDirectory* __copyPageDirectory(PageDirectory* source) {
-    PageDirectory* ret = pageAlloc(1, getPhysicalPageStruct(source)->attribute);
+    PageDirectory* ret = physicalPage_alloc(1, physicalPage_getStruct(source)->attribute);
     source = convertAddressP2V(source);
     if (source == NULL || ret == NULL) {
         return NULL;
@@ -149,15 +157,19 @@ static PageDirectory* __copyPageDirectory(PageDirectory* source) {
         }
 
         void* mapTo = PAGING_TABLE_FROM_PAGING_ENTRY(source->tableEntries[i]);
-        PhysicalPage* page = getPhysicalPageStruct(mapTo);
+        PhysicalPage* page = physicalPage_getStruct(mapTo);
         if (page == NULL) {
             return NULL;
         }
 
-        switch(PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute)) {
+        switch(PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute)) {
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW: {
                 CLEAR_FLAG_BACK(source->tableEntries[i], PAGING_ENTRY_FLAG_RW);
                 ++page->cowCnt;
+                if (TEST_FLAGS(source->tableEntries[i], PAGING_ENTRY_FLAG_PS)) {
+                    ret->tableEntries[i] = source->tableEntries[i];
+                }
+                break;
             }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE: {
                 ret->tableEntries[i] = source->tableEntries[i];
@@ -189,7 +201,7 @@ static PageDirectory* __copyPageDirectory(PageDirectory* source) {
 }
 
 static PageTable* __copyPageTable(PageTable* source) {
-    PageTable* ret = pageAlloc(1, getPhysicalPageStruct(source)->attribute);
+    PageTable* ret = physicalPage_alloc(1, physicalPage_getStruct(source)->attribute);
     source = convertAddressP2V(source);
     if (source == NULL || ret == NULL) {
         return NULL;
@@ -203,23 +215,26 @@ static PageTable* __copyPageTable(PageTable* source) {
         }
 
         void* mapTo = BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, source->tableEntries[i]);
-        PhysicalPage* page = getPhysicalPageStruct(mapTo);
+        PhysicalPage* page = physicalPage_getStruct(mapTo);
         if (page == NULL) {
             return NULL;
         }
 
-        switch (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute)) {
+        switch (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute)) {
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW: {
                 CLEAR_FLAG_BACK(source->tableEntries[i], PAGING_ENTRY_FLAG_RW);
                 ++page->cowCnt;
+                ret->tableEntries[i] = source->tableEntries[i];
+                break;
             }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE: {
                 ret->tableEntries[i] = source->tableEntries[i];
                 break;
             }
-            case PHYSICAL_PAGE_ATTRIBUTE_TYPE_IGNORE:
+            case PHYSICAL_PAGE_ATTRIBUTE_TYPE_IGNORE: {
                 ret->tableEntries[i] = EMPTY_PAGING_ENTRY;
                 break;
+            }
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_MIXED:
             case PHYSICAL_PAGE_ATTRIBUTE_TYPE_UNKNOWN:
             default:

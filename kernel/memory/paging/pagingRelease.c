@@ -38,17 +38,17 @@ void releasePML4Table(PML4Table* table) {
         PhysicalPage* page;
         if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
             pBase = BASE_FROM_ENTRY_PS(PAGING_LEVEL_PML4, entry);
-            page = getPhysicalPageStruct(pBase);
-            if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
+            page = physicalPage_getStruct(pBase);
+            if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
                 --page->cowCnt;
             }
             continue;
         }
 
         pBase = PAGING_TABLE_FROM_PAGING_ENTRY(entry);
-        page = getPhysicalPageStruct(pBase);
+        page = physicalPage_getStruct(pBase);
 
-        if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE) {
+        if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE) {
             continue;
         }
 
@@ -56,7 +56,7 @@ void releasePML4Table(PML4Table* table) {
     }
 
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(convertAddressV2P(table));
+    physicalPage_free(convertAddressV2P(table));
 }
 
 static void __releasePDPtable(PDPtable* table) {
@@ -71,17 +71,17 @@ static void __releasePDPtable(PDPtable* table) {
         PhysicalPage* page;
         if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
             pBase = BASE_FROM_ENTRY_PS(PAGING_LEVEL_PDPT, entry);
-            page = getPhysicalPageStruct(pBase);
-            if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
+            page = physicalPage_getStruct(pBase);
+            if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
                 --page->cowCnt;
             }
             continue;
         }
 
         pBase = PAGING_TABLE_FROM_PAGING_ENTRY(entry);
-        page = getPhysicalPageStruct(pBase);
+        page = physicalPage_getStruct(pBase);
 
-        if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE) {
+        if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE) {
             continue;
         }
 
@@ -89,7 +89,7 @@ static void __releasePDPtable(PDPtable* table) {
     }
 
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(convertAddressV2P(table));
+    physicalPage_free(convertAddressV2P(table));
 }
 
 static void __releasePageDirectory(PageDirectory* table) {
@@ -104,17 +104,17 @@ static void __releasePageDirectory(PageDirectory* table) {
         PhysicalPage* page;
         if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
             pBase = BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_DIRECTORY, entry);
-            page = getPhysicalPageStruct(pBase);
-            if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
+            page = physicalPage_getStruct(pBase);
+            if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
                 --page->cowCnt;
             }
             continue;
         }
 
         pBase = PAGING_TABLE_FROM_PAGING_ENTRY(entry);
-        page = getPhysicalPageStruct(pBase);
+        page = physicalPage_getStruct(pBase);
 
-        if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE) {
+        if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE) {
             continue;
         }
 
@@ -122,7 +122,7 @@ static void __releasePageDirectory(PageDirectory* table) {
     }
 
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(convertAddressV2P(table));
+    physicalPage_free(convertAddressV2P(table));
 }
 
 static void __releasePageTable(PageTable* table) {
@@ -134,12 +134,12 @@ static void __releasePageTable(PageTable* table) {
         }
 
         void* pBase = BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, entry);
-        PhysicalPage* page = getPhysicalPageStruct(pBase);
-        if (PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
+        PhysicalPage* page = physicalPage_getStruct(pBase);
+        if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)) {
             --page->cowCnt;
         }
     }
 
     memset(table, 0, sizeof(PAGE_SIZE));
-    pageFree(convertAddressV2P(table));
+    physicalPage_free(convertAddressV2P(table));
 }

@@ -60,7 +60,6 @@ static inline bool spinlockTryLock(Spinlock* lock) {
  */
 static inline void spinlockUnlock(Spinlock* lock) {
     asm volatile(
-        "lock;"
         "movb $1, %0"
         : "=m" (lock->counter)
         :

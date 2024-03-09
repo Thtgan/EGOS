@@ -6,7 +6,7 @@
 #include<print.h>
 
 __attribute__((noreturn))
-void debug_belowup(const Cstring format, ...) {
+void debug_blowup(const Cstring format, ...) {
     va_list args;
     va_start(args, format);
 

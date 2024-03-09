@@ -17,7 +17,7 @@ static void __initBlock(Block* block, void* data, Index64 blockIndex);
 
 Result initBlockBuffer(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
-    void* pBlockData = pageAlloc(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT), MEMORY_TYPE_PUBLIC);
+    void* pBlockData = physicalPage_alloc(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
     if (pBlockData == NULL) {
         return RESULT_FAIL;
     }
@@ -60,7 +60,7 @@ void releaseBlockBuffer(BlockBuffer* blockBuffer) {
 
     kFree((void*)minOldBlockPtr);
     kFree(blockBuffer->hashTable.chains);
-    pageFree(convertAddressV2P(blockBuffer->blockData));
+    physicalPage_free(convertAddressV2P(blockBuffer->blockData));
 
     memset(blockBuffer, 0, sizeof(BlockBuffer));
 }

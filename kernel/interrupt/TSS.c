@@ -12,8 +12,8 @@ static TSS _tss;
 
 Result initTSS() {
     memset(&_tss, 0, sizeof(TSS));
-    _tss.ist[0] = (Uintptr)pageAlloc(4, MEMORY_TYPE_PUBLIC);
-    _tss.rsp[0] = (Uintptr)pageAlloc(4, MEMORY_TYPE_PUBLIC);
+    _tss.ist[0] = (Uintptr)physicalPage_alloc(4, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
+    _tss.rsp[0] = (Uintptr)physicalPage_alloc(4, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
     _tss.ioMapBaseAddress = 0x8000;  //Invalid
     
     GDTDesc64* desc = (GDTDesc64*)convertAddressP2V(sysInfo->gdtDesc);

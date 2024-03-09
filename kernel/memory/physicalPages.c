@@ -12,15 +12,14 @@
 
 static PhysicalPage* _pages;
 static SinglyLinkedList _freeList;
-static Size _freePageNum = 0;
 
-static void __initPhysicalPageNode(PhysicalPage* base, Size n, Flags16 attribute);
+static void __physicalPage_initStruct(PhysicalPage* base, Size n, PhysicalPageAttribute attribute);
 
-static SinglyLinkedListNode* __firstFitSearch(Size size);
+static SinglyLinkedListNode* __physicalPage_firstFitSearch(Size size);
 
-static PhysicalPage* __combinePageNode(PhysicalPage* node1, PhysicalPage* node2);
-
-Result initPhysicalPage() {
+static PhysicalPage* __physicalPage_combine(PhysicalPage* node1, PhysicalPage* node2);
+#include<debug.h>
+Result physicalPage_init() {
     Size n = DIVIDE_ROUND_UP(mm->freePageEnd, __PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE);
     if (mm->freePageBegin + n >= mm->freePageEnd) {
         return RESULT_FAIL;
@@ -28,28 +27,39 @@ Result initPhysicalPage() {
 
     _pages = (PhysicalPage*)convertAddressP2V((void*)((Uintptr)mm->freePageBegin << PAGE_SIZE_SHIFT));
     mm->freePageBegin += n;
-    _freePageNum = mm->freePageEnd - mm->freePageBegin;
 
-    PhysicalPage* firstFreePage = _pages + mm->freePageBegin;
-    __initPhysicalPageNode(firstFreePage, _freePageNum, MEMORY_TYPE_NORMAL);
-
+    SinglyLinkedList* tail = &_freeList;
+    PhysicalPage* region = _pages;
+    Size regionLength;
     singlyLinkedList_initStruct(&_freeList);
-    singlyLinkedList_insertNext(&_freeList, &firstFreePage->listNode);
 
-    for (Index64 i = mm->directPageTableBegin; i < mm->directPageTableEnd; ++i) {
-        (_pages + i)->attribute = PHYSICAL_PAGE_ATTRIBUTE_TYPE_SHARE | PHYSICAL_PAGE_ATTRIBUTE_FLAG_PAGE_TABLE;
-    }
+    regionLength = mm->directPageTableBegin - 0;
+    __physicalPage_initStruct(region, regionLength, PHYSICAL_PAGE_ATTRIBUTE_DUMMY);
+    region = region + regionLength;
+
+    regionLength = mm->directPageTableEnd - mm->directPageTableBegin;
+    __physicalPage_initStruct(region, regionLength, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC | PHYSICAL_PAGE_ATTRIBUTE_FLAGS_PAGE_TABLE);
+    region = region + regionLength;
+
+    regionLength = n;
+    __physicalPage_initStruct(region, regionLength, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
+    region = region + regionLength;
+
+    regionLength = mm->freePageEnd - mm->freePageBegin;
+    __physicalPage_initStruct(region, regionLength, PHYSICAL_PAGE_ATTRIBUTE_DUMMY);
+    singlyLinkedList_insertNext(&_freeList, &region->listNode);
+    region = region + regionLength;
 
     return RESULT_SUCCESS;
 }
 
-PhysicalPage* getPhysicalPageStruct(void* pAddr) {
+PhysicalPage* physicalPage_getStruct(void* pAddr) {
     Index64 index = (Uintptr)pAddr >> PAGE_SIZE_SHIFT;
     return index >= mm->freePageEnd ? NULL : (_pages + index);
 }
 
-void* pageAlloc(Size n, MemoryType type) {
-    SinglyLinkedListNode* lastNode = __firstFitSearch(n);
+void* physicalPage_alloc(Size n, PhysicalPageAttribute attribute) {
+    SinglyLinkedListNode* lastNode = __physicalPage_firstFitSearch(n);
     if (lastNode == NULL) {
         return NULL;
     }
@@ -60,22 +70,51 @@ void* pageAlloc(Size n, MemoryType type) {
 
     if (freePage->length > n) {
         PhysicalPage* newFreePage = freePage + n;
-        __initPhysicalPageNode(newFreePage, freePage->length - n, MEMORY_TYPE_NORMAL);
+        __physicalPage_initStruct(newFreePage, freePage->length - n, PHYSICAL_PAGE_ATTRIBUTE_DUMMY);
         singlyLinkedList_insertNext(lastNode, &newFreePage->listNode);
     }
 
-    __initPhysicalPageNode(freePage, n, type | PHYSICAL_PAGE_ATTRIBUTE_FLAG_ALLOCATED);
+    __physicalPage_initStruct(freePage, n, attribute | PHYSICAL_PAGE_ATTRIBUTE_FLAGS_ALLOCATED);
+
+    if (PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW) {
+        for (int i = 0; i < n; ++i) {
+            (freePage + i)->cowCnt = 1;
+        }
+    }
 
     return ret;
 }
 
-void pageFree(void* pPageBegin) {
-    PhysicalPage* pageToFree = getPhysicalPageStruct(pPageBegin);
-    if (pageToFree == NULL || TEST_FLAGS_FAIL(pageToFree->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_ALLOCATED)) {
+void* physicalPage_mappedAlloc(Size n, PhysicalPageAttribute attribute, void* mapTo, Flags64 flags) {
+    void* pPage = physicalPage_alloc(n, attribute);
+    if (pPage == NULL) {
+        return NULL;
+    }
+
+    if (mapTo == NULL) {
+        return convertAddressP2V(pPage);
+    }
+
+    void* p = pPage, * v = mapTo;
+    for (int i = 0; i < n; ++i) {
+        if (mapAddr(mm->currentPageTable, v, p, flags) == RESULT_FAIL) {
+            return NULL;
+        }
+
+        p += PAGE_SIZE;
+        v += PAGE_SIZE;
+    }
+
+    return mapTo;
+}
+
+void physicalPage_free(void* pPageBegin) {
+    PhysicalPage* pageToFree = physicalPage_getStruct(pPageBegin);
+    if (pageToFree == NULL || TEST_FLAGS_FAIL(pageToFree->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAGS_ALLOCATED)) {
         return;
     }
 
-    __initPhysicalPageNode(pageToFree, pageToFree->length, MEMORY_TYPE_NORMAL);
+    __physicalPage_initStruct(pageToFree, pageToFree->length, PHYSICAL_PAGE_ATTRIBUTE_DUMMY);
 
     SinglyLinkedListNode* insertPosition = &_freeList;
     //Find a node whose base is higher than the node to collect (Theoreticlly, equal is impossible)
@@ -93,27 +132,35 @@ void pageFree(void* pPageBegin) {
     if (prevListNode != &_freeList) {
         PhysicalPage* prevNode = HOST_POINTER(prevListNode, PhysicalPage, listNode);
         if (prevNode + prevNode->length == combinedNode) {
-            combinedNode = __combinePageNode(prevNode, combinedNode);
+            combinedNode = __physicalPage_combine(prevNode, combinedNode);
         }
     }
 
     if (nextListNode != &_freeList) {
         PhysicalPage* nextNode = HOST_POINTER(nextListNode, PhysicalPage, listNode);
         if (combinedNode + combinedNode->length == nextNode) {
-            combinedNode = __combinePageNode(combinedNode, nextNode);
+            combinedNode = __physicalPage_combine(combinedNode, nextNode);
         }
     }
 }
 
-static void __initPhysicalPageNode(PhysicalPage* base, Size n, Flags16 attribute) {
-    memset(base, 0, n * sizeof(PhysicalPage));
+static void __physicalPage_initStruct(PhysicalPage* base, Size n, PhysicalPageAttribute attribute) {
     singlyLinkedListNode_initStruct(&base->listNode);
     base->length    = n;
     base->attribute = attribute;
     base->cowCnt    = 0;
+
+    PhysicalPage* page;
+    for (int i = 1; i < n; ++i) {
+        page = base + i;
+        singlyLinkedListNode_initStruct(&page->listNode);
+        page->length    = -1;
+        page->attribute = attribute;
+        page->cowCnt    = 0;
+    }
 }
 
-static SinglyLinkedListNode* __firstFitSearch(Size n) {
+static SinglyLinkedListNode* __physicalPage_firstFitSearch(Size n) {
     if (singlyLinkedList_isEmpty(&_freeList)) {
         return NULL;
     }
@@ -127,7 +174,7 @@ static SinglyLinkedListNode* __firstFitSearch(Size n) {
     return NULL;
 }
 
-static PhysicalPage* __combinePageNode(PhysicalPage* node1, PhysicalPage* node2) {
+static PhysicalPage* __physicalPage_combine(PhysicalPage* node1, PhysicalPage* node2) {
     singlyLinkedList_deleteNext(&node1->listNode);
     singlyLinkedListNode_initStruct(&node2->listNode);
     node1->length += node2->length;

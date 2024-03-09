@@ -95,7 +95,7 @@ static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocate
     info->BPB                           = BPB;
 
     Size FATsizeInByte                  = BPB->sectorPerFAT << device->bytePerBlockShift;
-    void* pFAT = pageAlloc(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT), MEMORY_TYPE_NORMAL);
+    void* pFAT = physicalPage_alloc(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
     if (pFAT == NULL) {
         return RESULT_FAIL;
     }
@@ -185,7 +185,7 @@ Result FAT32_fs_close(FS* fs) {
 
     Size FATsizeInByte = info->FATrange.length << fs->superBlock->device->bytePerBlockShift;
     memset(info->FAT, 0, DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
-    pageFree(info->FAT);
+    physicalPage_free(info->FAT);
 
     void* batchAllocated = fs;
     memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);

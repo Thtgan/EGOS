@@ -33,5 +33,5 @@ static void __idle() {
         //No, no yield here, currently it will make system freezed for input
     }
 
-    debug_belowup("Idle is trying to return\n");
+    debug_blowup("Idle is trying to return\n");
 }

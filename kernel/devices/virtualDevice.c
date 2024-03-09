@@ -30,7 +30,7 @@
 // // static Result __doOpenStandardOutput(DirectoryEntry* entry, iNode** iNodePtr);
 
 // Result initVirtualDevices() {
-//     // void* region = pageAlloc(__MEMORY_DEVICE_SIZE / PAGE_SIZE, MEMORY_TYPE_PUBLIC);
+//     // void* region = physicalPage_alloc(__MEMORY_DEVICE_SIZE / PAGE_SIZE, MEMORY_TYPE_PUBLIC);
 //     // BlockDevice* memDevice = createMemoryBlockDevice(region, __MEMORY_DEVICE_SIZE, __MEMORY_DEVICE_NAME);
 //     // if (memDevice == NULL) {
 //     //     return RESULT_FAIL;
@@ -89,7 +89,7 @@
 
 //     // void* region = (void*)memDevice->handle;
 //     // releaseBlockDevice(memDevice);
-//     // pageFree(region);
+//     // physicalPage_free(region);
 
 //     // return RESULT_SUCCESS;
 //     return RESULT_FAIL;

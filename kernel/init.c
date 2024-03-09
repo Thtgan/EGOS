@@ -26,7 +26,7 @@ static Result __enableInterrupt();
 
 static __InitFunc _initFuncs[] = {
     { initTerminalSwitch, "Terminal"    },
-    { __printBootSlogan , NULL          },
+    { __printBootSlogan , NULL          },  //TODO: May crash after print slogan
     { initIDT           , "Interrupt"   },
     { initMemoryManager , "Memory"      },
     { initTSS           , "TSS"         },

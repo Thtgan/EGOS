@@ -11,6 +11,7 @@
 #include<memory/mm.h>
 #include<memory/paging/pagingSetup.h>
 #include<memory/physicalPages.h>
+#include<real/flags/cr0.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
@@ -28,52 +29,56 @@
 ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page faults for somehow
     void* vAddr = (void*)readRegister_CR2_64();
 
-    PagingTable* table = convertAddressP2V(mm->currentPageTable);
-    PagingEntry entry = EMPTY_PAGING_ENTRY;
-    for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
-        Index16 index = PAGING_INDEX(level, vAddr);
-        entry = table->tableEntries[index];
+    if (vAddr != NULL) {
+        PagingTable* table = convertAddressP2V(mm->currentPageTable);
+        PagingEntry entry = EMPTY_PAGING_ENTRY;
+        for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+            Index16 index = PAGING_INDEX(level, vAddr);
+            entry = table->tableEntries[index];
 
-        PhysicalPage* physicalPage = getPhysicalPageStruct(BASE_FROM_ENTRY_PS(level, entry));
-        if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
-            if (
-                TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
-                PHYSICAL_PAGE_GET_TYPE_FROM_ATTRIBUTE(physicalPage->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
-                TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)
-            ) {
-                if (physicalPage->cowCnt == 1) {
+            PhysicalPage* physicalPage = physicalPage_getStruct(BASE_FROM_ENTRY_PS(level, entry));
+            if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
+                if (
+                    TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_WR) && 
+                    PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(physicalPage->attribute) == PHYSICAL_PAGE_ATTRIBUTE_TYPE_COW && 
+                    TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_RW)
+                ) {
                     SET_FLAG_BACK(entry, PAGING_ENTRY_FLAG_RW);
-                } else {
-                    Size span = PAGING_SPAN(level - 1);
-                    void* copyTo = pageAlloc(span >> PAGE_SIZE_SHIFT, MEMORY_TYPE_COW); //Need align here
-                    memcpy(convertAddressP2V(copyTo), convertAddressP2V(BASE_FROM_ENTRY_PS(level, entry)), span);
-                    table->tableEntries[index] = BUILD_ENTRY_PS(level, copyTo, FLAGS_FROM_PAGING_ENTRY(entry) | PAGING_ENTRY_FLAG_RW);
-                }
+                    if (physicalPage->cowCnt == 1) {
+                        SET_FLAG_BACK(entry, PAGING_ENTRY_FLAG_RW);
+                    } else {
+                        Size span = PAGING_SPAN(level - 1);
+                        void* copyTo = physicalPage_alloc(span >> PAGE_SIZE_SHIFT, PHYSICAL_PAGE_ATTRIBUTE_COW); //Need align here
+                        memcpy(convertAddressP2V(copyTo), convertAddressP2V(BASE_FROM_ENTRY_PS(level, entry)), span);
+                        table->tableEntries[index] = BUILD_ENTRY_PS(level, copyTo, FLAGS_FROM_PAGING_ENTRY(entry) | PAGING_ENTRY_FLAG_RW);
+                    }
 
-                --physicalPage->cowCnt;
+                    --physicalPage->cowCnt;
+                    return;
+                }
+            }
+
+            if (
+                TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_US) && 
+                TEST_FLAGS(physicalPage->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAGS_USER) &&
+                TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_US)
+                ) {
+                SET_FLAG_BACK(table->tableEntries[index], PAGING_ENTRY_FLAG_US);
+
                 return;
             }
+
+            table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
         }
-
-        if (
-            TEST_FLAGS(handlerStackFrame->errorCode, __PAGE_FAULT_ERROR_CODE_FLAG_US) && 
-            TEST_FLAGS(physicalPage->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAG_USER) &&
-            TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_US)
-            ) {
-            SET_FLAG_BACK(table->tableEntries[index], PAGING_ENTRY_FLAG_US);
-
-            return;
-        }
-
-        table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
+
 
     printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
     printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
     printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
     printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
     printRegisters(TERMINAL_LEVEL_DEBUG, registers);
-    debug_belowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (Uint64)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
+    debug_blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (Uint64)vAddr, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 
 Result initPaging() {
@@ -85,6 +90,8 @@ Result initPaging() {
     SWITCH_TO_TABLE(table);
 
     registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
+
+    writeRegister_CR0_64(readRegister_CR0_64() | CR0_WP); //Enable write protect
 
     return RESULT_SUCCESS;
 }
@@ -123,7 +130,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags) {
         entry = table->tableEntries[index];
 
         if (level > PAGING_LEVEL_PAGE_TABLE && TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
-            void* page = pageAlloc(1, MEMORY_TYPE_PRIVATE);
+            void* page = physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_PRIVATE); //TODO: Are you sure?
             if (page == NULL) {
                 return RESULT_FAIL;
             }
@@ -151,9 +158,7 @@ Result mapAddr(PML4Table* pageTable, void* vAddr, void* pAddr, Flags64 flags) {
 }
 
 PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* levelOut) {
-    // printf(TERMINAL_LEVEL_DEBUG, "%p\n", vAddr);
     if (pageTable == NULL) {
-        // MARK_PRINT(MARK);
         return NULL;
     }
 
@@ -162,10 +167,7 @@ PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* l
     for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
         Index16 index = PAGING_INDEX(level, vAddr);
         entry = table->tableEntries[index];
-        // MARK_PRINT(MARK);
         if (TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
-            // printf(TERMINAL_LEVEL_DEBUG, "%lX\n", entry);
-            // MARK_PRINT(MARK);
             return NULL;
         }
 
@@ -180,4 +182,34 @@ PagingEntry* pageTableGetEntry(PML4Table* pageTable, void* vAddr, PagingLevel* l
     }
 
     return NULL;
+}
+
+Result paging_updatePageType(PML4Table* pageTable, void* vAddr, PhysicalPageType type) {
+    if (pageTable == NULL) {
+        return RESULT_FAIL;
+    }
+
+    PagingTable* table = convertAddressP2V(pageTable);
+    PagingEntry entry = EMPTY_PAGING_ENTRY;
+    for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+        Index16 index = PAGING_INDEX(level, vAddr);
+        entry = table->tableEntries[index];
+        if (TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
+            return RESULT_FAIL;
+        }
+
+        PhysicalPage* page = physicalPage_getStruct(convertAddressV2P(table));
+        PhysicalPageType tableType = PHYSICAL_PAGE_TYPE_FROM_ATTRIBUTE(page->attribute);
+        if (tableType != PHYSICAL_PAGE_ATTRIBUTE_TYPE_MIXED && tableType != type) {
+            PHYSICAL_PAGE_UPDATE_ATTRIBUTE_TYPE(page->attribute, PHYSICAL_PAGE_ATTRIBUTE_TYPE_MIXED);
+        }
+
+        if (level == PAGING_LEVEL_PAGE_TABLE || TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PS)) {
+            return RESULT_SUCCESS;
+        }
+
+        table = convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
+    }
+
+    return RESULT_FAIL;
 }

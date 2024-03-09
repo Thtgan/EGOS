@@ -114,7 +114,7 @@ int bufferGetLine(InputBuffer* buffer, char* writeTo) {
 }
 
 static __InputBufferNode* __allocateNode() {
-    __InputBufferNode* ret = convertAddressP2V(pageAlloc(1, MEMORY_TYPE_PUBLIC));
+    __InputBufferNode* ret = convertAddressP2V(physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC));
 
     queueNode_initStruct(&ret->node);
     ret->begin = ret->end = 0;
@@ -125,5 +125,5 @@ static __InputBufferNode* __allocateNode() {
 
 static void __releaseNode(__InputBufferNode* node) {
     memset(node, 0, PAGE_SIZE);
-    pageFree(convertAddressV2P(node));
+    physicalPage_free(convertAddressV2P(node));
 }

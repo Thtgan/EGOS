@@ -38,11 +38,11 @@ extern FS* rootFS;
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
     if (sysInfo->magic != SYSTEM_INFO_MAGIC) {
-        debug_belowup("Boot magic not match");
+        debug_blowup("Boot magic not match");
     }
 
     if (initKernel() == RESULT_FAIL) {
-        debug_belowup("Initialization failed");
+        debug_blowup("Initialization failed");
     }
 
     printLOGO();
@@ -50,7 +50,7 @@ void kernelMain(SystemInfo* info) {
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
 
-    arr1 = kMallocSpecific(1 * sizeof(int), MEMORY_TYPE_NORMAL, 16), arr2 = kMallocSpecific(1 * sizeof(int), MEMORY_TYPE_PUBLIC, 16);
+    arr1 = kMallocSpecific(1 * sizeof(int), PHYSICAL_PAGE_ATTRIBUTE_COW, 16), arr2 = kMallocSpecific(1 * sizeof(int), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16); //TODO: COW not working
     arr1[0] = 1, arr2[0] = 114514;
     if (fork("Forked") != NULL) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
@@ -77,33 +77,34 @@ void kernelMain(SystemInfo* info) {
             }
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
-        up(&sema2);
 
         int ret = execute("\\bin\\test");
         printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
         fs_close(rootFS); //TODO: Move to better place
+
+        up(&sema2);
         exitProcess();
     }
 
     kFree(arr1);
     kFree(arr2);
-//     do {
-//         File* ttyFile = NULL;
-//         if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {
-//             printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", schedulerGetCurrentProcess()->errorCode);
-//             break;
-//         }
+    // do {
+    //     File* ttyFile = NULL;
+    //     if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {
+    //         printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", schedulerGetCurrentProcess()->errorCode);
+    //         break;
+    //     }
 
-//         fsutil_fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
+    //     fsutil_fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
 
-//         fsutil_fileRead(ttyFile, str, -1);
-//         printf(TERMINAL_LEVEL_OUTPUT, "TTY READ: %s\n", str);
+    //     fsutil_fileRead(ttyFile, str, -1);
+    //     printf(TERMINAL_LEVEL_OUTPUT, "TTY READ: %s\n", str);
 
-//         fileClose(ttyFile);
-//     } while (0);
+    //     fileClose(ttyFile);
+    // } while (0);
 
-//     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
+    printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
 
     Timer timer1, timer2;

@@ -42,7 +42,7 @@ Result initUsermode() {
     return RESULT_SUCCESS;
 }
 
-int execute(ConstCstring path) {
+int execute(ConstCstring path) {    //TODO: Unstable code
     FSentry entry;
     FSentryDesc desc;
 
@@ -129,7 +129,7 @@ static int __doExecute(ConstCstring path, File* file) {
             return -1;
         }
 
-        void* pAddr = pageAlloc(1, MEMORY_TYPE_USER_STACK);
+        void* pAddr = physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_USER_STACK);
         if (pAddr == NULL || mapAddr(pageTable, (void*)USER_STACK_BOTTOM - i, pAddr, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US) == RESULT_FAIL) {
             return -1;
         }
@@ -148,9 +148,7 @@ static int __doExecute(ConstCstring path, File* file) {
         : "i"(sizeof(Registers))
     );
     
-
     RESTORE_REGISTERS();    //Restore context
-
 
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
         if (readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
@@ -172,7 +170,7 @@ static int __doExecute(ConstCstring path, File* file) {
             return -1;
         }
 
-        pageFree(BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, entry));
+        physicalPage_free(BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, entry));
     }
 
     //TODO: Drop pagfe entries about user program

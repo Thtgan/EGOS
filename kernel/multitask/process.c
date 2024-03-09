@@ -83,23 +83,20 @@ Process* fork(ConstCstring name) {
         return NULL;
     }
     
-    void* newStack = convertAddressP2V(pageAlloc(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE), MEMORY_TYPE_NORMAL));
+    void* newStack = convertAddressP2V(physicalPage_alloc(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC)); //TODO: Maybe another type
 
-    Process* newProcess = __createProcess(newPID, name, newStack + 4 * PAGE_SIZE);
+    Process* newProcess = __createProcess(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
     newProcess->ppid = oldPID;
     PML4Table* newTable = copyPML4Table(schedulerGetCurrentProcess()->context.pageTable);
 
-    // memset(newStack, 0, KERNEL_STACK_SIZE);
-    // for (Uintptr i = PAGE_SIZE; i <= KERNEL_STACK_SIZE; i += PAGE_SIZE) {
-    //     mapAddr(newTable, (void*)KERNEL_STACK_BOTTOM - i, newStack + KERNEL_STACK_SIZE - i);
-    // }
+    Uintptr currentStackTop = schedulerGetCurrentProcess()->kernelStackTop;
 
     SAVE_REGISTERS();
-    memcpy(newStack, (void*)schedulerGetCurrentProcess()->kernelStackTop - PROCESS_KERNEL_STACK_SIZE, PROCESS_KERNEL_STACK_SIZE);
+    memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
 
     newProcess->context.pageTable = newTable;
     newProcess->context.rip = (Uint64)&__fork_return;
-    newProcess->context.rsp = newProcess->kernelStackTop - (schedulerGetCurrentProcess()->kernelStackTop - readRegister_RSP_64());
+    newProcess->context.rsp = newProcess->kernelStackTop - (currentStackTop - readRegister_RSP_64());
 
     schedulerAddProcess(newProcess);
 
@@ -114,23 +111,23 @@ Process* fork(ConstCstring name) {
 void exitProcess() {
     schedulerTerminateProcess(schedulerGetCurrentProcess());
 
-    debug_belowup("Func exitProcess is trying to return\n");
+    debug_blowup("Func exitProcess is trying to return\n");
 }
 
 void releaseProcess(Process* process) {
     PML4Table* pageTable = process->context.pageTable;
     void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
     memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
-    pageFree(convertAddressV2P(stackBottom));
+    physicalPage_free(convertAddressV2P(stackBottom));
 
     // if (process->userStackTop != NULL) {
     //     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-    //         pageFree(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i));
+    //         physicalPage_free(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i));
     //     }
     // }
 
     // if (process->userProgramBegin != NULL) {
-    //     pageFree(process->userProgramBegin);
+    //     physicalPage_free(process->userProgramBegin);
     // }
 
     releasePML4Table(pageTable);
@@ -144,15 +141,15 @@ void releaseProcess(Process* process) {
     // }
     // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
     // memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    // pageFree(process->fileSlots);
+    // physicalPage_free(process->fileSlots);
 
 
     memset(process, 0, PAGE_SIZE);
-    pageFree(convertAddressV2P(process));
+    physicalPage_free(convertAddressV2P(process));
 }
 
 static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStackTop) {
-    Process* ret = convertAddressP2V(pageAlloc(1, MEMORY_TYPE_PRIVATE));
+    Process* ret = convertAddressP2V(physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC));
     memset(ret, 0, PAGE_SIZE);
 
     ret->pid = pid, ret->ppid = 0;
@@ -172,7 +169,7 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
     queueNode_initStruct(&ret->semaWaitQueueNode);
 
     // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
-    // ret->fileSlots = pageAlloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
+    // ret->fileSlots = physicalPage_alloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
     // memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
     // ret->fileSlots[0] = getStandardOutputFile();

@@ -66,8 +66,8 @@ static Process* __getStatusQueueHead(__SimpleScheduler* scheduler, ProcessStatus
  */
 static Result __removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
 
-Scheduler* createSimpleScheduler() {
-    __SimpleScheduler* ret = kMallocSpecific(sizeof(__SimpleScheduler), MEMORY_TYPE_PUBLIC, 16);    //Share between processes
+Scheduler* createSimpleScheduler() {    //TODO: Scheduler found may stuck
+    __SimpleScheduler* ret = kMallocSpecific(sizeof(__SimpleScheduler), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);    //Share between processes
     if (ret == NULL) {
         return NULL;
     }
@@ -135,7 +135,7 @@ Result __terminateProcess(Scheduler* this, Process* process) {
 
     if (process == schedulerGetCurrentProcess(this)) {
         __schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_DYING);
-        debug_belowup("Terminated process still alive\n");
+        debug_blowup("Terminated process still alive\n");
     }
 
     __setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_DYING);
@@ -191,7 +191,7 @@ static void __setProcessStatus(__SimpleScheduler* scheduler, Process* process, P
     }
 
     if (process->status != PROCESS_STATUS_UNKNOWN && __removeProcessFromQueue(scheduler, process) == RESULT_FAIL) {
-        debug_belowup("Remove process from queue failed\n");
+        debug_blowup("Remove process from queue failed\n");
     }
 
     process->status = status;
