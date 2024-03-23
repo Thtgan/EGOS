@@ -1,11 +1,11 @@
 #include<fs/fsEntry.h>
 
 #include<algorithms.h>
+#include<cstring.h>
 #include<devices/block/blockDevice.h>
 #include<fs/fsutil.h>
 #include<fs/fs.h>
-#include<fs/fsPreDefines.h>
-#include<fs/inode.h>
+#include<fs/fsStructs.h>
 #include<kernel.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
@@ -14,46 +14,80 @@
 #include<memory/buffer.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<string.h>
+#include<structs/string.h>
 #include<system/pageTable.h>
 
-Result FSentryDesc_initStruct(FSentryDesc* desc, FSentryDescInitStructArgs* args) {
-    ConstCstring name = args->name;
-
-    FSentryIdentifier* identifier = &desc->identifier;
-    if (name == NULL) {
-        identifier->name    = NULL;
-    } else {
-        Cstring copy = kMalloc(strlen(name) + 1);
-        if (copy == NULL) {
-            return RESULT_FAIL;
-        }
-
-        strcpy(copy, name);
-        identifier->name    = copy;
+Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, fsEntryType type) {
+    ConstCstring sep = strrchr(path, FS_PATH_SEPERATOR);
+    if (sep == NULL) {
+        return RESULT_FAIL;
+    }
+    if (
+        string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep)) == RESULT_FAIL ||
+        string_initStruct(&identifier->name, sep + 1) == RESULT_FAIL
+    ) {
+        return RESULT_FAIL; //TODO: Memory release if failed here
     }
 
-    identifier->type        = args->type;
-    identifier->parent      = args->parent;
-    desc->dataRange         = args->dataRange;
-    desc->flags             = args->flags;
-
-    desc->createTime        = args->createTime;
-    desc->lastAccessTime    = args->lastAccessTime;
-    desc->lastModifyTime    = args->lastModifyTime;
+    identifier->type = type;
 
     return RESULT_SUCCESS;
 }
 
-void FSentryDesc_clearStruct(FSentryDesc* desc) {
-    if (desc->identifier.name != NULL) {
-        kFree((void*)desc->identifier.name);
+Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, fsEntryType type) {
+    if (
+        string_initStruct(&identifier->parentPath, parentPath) == RESULT_FAIL ||
+        string_initStruct(&identifier->name, name) == RESULT_FAIL
+    ) {
+        return RESULT_FAIL; //TODO: Memory release if failed here
     }
 
-    memset(desc, 0, sizeof(FSentryDesc));
+    identifier->type = type;
+
+    return RESULT_SUCCESS;
 }
 
-Result fsEntry_genericOpen(SuperBlock* superBlock, FSentry* entry, FSentryDesc* desc) {
+void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier) {
+    string_clearStruct(&identifier->parentPath);
+    string_clearStruct(&identifier->name);
+}
+
+Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
+    return fsEntryIdentifier_initStruct(parentIdentifierOut, identifier->parentPath.data, FS_ENTRY_TYPE_DIRECTORY);
+}
+
+Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
+    if (args->name == NULL || args->parentPath == NULL) {
+        return RESULT_FAIL;
+    }
+
+    fsEntryIdentifier* identifier = &desc->identifier;
+    if (fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    if (args->isDevice) {
+        desc->device        = args->device;
+    } else {
+        desc->dataRange     = args->dataRange;
+    }
+    desc->flags             = args->flags;
+    desc->createTime        = args->createTime;
+    desc->lastAccessTime    = args->lastAccessTime;
+    desc->lastModifyTime    = args->lastModifyTime;
+
+    hashChainNode_initStruct(&desc->descNode);
+    desc->descReferCnt      = 0;
+
+    return RESULT_SUCCESS;
+}
+
+void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
+    fsEntryIdentifier_clearStruct(&desc->identifier);
+    memset(desc, 0, sizeof(fsEntryDesc));
+}
+
+Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
     entry->desc     = desc;
     entry->pointer  = 0;
     entry->iNode    = iNode_open(superBlock, desc);
@@ -61,26 +95,22 @@ Result fsEntry_genericOpen(SuperBlock* superBlock, FSentry* entry, FSentryDesc* 
         return RESULT_FAIL;
     }
 
-    SET_FLAG_BACK(desc->flags, FS_ENTRY_DESC_FLAGS_PRESENT);
-
     return RESULT_SUCCESS;
 }
 
-Result fsEntry_genericClose(SuperBlock* superBlock, FSentry* entry) {
-    FSentryDesc* desc = entry->desc;
-
-    CLEAR_FLAG_BACK(desc->flags, FS_ENTRY_DESC_FLAGS_PRESENT);
+Result fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
+    fsEntryDesc* desc = entry->desc;
 
     if (iNode_close(entry->iNode, desc) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    memset(entry, 0, sizeof(FSentry));
+    memset(entry, 0, sizeof(fsEntry));
 
     return RESULT_SUCCESS;
 }
 
-Index64 fsEntry_genericSeek(FSentry* entry, Index64 seekTo) {
+Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
     if (seekTo > entry->desc->dataRange.length) {
         return INVALID_INDEX;
     }
@@ -88,7 +118,7 @@ Index64 fsEntry_genericSeek(FSentry* entry, Index64 seekTo) {
     return entry->pointer = seekTo;
 }
 
-Result fsEntry_genericRead(FSentry* entry, void* buffer, Size n) {
+Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     iNode* iNode = entry->iNode;
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
@@ -157,7 +187,7 @@ Result fsEntry_genericRead(FSentry* entry, void* buffer, Size n) {
     return RESULT_SUCCESS;
 }
 
-Result fsEntry_genericWrite(FSentry* entry, const void* buffer, Size n) {
+Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     iNode* iNode = entry->iNode;
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
@@ -170,7 +200,7 @@ Result fsEntry_genericWrite(FSentry* entry, const void* buffer, Size n) {
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
     Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = n;
     if (entry->pointer + n > entry->desc->dataRange.length) {
-        if (fsEntry_rawResize(entry, entry->pointer + n) == RESULT_FAIL) {
+        if (fsEntry_rawResize(entry, entry->pointer + n) == RESULT_FAIL) {  //TODO: May be remove this?
             return RESULT_FAIL;
         }
     }
@@ -235,6 +265,16 @@ Result fsEntry_genericWrite(FSentry* entry, const void* buffer, Size n) {
     }
 
     releaseBuffer(blockBuffer, device->bytePerBlockShift);
+
+    return RESULT_SUCCESS;
+}
+
+Result fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
+    if (iNode_rawResize(entry->iNode, newSizeInByte) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+
+    entry->desc->dataRange.length = newSizeInByte;
 
     return RESULT_SUCCESS;
 }

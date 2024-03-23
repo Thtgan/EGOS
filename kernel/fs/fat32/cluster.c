@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 
+//TODO: These codes seems wrong
 FAT32ClusterType FAT32_cluster_getType(FAT32info* info, Index32 physicalClusterIndex) {
     if (physicalClusterIndex == 0x00000000) {
         return FAT32_CLUSTER_TYPE_FREE;

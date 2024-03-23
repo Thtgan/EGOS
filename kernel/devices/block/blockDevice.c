@@ -7,7 +7,7 @@
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<print.h>
-#include<string.h>
+#include<cstring.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
 

@@ -5,7 +5,7 @@
 #include<fs/fat32/fsEntry.h>
 #include<fs/fat32/inode.h>
 #include<fs/fs.h>
-#include<fs/fsEntry.h>
+#include<fs/fsStructs.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/buffer.h>
@@ -42,10 +42,11 @@ Result FAT32_fs_checkType(BlockDevice* device) {
 
 static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocated);
 
-#define __FS_FAT32_BATCH_ALLOCATE_SIZE BATCH_ALLOCATE_SIZE((SuperBlock, 1), (FSentry, 1), (FSentryDesc, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, 16))
+#define __FS_FAT32_SUPERBLOCK_HASH_BUCKET   16
+#define __FS_FAT32_BATCH_ALLOCATE_SIZE      BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET))
 
 Result FAT32_fs_open(FS* fs, BlockDevice* device) {
-    void* batchAllocated = kMalloc(__FS_FAT32_BATCH_ALLOCATE_SIZE);
+    void* batchAllocated = kMallocSpecific(__FS_FAT32_BATCH_ALLOCATE_SIZE, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
     if (batchAllocated == NULL || __FAT32_fs_doOpen(fs, device, batchAllocated) == RESULT_FAIL) {
         if (batchAllocated != NULL) {
             kFree(batchAllocated);
@@ -61,13 +62,21 @@ static ConstCstring __FAT32_fs_name = "FAT32";
 static SuperBlockOperations __FAT32_fs_superBlockOperations = {
     .openInode      = FAT32_iNode_open,
     .closeInode     = FAT32_iNode_close,
-    .openFSentry    = FAT32_fsEntry_open,
-    .closeFSentry   = fsEntry_genericClose
+    .openfsEntry    = FAT32_fsEntry_open,
+    .closefsEntry   = fsEntry_genericClose,
+    .mount          = superBlock_genericMount,
+    .unmount        = superBlock_genericUnmount
 };
 
 static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocated) {
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
-        (SuperBlock, superBlock, 1), (FSentry, rootDirectory, 1), (FSentryDesc, desc, 1), (FAT32info, info, 1), (FAT32BPB, BPB, 1), (SinglyLinkedList, iNodeHashChains, 16)
+        (SuperBlock, superBlock, 1),
+        (fsEntryDesc, desc, 1),
+        (FAT32info, info, 1),
+        (FAT32BPB, BPB, 1),
+        (SinglyLinkedList, openedInodeChains, __FS_FAT32_SUPERBLOCK_HASH_BUCKET),
+        (SinglyLinkedList, mountedChains, __FS_FAT32_SUPERBLOCK_HASH_BUCKET),
+        (SinglyLinkedList, fsEntryDescChains, __FS_FAT32_SUPERBLOCK_HASH_BUCKET)
     );
 
     void* buffer = allocateBuffer(device->bytePerBlockShift);
@@ -126,49 +135,47 @@ static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocate
 
     info->firstFreeCluster              = firstFreeCluster;
 
-    FSentryDescInitStructArgs args = {
-        .name       = NULL,
+    fsEntryDescInitArgs args1 = {
+        .name       = "",
+        .parentPath = "",
         .type       = FS_ENTRY_TYPE_DIRECTORY,
+        .isDevice   = false,
         .dataRange  = RANGE(
             (BPB->rootDirectoryClusterIndex * BPB->sectorPerCluster + info->dataBlockRange.begin) << device->bytePerBlockShift, 
             (FAT32_cluster_getChainLength(info, BPB->rootDirectoryClusterIndex) * BPB->sectorPerCluster) << device->bytePerBlockShift
             ),
-        .parent     = NULL,
         .flags      = EMPTY_FLAGS,
     };
 
-    if (FSentryDesc_initStruct(desc, &args) == RESULT_FAIL) {
+    if (fsEntryDesc_initStruct(desc, &args1) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    superBlock->device                  = device;
-    superBlock->operations              = &__FAT32_fs_superBlockOperations;
-    superBlock->rootDirectory           = NULL;
-    superBlock->specificInfo            = info;
-    hashTable_initStruct(&superBlock->openedInode, 16, iNodeHashChains, LAMBDA(Size, (HashTable* this, Object key) {
-        return key % this->hashSize;
-    }));
+    SuperBlockInitArgs args2 = {
+        .device             = device,
+        .operations         = &__FAT32_fs_superBlockOperations,
+        .rootDirDesc        = desc,
+        .specificInfo       = info,
+        .openedInodeBucket  = __FS_FAT32_SUPERBLOCK_HASH_BUCKET,
+        .openedInodeChains  = openedInodeChains,
+        .mountedBucket      = __FS_FAT32_SUPERBLOCK_HASH_BUCKET,
+        .mountedChains      = mountedChains,
+        .fsEntryDescBucket  = __FS_FAT32_SUPERBLOCK_HASH_BUCKET,
+        .fsEntryDescChains  = fsEntryDescChains
+    };
 
-    superBlock->rootDirectory           = rootDirectory;
+    superBlock_initStruct(superBlock, &args2);
 
     fs->name                            = __FAT32_fs_name;
     fs->type                            = FS_TYPE_FAT32;
     fs->superBlock                      = superBlock;
-    
-    if (superBlock_rawOpenFSentry(superBlock, rootDirectory, desc) == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
 
     return RESULT_SUCCESS;
 }
 
 Result FAT32_fs_close(FS* fs) {
     SuperBlock* superBlock = fs->superBlock;
-    FSentryDesc* desc = superBlock->rootDirectory->desc;
-    if (superBlock_rawCloseFSentry(superBlock, superBlock->rootDirectory) == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-    FSentryDesc_clearStruct(desc);
+    fsEntryDesc_clearStruct(superBlock->rootDirDesc);
     FAT32info* info = fs->superBlock->specificInfo;
 
     for (int i = info->firstFreeCluster, next; i != FAT32_CLSUTER_END_OF_CHAIN; i = next) {
@@ -189,7 +196,7 @@ Result FAT32_fs_close(FS* fs) {
 
     void* batchAllocated = fs;
     memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);
-    kFree(fs);
+    kFree(batchAllocated);
 
     return RESULT_FAIL;
 }

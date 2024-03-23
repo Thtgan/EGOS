@@ -18,7 +18,7 @@ static void __physicalPage_initStruct(PhysicalPage* base, Size n, PhysicalPageAt
 static SinglyLinkedListNode* __physicalPage_firstFitSearch(Size size);
 
 static PhysicalPage* __physicalPage_combine(PhysicalPage* node1, PhysicalPage* node2);
-#include<debug.h>
+
 Result physicalPage_init() {
     Size n = DIVIDE_ROUND_UP(mm->freePageEnd, __PHYSICAL_PAGE_STRUCT_NUM_IN_PAGE);
     if (mm->freePageBegin + n >= mm->freePageEnd) {

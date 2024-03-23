@@ -5,7 +5,7 @@
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<string.h>
+#include<cstring.h>
 
 #define __FLAGS_LEFT_JUSTIFY    FLAG8(0)
 #define __FLAGS_EXPLICIT_SIGN   FLAG8(1)

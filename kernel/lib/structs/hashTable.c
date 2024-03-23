@@ -5,14 +5,17 @@
 #include<kit/util.h>
 #include<structs/singlyLinkedList.h>
 
-//TODO: Make a default hash function
-void hashTable_initStruct(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC) {
+Size hashTable_defaultHashFunc(HashTable* this, Object key) {
+    return key % this->bucket;
+}
+
+void hashTable_initStruct(HashTable* table, Size bucket, SinglyLinkedList* chains, HashTableHashFunc hashFunc) {
     table->size = 0;
-    table->hashSize = hashSize;
+    table->bucket = bucket;
     table->hashFunc = hashFunc;
     table->chains = chains;
 
-    for (int i = 0; i < hashSize; i++) {
+    for (int i = 0; i < bucket; i++) {
         singlyLinkedList_initStruct(table->chains + i);
     }
 }

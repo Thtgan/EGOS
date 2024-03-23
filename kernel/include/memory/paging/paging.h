@@ -4,6 +4,7 @@
 #include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<memory/physicalPages.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>

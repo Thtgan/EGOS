@@ -33,6 +33,10 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         PagingTable* table = convertAddressP2V(mm->currentPageTable);
         PagingEntry entry = EMPTY_PAGING_ENTRY;
         for (PagingLevel level = PAGING_LEVEL_PML4; level >= PAGING_LEVEL_PAGE_TABLE; --level) {
+            if (table == NULL) {
+                break;
+            }
+            
             Index16 index = PAGING_INDEX(level, vAddr);
             entry = table->tableEntries[index];
 

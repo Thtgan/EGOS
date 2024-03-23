@@ -8,7 +8,7 @@
 // #include<multitask/semaphore.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
-#include<string.h>
+#include<cstring.h>
 #include<system/systemInfo.h>
 #include<time/time.h>
 #include<time/timer.h>
@@ -32,6 +32,7 @@ static void printLOGO();
 #include<interrupt/IDT.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsutil.h>
+#include<fs/fsEntry.h>
 
 extern FS* rootFS;
 
@@ -78,34 +79,24 @@ void kernelMain(SystemInfo* info) {
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
 
-        int ret = execute("\\bin\\test");
-        printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
-
-        fs_close(rootFS); //TODO: Move to better place
+        //TODO: Calling userprogram goes wrong here
 
         up(&sema2);
         exitProcess();
     }
 
-    kFree(arr1);
-    kFree(arr2);
-    // do {
-    //     File* ttyFile = NULL;
-    //     if ((ttyFile = fileOpen("/dev/tty", FILE_FLAG_READ_WRITE)) == NULL) {
-    //         printf(TERMINAL_LEVEL_OUTPUT, "TTY FILE OPEN FAILED, ERROR: %llX\n", schedulerGetCurrentProcess()->errorCode);
-    //         break;
-    //     }
+    int ret = execute("/bin/test");
+    printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
-    //     fsutil_fileWrite(ttyFile, "TEST TEXT FOR TTY FILE\n", -1);
-
-    //     fsutil_fileRead(ttyFile, str, -1);
-    //     printf(TERMINAL_LEVEL_OUTPUT, "TTY READ: %s\n", str);
-
-    //     fileClose(ttyFile);
-    // } while (0);
+    // kFree(arr1);
+    // kFree(arr2); //TODO: It crashes
 
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
+    fsEntry entry;
+    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {
+        fsutil_fileWrite(&entry, "1145141919810", 14);
+    }
 
     Timer timer1, timer2;
     initTimer(&timer1, 500, TIME_UNIT_MILLISECOND);
@@ -127,6 +118,7 @@ void kernelMain(SystemInfo* info) {
 
     timerStart(&timer1);
     timerStart(&timer2);
+    fs_close(rootFS); //TODO: Move to better place
 
     printf(TERMINAL_LEVEL_OUTPUT, "DEAD\n");
 
@@ -135,9 +127,8 @@ void kernelMain(SystemInfo* info) {
 
 static void printLOGO() {
     char buffer[1024];
-    FSentryDesc desc;
-    FSentry entry;
-    if (fsutil_openFSentry(&entry, &desc, "\\LOGO.txt", FS_ENTRY_TYPE_FILE) == RESULT_SUCCESS) {
+    fsEntry entry;
+    if (fsutil_openfsEntry(rootFS->superBlock, "/LOGO.txt", FS_ENTRY_TYPE_FILE, &entry) == RESULT_SUCCESS) {
         fsutil_fileSeek(&entry, 0, FILE_SEEK_END);
         Size fileSize = fsutil_fileGetPointer(&entry);
         fsutil_fileSeek(&entry, 0, FILE_SEEK_BEGIN);
@@ -155,7 +146,7 @@ static void printLOGO() {
         // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastModifyTime);
 
         BlockDevice* device = entry.iNode->superBlock->device;
-        fsutil_closeFSentry(&entry);
+        fsutil_closefsEntry(&entry);
         blockDeviceSynchronize(device);
     }
 }

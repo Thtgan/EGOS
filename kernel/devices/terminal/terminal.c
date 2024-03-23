@@ -9,7 +9,7 @@
 #include<multitask/semaphore.h>
 #include<real/ports/CGA.h>
 #include<real/simpleAsmLines.h>
-#include<string.h>
+#include<cstring.h>
 #include<structs/queue.h>
 #include<system/memoryLayout.h>
 

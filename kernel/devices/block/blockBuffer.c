@@ -25,7 +25,7 @@ Result initBlockBuffer(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, S
     blockBuffer->blockData          = convertAddressP2V(pBlockData);
     linkedList_initStruct(&blockBuffer->LRU);
 
-    Block* blocks = kMalloc(sizeof(Block) * blockNum);
+    Block* blocks = kMallocSpecific(sizeof(Block) * blockNum, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
     if (blocks == NULL) {
         return RESULT_FAIL;
     }
@@ -37,14 +37,12 @@ Result initBlockBuffer(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, S
         linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
     }
 
-    SinglyLinkedList* chains = kMalloc(sizeof(SinglyLinkedList) * chainNum);
+    SinglyLinkedList* chains = kMallocSpecific(sizeof(SinglyLinkedList) * chainNum, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
     if (chains == NULL) {
         return RESULT_FAIL;
     }
 
-    hashTable_initStruct(&blockBuffer->hashTable, chainNum, chains, LAMBDA(Size, (HashTable* this, Object key) {
-        return key % this->hashSize;
-    }));
+    hashTable_initStruct(&blockBuffer->hashTable, chainNum, chains, hashTable_defaultHashFunc);
     blockBuffer->blockNum           = blockNum;
 
     return RESULT_SUCCESS;
@@ -66,7 +64,7 @@ void releaseBlockBuffer(BlockBuffer* blockBuffer) {
 }
 
 Result resizeBlockBuffer(BlockBuffer* blockBuffer, Size newBlockNum) {
-    Block* newBlocks = kMalloc(sizeof(Block) * newBlockNum);
+    Block* newBlocks = kMallocSpecific(sizeof(Block) * newBlockNum, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
     if (newBlocks == NULL) {
         return RESULT_FAIL;
     }

@@ -2,8 +2,7 @@
 
 #include<debug.h>
 #include<devices/virtualDevice.h>
-// #include<fs/file.h>
-// #include<fs/fsutil.h>
+#include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -14,7 +13,7 @@
 #include<memory/physicalPages.h>
 #include<multitask/context.h>
 #include<multitask/schedule.h>
-#include<string.h>
+#include<cstring.h>
 #include<structs/bitmap.h>
 #include<structs/queue.h>
 #include<structs/vector.h>
@@ -109,6 +108,7 @@ Process* fork(ConstCstring name) {
 }
 
 void exitProcess() {
+    // debug_blowup("EXIT BLOW\n");
     schedulerTerminateProcess(schedulerGetCurrentProcess());
 
     debug_blowup("Func exitProcess is trying to return\n");
@@ -120,28 +120,20 @@ void releaseProcess(Process* process) {
     memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
     physicalPage_free(convertAddressV2P(stackBottom));
 
-    // if (process->userStackTop != NULL) {
-    //     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-    //         physicalPage_free(translateVaddr(pageTable, (void*)USER_STACK_BOTTOM - i));
-    //     }
-    // }
-
-    // if (process->userProgramBegin != NULL) {
-    //     physicalPage_free(process->userProgramBegin);
-    // }
+    //TODO: What if user program is running
 
     releasePML4Table(pageTable);
 
     __releasePID(process->pid);
 
-    // for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
-    //     if (process->fileSlots[i] != NULL) {
-    //         fileClose(process->fileSlots[i]);
-    //     }
-    // }
-    // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
-    // memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    // physicalPage_free(process->fileSlots);
+    for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
+        if (process->fileSlots[i] != NULL) {
+            fsutil_closefsEntry(process->fileSlots[i]);
+        }
+    }
+    Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    physicalPage_free(convertAddressV2P(process->fileSlots));
 
 
     memset(process, 0, PAGE_SIZE);
@@ -161,51 +153,48 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
     ret->kernelStackTop = (Uintptr)kernelStackTop;
     memset(&ret->context, 0, sizeof(Context));
     ret->registers = NULL;
-
-    // ret->userStackTop = ret->userProgramBegin = NULL;
-    // ret->userProgramPageSize = 0;
-
+                  
     queueNode_initStruct(&ret->statusQueueNode);
     queueNode_initStruct(&ret->semaWaitQueueNode);
 
-    // Size openedFilePageSize = (MAX_OPENED_FILE_NUM * sizeof(File*) + PAGE_SIZE - 1) / PAGE_SIZE;
-    // ret->fileSlots = physicalPage_alloc(openedFilePageSize, MEMORY_TYPE_PRIVATE);
-    // memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    ret->fileSlots = convertAddressP2V(physicalPage_alloc(openedFilePageSize, PHYSICAL_PAGE_ATTRIBUTE_PRIVATE));
+    memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
     // ret->fileSlots[0] = getStandardOutputFile();
 
     return ret;
 }
 
-// int allocateFileSlot(Process* process, File* file) {
-//     for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
-//         if (process->fileSlots[i] == NULL) {
-//             process->fileSlots[i] = file;
-//             return i;
-//         }
-//     }
+int allocateFileSlot(Process* process, File* file) {
+    for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+        if (process->fileSlots[i] == NULL) {
+            process->fileSlots[i] = file;
+            return i;
+        }
+    }
 
-//     return INVALID_INDEX;
-// }
+    return INVALID_INDEX;
+}
 
-// File* getFileFromSlot(Process* process, int index) {
-//     if (index >= MAX_OPENED_FILE_NUM) {
-//         return NULL;
-//     }
+File* getFileFromSlot(Process* process, int index) {
+    if (index >= MAX_OPENED_FILE_NUM) {
+        return NULL;
+    }
 
-//     return process->fileSlots[index];
-// }
+    return process->fileSlots[index];
+}
 
-// File* releaseFileSlot(Process* process, int index) {
-//     if (index >= MAX_OPENED_FILE_NUM) {
-//         return NULL;
-//     }
+File* releaseFileSlot(Process* process, int index) {
+    if (index >= MAX_OPENED_FILE_NUM) {
+        return NULL;
+    }
 
-//     File* ret =  process->fileSlots[index];
-//     process->fileSlots[index] = NULL;
+    File* ret =  process->fileSlots[index];
+    process->fileSlots[index] = NULL;
     
-//     return ret;
-// }
+    return ret;
+}
 
 static Uint16 __allocatePID() {
     Uint16 pid = bitmap_findFirstClear(&_pidBitmap, _lastGeneratePID);

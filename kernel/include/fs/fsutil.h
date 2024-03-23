@@ -1,14 +1,8 @@
 #if !defined(__FSUTIL_H)
 #define __FSUTIL_H
 
-#include<fs/fsEntry.h>
+#include<fs/fsStructs.h>
 #include<kit/types.h>
-
-Result fsutil_openFSentry(FSentry* entry, FSentryDesc* desc, ConstCstring path, FSentryType type); //TODO: Remove desc argument?
-
-Result fsutil_closeFSentry(FSentry* entry);
-
-Result fsutil_dirLookup(Directory* directory, FSentryDesc* desc, Size* entrySizePtr, FSentryIdentifier* identifier);
 
 #define FILE_SEEK_BEGIN     0
 #define FILE_SEEK_CURRENT   1
@@ -18,7 +12,7 @@ Result fsutil_dirLookup(Directory* directory, FSentryDesc* desc, Size* entrySize
  * @brief Seek file pointer to position, sets errorcode to indicate error
  * 
  * @param file File
- * @param offset Offset to the vegin
+ * @param offset Offset to the begin
  * @param begin Begin of the seek
  * @return Result Result of the operation
  */
@@ -51,5 +45,11 @@ Result fsutil_fileRead(File* file, void* buffer, Size n);
  * @return Result Result of the operation
  */
 Result fsutil_fileWrite(File* file, const void* buffer, Size n);
+
+Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntryType type, fsEntry* entryOut);
+
+Result fsutil_closefsEntry(fsEntry* entry);
+
+Result fsutil_lookupEntryDesc(Directory* directory, fsEntryIdentifier* identifier, fsEntryDesc* descOut, Size* entrySizeOut);
 
 #endif // __FSUTIL_H

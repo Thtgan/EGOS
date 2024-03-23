@@ -7,7 +7,7 @@
 #include<kit/util.h>
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<string.h>
+#include<cstring.h>
 #include<structs/singlyLinkedList.h>
 
 static Result __readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n);

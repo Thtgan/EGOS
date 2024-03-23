@@ -1,5 +1,5 @@
-#if !defined(__STRING_H)
-#define __STRING_H
+#if !defined(__CSTRING_H)
+#define __CSTRING_H
 
 #include<kit/types.h>
 
@@ -113,13 +113,11 @@ int strcmp(ConstCstring str1, ConstCstring str2);
 int strncmp(ConstCstring str1, ConstCstring str2, Size n);
 
 /**
- * @brief Get polynomial rolling hash of the string
+ * @brief Get SDBM hash of the string
  * 
  * @param str String to hash
- * @param p Prime number for rolling
- * @param mod Mod of the hash
  * @return Size Hash value of string
  */
-Size strhash(ConstCstring str, Size p, Size mod);
+Size strhash(ConstCstring str);
 
-#endif // __KERNEL_STRING_H
+#endif // __CSTRING_H

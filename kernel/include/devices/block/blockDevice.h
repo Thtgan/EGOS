@@ -30,9 +30,9 @@ typedef struct {
 } BlockDeviceArgs;
 
 STRUCT_PRIVATE_DEFINE(BlockDevice) {
-    char                        name[BLOCK_DEVICE_NAME_LENGTH];
+    char                        name[BLOCK_DEVICE_NAME_LENGTH + 1];
     Size                        availableBlockNum;
-
+    
     Uint8                       bytePerBlockShift;
 
 #define BLOCK_DEVICE_FLAGS_BOOTABLE FLAG8(0)

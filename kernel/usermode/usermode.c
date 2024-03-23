@@ -43,16 +43,14 @@ Result initUsermode() {
 }
 
 int execute(ConstCstring path) {    //TODO: Unstable code
-    FSentry entry;
-    FSentryDesc desc;
-
-    if (fsutil_openFSentry(&entry, &desc, path, FS_ENTRY_TYPE_FILE) == RESULT_FAIL) {
+    fsEntry entry;
+    if (fsutil_openfsEntry(rootFS->superBlock, path, FS_ENTRY_TYPE_FILE, &entry) == RESULT_FAIL) {
         return -1;
     }
 
     int ret = __doExecute(path, &entry);
 
-    fsutil_closeFSentry(&entry);
+    fsutil_closefsEntry(&entry);
 
     return ret;
 }
@@ -173,7 +171,7 @@ static int __doExecute(ConstCstring path, File* file) {
         physicalPage_free(BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, entry));
     }
 
-    //TODO: Drop pagfe entries about user program
+    //TODO: Drop page entries about user program
 
     return popq();
 }

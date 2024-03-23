@@ -96,6 +96,7 @@ void* kMalloc(Size n) {
     return kMallocSpecific(n, PHYSICAL_PAGE_ATTRIBUTE_COW, 16);
 }
 
+//TODO: Need to reconsider how to use this in whole system
 void* kMallocSpecific(Size n, PhysicalPageAttribute attribute, Uint16 align) {
     if (n == 0 || !IS_POWER_2(align)) {
         return NULL;
@@ -115,14 +116,19 @@ void* kMallocSpecific(Size n, PhysicalPageAttribute attribute, Uint16 align) {
             paging_updatePageType(mm->currentPageTable, base + i * PAGE_SIZE, type);
         }
     } else {
-        realSize = ALIGN_UP(realSize, MIN_REGION_LENGTH);
+        //TODO: Probably wrong code
+        // realSize = ALIGN_UP(realSize, MIN_REGION_LENGTH);
         
-        for (level = 0; level < REGION_LIST_NUM && attributedRegionLists[level].length < realSize; ++level);
+        // for (level = 0; level < REGION_LIST_NUM && attributedRegionLists[level].length < realSize; ++level);
 
+        // base = __getRegion(level, attribute);
+        // if (base != NULL && attributedRegionLists[level].length - realSize > MIN_REGION_LENGTH) {
+        //     __recycleFragment(base + realSize, attributedRegionLists[level].length - realSize, level, attributedRegionLists);
+        // }
+
+        for (level = 0; level < REGION_LIST_NUM && attributedRegionLists[level].length < realSize; ++level);
+        realSize = attributedRegionLists[level].length;
         base = __getRegion(level, attribute);
-        if (base != NULL && attributedRegionLists[level].length - realSize > MIN_REGION_LENGTH) {
-            __recycleFragment(base + realSize, attributedRegionLists[level].length - realSize, level, attributedRegionLists);
-        }
     }
 
     if (base == NULL) {

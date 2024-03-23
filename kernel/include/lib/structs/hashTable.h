@@ -5,10 +5,14 @@
 #include<kit/types.h>
 #include<structs/singlyLinkedList.h>
 
-RECURSIVE_REFER_STRUCT(HashTable) {
-    Size size, hashSize;
+STRUCT_PRE_DEFINE(HashTable);
+
+typedef Size (*HashTableHashFunc)(HashTable* this, Object key);
+
+STRUCT_PRIVATE_DEFINE(HashTable) {
+    Size size, bucket;
     SinglyLinkedList* chains;
-    Size (*hashFunc)(HashTable* this, Object key);
+    HashTableHashFunc hashFunc;
 };
 
 typedef struct {
@@ -16,17 +20,17 @@ typedef struct {
     Object key;
 } HashChainNode;
 
-#define HASH_FUNC Size (*hashFunc)(HashTable* this, Object key)
+Size hashTable_defaultHashFunc(HashTable* this, Object key);
 
 /**
  * @brief Initialize hash table
  * 
  * @param table Hash table struct
- * @param hashSize Num of hash chains
+ * @param bucket Num of hash chains
  * @param chains Hash chain list
  * @param hashFunc Hash function to apply
  */
-void hashTable_initStruct(HashTable* table, Size hashSize, SinglyLinkedList* chains, HASH_FUNC);
+void hashTable_initStruct(HashTable* table, Size bucket, SinglyLinkedList* chains, HashTableHashFunc hashFunc);
 
 /**
  * @brief Initialize hash chain node

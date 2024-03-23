@@ -1,4 +1,4 @@
-#include<string.h>
+#include<cstring.h>
 
 #include<memory/memory.h>
 #include<kit/types.h>
@@ -167,19 +167,17 @@ int strcmp(ConstCstring str1, ConstCstring str2) {
 }
 
 int strncmp(ConstCstring str1, ConstCstring str2, Size n) {
-    for (int i = 0; i < n && *str1 == *str2 && *str1 != '\0'; ++i) {
+    for (int i = 1; i < n && *str1 == *str2 && *str1 != '\0'; ++i) {
         ++str1, ++str2;
     }
     
     return *str1 - *str2;
 }
 
-Size strhash(ConstCstring str, Size p, Size mod) {
-    Size pp = 1, ret = 0;
-
-    for (int i = 0; str[i] != '\0'; ++i) {
-        ret = (ret + str[i] * pp) % mod;
-        pp = (pp * p) % mod;
+Size strhash(ConstCstring str) {
+    Size ret = 0;
+    for (int c = *str; c != 0; c = *(++str)) {
+        ret = (ret << 6) + (ret << 16) - ret + c;
     }
 
     return ret;

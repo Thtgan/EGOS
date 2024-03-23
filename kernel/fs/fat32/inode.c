@@ -10,15 +10,23 @@
 #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>
+#include<structs/singlyLinkedList.h>
+
+typedef struct {
+    Index64 firstCluster;
+} __FAT32iNodeInfo;
 
 static Result __iNode_FAT32_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
 
+static Result __iNode_FAT32_resize(iNode* iNode, Size newSizeInByte);
+
 static iNodeOperations _FAT32iNodeOperations = {
-    .translateBlockPos   = __iNode_FAT32_mapBlockPosition
+    .translateBlockPos  = __iNode_FAT32_mapBlockPosition,
+    .resize             = __iNode_FAT32_resize
 };
 
-Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, FSentryDesc* desc) {
-    FAT32iNodeInfo* iNodeInfo = kMalloc(sizeof(FAT32iNodeInfo));
+Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
+    __FAT32iNodeInfo* iNodeInfo = kMallocSpecific(sizeof(__FAT32iNodeInfo), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
     }
@@ -33,7 +41,8 @@ Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, FSentryDesc* desc)
     iNode->superBlock       = superBlock;
     iNode->openCnt          = 1;
     iNode->operations       = &_FAT32iNodeOperations;
-    hashChainNode_initStruct(&iNode->hashChainNode);
+    hashChainNode_initStruct(&iNode->openedNode);
+    singlyLinkedListNode_initStruct(&iNode->mountNode);
     iNode->specificInfo     = (Object)iNodeInfo;
 
     return RESULT_SUCCESS;
@@ -59,7 +68,7 @@ static Result __iNode_FAT32_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
     FAT32info* info = (FAT32info*)superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
 
-    FAT32iNodeInfo* iNodeInfo = (FAT32iNodeInfo*)iNode->specificInfo;
+    __FAT32iNodeInfo* iNodeInfo = (__FAT32iNodeInfo*)iNode->specificInfo;
 
     Index64 offsetInCluster = *vBlockIndex;
     Index32 current = iNodeInfo->firstCluster;
@@ -109,4 +118,34 @@ static Result __iNode_FAT32_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
     *n = remain;
 
     return RESULT_CONTINUE;
+}
+
+static Result __iNode_FAT32_resize(iNode* iNode, Size newSizeInByte) {
+    FAT32info* info = (FAT32info*)iNode->superBlock->specificInfo;
+    FAT32BPB* BPB = info->BPB;
+    __FAT32iNodeInfo* iNodeInfo = (__FAT32iNodeInfo*)iNode->specificInfo;
+    Size newSizeInCluster = DIVIDE_ROUND_UP(DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster), oldSizeInCluster = DIVIDE_ROUND_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
+
+    if (newSizeInCluster < oldSizeInCluster) {
+        Index32 tail = FAT32_cluster_get(info, iNodeInfo->firstCluster, newSizeInCluster - 1);
+        if (FAT32_cluster_getType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) == FAT32_CLSUTER_END_OF_CHAIN) {
+            return RESULT_FAIL;
+        }
+
+        Index32 cut = FAT32_cluster_cutChain(info, tail);
+        FAT32_cluster_freeChain(info, cut);
+    } else if (newSizeInCluster > oldSizeInCluster) {
+        Index32 freeClusterChain = FAT32_cluster_allocChain(info, newSizeInCluster - oldSizeInCluster);
+        Index32 tail = FAT32_cluster_get(info, iNodeInfo->firstCluster, iNode->sizeInBlock / BPB->sectorPerCluster - 1);
+
+        if (FAT32_cluster_getType(info, tail) != FAT32_CLUSTER_TYPE_ALLOCATERD || FAT32_cluster_getType(info, freeClusterChain) != FAT32_CLUSTER_TYPE_ALLOCATERD || PTR_TO_VALUE(32, info->FAT + tail) != FAT32_CLSUTER_END_OF_CHAIN) {
+            return RESULT_FAIL;
+        }
+
+        FAT32_cluster_insertChain(info, tail, freeClusterChain);
+    }
+
+    iNode->sizeInBlock = newSizeInCluster * BPB->sectorPerCluster;
+
+    return RESULT_SUCCESS;
 }
