@@ -1,6 +1,7 @@
 #include<fs/devfs/fsEntry.h>
 
 #include<cstring.h>
+#include<devices/device.h>
 #include<devices/block/blockDevice.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/devfs.h>
@@ -17,8 +18,8 @@ typedef struct {
 #define DEVFS_DIRECTORY_ENTRY_NAME_LIMIT    31
     char    name[DEVFS_DIRECTORY_ENTRY_NAME_LIMIT + 1];
     union {
-        Device*  device;
-        Range   dataRange;
+        Range       dataRange;
+        DeviceID    device;
     };
     Uint8   attribute;
 #define __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY FLAG8(0)
@@ -66,7 +67,12 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     }
 
     if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
-        entry->operations = ((Device*)desc->device)->operations;
+        Device* device = device_getDevice(desc->device);
+        if (device == NULL) {
+            return RESULT_FAIL;
+        }
+
+        entry->operations = (fsEntryOperations*)device->operations;
     } else {
         entry->operations = &_DEVFSfileSystemEntryOperations;
         if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
@@ -76,61 +82,6 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
 
     return RESULT_SUCCESS;
 }
-
-//TODO: Remove codes down
-
-static Result __devfs_fsEntry_nullRead(fsEntry* entry, void* buffer, Size n);
-
-static Result __devfs_fsEntry_nullWrite(fsEntry* entry, const void* buffer, Size n);
-
-static Index64 __devfs_fsEntry_nullSeek(fsEntry* entry, Index64 seekTo);
-
-static Result  __devfs_fsEntry_nullResize(fsEntry* entry, Size newSizeInByte);
-
-BlockDevice _null = {
-    .name = "null",
-    .availableBlockNum = -1,
-    .bytePerBlockShift = DEFAULT_BLOCK_SIZE_SHIFT,
-    .flags = EMPTY_FLAGS,
-    .parent = NULL,
-    .childNum = 0,
-    .blockBuffer = NULL,
-    .specificInfo = OBJECT_NULL,
-    .operations = NULL,
-};
-
-fsEntryOperations _nullDeviceOperations = {
-    .read = __devfs_fsEntry_nullRead,
-    .write = __devfs_fsEntry_nullWrite,
-    .seek = __devfs_fsEntry_nullSeek,
-    .resize = __devfs_fsEntry_nullResize
-};
-
-Device _nullDevice = {
-    .device = &_null,
-    .operations = &_nullDeviceOperations
-};
-
-static Result __devfs_fsEntry_nullRead(fsEntry* entry, void* buffer, Size n) {
-    PTR_TO_VALUE(8, buffer) = 0;
-    return RESULT_SUCCESS;
-}
-
-#include<print.h>
-static Result __devfs_fsEntry_nullWrite(fsEntry* entry, const void* buffer, Size n) {
-    printf(TERMINAL_LEVEL_OUTPUT, "%u-%s\n", n, buffer);
-    return RESULT_SUCCESS;
-}
-
-static Index64 __devfs_fsEntry_nullSeek(fsEntry* entry, Index64 seekTo) {
-    return 0;
-}
-
-static Result  __devfs_fsEntry_nullResize(fsEntry* entry, Size newSizeInByte) {
-    return RESULT_SUCCESS;
-}
-
-//TODO: Remove codes above
 
 Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
     DevFSblockChains* chains = &((DEVFSspecificInfo*)superBlock->specificInfo)->chains;
@@ -181,23 +132,28 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
 
     __DevFSdirectoryEntry deviceEntry;
     fsEntryDesc desc;
-    __devfs_fsentry_deviceToDirectoryEntry(&_nullDevice, &deviceEntry);
-    __devfs_fsentry_directoryEntryToFSentryDesc(&rootDir.desc->identifier, &deviceEntry, &desc);
-
-    fsEntry_rawSeek(&rootDir, 0);
-    if (fsEntry_rawDirAddEntry(&rootDir, &desc) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    for (MajorDeviceID major = device_iterateMajor(INVALID_DEVICE_ID); major != INVALID_DEVICE_ID; major = device_iterateMajor(major)) {
+        for (Device* device = device_iterateMinor(major, INVALID_DEVICE_ID); device != NULL; device = device_iterateMinor(major, MINOR_FROM_DEVICE_ID(device->id))) {
+            __devfs_fsentry_deviceToDirectoryEntry(device, &deviceEntry);
+            __devfs_fsentry_directoryEntryToFSentryDesc(&rootDir.desc->identifier, &deviceEntry, &desc);
+            fsEntry_rawSeek(&rootDir, 0);
+            if (fsEntry_rawDirAddEntry(&rootDir, &desc) == RESULT_FAIL) {
+                return RESULT_FAIL;
+            }
+        }
     }
+
+    fsutil_closefsEntry(&rootDir);
 
     return RESULT_SUCCESS;
 }
 
 void __devfs_fsentry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut) {
     memset(dirEntryOut, 0, sizeof(__DevFSdirectoryEntry));
-    strcpy(dirEntryOut->name, device->device->name);
-    dirEntryOut->device = device;
-    dirEntryOut->attribute = __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE;
-    dirEntryOut->magic = __DEVFS_DIRECTORY_ENTRY_MAGIC;
+    strcpy(dirEntryOut->name, device->name);
+    dirEntryOut->device     = device->id;
+    dirEntryOut->attribute  = __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE;
+    dirEntryOut->magic      = __DEVFS_DIRECTORY_ENTRY_MAGIC;
 }
 
 Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut) {

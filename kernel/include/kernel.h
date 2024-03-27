@@ -11,6 +11,7 @@
 extern SystemInfo* sysInfo;
 extern MemoryManager* mm;
 extern FS* rootFS;
+extern FS* devFS;
 
 extern char pKernelRangeBegin;
 #define PHYSICAL_KERNEL_RANGE_BEGIN (&pKernelRangeBegin)

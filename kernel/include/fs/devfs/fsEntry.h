@@ -4,12 +4,6 @@
 #include<fs/fsStructs.h>
 #include<kit/types.h>
 
-//TODO: Demonstration code, let device code handle it
-typedef struct {
-    BlockDevice* device;
-    fsEntryOperations* operations;
-} Device;
-
 Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);
 
 Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock);

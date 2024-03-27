@@ -41,6 +41,8 @@ void RBtree_initStruct(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), i
  */
 void RBtreeNode_initStruct(RBtree* tree, RBtreeNode* node);
 
+RBtreeNode* RBtree_getFirst(RBtree* tree);
+
 /**
  * @brief Search node with key
  * 

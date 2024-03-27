@@ -1,9 +1,9 @@
 #include<init.h>
 
 #include<devices/ata/ata.h>
+#include<devices/device.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
-#include<devices/virtualDevice.h>
 #include<fs/fs.h>
 #include<interrupt/IDT.h>
 #include<interrupt/TSS.h>
@@ -31,12 +31,12 @@ static __InitFunc _initFuncs[] = {
     { initMemoryManager , "Memory"      },
     { initTSS           , "TSS"         },
     { initKeyboard      , "Keyboard"    },
+    { device_init       , "Device"      },
     { initTime          , "Time"        },
     { initSchedule      , "Schedule"    },
     { __enableInterrupt , NULL          },
     { initATAdevices    , "ATA Devices" },
     { fs_init           , "File System" },
-    // { initVirtualDevices, "Virtual Device" },
     { initUsermode      , "User Mode"   },
     { NULL, NULL }
 };

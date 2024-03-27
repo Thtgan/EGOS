@@ -2,6 +2,7 @@
 #define __FS_STRUCT_H
 
 #include<devices/block/blockDevice.h>
+#include<devices/device.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
@@ -142,7 +143,7 @@ STRUCT_PRIVATE_DEFINE(fsEntryDesc) {
 
     union {
         Range           dataRange;  //Position and size on device (In byte)
-        void*           device;     //TODO: Definitely not simple void* pointer
+        DeviceID        device;
     };
     
 #define FS_ENTRY_INVALID_POSITION       -1
@@ -167,7 +168,7 @@ typedef struct {
     bool            isDevice;
     union {
         Range       dataRange;
-        void*       device;     //TODO: Definitely not simple void* pointer
+        DeviceID    device;
     };
     Flags16         flags;
     Uint64          createTime;

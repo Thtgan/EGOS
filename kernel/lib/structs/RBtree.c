@@ -36,6 +36,12 @@ void RBtreeNode_initStruct(RBtree* tree, RBtreeNode* node) {
     node->left = node->right = &tree->NIL;
 }
 
+RBtreeNode* RBtree_getFirst(RBtree* tree) {
+    RBtreeNode* ret = NULL;
+    for (RBtreeNode* node = tree->root; node != &tree->NIL; ret = node, node = node->left);
+    return ret;
+}
+
 RBtreeNode* RBtree_search(RBtree* tree, Object val) {
     int cmp;
     for (RBtreeNode* node = tree->root; node != &tree->NIL;) {

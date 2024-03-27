@@ -1,5 +1,6 @@
 #include<fs/devfs/inode.h>
 
+#include<devices/device.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/fsEntry.h>
 #include<fs/fsStructs.h>
@@ -9,8 +10,8 @@
 
 typedef struct {
     union {
-        Index8 firstBlock;
-        Device* device;
+        Index8      firstBlock;
+        DeviceID    device;
     };
 } __DEVFSiNodeInfo;
 
@@ -32,7 +33,7 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
 
     BlockDevice* device     = superBlock->device;
     if (desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
-        iNodeInfo->device = desc->device;
+        iNodeInfo->device = desc->device;   //TODO: Is this necessary?
     } else {
         iNodeInfo->firstBlock = DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlock->device->bytePerBlockShift);
     }
