@@ -85,29 +85,6 @@ void* physicalPage_alloc(Size n, PhysicalPageAttribute attribute) {
     return ret;
 }
 
-void* physicalPage_mappedAlloc(Size n, PhysicalPageAttribute attribute, void* mapTo, Flags64 flags) {
-    void* pPage = physicalPage_alloc(n, attribute);
-    if (pPage == NULL) {
-        return NULL;
-    }
-
-    if (mapTo == NULL) {
-        return convertAddressP2V(pPage);
-    }
-
-    void* p = pPage, * v = mapTo;
-    for (int i = 0; i < n; ++i) {
-        if (mapAddr(mm->currentPageTable, v, p, flags) == RESULT_FAIL) {
-            return NULL;
-        }
-
-        p += PAGE_SIZE;
-        v += PAGE_SIZE;
-    }
-
-    return mapTo;
-}
-
 void physicalPage_free(void* pPageBegin) {
     PhysicalPage* pageToFree = physicalPage_getStruct(pPageBegin);
     if (pageToFree == NULL || TEST_FLAGS_FAIL(pageToFree->attribute, PHYSICAL_PAGE_ATTRIBUTE_FLAGS_ALLOCATED)) {

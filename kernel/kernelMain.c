@@ -88,8 +88,8 @@ void kernelMain(SystemInfo* info) {
     int ret = execute("/bin/test");
     printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
-    // kFree(arr1);
-    // kFree(arr2); //TODO: It crashes
+    kFree(arr1);
+    kFree(arr2);
 
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 

@@ -1,7 +1,6 @@
 #include<multitask/process.h>
 
 #include<debug.h>
-#include<devices/virtualDevice.h>
 #include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -108,7 +107,6 @@ Process* fork(ConstCstring name) {
 }
 
 void exitProcess() {
-    // debug_blowup("EXIT BLOW\n");
     schedulerTerminateProcess(schedulerGetCurrentProcess());
 
     debug_blowup("Func exitProcess is trying to return\n");

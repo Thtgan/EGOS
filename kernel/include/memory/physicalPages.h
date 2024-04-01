@@ -63,8 +63,6 @@ PhysicalPage* physicalPage_getStruct(void* pAddr);
  */
 void* physicalPage_alloc(Size n, PhysicalPageAttribute attribute);
 
-void* physicalPage_mappedAlloc(Size n, PhysicalPageAttribute attribute, void* mapTo, Flags64 flags);
-
 /**
  * @brief Free continous physical pages, must be allocated by physicalPage_alloc
  * 
