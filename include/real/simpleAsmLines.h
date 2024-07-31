@@ -471,7 +471,7 @@ static inline Uint32 readEFlags32() {
     return ret;
 }
 
-static void writeEFlags32(Uint32 eflags) {
+static inline void writeEFlags32(Uint32 eflags) {
     pushl(eflags);
     popfl();
 }
@@ -485,7 +485,7 @@ static inline Uint64 readEFlags64() {
     return ret;
 }
 
-static void writeEFlags64(Uint64 eflags) {
+static inline void writeEFlags64(Uint64 eflags) {
     pushq(eflags);
     popfq();
 }

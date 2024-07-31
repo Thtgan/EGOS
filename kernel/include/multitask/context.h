@@ -4,7 +4,8 @@
 #include<devices/terminal/terminalSwitch.h>
 #include<kit/macro.h>
 #include<kit/types.h>
-#include<memory/paging/paging.h>
+// #include<memory/paging.h>
+#include<system/pageTable.h>
 
 typedef struct {
     PML4Table* pageTable;   //Page table placed here to ensure stack safety

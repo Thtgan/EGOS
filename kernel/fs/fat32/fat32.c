@@ -8,11 +8,9 @@
 #include<fs/fsStructs.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/buffer.h>
-#include<memory/kMalloc.h>
+// #include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<structs/hashTable.h>
 #include<system/pageTable.h>
 
@@ -24,7 +22,7 @@ Result FAT32_fs_init() {
 #define __FS_FAT32_MINIMUM_CLUSTER_NUM  65525
 
 Result FAT32_fs_checkType(BlockDevice* device) {
-    void* BPBbuffer = allocateBuffer(device->bytePerBlockShift);
+    void* BPBbuffer = memory_allocate(POWER_2(device->bytePerBlockShift));
     if (BPBbuffer == NULL || blockDeviceReadBlocks(device, 0, BPBbuffer, 1) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -35,7 +33,8 @@ Result FAT32_fs_checkType(BlockDevice* device) {
         return RESULT_FAIL;
     }
 
-    releaseBuffer(BPBbuffer, device->bytePerBlockShift);
+    // releaseBuffer(BPBbuffer, device->bytePerBlockShift);
+    memory_free(BPBbuffer);
 
     return RESULT_SUCCESS;
 }
@@ -46,10 +45,10 @@ static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocate
 #define __FS_FAT32_BATCH_ALLOCATE_SIZE      BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET))
 
 Result FAT32_fs_open(FS* fs, BlockDevice* device) {
-    void* batchAllocated = kMallocSpecific(__FS_FAT32_BATCH_ALLOCATE_SIZE, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    void* batchAllocated = memory_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
     if (batchAllocated == NULL || __FAT32_fs_doOpen(fs, device, batchAllocated) == RESULT_FAIL) {
         if (batchAllocated != NULL) {
-            kFree(batchAllocated);
+            memory_free(batchAllocated);
         }
 
         return RESULT_FAIL;
@@ -79,14 +78,14 @@ static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocate
         (SinglyLinkedList, fsEntryDescChains, __FS_FAT32_SUPERBLOCK_HASH_BUCKET)
     );
 
-    void* buffer = allocateBuffer(device->bytePerBlockShift);
+    void* buffer = memory_allocate(POWER_2(device->bytePerBlockShift));
     if (buffer == NULL || blockDeviceReadBlocks(device, 0, buffer, 1) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     memcpy(BPB, buffer, sizeof(FAT32BPB));
 
-    releaseBuffer(buffer, device->bytePerBlockShift);
+    memory_free(buffer);
 
     if (POWER_2(device->bytePerBlockShift) != BPB->bytePerSector) {
         return RESULT_FAIL;
@@ -104,12 +103,12 @@ static Result __FAT32_fs_doOpen(FS* fs, BlockDevice* device, void* batchAllocate
     info->BPB                           = BPB;
 
     Size FATsizeInByte                  = BPB->sectorPerFAT << device->bytePerBlockShift;
-    void* pFAT = physicalPage_alloc(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
+    void* pFAT = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
     if (pFAT == NULL) {
         return RESULT_FAIL;
     }
 
-    Index32* FAT                        = convertAddressP2V(pFAT);
+    Index32* FAT                        = paging_convertAddressP2V(pFAT);
     if (blockDeviceReadBlocks(device, info->FATrange.begin, FAT, info->FATrange.length) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -192,11 +191,11 @@ Result FAT32_fs_close(FS* fs) {
 
     Size FATsizeInByte = info->FATrange.length << fs->superBlock->device->bytePerBlockShift;
     memset(info->FAT, 0, DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
-    physicalPage_free(info->FAT);
+    memory_freeFrame(paging_convertAddressV2P(info->FAT));
 
     void* batchAllocated = fs;
     memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);
-    kFree(batchAllocated);
+    memory_free(batchAllocated);
 
-    return RESULT_FAIL;
+    return RESULT_SUCCESS;
 }

@@ -2,7 +2,7 @@
 
 #include<algorithms.h>
 #include<kit/types.h>
-#include<memory/kMalloc.h>
+// #include<memory/kMalloc.h>
 #include<memory/memory.h>
 
 #define __VECTOR_INIT_STORAGE_SIZE  48
@@ -10,12 +10,12 @@
 void vector_init(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
-    vector->storage = kMalloc(__VECTOR_INIT_STORAGE_SIZE);
+    vector->storage = memory_allocate(__VECTOR_INIT_STORAGE_SIZE);
     memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
 }
 
 void vector_clearStruct(Vector* vector) {
-    kFree(vector->storage);
+    memory_free(vector->storage);
 }
 
 bool vector_isEmpty(Vector* vector) {
@@ -28,7 +28,7 @@ void vector_clear(Vector* vector) {
 }
 
 Result vector_resize(Vector* vector, Size newCapacity) {
-    Object* newStorage = kMalloc(newCapacity * sizeof(Object));
+    Object* newStorage = memory_allocate(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
         return RESULT_FAIL;
     }
@@ -36,7 +36,7 @@ Result vector_resize(Vector* vector, Size newCapacity) {
     vector->capacity = newCapacity;
     vector->size = min64(vector->size, newCapacity);
     memcpy(newStorage, vector->storage, vector->size * sizeof(Object));
-    kFree(vector->storage);
+    memory_free(vector->storage);
     vector->storage = newStorage;
 
     return RESULT_SUCCESS;

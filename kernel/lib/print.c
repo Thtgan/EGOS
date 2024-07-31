@@ -1,11 +1,12 @@
 #include<print.h>
 
 #include<algorithms.h>
+#include<cstring.h>
 #include<devices/terminal/terminal.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<cstring.h>
+#include<memory/memory.h>
 
 #define __FLAGS_LEFT_JUSTIFY    FLAG8(0)
 #define __FLAGS_EXPLICIT_SIGN   FLAG8(1)
@@ -17,7 +18,7 @@
 
 #define __IS_DIGIT(__CH)        ('0' <= (__CH) && (__CH) <= '9')
 
-static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_list args);
+static int __handlePrintf(char* buffer, Size bufferSize, const char* format, va_list args);
 
 /**
  * @brief Read flags from format string
@@ -69,7 +70,7 @@ static const char* __readLengthModifier(const char* format, LengthModifier* modi
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printInteger(void (*charHandler)(char ch), Uint64 num, int base, int width, int precision, Uint8 flags); //TODO: 64-bit not supported yet
+static int __printInteger(char* buffer, Size bufferSize, Uint64 num, int base, int width, int precision, Uint8 flags); //TODO: 64-bit not supported yet
 
 /**
  * @brief Print the character in format
@@ -79,7 +80,7 @@ static int __printInteger(void (*charHandler)(char ch), Uint64 num, int base, in
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printCharacter(void (*charHandler)(char ch), char ch, int width, Uint8 flags);
+static int __printCharacter(char* buffer, Size bufferSize, char ch, int width, Uint8 flags);
 
 /**
  * @brief Print the string in format
@@ -90,7 +91,7 @@ static int __printCharacter(void (*charHandler)(char ch), char ch, int width, Ui
  * @param flags Flags
  * @return int The number of character printed
  */
-static int __printString(void (*charHandler)(char ch), const char* str, int width, int precision, Uint8 flags);
+static int __printString(char* buffer, Size bufferSize, const char* str, int width, int precision, Uint8 flags);
 
 int printf(TerminalLevel level, const char* format, ...) {
     va_list args;
@@ -114,13 +115,15 @@ int sprintf(char* buffer, const char* format, ...) {
     return ret;
 }
 
+#define __PRINT_BUFFER_SIZE 1024
+
 int vprintf(TerminalLevel level, const char* format, va_list args) {
+    char buffer[__PRINT_BUFFER_SIZE];
+    memset(buffer, 0, __PRINT_BUFFER_SIZE);
+    int ret = __handlePrintf(buffer, (Size)__PRINT_BUFFER_SIZE - 1, format, args);
+
     Terminal* terminal = getLevelTerminal(level);
-
-    int ret = __handlePrintf(LAMBDA(void, (char ch) {
-        terminalOutputChar(terminal, ch);
-    }), format, args);
-
+    terminalOutputString(terminal, buffer);
     if (terminal == getCurrentTerminal()) {
         flushDisplay();
     }
@@ -128,14 +131,7 @@ int vprintf(TerminalLevel level, const char* format, va_list args) {
 }
 
 int vsprintf(char* buffer, const char* format, va_list args) {
-    Size len = 0;
-    int ret =  __handlePrintf(LAMBDA(void, (char ch) {
-        buffer[len++] = ch;
-    }), format, args);
-
-    buffer[len] = '\0';
-
-    return ret;
+    return __handlePrintf(buffer, (Size)-1, format, args);
 }
 
 int putchar(TerminalLevel level, int ch) {
@@ -149,12 +145,16 @@ int putchar(TerminalLevel level, int ch) {
     return ch;
 }
 
-static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_list args) {
+//TODO: BUG: 0xCA in %02X prints 0xFFFFFFCA
+static int __handlePrintf(char* buffer, Size bufferSize, const char* format, va_list args) {
     int ret = 0;
     for (; *format != '\0'; ++format) { //Scan the string
+        if (ret >= bufferSize) {
+            break;
+        }
+
         if (*format != '%') {
-            charHandler(*format);
-            ++ret;
+            buffer[ret++] = *format;
             continue;
         }
 
@@ -181,18 +181,18 @@ static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_l
         int base;
         switch (*format) {
             case '%':
-                charHandler('%');
+                buffer[ret++] = *format;
                 break;
             case 'c':
                 switch (modifier) {
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printCharacter(charHandler, (char)va_arg(args, int), width, flags);
+                        ret += __printCharacter(buffer + ret, bufferSize - ret, (char)va_arg(args, int), width, flags);
                         break;
                     case LENGTH_MODIFIER_L:
                         //TODO: Implement wint_t version here
                         break;
                     default:
-                        ret += __printCharacter(charHandler, (char)va_arg(args, int), width, flags);
+                        ret += __printCharacter(buffer + ret, bufferSize - ret, (char)va_arg(args, int), width, flags);
                 }
                 break;
             case 's':
@@ -200,7 +200,7 @@ static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_l
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printString(charHandler, (const char*)va_arg(args, char*), width, precision, flags);
+                        ret += __printString(buffer + ret, bufferSize - ret, (const char*)va_arg(args, char*), width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
                         //TODO: Implement wchar_t version here
@@ -217,26 +217,26 @@ static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_l
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, int), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, long), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, long long), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, long long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_J:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, Intmax), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, Intmax), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_Z:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, Size), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, Size), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_T:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, Ptrdiff), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, Ptrdiff), base, width, precision, flags);
                         break;
                     default:
-                        charHandler('e');
+                        buffer[ret++] = 'e';
                 }
                 break;
             case 'o':
@@ -254,23 +254,23 @@ static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_l
                     case LENGTH_MODIFIER_HH:
                     case LENGTH_MODIFIER_H:
                     case LENGTH_MODIFIER_NONE:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, unsigned int), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, unsigned int), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_L:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, unsigned long), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, unsigned long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_LL:
                     case LENGTH_MODIFIER_GREAT_L:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, unsigned long long), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, unsigned long long), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_J:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, Uintmax), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, Uintmax), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_Z:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, Size), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, Size), base, width, precision, flags);
                         break;
                     case LENGTH_MODIFIER_T:
-                        ret += __printInteger(charHandler, (Uint64)va_arg(args, Ptrdiff), base, width, precision, flags);
+                        ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, Ptrdiff), base, width, precision, flags);
                         break;
                     default:
                 }
@@ -320,12 +320,11 @@ static int __handlePrintf(void (*charHandler)(char ch), const char* format, va_l
             case 'p':
                 base = 16;
                 SET_FLAG_BACK(flags, __FLAGS_SPECIFIER);
-                __printInteger(charHandler, (Uint64)va_arg(args, void*), base, width, precision, flags);
+                ret += __printInteger(buffer + ret, bufferSize - ret, (Uint64)va_arg(args, void*), base, width, precision, flags);
                 break;
             default:
-                charHandler('%');
-                charHandler(*format);
-                ret += 2;
+                buffer[ret++] = '%';
+                buffer[ret++] = *format;
         }
     }
 
@@ -421,13 +420,12 @@ static const char* _digits = "0123456789ABCDEF";
 static char _tmp[64];   //Number temporary buffer
 
 //TODO: BUG: printf("%#02X", 0xAA55) outputs 0XAA55 (should be 0x55)
-static int __printInteger(void (*charHandler)(char ch), Uint64 num, int base, int width, int precision, Uint8 flags) {
+static int __printInteger(char* buffer, Size bufferSize, Uint64 num, int base, int width, int precision, Uint8 flags) {
     if (base < 2 || base > 16)  //If base not available, return
         return -1;              //error
 
     char sign = '\0';
-    int sLen = 0,                                                   //Length of sign or specifier
-        ret = 0;                                                    //Return value
+    int sLen = 0;                                                   //Length of sign or specifier
 
     if (TEST_FLAGS(flags, __FLAGS_SPECIFIER)) {                     //If use the specifier or sign, length will be recorded
         if (base == 16) {                                           //Hex
@@ -479,58 +477,98 @@ static int __printInteger(void (*charHandler)(char ch), Uint64 num, int base, in
     leadingZeroLen = fullLen - digitLen;
     padding = max32(width - sLen - fullLen, 0);
 
-    ret = padding + sLen + padding; //TODO: Check this code again
-
+    int index = 0;
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            charHandler(' ');
+            if (index >= bufferSize) {
+                return index;
+            }
+
+            buffer[index++] = ' ';
         }
     }
 
     if (sign != '\0') {     //Guaranteed only sign or specifier, impossible to print both
-        charHandler(sign);
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = sign;
     }
     if (TEST_FLAGS(flags, __FLAGS_SPECIFIER)) {
         if (base == 8) {
-            charHandler('0');
+            if (index >= bufferSize) {
+                return index;
+            }
+
+            buffer[index++] = '0';
         } else if (base == 16) {
-            charHandler('0');
-            charHandler('X' | lowercaseBit);
+            if (index >= bufferSize) {
+                return index;
+            }
+
+            buffer[index++] = '0';
+            buffer[index++] = 'X' | lowercaseBit;
         }
     }
 
     for (; leadingZeroLen > 0; --leadingZeroLen) {
-        charHandler('0');
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = '0';
     }
 
     for (int i = digitLen - 1; i >= 0; --i) {
-        charHandler(_tmp[i]);
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = _tmp[i];
     }
 
     for (; padding > 0; --padding) {    //If left justified, padding should be 0 when entering this loop
-        charHandler(' ');
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = ' ';
     }
 
-    return ret;
+    return index;
 }
 
-static int __printCharacter(void (*charHandler)(char ch), char ch, int width, Uint8 flags) {
-    int padding = width - 1;
+static int __printCharacter(char* buffer, Size bufferSize, char ch, int width, Uint8 flags) {
+    int padding = width - 1, index = 0;
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            charHandler(' ');
+            if (index >= bufferSize) {
+                return index;
+            }
+
+            buffer[index++] = ' ';
         }
     }
-    charHandler(ch);
 
-    for (; padding > 0; --padding) {
-        charHandler(' ');
+    if (index >= bufferSize) {
+        return index;
     }
 
-    return width >= 1 ? width : 1;
+    buffer[index++] = ch;
+
+    for (; padding > 0; --padding) {
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = ' ';
+    }
+
+    return index;
 }
 
-static int __printString(void (*charHandler)(char ch), const char* str, int width, int precision, Uint8 flags) {
+static int __printString(char* buffer, Size bufferSize, const char* str, int width, int precision, Uint8 flags) {
     int strLen = strlen(str), padding = 0;
     if (precision >= 0) {
         strLen = min32(strLen, precision);
@@ -538,21 +576,33 @@ static int __printString(void (*charHandler)(char ch), const char* str, int widt
 
     padding = max32(0, width - strLen);
 
-    int ret = padding + strLen;
+    int index = 0;
 
     if (TEST_FLAGS_NONE(flags, __FLAGS_LEFT_JUSTIFY)) {
         for (; padding > 0; --padding) {
-            charHandler(' ');
+            if (index >= bufferSize) {
+                return index;
+            }
+
+            buffer[index++] = ' ';
         }
     }
 
     for (int i = 0; i < strLen; ++i) {
-        charHandler(str[i]);
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = str[i];
     }
 
     for (; padding > 0; --padding) {
-        charHandler(' ');
+        if (index >= bufferSize) {
+            return index;
+        }
+
+        buffer[index++] = ' ';
     }
 
-    return ret;
+    return index;
 }

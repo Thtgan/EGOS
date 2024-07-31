@@ -4,24 +4,28 @@
 #include<kernel.h>
 #include<kit/util.h>
 #include<system/pageTable.h>
-#include<memory/buffer.h>
-#include<memory/kMalloc.h>
+#include<memory/extraPageTable.h>
+#include<memory/buddyFrameAllocator.h>
+#include<memory/buddyHeapAllocator.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/paging/pagingSetup.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<system/memoryMap.h>
 
 /**
  * @brief Prepare the necessary information for memory, not done in boot stage for limitation on instructions
  */
-static void __E820Audit(MemoryManager* mm);
+static void __mm_auditE820(MemoryManager* mm);
+
+static void __mm_initFrames(MemoryManager* mm);
 
 static MemoryManager _memoryManager;
+static BuddyFrameAllocator _buddyFrameAllocator;
+static BuddyHeapAllocator _buddyHeapAllocators[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
+static HeapAllocator* heapAllocatorPtrs[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
 
 MemoryManager* mm;
 
-Result initMemoryManager() {
+Result mm_init() {
     if (_memoryManager.initialized) {
         return RESULT_FAIL;
     }
@@ -29,38 +33,42 @@ Result initMemoryManager() {
     mm = &_memoryManager;
 
     memcpy(&mm->mMap, sysInfo->mMap, sizeof(MemoryMap));
-    __E820Audit(mm);
+    __mm_auditE820(mm);
 
-    mm->directPageTableBegin = mm->freePageBegin;
-    if (initPaging() == RESULT_FAIL) {
+    frameMetadata_initStruct(&mm->frameMetadata);
+    FrameMetadataHeader* header = frameMetadata_addFrames(&mm->frameMetadata, (void*)(mm->accessibleBegin * PAGE_SIZE), mm->accessibleEnd - mm->accessibleBegin);
+    if (header == NULL || buddyFrameAllocator_initStruct(&_buddyFrameAllocator) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
-    mm->directPageTableEnd = mm->freePageBegin;
+    mm->frameAllocator = &_buddyFrameAllocator.allocator;
 
-    mm->physicalPageStructBegin = mm->freePageBegin;
-    if (physicalPage_init() == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-    mm->physicalPageStructEnd = mm->freePageBegin;
-
-    // if (setupPagingType(mm->currentPageTable) == RESULT_FAIL) {
-    //     return RESULT_FAIL;
-    // }
-
-    if (initKmalloc() == RESULT_FAIL) {
+    if (frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    if (initBuffer() == RESULT_FAIL) {
+    if (paging_init() == RESULT_FAIL) {
         return RESULT_FAIL;
     }
+
+    Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_PRESET_TYPE_SHARE);
+    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, EXTRA_PAGE_TABLE_PRESET_TYPE_SHARE) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+    heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
+
+    presetID = EXTRA_PAGE_TABLE_CONTEXT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_PRESET_TYPE_COW);
+    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, EXTRA_PAGE_TABLE_PRESET_TYPE_COW) == RESULT_FAIL) {
+        return RESULT_FAIL;
+    }
+    heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
+
+    mm->heapAllocators = heapAllocatorPtrs;
 
     mm->initialized = true;
-
     return RESULT_SUCCESS;
 }
 
-static void __E820Audit(MemoryManager* mm) {
+static void __mm_auditE820(MemoryManager* mm) {
     MemoryMap* mMap = &mm->mMap;
 
     Uintptr largestRegionBase = 0, largestRegionLength = 0;
@@ -75,20 +83,7 @@ static void __E820Audit(MemoryManager* mm) {
             largestRegionBase = e->base, largestRegionLength = e->length;
         }
     }
-
-    mm->freePageBegin = DIVIDE_ROUND_UP(largestRegionBase, PAGE_SIZE), mm->freePageEnd = DIVIDE_ROUND_DOWN(largestRegionBase + largestRegionLength, PAGE_SIZE);
-}
-
-void* mmBasicAllocatePages(MemoryManager* mm, Size n) {
-    if (mm->initialized) {
-        return NULL;
-    }
-
-    if (mm->freePageBegin + n > mm->freePageEnd) {
-        debug_blowup("No enough memory for basic allocation\n");
-    }
-
-    void* ret = (void*)((Uint64)(mm->freePageBegin++) << PAGE_SIZE_SHIFT);
-    memset(ret, 0, n * PAGE_SIZE);
-    return ret;
+    
+    mm->accessibleBegin = DIVIDE_ROUND_UP(largestRegionBase, PAGE_SIZE);
+    mm->accessibleEnd = DIVIDE_ROUND_DOWN(largestRegionBase + largestRegionLength, PAGE_SIZE);
 }

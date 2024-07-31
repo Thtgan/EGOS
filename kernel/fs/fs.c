@@ -10,7 +10,8 @@
 #include<fs/fsSyscall.h>
 #include<kernel.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
+#include<memory/paging.h>
+#include<memory/memory.h>
 #include<structs/hashTable.h>
 
 FS* rootFS = NULL, * devFS = NULL;
@@ -54,12 +55,12 @@ Result fs_init() {
         return RESULT_FAIL;
     }
 
-    rootFS = kMalloc(sizeof(FS));
+    rootFS = memory_allocate(sizeof(FS));
     if (rootFS == NULL || fs_open(rootFS, firstBootablePartition) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
     
-    void* region = convertAddressP2V(physicalPage_alloc(DEVFS_FS_BLOCKDEVICE_BLOCK_NUM * DEFAULT_BLOCK_SIZE / PAGE_SIZE, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC));
+    void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_FS_BLOCKDEVICE_BLOCK_NUM * DEFAULT_BLOCK_SIZE / PAGE_SIZE));
     if (region == NULL || createMemoryBlockDevice(&devfsBlockDevice, region, DEVFS_FS_BLOCKDEVICE_BLOCK_NUM * DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE") == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -68,7 +69,7 @@ Result fs_init() {
         return RESULT_FAIL;
     }
 
-    devFS = kMalloc(sizeof(FS));
+    devFS = memory_allocate(sizeof(FS));
     if (devFS == NULL || fs_open(devFS, &devfsBlockDevice) == RESULT_FAIL) {
         return RESULT_FAIL;
     }

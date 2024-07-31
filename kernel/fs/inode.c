@@ -4,7 +4,7 @@
 #include<fs/fsEntry.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
+#include<memory/memory.h>
 
 iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
     HashChainNode* found = hashTable_find(table, (Object)blockIndex);
@@ -22,13 +22,13 @@ Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
     iNode* ret = iNode_openFromOpened(&superBlock->openedInode, desc->dataRange.begin >> superBlock->device->bytePerBlockShift);
     if (ret == NULL) {
-        ret = kMallocSpecific(sizeof(iNode), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        ret = memory_allocate(sizeof(iNode));
         if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) == RESULT_FAIL) {
             return NULL;
         }
 
         if (iNode_addToOpened(&superBlock->openedInode, ret, desc->dataRange.begin >> superBlock->device->bytePerBlockShift) == RESULT_FAIL) {
-            kFree(ret);
+            memory_free(ret);
             return NULL;
         }
     } else {
@@ -48,7 +48,7 @@ Result iNode_close(iNode* iNode, fsEntryDesc* desc) {
         if (superBlock_rawCloseInode(superBlock, iNode) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
-        kFree(iNode);
+        memory_free(iNode);
     }
 
     return RESULT_SUCCESS;

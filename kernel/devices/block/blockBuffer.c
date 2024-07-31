@@ -5,10 +5,8 @@
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<structs/linkedList.h>
 #include<structs/hashTable.h>
 #include<system/pageTable.h>
@@ -17,15 +15,15 @@ static void __initBlock(Block* block, void* data, Index64 blockIndex);
 
 Result initBlockBuffer(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
-    void* pBlockData = physicalPage_alloc(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC);
+    void* pBlockData = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT));
     if (pBlockData == NULL) {
         return RESULT_FAIL;
     }
 
-    blockBuffer->blockData          = convertAddressP2V(pBlockData);
+    blockBuffer->blockData          = paging_convertAddressP2V(pBlockData);
     linkedList_initStruct(&blockBuffer->LRU);
 
-    Block* blocks = kMallocSpecific(sizeof(Block) * blockNum, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    Block* blocks = memory_allocate(sizeof(Block) * blockNum);
     if (blocks == NULL) {
         return RESULT_FAIL;
     }
@@ -37,7 +35,7 @@ Result initBlockBuffer(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, S
         linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
     }
 
-    SinglyLinkedList* chains = kMallocSpecific(sizeof(SinglyLinkedList) * chainNum, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    SinglyLinkedList* chains = memory_allocate(sizeof(SinglyLinkedList) * chainNum);
     if (chains == NULL) {
         return RESULT_FAIL;
     }
@@ -56,15 +54,15 @@ void releaseBlockBuffer(BlockBuffer* blockBuffer) {
         current = linkedListNode_getNext(current);
     }
 
-    kFree((void*)minOldBlockPtr);
-    kFree(blockBuffer->hashTable.chains);
-    physicalPage_free(convertAddressV2P(blockBuffer->blockData));
+    memory_free((void*)minOldBlockPtr);
+    memory_free(blockBuffer->hashTable.chains);
+    memory_freeFrame(paging_convertAddressV2P(blockBuffer->blockData));
 
     memset(blockBuffer, 0, sizeof(BlockBuffer));
 }
 
 Result resizeBlockBuffer(BlockBuffer* blockBuffer, Size newBlockNum) {
-    Block* newBlocks = kMallocSpecific(sizeof(Block) * newBlockNum, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    Block* newBlocks = memory_allocate(sizeof(Block) * newBlockNum);
     if (newBlocks == NULL) {
         return RESULT_FAIL;
     }
@@ -98,7 +96,7 @@ Result resizeBlockBuffer(BlockBuffer* blockBuffer, Size newBlockNum) {
         }
     }
 
-    kFree((void*)minOldBlockPtr);
+    memory_free((void*)minOldBlockPtr);
     blockBuffer->blockNum = newBlockNum;
 
     return RESULT_SUCCESS;

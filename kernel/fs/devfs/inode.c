@@ -6,7 +6,7 @@
 #include<fs/fsStructs.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
+#include<memory/memory.h>
 
 typedef struct {
     union {
@@ -25,7 +25,7 @@ static iNodeOperations _DEVFSiNodeOperations = {
 };
 
 Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
-    __DEVFSiNodeInfo* iNodeInfo = kMallocSpecific(sizeof(__DEVFSiNodeInfo), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    __DEVFSiNodeInfo* iNodeInfo = memory_allocate(sizeof(__DEVFSiNodeInfo));
 
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
@@ -51,7 +51,7 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
 }
 
 Result devfs_iNode_close(SuperBlock* superBlock, iNode* iNode) {
-    kFree((void*)iNode->specificInfo);
+    memory_free((void*)iNode->specificInfo);
     return RESULT_SUCCESS;
 }
 

@@ -34,9 +34,17 @@ typedef enum {
     PAGING_LEVEL_NUM
 } PagingLevel;
 
+#if defined(__x86_64__)
 typedef Uint64                                              PagingEntry;
-#define EMPTY_PAGING_ENTRY                                  0
+#define PAGING_PTR_BIT_LENGTH                               64
 #define PAGING_ENTRY_BASE_ADDR_END                          52
+#elif defined(__i386__)
+typedef Uint32                                              PagingEntry;
+#define PAGING_PTR_BIT_LENGTH                               32
+#define PAGING_ENTRY_BASE_ADDR_END                          32
+#endif
+
+#define EMPTY_PAGING_ENTRY                                  0
 
 #define PAGING_ENTRY_FLAG_PRESENT                           FLAG64(0)
 #define PAGING_ENTRY_FLAG_RW                                FLAG64(1)   //Read and Write
@@ -54,20 +62,62 @@ typedef Uint64                                              PagingEntry;
 
 typedef struct {
     PagingEntry tableEntries[PAGING_TABLE_SIZE];
-} __attribute__((packed)) PagingTable;
+} PagingTable;
 
+#define PAGING_NEXT_LEVEL(__LEVEL)                          ((__LEVEL) - 1)
+#define PAGING_LAST_LEVEL(__LEVEL)                          ((__LEVEL) + 1)
 #define PAGING_SPAN_SHIFT(__LEVEL)                          (PAGE_SIZE_SHIFT + 9 * (__LEVEL))
 #define PAGING_SPAN(__LEVEL)                                (1ull << PAGING_SPAN_SHIFT(__LEVEL)) //PML4-256TB, PDPT-512GB, PageDirecotry-1GB, Page Table-2MB, Page-4KB
-#define PAGING_INDEX(__LEVEL, __VA)                         EXTRACT_VAL((Uint64)(__VA), 64, PAGING_SPAN_SHIFT(__LEVEL - 1), PAGING_SPAN_SHIFT(__LEVEL))
+#define PAGING_INDEX(__LEVEL, __VA)                         (EXTRACT_VAL(   \
+    (Uintptr)(__VA),                                                        \
+    PAGING_PTR_BIT_LENGTH,                                                  \
+    PAGING_SPAN_SHIFT(PAGING_NEXT_LEVEL(__LEVEL)),                          \
+    PAGING_SPAN_SHIFT(__LEVEL)))
 
-#define FLAGS_FROM_PAGING_ENTRY(__ENTRY)                    (CLEAR_VAL_RANGLE((__ENTRY), 64, PAGE_SIZE_SHIFT, PAGING_ENTRY_BASE_ADDR_END))
+#define PAGING_IS_LEAF(__LEVEL, __ENTRY)                    (PAGING_NEXT_LEVEL(__LEVEL) == PAGING_LEVEL_PAGE || TEST_FLAGS(__ENTRY, PAGING_ENTRY_FLAG_PS))
 
-#define BASE_FROM_ENTRY_PS(__LEVEL, __ENTRY)                ((void*)TRIM_VAL_RANGE((Uint64)(__ENTRY), 64, PAGING_SPAN_SHIFT(__LEVEL - 1), PAGING_ENTRY_BASE_ADDR_END))
-#define ADDR_FROM_ENTRY_PS(__LEVEL, __VA, __ENTRY)          ((void*)((Uint64)BASE_FROM_ENTRY_PS(__LEVEL, __ENTRY) | TRIM_VAL_SIMPLE((Uint64)(__VA), 64, PAGING_SPAN_SHIFT(__LEVEL - 1))))
-#define BUILD_ENTRY_PS(__LEVEL, __PAGE_ADDR, __FLAGS)       (TRIM_VAL_RANGE((Uint64)(__PAGE_ADDR), 64, PAGING_SPAN_SHIFT(__LEVEL - 1), PAGING_ENTRY_BASE_ADDR_END) | CLEAR_VAL_RANGLE((__FLAGS), 64, PAGE_SIZE_SHIFT, PAGING_ENTRY_BASE_ADDR_END))
+#define FLAGS_FROM_PAGING_ENTRY(__ENTRY)                    (CLEAR_VAL_RANGE(   \
+    (__ENTRY),                                                                  \
+    PAGING_PTR_BIT_LENGTH,                                                      \
+    PAGE_SIZE_SHIFT,                                                            \
+    PAGING_ENTRY_BASE_ADDR_END))
+
+#define BASE_FROM_ENTRY_PS(__LEVEL, __ENTRY)                ((void*)TRIM_VAL_RANGE( \
+    (PagingEntry)(__ENTRY),                                                         \
+    PAGING_PTR_BIT_LENGTH,                                                          \
+    PAGING_SPAN_SHIFT(PAGING_NEXT_LEVEL(__LEVEL)),                                  \
+    PAGING_ENTRY_BASE_ADDR_END))
+
+#define ADDR_FROM_ENTRY_PS(__LEVEL, __VA, __ENTRY)          ((void*)(   \
+    (PagingEntry)BASE_FROM_ENTRY_PS(__LEVEL, __ENTRY) |                 \
+    TRIM_VAL_SIMPLE(                                                    \
+        (Uintptr)(__VA),                                                \
+        PAGING_PTR_BIT_LENGTH,                                          \
+        PAGING_SPAN_SHIFT(PAGING_NEXT_LEVEL(__LEVEL))                   \
+        )))
+
+#define BUILD_ENTRY_PS(__LEVEL, __PAGE_ADDR, __FLAGS)       (TRIM_VAL_RANGE(    \
+    (PagingEntry)(__PAGE_ADDR),                                                 \
+    PAGING_PTR_BIT_LENGTH,                                                      \
+    PAGING_SPAN_SHIFT(PAGING_NEXT_LEVEL(__LEVEL)),                              \
+    PAGING_ENTRY_BASE_ADDR_END                                                  \
+    ) | CLEAR_VAL_RANGE(                                                        \
+    (__FLAGS),                                                                  \
+    PAGING_PTR_BIT_LENGTH,                                                      \
+    PAGE_SIZE_SHIFT,                                                            \
+    PAGING_ENTRY_BASE_ADDR_END))
 
 #define PAGING_TABLE_FROM_PAGING_ENTRY(__ENTRY)             ((PagingTable*)BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, __ENTRY))
+
 #define BUILD_ENTRY_PAGING_TABLE(__PAGING_TABLE, __FLAGS)   BUILD_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, __PAGING_TABLE, __FLAGS)
+
+static inline void* pageTable_getNextLevelPage(PagingLevel level, PagingEntry entry) {
+    if (level == PAGING_LEVEL_PAGE || TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
+        return NULL;
+    }
+
+    return PAGING_IS_LEAF(level, entry) ? BASE_FROM_ENTRY_PS(level, entry) : PAGING_TABLE_FROM_PAGING_ENTRY(entry);
+}
 
 /**
  * @brief Level-4 Page Map entry

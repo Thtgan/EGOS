@@ -7,7 +7,6 @@
 #include<fs/fsEntry.h>
 #include<fs/inode.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
@@ -26,7 +25,7 @@ static iNodeOperations _FAT32iNodeOperations = {
 };
 
 Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
-    __FAT32iNodeInfo* iNodeInfo = kMallocSpecific(sizeof(__FAT32iNodeInfo), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    __FAT32iNodeInfo* iNodeInfo = memory_allocate(sizeof(__FAT32iNodeInfo));
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
     }
@@ -49,7 +48,7 @@ Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
 }
 
 Result FAT32_iNode_close(SuperBlock* superBlock, iNode* iNode) {
-    kFree((void*)iNode->specificInfo);
+    memory_free((void*)iNode->specificInfo);
     return RESULT_SUCCESS;
 }
 

@@ -6,10 +6,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/paging/pagingCopy.h>
-#include<memory/paging/pagingRelease.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<multitask/context.h>
 #include<multitask/schedule.h>
 #include<cstring.h>
@@ -81,11 +78,11 @@ Process* fork(ConstCstring name) {
         return NULL;
     }
     
-    void* newStack = convertAddressP2V(physicalPage_alloc(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC)); //TODO: Maybe another type
+    void* newStack = paging_convertAddressP2V(memory_allocateFrame(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE)));
 
     Process* newProcess = __createProcess(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
     newProcess->ppid = oldPID;
-    PML4Table* newTable = copyPML4Table(schedulerGetCurrentProcess()->context.pageTable);
+    PML4Table* newTable = paging_copyPageTable(schedulerGetCurrentProcess()->context.pageTable);
 
     Uintptr currentStackTop = schedulerGetCurrentProcess()->kernelStackTop;
 
@@ -104,6 +101,7 @@ Process* fork(ConstCstring name) {
     RESTORE_REGISTERS();
 
     return schedulerGetCurrentProcess()->pid == oldPID ? newProcess : NULL;
+    // return NULL;
 }
 
 void exitProcess() {
@@ -116,30 +114,31 @@ void releaseProcess(Process* process) {
     PML4Table* pageTable = process->context.pageTable;
     void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
     memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
-    physicalPage_free(convertAddressV2P(stackBottom));
+    memory_freeFrame(paging_convertAddressV2P(stackBottom));
 
     //TODO: What if user program is running
 
-    releasePML4Table(pageTable);
+    paging_releasePageTable(pageTable);
 
     __releasePID(process->pid);
 
-    for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
-        if (process->fileSlots[i] != NULL) {
-            fsutil_closefsEntry(process->fileSlots[i]);
-        }
-    }
-    Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
-    memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    physicalPage_free(convertAddressV2P(process->fileSlots));
+    //TODO: Check these codes again
+    // for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
+    //     if (process->fileSlots[i] != NULL) {
+    //         fsutil_closefsEntry(process->fileSlots[i]);
+    //     }
+    // }
+    // Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    // memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    // physicalPage_free(convertAddressV2P(process->fileSlots));
 
 
     memset(process, 0, PAGE_SIZE);
-    physicalPage_free(convertAddressV2P(process));
+    memory_freeFrame(paging_convertAddressV2P(process));
 }
 
 static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStackTop) {
-    Process* ret = convertAddressP2V(physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC));
+    Process* ret = paging_convertAddressP2V(memory_allocateFrame(1));
     memset(ret, 0, PAGE_SIZE);
 
     ret->pid = pid, ret->ppid = 0;
@@ -155,9 +154,11 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
     queueNode_initStruct(&ret->statusQueueNode);
     queueNode_initStruct(&ret->semaWaitQueueNode);
 
-    Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
-    ret->fileSlots = convertAddressP2V(physicalPage_alloc(openedFilePageSize, PHYSICAL_PAGE_ATTRIBUTE_PRIVATE));
-    memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    //TODO: Check these codes again
+    // Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    // // ret->fileSlots = convertAddressP2V(physicalPage_alloc(openedFilePageSize, PHYSICAL_PAGE_ATTRIBUTE_PRIVATE));
+    // ret->fileSlots = paging_convertAddressP2V(frameAllocator_allocateFrame(mm->frameAllocator, openedFilePageSize));
+    // memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
     // ret->fileSlots[0] = getStandardOutputFile();
 

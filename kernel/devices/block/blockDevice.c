@@ -4,7 +4,6 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<print.h>
 #include<cstring.h>
@@ -42,7 +41,7 @@ Result initBlockDevice(BlockDevice* device, BlockDeviceArgs* args) {
     }
 
     if (args->buffered) {
-        BlockBuffer* blockBuffer = kMalloc(sizeof(BlockBuffer));
+        BlockBuffer* blockBuffer = memory_allocate(sizeof(BlockBuffer));
         if (blockBuffer == NULL || initBlockBuffer(blockBuffer, BLOCK_BUFFER_DEFAULT_HASH_SIZE, BLOCK_BUFFER_DEFAULT_MAX_BLOCK_NUM, bytePerBlockShift) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
@@ -151,14 +150,14 @@ Result blockDeviceSynchronize(BlockDevice* device) {
 }
 
 Result probePartitions(BlockDevice* device) {
-    void* buffer = allocateBuffer(BUFFER_SIZE_512);
+    void* buffer = memory_allocate(DEFAULT_BLOCK_SIZE);
     if (buffer == NULL) {
         return RESULT_FAIL;
     }
 
     Result ret = __doProbePartitions(device, buffer);
 
-    releaseBuffer(buffer, BUFFER_SIZE_512);
+    memory_free(buffer);
     return ret;
 }
 
@@ -203,7 +202,7 @@ static Result __doProbePartitions(BlockDevice* device, void* buffer) {
                 .buffered           = true
             };
 
-            BlockDevice* partitionDevice = kMalloc(sizeof(BlockDevice));
+            BlockDevice* partitionDevice = memory_allocate(sizeof(BlockDevice));
             if (partitionDevice == NULL || initBlockDevice(partitionDevice, &args) == RESULT_FAIL) {
                 continue;
             }

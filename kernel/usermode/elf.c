@@ -5,9 +5,9 @@
 #include<error.h>
 #include<fs/fsutil.h>
 #include<kit/bit.h>
+#include<memory/extraPageTable.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<multitask/schedule.h>
 #include<print.h>
 #include<system/address.h>
@@ -118,13 +118,13 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
     Uint64 flags = PAGING_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGING_ENTRY_FLAG_RW : 0) | PAGING_ENTRY_FLAG_PRESENT;
     
-    Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
+    Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = NULL;
-        if ((pAddr = translateVaddr(pageTable, base)) == NULL) {
-            pAddr = physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_USER_PROGRAM);
-            if (pAddr == NULL || mapAddr(pageTable, base, pAddr, PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_PRESENT) == RESULT_FAIL) {
+        if ((pAddr = paging_translate(pageTable, base)) == NULL) {
+            pAddr = memory_allocateFrame(1);
+            if (pAddr == NULL || paging_map(pageTable, base, pAddr, 1, EXTRA_PAGE_TABLE_PRESET_TYPE_USER_DATA) == RESULT_FAIL) {    //TODO: Set to USER_CODE when code load complete
                 return RESULT_FAIL;
             }
         }
@@ -144,17 +144,9 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
             memoryRemain -= (to - from - readN);
         }
 
-        PagingLevel level;
-        PagingEntry* entry = pageTableGetEntry(pageTable, base, &level);
-        if (entry == NULL || level != PAGING_LEVEL_PAGE_TABLE) {    //TODO: Ugly code
-            return RESULT_FAIL;
-        }
-
-        *entry = BUILD_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, *entry), flags);
-
         base += PAGE_SIZE;
         from = to;
-        to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, to + PAGE_SIZE);
+        to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
     }
 
     return RESULT_SUCCESS;
@@ -168,11 +160,11 @@ Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
-        void* pAddr = translateVaddr(pageTable, base);
-        if (pAddr == NULL) {
+        void* pAddr = paging_translate(pageTable, base);
+        if (pAddr == NULL || paging_unmap(pageTable, base, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
-        physicalPage_free(pAddr);
+        memory_freeFrame(pAddr);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 

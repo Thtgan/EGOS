@@ -1,12 +1,13 @@
 #include<multitask/context.h>
 
 #include<devices/terminal/terminalSwitch.h>
+#include<memory/paging.h>
 #include<print.h>
 
 __attribute__((naked))
 void switchContext(Context* from, Context* to) {
     //Switch the page table, place it here to prevent stack corruption from function call
-    SWITCH_TO_TABLE(to->pageTable);
+    PAGING_SWITCH_TO_TABLE(to->pageTable);
     asm volatile(
         "mov %%rsp, 16(%0);"
         "mov 16(%1), %%rsp;"

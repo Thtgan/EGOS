@@ -3,11 +3,10 @@
 #include<devices/ata/channel.h>
 #include<devices/ata/pio.h>
 #include<devices/block/blockDevice.h>
+#include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<memory/buffer.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<print.h>
 
@@ -207,7 +206,7 @@ static Result __initATADevice(ATAchannel* channel, Uint8 deviceSelect, ATAdevice
         return RESULT_FAIL;
     }
 
-    void* buffer = allocateBuffer(BUFFER_SIZE_512);
+    void* buffer = memory_allocate(DEFAULT_BLOCK_SIZE);
 
     if (__identifyATAPIdevice(channel, buffer) == RESULT_SUCCESS) {
         PacketDeviceIdentifyData* data = (PacketDeviceIdentifyData*)buffer;
@@ -216,13 +215,13 @@ static Result __initATADevice(ATAchannel* channel, Uint8 deviceSelect, ATAdevice
         DeviceIdentifyData* data = (DeviceIdentifyData*)buffer;
         device->sectorNum = data->commandSetSupport.lba48Supported ? data->maxUserLBAfor48bitAddress : data->addressableSectorNum;
     } else {
-        releaseBuffer(buffer, BUFFER_SIZE_512);
+        memory_free(buffer);
         return RESULT_FAIL;
     }
 
     device->deviceNumber = deviceSelect;
 
-    releaseBuffer(buffer, BUFFER_SIZE_512);
+    memory_free(buffer);
     return RESULT_SUCCESS;
 }
 

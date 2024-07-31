@@ -59,8 +59,10 @@
 
 #define CLEAR_VAL(__VAL, __MASK)                                    VAL_AND(__VAL, VAL_NOT(__MASK))
 #define CLEAR_VAL_SIMPLE(__VAL, __FULL_LENGTH, __LENGTH)            CLEAR_VAL(__VAL, MASK_SIMPLE(__FULL_LENGTH, __LENGTH))
-#define CLEAR_VAL_RANGLE(__VAL, __FULL_LENGTH, __BEGIN, __END)      CLEAR_VAL(__VAL, MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
+#define CLEAR_VAL_RANGE(__VAL, __FULL_LENGTH, __BEGIN, __END)       CLEAR_VAL(__VAL, MASK_RANGE(__FULL_LENGTH, __BEGIN, __END))
 
 #define EXTRACT_VAL(__VAL, __FULL_LENGTH, __BEGIN, __END)           TRIM_VAL_SIMPLE(VAL_RIGHT_SHIFT(__VAL, __BEGIN), __FULL_LENGTH, (__END - __BEGIN))
+
+#define LOWER_BIT(__VAL)                                            VAL_AND((__VAL), -(__VAL))
 
 #endif // __BIT_MACRO_H

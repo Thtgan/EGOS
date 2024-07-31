@@ -12,7 +12,6 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
-#include<memory/kMalloc.h>
 #include<structs/string.h>
 #include<time/time.h>
 
@@ -113,19 +112,19 @@ Result FAT32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     return RESULT_SUCCESS;
 }
 
-static Result __FAT32_fsEntry_doReadChild(fsEntry* directory, fsEntryDesc* childDesc, Size* entrySizePtr, char** bufferPtr, String* directoryPath);
+static Result __FAT32_fsEntry_doReadEntry(fsEntry* directory, fsEntryDesc* childDesc, Size* entrySizePtr, char** bufferPtr, String* directoryPath);
 
 static Result __FAT32_fsEntry_readEntry(fsEntry* directory, fsEntryDesc* childDesc, Size* entrySizePtr) {
     char* buffer;
     String directoryPath;
-    Result res = __FAT32_fsEntry_doReadChild(directory, childDesc, entrySizePtr, &buffer, &directoryPath);
+    Result res = __FAT32_fsEntry_doReadEntry(directory, childDesc, entrySizePtr, &buffer, &directoryPath);
 
     if (STRING_IS_AVAILABLE(&directoryPath)) {
         string_clearStruct(&directoryPath);
     }
 
     if (buffer != NULL) {
-        releaseBuffer(buffer, BUFFER_SIZE_512);
+        memory_free(buffer);
     }
 
     return res;
@@ -139,8 +138,8 @@ static Uint16 __FAT32_fsEntry_convertRealTimeToDateField(RealTime* realTime);
 
 static Uint16 __FAT32_fsEntry_convertRealTimeToTimeField(RealTime* realTime);
 
-static Result __FAT32_fsEntry_doReadChild(fsEntry* directory, fsEntryDesc* childDesc, Size* entrySizePtr, char** bufferPtr, String* directoryPath) {
-    if ((*bufferPtr = allocateBuffer(BUFFER_SIZE_512)) == NULL || fsEntry_rawRead(directory, *bufferPtr, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
+static Result __FAT32_fsEntry_doReadEntry(fsEntry* directory, fsEntryDesc* childDesc, Size* entrySizePtr, char** bufferPtr, String* directoryPath) {
+    if ((*bufferPtr = memory_allocate(DEFAULT_BLOCK_SIZE)) == NULL || fsEntry_rawRead(directory, *bufferPtr, sizeof(__FAT32DirectoryEntry)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
     char* buffer = *bufferPtr;
@@ -293,7 +292,7 @@ static Result __FAT32_fsEntry_descToDirectoryEntry(FAT32info* info, fsEntryDesc*
 
 static Result __FAT32_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToAdd) { //TODO: Not considering dummy at tail
     Size directoryEntrySize = __FAT32_fsEntry_getDirectoryEntrySize(childToAdd);
-    void* directoryEntry = kMalloc(directoryEntrySize);
+    void* directoryEntry = memory_allocate(directoryEntrySize);
     FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
     if (directoryEntry == NULL || __FAT32_fsEntry_descToDirectoryEntry(info, childToAdd, directoryEntry) == RESULT_FAIL) {
         return RESULT_FAIL;
@@ -305,7 +304,7 @@ static Result __FAT32_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToA
         return RESULT_FAIL;
     }
 
-    kFree(directoryEntry);
+    memory_free(directoryEntry);
 
     return RESULT_SUCCESS;
 }
@@ -320,7 +319,7 @@ static Result __FAT32_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
     fsEntry_rawSeek(directory, directory->pointer + oldDirectoryEntrySize);
 
     Size followedDataSize = directory->desc->dataRange.length - directory->pointer;
-    void* followedData = kMalloc(followedDataSize);
+    void* followedData = memory_allocate(followedDataSize);
     if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -330,7 +329,7 @@ static Result __FAT32_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
         return RESULT_FAIL;
     }
 
-    kFree(followedData);
+    memory_free(followedData);
 
     return RESULT_SUCCESS;
 }
@@ -342,7 +341,7 @@ static Result __FAT32_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier*
     }
 
     Size directoryEntrySize = __FAT32_fsEntry_getDirectoryEntrySize(newChild);
-    void* directoryEntry = kMalloc(directoryEntrySize); //TODO: Bad memory management
+    void* directoryEntry = memory_allocate(directoryEntrySize); //TODO: Bad memory management
     FAT32info* info = (FAT32info*)directory->iNode->superBlock->specificInfo;
     if (directoryEntry == NULL || __FAT32_fsEntry_descToDirectoryEntry(info, newChild, directoryEntry) == RESULT_FAIL) {
         return RESULT_FAIL;
@@ -353,7 +352,7 @@ static Result __FAT32_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier*
     if (oldDirectoryEntrySize != directoryEntrySize) {
         Index64 oldPointer = directory->pointer;
         fsEntry_rawSeek(directory, directory->pointer + oldDirectoryEntrySize);
-        followedData = kMalloc(followedDataSize); //TODO: Bad memory management
+        followedData = memory_allocate(followedDataSize); //TODO: Bad memory management
         if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
@@ -369,10 +368,11 @@ static Result __FAT32_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier*
         if (fsEntry_rawWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
-        kFree(followedData);
+
+        memory_free(followedData);
     }
 
-    kFree(directoryEntry);
+    memory_free(directoryEntry);
 
     return RESULT_SUCCESS;
 }

@@ -4,8 +4,9 @@
 #include<fs/fsutil.h>
 #include<fs/inode.h>
 #include<kit/types.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalPages.h>
+#include<kit/util.h>
+#include<memory/memory.h>
+#include<memory/paging.h>
 #include<multitask/context.h>
 #include<multitask/schedule.h>
 #include<real/simpleAsmLines.h>
@@ -120,17 +121,16 @@ static int __doExecute(ConstCstring path, File* file) {
 
     PML4Table* pageTable = mm->currentPageTable;
 
-    PagingLevel level;
+#define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        PagingEntry* entry = pageTableGetEntry(pageTable, (void*)USER_STACK_BOTTOM - i, &level);
-        if (entry != NULL) {
+        if (paging_translate(pageTable, (void*)USER_STACK_BOTTOM - i) != NULL) {
             return -1;
         }
 
-        void* pAddr = physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_USER_STACK);
-        if (pAddr == NULL || mapAddr(pageTable, (void*)USER_STACK_BOTTOM - i, pAddr, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US) == RESULT_FAIL) {
+        void* pAddr = memory_allocateFrame(1);
+        if (pAddr == NULL || paging_map(pageTable, (void*)USER_STACK_BOTTOM - i, pAddr, 1, EXTRA_PAGE_TABLE_PRESET_TYPE_USER_DATA) == RESULT_FAIL) {
             return -1;
-        }
+        }   
     }
 
     pushq(0);   //Reserved for return value
@@ -163,12 +163,12 @@ static int __doExecute(ConstCstring path, File* file) {
     }
 
     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        PagingEntry* entry = pageTableGetEntry(pageTable, (void*)USER_STACK_BOTTOM - i, &level);
-        if (entry == NULL || level != PAGING_LEVEL_PAGE_TABLE) {
+        void* pAddr = paging_translate(pageTable, (void*)USER_STACK_BOTTOM - i);
+        if (pAddr == NULL || paging_unmap(pageTable, (void*)USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
             return -1;
         }
 
-        physicalPage_free(BASE_FROM_ENTRY_PS(PAGING_LEVEL_PAGE_TABLE, entry));
+        memory_freeFrame(pAddr);
     }
 
     //TODO: Drop page entries about user program

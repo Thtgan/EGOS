@@ -3,8 +3,7 @@
 #include<debug.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
-#include<memory/physicalPages.h>
+#include<memory/memory.h>
 #include<multitask/process.h>
 #include<multitask/spinlock.h>
 #include<structs/queue.h>
@@ -67,7 +66,7 @@ static Process* __getStatusQueueHead(__SimpleScheduler* scheduler, ProcessStatus
 static Result __removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
 
 Scheduler* createSimpleScheduler() {    //TODO: Scheduler found may stuck
-    __SimpleScheduler* ret = kMallocSpecific(sizeof(__SimpleScheduler), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);    //Share between processes
+    __SimpleScheduler* ret = memory_allocate(sizeof(__SimpleScheduler));
     if (ret == NULL) {
         return NULL;
     }

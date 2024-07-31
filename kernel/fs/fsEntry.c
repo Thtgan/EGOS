@@ -11,8 +11,6 @@
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/buffer.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<structs/string.h>
 #include<system/pageTable.h>
@@ -123,7 +121,7 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
 
-    void* blockBuffer = allocateBuffer(device->bytePerBlockShift);
+    void* blockBuffer = memory_allocate(POWER_2(device->bytePerBlockShift));
     if (blockBuffer == NULL) {
         return RESULT_FAIL;
     }
@@ -182,7 +180,7 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
         remainByteNum = 0;
     }
 
-    releaseBuffer(blockBuffer, device->bytePerBlockShift);
+    memory_free(blockBuffer);
 
     return RESULT_SUCCESS;
 }
@@ -192,7 +190,7 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* device = superBlock->device;
 
-    void* blockBuffer = allocateBuffer(device->bytePerBlockShift);
+    void* blockBuffer = memory_allocate(POWER_2(device->bytePerBlockShift));
     if (blockBuffer == NULL) {
         return RESULT_FAIL;
     }
@@ -264,7 +262,7 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
         remainByteNum = 0;
     }
 
-    releaseBuffer(blockBuffer, device->bytePerBlockShift);
+    memory_free(blockBuffer);
 
     return RESULT_SUCCESS;
 }

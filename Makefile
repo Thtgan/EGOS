@@ -75,7 +75,7 @@ postBuild: removeTmp
 
 LOOP_DEVICE_PATH_STORAGE	:=	$(TMP_DIR)/loopDevice
 LOOP_DEVICE_PATH			:=	$$(cat $(LOOP_DEVICE_PATH_STORAGE))
-
+# TODO: Use -j make this procedure fails
 $(BUILD_TARGET): bootBuild kernelBuild userPrograms
 	@$(DD) if=/dev/zero bs=1M count=$(TARGET_SIZE_MB) > $(BUILD_TARGET)
 	@$(PARTED) -s $(BUILD_TARGET) mklabel msdos

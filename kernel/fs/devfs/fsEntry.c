@@ -10,7 +10,6 @@
 #include<fs/fsutil.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 
 //TODO: Extremely rough code, need rework
@@ -233,7 +232,7 @@ static Result __devfs_fsEntry_readEntry(fsEntry* directory, fsEntryDesc* childDe
 
 static Result __devfs_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToAdd) {
     Size followedDataSize = directory->desc->dataRange.length - directory->pointer;
-    void* followedData = kMalloc(followedDataSize);
+    void* followedData = memory_allocate(followedDataSize);
     if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -249,7 +248,7 @@ static Result __devfs_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToA
         return RESULT_FAIL;
     }
 
-    kFree(followedData);
+    memory_free(followedData);
 
     return RESULT_SUCCESS;
 }
@@ -263,7 +262,7 @@ static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
     fsEntry_rawSeek(directory, directory->pointer + sizeof(__DevFSdirectoryEntry));
 
     Size followedDataSize = directory->desc->dataRange.length - directory->pointer;
-    void* followedData = kMalloc(followedDataSize);
+    void* followedData = memory_allocate(followedDataSize);
     if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -273,7 +272,7 @@ static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
         return RESULT_FAIL;
     }
 
-    kFree(followedData);
+    memory_free(followedData);
 
     return RESULT_SUCCESS;
 }

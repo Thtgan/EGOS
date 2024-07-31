@@ -88,4 +88,8 @@ RBtreeNode* RBtree_getPredecessor(RBtree* tree, RBtreeNode* node);
  */
 RBtreeNode* RBtree_getSuccessor(RBtree* tree, RBtreeNode* node);
 
+RBtreeNode* RBtree_lowerBound(RBtree* tree, Object val);
+
+RBtreeNode* RBtree_upperBound(RBtree* tree, Object val);
+
 #endif // __RB_TREE_H

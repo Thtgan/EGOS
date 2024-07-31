@@ -9,7 +9,6 @@
 #include<fs/devfs/inode.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 
 static ConstCstring __devfs_fs_name = "DEVFS";
@@ -42,7 +41,7 @@ Result devfs_fs_open(FS* fs, BlockDevice* device) {
         return RESULT_FAIL;
     }
 
-    void* batchAllocated = kMallocSpecific(__DEVFS_BATCH_ALLOCATE_SIZE, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);    //TODO: Bad memory management
+    void* batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);    //TODO: Bad memory management
     if (batchAllocated == NULL) {
         return RESULT_FAIL;
     }

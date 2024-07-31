@@ -28,7 +28,7 @@ static __InitFunc _initFuncs[] = {
     { initTerminalSwitch, "Terminal"    },
     { __printBootSlogan , NULL          },  //TODO: May crash after print slogan
     { initIDT           , "Interrupt"   },
-    { initMemoryManager , "Memory"      },
+    { mm_init           , "Memory"      },
     { initTSS           , "TSS"         },
     { initKeyboard      , "Keyboard"    },
     { device_init       , "Device"      },

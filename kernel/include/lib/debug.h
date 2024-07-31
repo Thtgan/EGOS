@@ -17,6 +17,8 @@ void debug_blowup(const Cstring format, ...);
 
 #define DEBUG_ASSERT_SILENT(__EXPRESSION)               do { if (!(__EXPRESSION)) debug_blowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
 
-#define DEBUG_ASSERT(__EXPRESSION, __LAST_WORD, ...)    do { if (!(__EXPRESSION)) debug_blowup("Assertion failed at %s, line %d\n" __LAST_WORD "\n", __FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+#define DEBUG_ASSERT(__EXPRESSION, __LAST_WORD, ...)    do { if (!(__EXPRESSION)) debug_blowup("Assertion failed at %s, line %d\n" __LAST_WORD, __FILE__, __LINE__, ##__VA_ARGS__); } while(0)
+
+#define DEBUG_ASSERT_COMPILE(__EXPRESSION)              typedef char MACRO_CALL(MACRO_CONCENTRATE2, COMPILE_ASSERT_FAILED_, __LINE__)[-!(__EXPRESSION)]
 
 #endif // __DEBUG_H

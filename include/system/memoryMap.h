@@ -21,9 +21,6 @@ typedef struct {
 typedef struct {
     Uint32 entryNum;
     MemoryMapEntry memoryMapEntries[MEMORY_MAP_ENTRY_NUM];
-    Uint64 directPageTableBegin, directPageTableEnd;
-    Uint64 physicalPageStructBegin, physicalPageStructEnd;
-    Uint64 freePageBegin, freePageEnd;
 } MemoryMap;
 
 #endif // __MEMORY_AREA_H

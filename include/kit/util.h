@@ -13,6 +13,8 @@
 #define ALIGN_UP(__X, __Y)                                      (DIVIDE_ROUND_UP(__X, __Y) * (__Y))
 #define ALIGN_DOWN(__X, __Y)                                    (DIVIDE_ROUND_DOWN(__X, __Y) * (__Y))
 
+#define IS_ALIGNED(__X, __Y)                                    (((__X) & ((__Y) - 1)) == 0)
+
 #define DIVIDE_ROUND_UP_SHIFT(__X, __SHIFT)                     (VAL_RIGHT_SHIFT(__X, __SHIFT) + (((__X) & MASK_SIMPLE(64, __SHIFT)) != 0))
 #define DIVIDE_ROUND_DOWN_SHIFT(__X, __SHIFT)                   VAL_RIGHT_SHIFT(__X, __SHIFT)
 

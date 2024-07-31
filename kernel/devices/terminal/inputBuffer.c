@@ -1,9 +1,9 @@
 #include<devices/terminal/inputBuffer.h>
 
+#include<debug.h>
 #include<kit/util.h>
 #include<memory/memory.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
 
@@ -14,6 +14,8 @@ typedef struct {
     Uint16 begin, end;
     char buffer[__NODE_BUFFER_SIZE];
 } __InputBufferNode;
+
+DEBUG_ASSERT_COMPILE(sizeof(__InputBufferNode) == PAGE_SIZE);
 
 /**
  * @brief Allocate a buffer node
@@ -114,7 +116,7 @@ int bufferGetLine(InputBuffer* buffer, char* writeTo) {
 }
 
 static __InputBufferNode* __allocateNode() {
-    __InputBufferNode* ret = convertAddressP2V(physicalPage_alloc(1, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC));
+    __InputBufferNode* ret = paging_convertAddressP2V(memory_allocateFrame(1));
 
     queueNode_initStruct(&ret->node);
     ret->begin = ret->end = 0;
@@ -125,5 +127,5 @@ static __InputBufferNode* __allocateNode() {
 
 static void __releaseNode(__InputBufferNode* node) {
     memset(node, 0, PAGE_SIZE);
-    physicalPage_free(convertAddressV2P(node));
+    memory_freeFrame(paging_convertAddressV2P(node));
 }

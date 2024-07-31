@@ -3,7 +3,7 @@
 #include<algorithms.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
+// #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<cstring.h>
 
@@ -15,7 +15,7 @@ Result string_initStruct(String* str, ConstCstring cstr) {
 
 Result string_initStructN(String* str, ConstCstring cstr, Size n) {
     Size len = umin64(n, strlen(cstr)), capacity = ALIGN_UP(len + 1, __STRING_CAPACITY_ALIGN);
-    Cstring data = kMallocSpecific(capacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    Cstring data = memory_allocate(capacity);
     if (data == NULL) {
         return RESULT_FAIL;
     }
@@ -37,7 +37,7 @@ void string_clearStruct(String* str) {
     }
 
     str->capacity = str->length = str->magic = 0;
-    kFree(str->data);
+    memory_free(str->data);
 }
 
 Result string_concat(String* des, String* str1, String* str2) {
@@ -62,7 +62,7 @@ Result string_concat(String* des, String* str1, String* str2) {
         memcpy(des->data, str2->data, str2->length);
         des->data[newLen] = '\0';
     } else {
-        Cstring data = kMallocSpecific(newCapacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        Cstring data = memory_allocate(newCapacity);
         if (data == NULL) {
             return RESULT_FAIL;
         }
@@ -97,7 +97,7 @@ Result string_cconcat(String* des, String* str1, Cstring str2) {
         memcpy(des->data + str1->length, str2, len2);
         des->data[newLen] = '\0';
     } else {
-        Cstring data = kMallocSpecific(newCapacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        Cstring data = memory_allocate(newCapacity);
         if (data == NULL) {
             return RESULT_FAIL;
         }
@@ -131,7 +131,7 @@ Result string_append(String* des, String* str, int ch) {
         des->data[str->length] = ch;
         des->data[newLen] = '\0';
     } else {
-        Cstring data = kMallocSpecific(newCapacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        Cstring data = memory_allocate(newCapacity);
         if (data == NULL) {
             return RESULT_FAIL;
         }
@@ -168,7 +168,7 @@ Result string_slice(String* des, String* src, int from, int to) {
             return RESULT_FAIL;
         }
     } else {
-        Cstring data = kMallocSpecific(newCapacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        Cstring data = memory_allocate(newCapacity);
         if (data == NULL) {
             return RESULT_FAIL;
         }
@@ -195,14 +195,14 @@ Result string_resize(String* str, Size newCapacity) {
         return RESULT_SUCCESS;
     }
 
-    Cstring newData = kMallocSpecific(newCapacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    Cstring newData = memory_allocate(newCapacity);
     if (newData == NULL) {
         return RESULT_FAIL;
     }
 
     memcpy(newData, str->data, newCapacity);
     newData[str->length] = '\0';
-    kFree(str->data);
+    memory_free(str->data);
 
     str->data       = newData;
     str->capacity   = newCapacity;
@@ -215,7 +215,7 @@ Result string_copy(String* str, String* src) {
         return RESULT_FAIL;
     }
 
-    void* newData = kMallocSpecific(src->capacity, PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    Cstring newData = memory_allocate(src->capacity);
     if (newData == NULL) {
         return RESULT_FAIL;
     }

@@ -7,7 +7,6 @@
 #include<fs/fsutil.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>
 #include<structs/linkedList.h>
@@ -161,7 +160,7 @@ fsEntryDesc* superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier
 
     fsEntryDesc* ret = NULL;
     if (found == NULL) {
-        ret = kMalloc(sizeof(fsEntryDesc));
+        ret = memory_allocate(sizeof(fsEntryDesc));
         if (ret == NULL) {
             if (superBlockOut != NULL) {
                 *superBlockOut = NULL;
@@ -172,7 +171,7 @@ fsEntryDesc* superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier
         }
 
         if (superBlock_readfsEntryDesc(currentSuperBlock, & finalIdentifier, ret) == RESULT_FAIL) {
-            kFree(ret);
+            memory_free(ret);
             if (superBlockOut != NULL) {
                 *superBlockOut = NULL;
             }
@@ -217,7 +216,7 @@ Result superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryD
             return RESULT_FAIL;
         }
 
-        kFree(entryDesc);
+        memory_free(entryDesc);
     }
 
     return RESULT_SUCCESS;
@@ -293,7 +292,7 @@ void mount_clearStruct(Mount* mount) {
 }
 
 Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) { //TODO: Bad memory management
-    Mount* mount = kMallocSpecific(sizeof(Mount), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+    Mount* mount = memory_allocate(sizeof(Mount));
     if (mount == NULL || mount_initStruct(mount, identifier->name.data, targetSuperBlock, targetDesc) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -301,7 +300,7 @@ Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identi
     Object pathKey = strhash(identifier->parentPath.data);
     HashChainNode* found = hashTable_find(&superBlock->mounted, pathKey);
     if (found == NULL) {
-        DirMountList* list = kMallocSpecific(sizeof(DirMountList), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        DirMountList* list = memory_allocate(sizeof(DirMountList));
         if (list == NULL) {
             return RESULT_FAIL;
         }
@@ -337,13 +336,13 @@ Result superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* iden
 
         mount_clearStruct(mount);
         linkedListNode_delete(&mount->node);
-        kFree(mount);
+        memory_free(mount);
         break;
     }
 
     if (linkedList_isEmpty(&list->list)) {
         hashTable_delete(&superBlock->mounted, pathKey);
-        kFree(list);
+        memory_free(list);
     }
 
     return RESULT_SUCCESS;

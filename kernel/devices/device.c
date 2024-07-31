@@ -2,9 +2,10 @@
 
 #include<cstring.h>
 #include<devices/pseudo.h>
+#include<kernel.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/kMalloc.h>
+#include<memory/memory.h>
 #include<structs/RBtree.h>
 
 RBtree _deviceMajorTree;
@@ -55,7 +56,7 @@ MajorDeviceID device_allocMajor() {
     }
 
     if (ret != INVALID_DEVICE_ID) {
-        __DeviceMajorTreeNode* newNode = kMallocSpecific(sizeof(__DeviceMajorTreeNode), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16);
+        __DeviceMajorTreeNode* newNode = memory_allocate(sizeof(__DeviceMajorTreeNode));
         newNode->major = ret;
         newNode->deviceNum = 0;
         RBtree_initStruct(&newNode->minorTree, __device_deviceMinorTreeCmpFunc, __device_deviceMinorTreeSearchFunc);
@@ -78,7 +79,7 @@ Result device_releaseMajor(MajorDeviceID major) {
         return RESULT_FAIL;
     }
 
-    kFree(node);
+    memory_free(node);
 
     return RESULT_SUCCESS;
 }

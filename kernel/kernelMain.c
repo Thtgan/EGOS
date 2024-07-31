@@ -1,11 +1,10 @@
 #include<debug.h>
-// #include<fs/fsutil.h>
+#include<fs/fsutil.h>
 #include<init.h>
-// #include<kit/types.h>
-// #include<memory/buffer.h>
-#include<memory/kMalloc.h>
+#include<kit/types.h>
+#include<memory/allocator.h>
 #include<multitask/schedule.h>
-// #include<multitask/semaphore.h>
+#include<multitask/semaphore.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
 #include<cstring.h>
@@ -13,8 +12,6 @@
 #include<time/time.h>
 #include<time/timer.h>
 #include<usermode/usermode.h>
-
-// #include<memory/physicalPages.h>
 
 SystemInfo* sysInfo;
 
@@ -27,14 +24,24 @@ static void printLOGO();
 
 #include<kit/util.h>
 #include<system/memoryLayout.h>
-#include<memory/paging/paging.h>
-#include<memory/physicalPages.h>
+#include<memory/paging.h>
 #include<interrupt/IDT.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsutil.h>
 #include<fs/fsEntry.h>
 
-extern FS* rootFS;
+#include<memory/memory.h>
+
+static void __timerFunc1(Timer* timer) {
+    printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
+}
+
+static void __timerFunc2(Timer* timer) {
+    printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER2\n");
+    if (--timer->data == 0) {
+        CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
+    }
+}
 
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
@@ -51,7 +58,7 @@ void kernelMain(SystemInfo* info) {
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
 
-    arr1 = kMallocSpecific(1 * sizeof(int), PHYSICAL_PAGE_ATTRIBUTE_COW, 16), arr2 = kMallocSpecific(1 * sizeof(int), PHYSICAL_PAGE_ATTRIBUTE_PUBLIC, 16); //TODO: COW not working
+    arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_PRESET_TYPE_COW);
     arr1[0] = 1, arr2[0] = 114514;
     if (fork("Forked") != NULL) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
@@ -79,7 +86,7 @@ void kernelMain(SystemInfo* info) {
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
 
-        //TODO: Calling userprogram goes wrong here
+        // //TODO: Calling userprogram goes wrong here
 
         up(&sema2);
         exitProcess();
@@ -88,8 +95,8 @@ void kernelMain(SystemInfo* info) {
     int ret = execute("/bin/test");
     printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
-    kFree(arr1);
-    kFree(arr2);
+    memory_free(arr1);
+    memory_free(arr2);
 
     printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
@@ -103,17 +110,9 @@ void kernelMain(SystemInfo* info) {
     initTimer(&timer2, 500, TIME_UNIT_MILLISECOND);
     SET_FLAG_BACK(timer2.flags, TIMER_FLAGS_SYNCHRONIZE | TIMER_FLAGS_REPEAT);
 
-    timer1.handler = LAMBDA(void, (Timer* timer) {
-        printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
-    });
-
+    timer1.handler = __timerFunc1;
     timer2.data = 5;
-    timer2.handler = LAMBDA(void, (Timer* timer) {
-        printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER2\n");
-        if (--timer->data == 0) {
-            CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
-        }
-    });
+    timer2.handler = __timerFunc2;
 
 
     timerStart(&timer1);
@@ -137,13 +136,11 @@ static void printLOGO() {
             buffer[fileSize] = '\0';
             printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
-
-        // if (fileSize < 0x200) {
-        //     fsutil_fileWrite(&entry, "Per Aspera Ad Astra\nPer Aspera Ad Astra\nPer Aspera Ad Astra\n", 60);
-        // }
-        // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.createTime);
-        // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastAccessTime);
-        // printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc.lastModifyTime);
+        
+        fsEntryDesc* desc = entry.desc;
+        printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->createTime);
+        printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastAccessTime);
+        printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastModifyTime);
 
         BlockDevice* device = entry.iNode->superBlock->device;
         fsutil_closefsEntry(&entry);

@@ -5,7 +5,7 @@
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
-#include<memory/paging/paging.h>
+#include<memory/paging.h>
 #include<multitask/context.h>
 #include<print.h>
 #include<real/flags/eflags.h>

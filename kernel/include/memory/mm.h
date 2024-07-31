@@ -2,20 +2,25 @@
 #define __MM_H
 
 #include<kit/types.h>
+#include<memory/allocator.h>
+#include<memory/extraPageTable.h>
+#include<memory/frameMetadata.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
 typedef struct {
     bool initialized;
     MemoryMap mMap;
+    FrameMetadata frameMetadata;
+    ExtraPageTableContext extraPageTableContext;
+    FrameAllocator* frameAllocator;
+    HeapAllocator** heapAllocators;
     PML4Table* currentPageTable;
-    Uintptr freePageBegin, freePageEnd;
-    Uintptr directPageTableBegin, directPageTableEnd;
-    Uint64 physicalPageStructBegin, physicalPageStructEnd;
+    Uintptr accessibleBegin, accessibleEnd;
 } MemoryManager;
 
-Result initMemoryManager();
+Result mm_init();
 
-void* mmBasicAllocatePages(MemoryManager* mm, Size n);
+bool dbgCheck();
 
 #endif // __MM_H

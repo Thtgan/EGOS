@@ -169,6 +169,42 @@ RBtreeNode* RBtree_getSuccessor(RBtree* tree, RBtreeNode* node) {
     return parent;
 }
 
+RBtreeNode* RBtree_lowerBound(RBtree* tree, Object val) {
+    int cmp;
+    for (RBtreeNode* node = tree->root; node != &tree->NIL;) {
+        cmp = tree->searchFunc(node, val);
+        if (cmp == 0) {
+            return node;
+        } else if (cmp > 0) {
+            node = node->left;
+        } else {
+            if (node->right == &tree->NIL) {
+                return node;
+            }
+            node = node->right;
+        }
+    }
+
+    return NULL;
+}
+
+RBtreeNode* RBtree_upperBound(RBtree* tree, Object val) {
+    int cmp;
+    for (RBtreeNode* node = tree->root; node != &tree->NIL;) {
+        cmp = tree->searchFunc(node, val);
+        if (cmp > 0) {
+            if (node->left == &tree->NIL) {
+                return node;
+            }
+            node = node->left;
+        } else {
+            node = node->right;
+        }
+    }
+
+    return NULL;
+}
+
 static void __RBtree_lRotate(RBtree* tree, RBtreeNode* node) {
     RBtreeNode* parent = node->parent;
     RBtreeNode* right = node->right;

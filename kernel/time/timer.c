@@ -14,11 +14,11 @@ static Heap _timerHeap;
 #define __TIMER_MAXIMUM_NUM 1023
 static Object _heapObjects[1023 + 1];
 
+static Int64 __timers_compare(Object o1, Object o2);
+
 void initTimers(ClockSource* timerClockSource) {
     _timerClockSource = timerClockSource;
-    heap_initStruct(&_timerHeap, _heapObjects, __TIMER_MAXIMUM_NUM, LAMBDA(Int64, (Object o1, Object o2) {
-        return ((Timer*)o1)->until - ((Timer*)o2)->until;
-    }));
+    heap_initStruct(&_timerHeap, _heapObjects, __TIMER_MAXIMUM_NUM, __timers_compare);
 }
 
 void initTimer(Timer* timer, Int64 time, TimeUnit unit) {
@@ -77,4 +77,8 @@ void updateTimers() {
             heap_pop(&_timerHeap);
         }
     }
+}
+
+static Int64 __timers_compare(Object o1, Object o2) {
+    return ((Timer*)o1)->until - ((Timer*)o2)->until;
 }
