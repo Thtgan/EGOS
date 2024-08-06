@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<kit/types.h>
 #include<memory/allocator.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<print.h>
@@ -50,8 +51,8 @@ static Result __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page);
 
-Result buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, ExtraPageTablePresetType presetType) {
-    allocator_initStruct(&allocator->allocator, frameAllocator, &_buddyHeapAllocatorOperations, presetType);
+Result buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 presetID) {
+    allocator_initStruct(&allocator->allocator, frameAllocator, &_buddyHeapAllocatorOperations, presetID);
     for (int j = 0; j < BUDDY_HEAP_ALLOCATOR_BUDDY_LIST_LIST_NUM; ++j) {
         __buddyHeapAllocatorBuddyList_initStruct(&allocator->buddyLists[j], j);
     }
@@ -193,10 +194,8 @@ static Result __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size
         return RESULT_FAIL;
     }
 
-    void* v = paging_convertAddressP2V(page);
-
-    ExtraPageTableContext* context = &mm->extraPageTableContext;
-    if (extraPageTableContext_setPreset(context, mm->currentPageTable, v, n, EXTRA_PAGE_TABLE_CONTEXT_PRESET_TYPE_TO_ID(context, allocator->allocator.presetType)) == RESULT_FAIL) {
+    void* v = paging_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
+    if (extendedPageTableRoot_draw(mm->extendedTable, v, page, n, mm->extraPageTableContext.presets[allocator->allocator.presetID]) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 

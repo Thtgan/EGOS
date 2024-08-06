@@ -4,11 +4,11 @@
 #include<devices/terminal/terminalSwitch.h>
 #include<kit/macro.h>
 #include<kit/types.h>
-// #include<memory/paging.h>
-#include<system/pageTable.h>
+
+typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 
 typedef struct {
-    PML4Table* pageTable;   //Page table placed here to ensure stack safety
+    ExtendedPageTableRoot* extendedTable;   //Page table placed here to ensure stack safety
     Uint64 rip;
     Uint64 rsp;
 } __attribute__((packed)) Context;

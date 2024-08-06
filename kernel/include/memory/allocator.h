@@ -3,7 +3,6 @@
 
 #include<kit/types.h>
 #include<kit/oop.h>
-#include<memory/extraPageTable.h>
 
 STRUCT_PRE_DEFINE(FrameAllocator);
 STRUCT_PRE_DEFINE(HeapAllocator);
@@ -44,7 +43,7 @@ STRUCT_PRIVATE_DEFINE(HeapAllocator) {
     Size remaining;
     AllocatorOperations* operations;
     FrameAllocator* frameAllocator;
-    ExtraPageTablePresetType presetType;
+    Uint8 presetID;
 };
 
 static inline void* heapAllocator_allocate(HeapAllocator* allocator, Size n) {
@@ -55,6 +54,6 @@ static inline void heapAllocator_free(HeapAllocator* allocator, void* ptr) {
     allocator->operations->free(allocator, ptr);
 }
 
-void allocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, ExtraPageTablePresetType presetType);
+void allocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID);
 
 #endif // __ALLOCATOR_H

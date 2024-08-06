@@ -15,10 +15,7 @@ typedef struct {
 #define FRAME_METADATA_UNIT_FLAGS_PAGE_TABLE FLAG16(1)
 #define FRAME_METADATA_UNIT_FLAGS_CHUNK_HEAD FLAG16(2)
     Uint8 reserved;
-    union {
-        Uint16 cnt;     //For leaf page frames
-        Int16 pushdown; //For page table frames
-    } cow;
+    Uint16 cow;
     Uint32 chunkLength;
 } __attribute__((packed)) FrameMetadataUnit;
 

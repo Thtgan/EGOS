@@ -3,7 +3,7 @@
 
 #include<kit/types.h>
 #include<memory/allocator.h>
-#include<memory/extraPageTable.h>
+#include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
@@ -15,7 +15,7 @@ typedef struct {
     ExtraPageTableContext extraPageTableContext;
     FrameAllocator* frameAllocator;
     HeapAllocator** heapAllocators;
-    PML4Table* currentPageTable;
+    ExtendedPageTableRoot* extendedTable;
     Uintptr accessibleBegin, accessibleEnd;
 } MemoryManager;
 

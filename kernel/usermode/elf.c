@@ -5,7 +5,7 @@
 #include<error.h>
 #include<fs/fsutil.h>
 #include<kit/bit.h>
-#include<memory/extraPageTable.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<multitask/schedule.h>
@@ -111,7 +111,7 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         readRemain = programHeader->segmentSizeInFile,
         memoryRemain = programHeader->segmentSizeInMemory;
 
-    PML4Table* pageTable = schedulerGetCurrentProcess()->context.pageTable;
+    ExtendedPageTableRoot* extendedTable = schedulerGetCurrentProcess()->context.extendedTable;
     if (fsutil_fileSeek(file, fileBegin, FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
@@ -122,9 +122,9 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = NULL;
-        if ((pAddr = paging_translate(pageTable, base)) == NULL) {
+        if ((pAddr = extendedPageTableRoot_translate(extendedTable, base)) == NULL) {
             pAddr = memory_allocateFrame(1);
-            if (pAddr == NULL || paging_map(pageTable, base, pAddr, 1, EXTRA_PAGE_TABLE_PRESET_TYPE_USER_DATA) == RESULT_FAIL) {    //TODO: Set to USER_CODE when code load complete
+            if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, base, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) == RESULT_FAIL) {    //TODO: Set to USER_CODE when code load complete
                 return RESULT_FAIL;
             }
         }
@@ -156,12 +156,12 @@ Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     Size memoryRemain = programHeader->segmentSizeInMemory;
 
-    PML4Table* pageTable = schedulerGetCurrentProcess()->context.pageTable;
+    ExtendedPageTableRoot* extendedTable = schedulerGetCurrentProcess()->context.extendedTable;
     Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
-        void* pAddr = paging_translate(pageTable, base);
-        if (pAddr == NULL || paging_unmap(pageTable, base, 1) == RESULT_FAIL) {
+        void* pAddr = extendedPageTableRoot_translate(extendedTable, base);
+        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, base, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
         memory_freeFrame(pAddr);

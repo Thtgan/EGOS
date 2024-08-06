@@ -5,8 +5,6 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<memory/allocator.h>
-#include<memory/extraPageTable.h>
-#include<memory/frameMetadata.h>
 
 /**
  * @brief Copy data from source to destination, overlap not handled
@@ -65,7 +63,7 @@ void* memory_allocateFrame(Size n);
 
 void memory_freeFrame(void* p);
 
-void* memory_allocateDetailed(Size n, ExtraPageTablePresetType presetType);
+void* memory_allocateDetailed(Size n, Uint8 presetID);
 
 void* memory_allocate(Size n);
 

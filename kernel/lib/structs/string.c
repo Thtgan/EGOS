@@ -3,7 +3,6 @@
 #include<algorithms.h>
 #include<kit/types.h>
 #include<kit/util.h>
-// #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<cstring.h>
 

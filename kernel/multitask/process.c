@@ -5,6 +5,7 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
@@ -54,7 +55,7 @@ Process* initProcess() {
 
     Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Init", initKernelStack + PROCESS_KERNEL_STACK_SIZE);
     mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
-    mainProcess->context.pageTable = mm->currentPageTable;
+    mainProcess->context.extendedTable = mm->extendedTable;
 
     return mainProcess;
 }
@@ -82,14 +83,14 @@ Process* fork(ConstCstring name) {
 
     Process* newProcess = __createProcess(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
     newProcess->ppid = oldPID;
-    PML4Table* newTable = paging_copyPageTable(schedulerGetCurrentProcess()->context.pageTable);
+    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(schedulerGetCurrentProcess()->context.extendedTable);
 
     Uintptr currentStackTop = schedulerGetCurrentProcess()->kernelStackTop;
 
     SAVE_REGISTERS();
     memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
 
-    newProcess->context.pageTable = newTable;
+    newProcess->context.extendedTable = newTable;
     newProcess->context.rip = (Uint64)&__fork_return;
     newProcess->context.rsp = newProcess->kernelStackTop - (currentStackTop - readRegister_RSP_64());
 
@@ -101,7 +102,6 @@ Process* fork(ConstCstring name) {
     RESTORE_REGISTERS();
 
     return schedulerGetCurrentProcess()->pid == oldPID ? newProcess : NULL;
-    // return NULL;
 }
 
 void exitProcess() {
@@ -111,14 +111,12 @@ void exitProcess() {
 }
 
 void releaseProcess(Process* process) {
-    PML4Table* pageTable = process->context.pageTable;
     void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
     memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
     memory_freeFrame(paging_convertAddressV2P(stackBottom));
 
     //TODO: What if user program is running
-
-    paging_releasePageTable(pageTable);
+    extendedPageTableRoot_releaseTable(process->context.extendedTable);
 
     __releasePID(process->pid);
 

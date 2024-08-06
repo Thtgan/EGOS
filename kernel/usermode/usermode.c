@@ -5,6 +5,7 @@
 #include<fs/inode.h>
 #include<kit/types.h>
 #include<kit/util.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
@@ -119,18 +120,18 @@ static int __doExecute(ConstCstring path, File* file) {
         }
     }
 
-    PML4Table* pageTable = mm->currentPageTable;
+    ExtendedPageTableRoot* extendedTable = mm->extendedTable;
 
 #define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        if (paging_translate(pageTable, (void*)USER_STACK_BOTTOM - i) != NULL) {
+        if (extendedPageTableRoot_translate(extendedTable, (void*)USER_STACK_BOTTOM - i) != NULL) {
             return -1;
         }
 
         void* pAddr = memory_allocateFrame(1);
-        if (pAddr == NULL || paging_map(pageTable, (void*)USER_STACK_BOTTOM - i, pAddr, 1, EXTRA_PAGE_TABLE_PRESET_TYPE_USER_DATA) == RESULT_FAIL) {
+        if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, (void*)USER_STACK_BOTTOM - i, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) == RESULT_FAIL) {
             return -1;
-        }   
+        }
     }
 
     pushq(0);   //Reserved for return value
@@ -163,8 +164,8 @@ static int __doExecute(ConstCstring path, File* file) {
     }
 
     for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        void* pAddr = paging_translate(pageTable, (void*)USER_STACK_BOTTOM - i);
-        if (pAddr == NULL || paging_unmap(pageTable, (void*)USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
+        void* pAddr = extendedPageTableRoot_translate(extendedTable, (void*)USER_STACK_BOTTOM - i);
+        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
             return -1;
         }
 

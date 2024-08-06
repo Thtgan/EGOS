@@ -1,6 +1,8 @@
 #include<memory/memory.h>
 
 #include<kit/types.h>
+#include<memory/extendedPageTable.h>
+#include<memory/frameMetadata.h>
 
 void* memset(void* dst, int byte, Size n) {
     void* ret = dst;
@@ -85,8 +87,7 @@ void memory_freeFrame(void* p) {
     frameAllocator_freeFrame(mm->frameAllocator, p, n);
 }
 
-void* memory_allocateDetailed(Size n, ExtraPageTablePresetType presetType) {
-    Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, presetType);
+void* memory_allocateDetailed(Size n, Uint8 presetID) {
     if (mm->heapAllocators[presetID] == NULL) {
         return NULL;
     }
@@ -95,11 +96,11 @@ void* memory_allocateDetailed(Size n, ExtraPageTablePresetType presetType) {
 }
 
 void* memory_allocate(Size n) {
-    return memory_allocateDetailed(n, EXTRA_PAGE_TABLE_PRESET_TYPE_SHARE);
+    return memory_allocateDetailed(n, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE));
 }
 
 void memory_free(void* p) {
-    Uint8 presetID = extraPageTableContext_getPreset(mm->currentPageTable, p);
+    Uint8 presetID = extendedPageTableRoot_peek(mm->extendedTable, p)->id;
     HeapAllocator* allocator = mm->heapAllocators[presetID];
     if (allocator == NULL) {
         return;

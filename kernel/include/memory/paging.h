@@ -25,28 +25,10 @@
  */
 Result paging_init();
 
-void* paging_translate(PML4Table* pageTable, void* v);
-
-void* paging_allocatePageTableFrame();
-
-void paging_releasePageTableFrame(void* frame);
-
-Result paging_map(PML4Table* table, void* v, void* p, Size n, ExtraPageTablePresetType presetType);
-
-Result paging_unmap(PML4Table* table, void* v, Size n);
-
-PML4Table* paging_copyPageTable(PML4Table* source);
-
-void paging_releasePageTable(PML4Table* table);
-
-void paging_modifyCOW(PagingEntry entry, PagingLevel level, Uintptr subV, Size subN, bool inc);
-
-Uint16 paging_getCOW(PML4Table* pageTable, void* v);
-
-#define PAGING_SWITCH_TO_TABLE(__PAGE_TABLE)            \
-do {                                                    \
-    mm->currentPageTable = __PAGE_TABLE;                \
-    writeRegister_CR3_64((Uint64)mm->currentPageTable); \
+#define PAGING_SWITCH_TO_TABLE(__EXTENDED_TABLE)                    \
+do {                                                                \
+    mm->extendedTable = (__EXTENDED_TABLE);                         \
+    writeRegister_CR3_64((Uint64)mm->extendedTable->pPageTable);    \
 } while(0)
 
 //Flush the TLB, If page table update not working, try this

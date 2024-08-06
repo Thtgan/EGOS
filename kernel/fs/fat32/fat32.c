@@ -8,7 +8,6 @@
 #include<fs/fsStructs.h>
 #include<kit/types.h>
 #include<kit/util.h>
-// #include<memory/kMalloc.h>
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<structs/hashTable.h>
@@ -33,7 +32,6 @@ Result FAT32_fs_checkType(BlockDevice* device) {
         return RESULT_FAIL;
     }
 
-    // releaseBuffer(BPBbuffer, device->bytePerBlockShift);
     memory_free(BPBbuffer);
 
     return RESULT_SUCCESS;
@@ -193,7 +191,7 @@ Result FAT32_fs_close(FS* fs) {
     memset(info->FAT, 0, DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
     memory_freeFrame(paging_convertAddressV2P(info->FAT));
 
-    void* batchAllocated = fs;
+    void* batchAllocated = superBlock; //TODO: Ugly code
     memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);
     memory_free(batchAllocated);
 

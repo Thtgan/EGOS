@@ -24,6 +24,6 @@ typedef struct {
     BuddyHeapAllocatorBuddyList buddyLists[BUDDY_HEAP_ALLOCATOR_BUDDY_LIST_LIST_NUM];
 } BuddyHeapAllocator;
 
-Result buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, ExtraPageTablePresetType presetType);
+Result buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 presetID);
 
 #endif // __HEAP_ALLOCATOR_H

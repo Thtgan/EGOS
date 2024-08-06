@@ -2,7 +2,6 @@
 
 #include<algorithms.h>
 #include<kit/types.h>
-// #include<memory/kMalloc.h>
 #include<memory/memory.h>
 
 #define __VECTOR_INIT_STORAGE_SIZE  48

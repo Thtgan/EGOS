@@ -7,7 +7,7 @@
 __attribute__((naked))
 void switchContext(Context* from, Context* to) {
     //Switch the page table, place it here to prevent stack corruption from function call
-    PAGING_SWITCH_TO_TABLE(to->pageTable);
+    PAGING_SWITCH_TO_TABLE(to->extendedTable);
     asm volatile(
         "mov %%rsp, 16(%0);"
         "mov 16(%1), %%rsp;"

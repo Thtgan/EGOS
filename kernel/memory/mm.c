@@ -4,10 +4,11 @@
 #include<kernel.h>
 #include<kit/util.h>
 #include<system/pageTable.h>
-#include<memory/extraPageTable.h>
 #include<memory/buddyFrameAllocator.h>
 #include<memory/buddyHeapAllocator.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/memoryPresets.h>
 #include<memory/paging.h>
 #include<system/memoryMap.h>
 
@@ -50,14 +51,14 @@ Result mm_init() {
         return RESULT_FAIL;
     }
 
-    Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_PRESET_TYPE_SHARE);
-    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, EXTRA_PAGE_TABLE_PRESET_TYPE_SHARE) == RESULT_FAIL) {
+    Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
+    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
     heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
 
-    presetID = EXTRA_PAGE_TABLE_CONTEXT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_PRESET_TYPE_COW);
-    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, EXTRA_PAGE_TABLE_PRESET_TYPE_COW) == RESULT_FAIL) {
+    presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
+    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
     heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;

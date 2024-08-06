@@ -58,7 +58,7 @@ void kernelMain(SystemInfo* info) {
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);
 
-    arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_PRESET_TYPE_COW);
+    arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW));
     arr1[0] = 1, arr2[0] = 114514;
     if (fork("Forked") != NULL) {
         printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
@@ -86,7 +86,7 @@ void kernelMain(SystemInfo* info) {
             printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
 
-        // //TODO: Calling userprogram goes wrong here
+        //TODO: Calling userprogram goes wrong here
 
         up(&sema2);
         exitProcess();
@@ -136,7 +136,7 @@ static void printLOGO() {
             buffer[fileSize] = '\0';
             printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
-        
+
         fsEntryDesc* desc = entry.desc;
         printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->createTime);
         printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastAccessTime);
