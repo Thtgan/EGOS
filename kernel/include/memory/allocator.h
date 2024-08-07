@@ -1,8 +1,10 @@
 #if !defined(__ALLOCATOR_H)
 #define __ALLOCATOR_H
 
+#include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/oop.h>
+#include<system/memoryLayout.h>
 
 STRUCT_PRE_DEFINE(FrameAllocator);
 STRUCT_PRE_DEFINE(HeapAllocator);
@@ -45,6 +47,14 @@ STRUCT_PRIVATE_DEFINE(HeapAllocator) {
     FrameAllocator* frameAllocator;
     Uint8 presetID;
 };
+
+static inline void* heapAllocator_convertAddressV2P(void* v) {
+    return (void*)CLEAR_VAL((Uintptr)v, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN);
+}
+
+static inline void* heapAllocator_convertAddressP2V(void* p) {
+    return (void*)FILL_VAL((Uintptr)p, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN);
+}
 
 static inline void* heapAllocator_allocate(HeapAllocator* allocator, Size n) {
     return allocator->operations->allocate(allocator, n);

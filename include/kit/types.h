@@ -45,12 +45,6 @@ typedef __UINTMAX_TYPE__                Uintmax;
 typedef Uintptr                         Object;
 #define OBJECT_NULL                     (Object)NULL
 
-#define DATA_UNIT_B                     (1ull)
-#define DATA_UNIT_KB                    (1024ull)
-#define DATA_UNIT_MB                    (1024ull * 1024)
-#define DATA_UNIT_GB                    (1024ull * 1024 * 1024)
-#define DATA_UNIT_TB                    (1024ull * 1024 * 1024 * 1024)
-
 typedef Uint64                          ID;
 
 typedef Uint64                          Index64;

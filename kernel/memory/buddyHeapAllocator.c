@@ -5,7 +5,6 @@
 #include<memory/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
-#include<memory/paging.h>
 #include<print.h>
 #include<structs/singlyLinkedList.h>
 
@@ -194,8 +193,8 @@ static Result __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size
         return RESULT_FAIL;
     }
 
-    void* v = paging_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
-    if (extendedPageTableRoot_draw(mm->extendedTable, v, page, n, mm->extraPageTableContext.presets[allocator->allocator.presetID]) == RESULT_FAIL) {
+    void* v = heapAllocator_convertAddressP2V(page);
+    if (extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
@@ -208,7 +207,10 @@ static Result __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size
 }
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page) {
-    memory_freeFrame(paging_convertAddressV2P(page));
+    if (extendedPageTableRoot_erase(mm->extendedTable, page, 1) == RESULT_FAIL) {
+        return;
+    }
+    frameAllocator_freeFrame(allocator->allocator.frameAllocator, heapAllocator_convertAddressV2P(page), 1);
 
     allocator->allocator.total -= PAGE_SIZE;
     allocator->allocator.remaining -= PAGE_SIZE;
@@ -225,7 +227,16 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     void* base = NULL;
     if (realSize > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) { //Required size is greater than maximum size
         realSize = DIVIDE_ROUND_UP(realSize, PAGE_SIZE);
-        base = paging_convertAddressP2V(frameAllocator_allocateFrame(allocator->frameAllocator, realSize)); //Specially allocated
+
+        void* page = frameAllocator_allocateFrame(allocator->frameAllocator, n);    //Specially allocated
+        if (page == NULL) {
+            return NULL;
+        }
+
+        base = heapAllocator_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
+        if (extendedPageTableRoot_draw(mm->extendedTable, base, page, n,  extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID)) == RESULT_FAIL) {
+            return RESULT_FAIL;
+        }
     } else {
         Int8 order = -1;
         for (order = 0; order <= BUDDY_HEAP_ALLOCATOR_MAX_ORDER && BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(order) < realSize; ++order);
@@ -286,7 +297,11 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     memset(header, 0, sizeof(__BuddyHeader)); //TODO: When free the COW area not handled by page fault
 
     if (size > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) {
-        frameAllocator_freeFrame(allocator->frameAllocator, paging_convertAddressV2P(base), DIVIDE_ROUND_UP(size, PAGE_SIZE));
+        if (extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE)) == RESULT_FAIL) {
+            return;
+        }
+
+        frameAllocator_freeFrame(allocator->frameAllocator, heapAllocator_convertAddressV2P(base), DIVIDE_ROUND_UP(size, PAGE_SIZE));
     } else {
         __buddyHeapAllocatorBuddyList_recycleMemory(buddyAllocator, base, size);
 

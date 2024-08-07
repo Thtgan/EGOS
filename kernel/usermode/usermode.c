@@ -11,7 +11,6 @@
 #include<multitask/context.h>
 #include<multitask/schedule.h>
 #include<real/simpleAsmLines.h>
-#include<system/address.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
 #include<usermode/elf.h>
@@ -93,6 +92,9 @@ void __syscallHandlerExit(int ret) {
     );
 }
 
+#define __USER_STACK_SIZE       (16ull * DATA_UNIT_KB)
+#define __USER_STACK_PAGE_NUM   DIVIDE_ROUND_UP(__USER_STACK_SIZE, PAGE_SIZE)
+
 static int __doExecute(ConstCstring path, File* file) {
     Uint64 old = readRegister_RSP_64();
     ELF64Header header;
@@ -123,13 +125,13 @@ static int __doExecute(ConstCstring path, File* file) {
     ExtendedPageTableRoot* extendedTable = mm->extendedTable;
 
 #define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
-    for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        if (extendedPageTableRoot_translate(extendedTable, (void*)USER_STACK_BOTTOM - i) != NULL) {
+    for (Uintptr i = PAGE_SIZE; i <= __USER_STACK_SIZE; i += PAGE_SIZE) {
+        if (extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i) != NULL) {
             return -1;
         }
 
         void* pAddr = memory_allocateFrame(1);
-        if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, (void*)USER_STACK_BOTTOM - i, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) == RESULT_FAIL) {
+        if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) == RESULT_FAIL) {
             return -1;
         }
     }
@@ -140,7 +142,7 @@ static int __doExecute(ConstCstring path, File* file) {
     
     Process* process = schedulerGetCurrentProcess();
     process->userExitStackTop = (void*)readRegister_RSP_64();
-    __jumpToUserMode((void*)header.entryVaddr, (void*)USER_STACK_BOTTOM);
+    __jumpToUserMode((void*)header.entryVaddr, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM);
     asm volatile (
         "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :
@@ -163,9 +165,9 @@ static int __doExecute(ConstCstring path, File* file) {
         }
     }
 
-    for (Uintptr i = PAGE_SIZE; i <= USER_STACK_SIZE; i += PAGE_SIZE) {
-        void* pAddr = extendedPageTableRoot_translate(extendedTable, (void*)USER_STACK_BOTTOM - i);
-        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
+    for (Uintptr i = PAGE_SIZE; i <= __USER_STACK_SIZE; i += PAGE_SIZE) {
+        void* pAddr = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
+        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
             return -1;
         }
 

@@ -10,7 +10,6 @@
 #include<memory/paging.h>
 #include<multitask/schedule.h>
 #include<print.h>
-#include<system/address.h>
 #include<system/pageTable.h>
 
 Result readELF64Header(File* file, ELF64Header* header) {
@@ -87,7 +86,7 @@ void printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header) {
 }
 
 Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
-    if (programHeader->vAddr >= KERNEL_VIRTUAL_BEGIN) {
+    if (programHeader->vAddr >= MEMORY_LAYOUT_KERNEL_BEGIN) {
         return RESULT_FAIL;
     }
 

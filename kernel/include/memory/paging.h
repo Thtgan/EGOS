@@ -35,11 +35,11 @@ do {                                                                \
 #define PAGING_FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
 static inline void* paging_convertAddressV2P(void* v) {
-    return (void*)VAL_AND((Uintptr)v, VAL_NOT(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN));
+    return (void*)CLEAR_VAL((Uintptr)v, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN);
 }
 
 static inline void* paging_convertAddressP2V(void* p) {
-    return (void*)VAL_OR((Uintptr)p, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN);
+    return (void*)FILL_VAL((Uintptr)p, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN);
 }
 
 #endif // __PAGING_H
