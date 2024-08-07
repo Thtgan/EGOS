@@ -28,16 +28,16 @@ typedef struct {
     Uint32  nanosecond;
 } Timestamp;
 
-void timeConvertRealTimeToTimestamp(RealTime* realTime, Timestamp* timestamp);
+void time_convertRealTimeToTimestamp(RealTime* realTime, Timestamp* timestamp);
 
-void timeConvertTimestampToRealTime(Timestamp* timestamp, RealTime* realTime);
+void time_convertTimestampToRealTime(Timestamp* timestamp, RealTime* realTime);
 
-void timestampStep(Timestamp* timestamp, Uint64 time, TimeUnit unit);
+void timestamp_step(Timestamp* timestamp, Uint64 time, TimeUnit unit);
 
-Int64 timestampCompare(Timestamp* ts1, Timestamp* ts2);
+Int64 timestamp_compare(Timestamp* ts1, Timestamp* ts2);
 
-Result initTime();
+Result time_init();
 
-void readTimestamp(Timestamp* timestamp);
+void time_getTimestamp(Timestamp* timestamp);
 
 #endif // __TIME_H

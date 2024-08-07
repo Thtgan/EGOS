@@ -13,13 +13,13 @@ Result string_initStruct(String* str, ConstCstring cstr) {
 }
 
 Result string_initStructN(String* str, ConstCstring cstr, Size n) {
-    Size len = umin64(n, strlen(cstr)), capacity = ALIGN_UP(len + 1, __STRING_CAPACITY_ALIGN);
+    Size len = algorithms_umin64(n, cstring_strlen(cstr)), capacity = ALIGN_UP(len + 1, __STRING_CAPACITY_ALIGN);
     Cstring data = memory_allocate(capacity);
     if (data == NULL) {
         return RESULT_FAIL;
     }
 
-    memcpy(data, cstr, len);
+    memory_memcpy(data, cstr, len);
     data[len] = '\0';
 
     str->data       = data;
@@ -51,14 +51,14 @@ Result string_concat(String* des, String* str1, String* str2) {
             return RESULT_FAIL;
         }
 
-        memcpy(des->data + str1->length, str2->data, str2->length);
+        memory_memcpy(des->data + str1->length, str2->data, str2->length);
         des->data[newLen] = '\0';
     } else if (des == str2) {
         if (string_resize(des, newCapacity) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
-        memmove(des->data + str1->length, str1->data, str1->length);
-        memcpy(des->data, str2->data, str2->length);
+        memory_memmove(des->data + str1->length, str1->data, str1->length);
+        memory_memcpy(des->data, str2->data, str2->length);
         des->data[newLen] = '\0';
     } else {
         Cstring data = memory_allocate(newCapacity);
@@ -66,8 +66,8 @@ Result string_concat(String* des, String* str1, String* str2) {
             return RESULT_FAIL;
         }
 
-        memcpy(data, str1->data, str1->length);
-        memcpy(data + str1->length, str2->data, str2->length);
+        memory_memcpy(data, str1->data, str1->length);
+        memory_memcpy(data + str1->length, str2->data, str2->length);
         data[newLen] = '\0';
 
         des->data   = data;
@@ -85,7 +85,7 @@ Result string_cconcat(String* des, String* str1, Cstring str2) {
         return RESULT_FAIL;
     }
 
-    Size len2 = strlen(str2);
+    Size len2 = cstring_strlen(str2);
     Size newLen = str1->length + len2, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
 
     if (des == str1) {
@@ -93,7 +93,7 @@ Result string_cconcat(String* des, String* str1, Cstring str2) {
             return RESULT_FAIL;
         }
 
-        memcpy(des->data + str1->length, str2, len2);
+        memory_memcpy(des->data + str1->length, str2, len2);
         des->data[newLen] = '\0';
     } else {
         Cstring data = memory_allocate(newCapacity);
@@ -101,8 +101,8 @@ Result string_cconcat(String* des, String* str1, Cstring str2) {
             return RESULT_FAIL;
         }
 
-        memcpy(data, str1->data, str1->length);
-        memcpy(data + str1->length, str2, len2);
+        memory_memcpy(data, str1->data, str1->length);
+        memory_memcpy(data + str1->length, str2, len2);
         data[newLen] = '\0';
 
         des->data   = data;
@@ -135,7 +135,7 @@ Result string_append(String* des, String* str, int ch) {
             return RESULT_FAIL;
         }
 
-        memcpy(data, str->data, str->length);
+        memory_memcpy(data, str->data, str->length);
         data[str->length] = ch;
         data[newLen] = '\0';
 
@@ -161,7 +161,7 @@ Result string_slice(String* des, String* src, int from, int to) {
 
     Size newLen = to - from, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
     if (des == src) {
-        memmove(des->data, des->data + from, newLen);
+        memory_memmove(des->data, des->data + from, newLen);
         des->data[newLen] = '\0';
         if (string_resize(des, newCapacity) == RESULT_FAIL) {
             return RESULT_FAIL;
@@ -172,7 +172,7 @@ Result string_slice(String* des, String* src, int from, int to) {
             return RESULT_FAIL;
         }
 
-        memcpy(data, src->data, newLen);
+        memory_memcpy(data, src->data, newLen);
         data[newLen] = '\0';
 
         des->data   = data;
@@ -199,7 +199,7 @@ Result string_resize(String* str, Size newCapacity) {
         return RESULT_FAIL;
     }
 
-    memcpy(newData, str->data, newCapacity);
+    memory_memcpy(newData, str->data, newCapacity);
     newData[str->length] = '\0';
     memory_free(str->data);
 
@@ -220,7 +220,7 @@ Result string_copy(String* str, String* src) {
     }
 
     str->data       = newData;
-    memcpy(str->data, src->data, src->length);
+    memory_memcpy(str->data, src->data, src->length);
     str->data[src->length] = '\0';
 
     str->capacity   = src->capacity;

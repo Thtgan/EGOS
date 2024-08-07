@@ -103,7 +103,7 @@ static void __buddyFrameList_tidyup(BuddyFrameAllocator* allocator, FrameBuddyLi
         return;
     }
     
-    algo_singlyLinkedList_mergeSort(&list->list, list->remaining, __buddyFrameList_compareBlock);
+    algorithms_singlyLinkedList_mergeSort(&list->list, list->remaining, __buddyFrameList_compareBlock);
 
     Uintptr orderPageLen = BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(list->order) * PAGE_SIZE;
     for (

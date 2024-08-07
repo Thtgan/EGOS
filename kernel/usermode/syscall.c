@@ -13,39 +13,39 @@
 #include<kit/macro.h>
 
 //TODO: REMOVE THIS IN FUTURE
-static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
+static int __syscall_testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6);
 
 __attribute__((naked))
-static void __syscallHandler();
+static void __syscall_syscallHandler();
 
 static void* _syscallHandlers[SYSCALL_NUM] = {
     [0 ... SYSCALL_NUM - 1] = NULL
 };
 
-void initSyscall() {
+void syscall_init() {
     wrmsrl(MSR_ADDR_STAR, ((Uint64)SEGMENT_KERNEL_CODE << 32) | ((Uint64)SEGMENT_USER_CODE32 << 48));
-    wrmsrl(MSR_ADDR_LSTAR, (Uint64)__syscallHandler);
+    wrmsrl(MSR_ADDR_LSTAR, (Uint64)__syscall_syscallHandler);
     wrmsrl(MSR_ADDR_FMASK, EFLAGS_TF | EFLAGS_IF | EFLAGS_DF | EFLAGS_IOPL(3));
 
     Uint64 flags = rdmsrl(MSR_ADDR_EFER);
     SET_FLAG_BACK(flags, MSR_EFER_SCE);
     wrmsrl(MSR_ADDR_EFER, flags);
 
-    registerSyscallHandler(SYSCALL_TEST, __testSyscall);
+    syscall_registerHandler(SYSCALL_TEST, __syscall_testSyscall);
 }
 
-void registerSyscallHandler(SyscallType type, void* handler) {                                                                                        
+void syscall_registerHandler(SyscallType type, void* handler) {                                                                                        
     _syscallHandlers[type] = handler;
 }
 
-static int __testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
-    printf(TERMINAL_LEVEL_OUTPUT, "TEST SYSCALL-%d %d %d %d %d %d\n", arg1, arg2, arg3, arg4, arg5, arg6);
+static int __syscall_testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
+    print_printf(TERMINAL_LEVEL_OUTPUT, "TEST SYSCALL-%d %d %d %d %d %d\n", arg1, arg2, arg3, arg4, arg5, arg6);
     return 114514;
 }
 
 __attribute__((naked))
-static void __syscallHandler() {
-    SAVE_REGISTERS();
+static void __syscall_syscallHandler() {
+    REGISTERS_SAVE();
     register Registers* registers asm ("rbx") = NULL;
     asm volatile(
         "mov %1, %%ds;"
@@ -69,7 +69,7 @@ static void __syscallHandler() {
         "m"(registers->REGISTER_ARGUMENTS_5), "m"(registers->REGISTER_ARGUMENTS_6)
     );
 
-    RESTORE_REGISTERS();
+    REGISTERS_RESTORE();
 
     asm volatile(
         "sysretq;"

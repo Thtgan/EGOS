@@ -6,27 +6,27 @@
 #include<multitask/process.h>
 #include<multitask/simpleSchedule.h>
 
-static void __idle();
+static void __schedule_idle();
 
-static Scheduler* _scheduler = NULL;
+static Scheduler* _schedule_currentScheduler = NULL;
 
-Result initSchedule() {
-    _scheduler = createSimpleScheduler();
+Result schedule_init() {
+    _schedule_currentScheduler = simpleScheduler_create();
 
-    schedulerStart(initProcess());
+    schedulerStart(process_init());
 
     if (fork("Idle") == NULL) {
-        __idle();
+        __schedule_idle();
     }
 
     return RESULT_SUCCESS;
 }
 
-Scheduler* getScheduler() {
-    return _scheduler;
+Scheduler* schedule_getCurrentScheduler() {
+    return _schedule_currentScheduler;
 }
 
-static void __idle() {
+static void __schedule_idle() {
     while (true) {
         sti();
         hlt();

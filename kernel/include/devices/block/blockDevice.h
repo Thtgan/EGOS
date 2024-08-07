@@ -9,10 +9,10 @@
 #include<structs/linkedList.h>
 #include<structs/singlyLinkedList.h>
 
-#define DEFAULT_BLOCK_SIZE          512
-#define DEFAULT_BLOCK_SIZE_SHIFT    9
+#define BLOCK_DEVICE_DEFAULT_BLOCK_SIZE         512
+#define BLOCK_DEVICE_DEFAULT_BLOCK_SIZE_SHIFT   9
 
-#define BLOCK_DEVICE_NAME_LENGTH    31
+#define BLOCK_DEVICE_NAME_LENGTH                31
 
 STRUCT_PRE_DEFINE(BlockDeviceOperation);
 
@@ -74,7 +74,7 @@ STRUCT_PRIVATE_DEFINE(BlockDeviceOperation) {
     Result (*writeBlocks)(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n);
 };
 
-Result initBlockDevice(BlockDevice* device, BlockDeviceArgs* args);
+Result blockDevice_initStruct(BlockDevice* device, BlockDeviceArgs* args);
 
 /**
  * @brief Packed function of block device operation, sets errorcode to indicate error
@@ -85,12 +85,12 @@ Result initBlockDevice(BlockDevice* device, BlockDeviceArgs* args);
  * @param n Num of block(s) to read
  * @return Result Result of the operation
  */
-Result blockDeviceReadBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n);
+Result blockDevice_readBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n);
 
-Result blockDeviceWriteBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n);
+Result blockDevice_writeBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n);
 
-Result blockDeviceSynchronize(BlockDevice* device);
+Result blockDevice_flush(BlockDevice* device);
 
-Result probePartitions(BlockDevice* device);
+Result blockDevice_probePartitions(BlockDevice* device);
 
 #endif // __BLOCK_DEVICE_H

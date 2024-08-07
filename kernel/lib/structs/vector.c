@@ -10,7 +10,7 @@ void vector_init(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
     vector->storage = memory_allocate(__VECTOR_INIT_STORAGE_SIZE);
-    memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
+    memory_memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
 }
 
 void vector_clearStruct(Vector* vector) {
@@ -23,7 +23,7 @@ bool vector_isEmpty(Vector* vector) {
 
 void vector_clear(Vector* vector) {
     vector->size = 0;
-    memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
+    memory_memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
 }
 
 Result vector_resize(Vector* vector, Size newCapacity) {
@@ -33,8 +33,8 @@ Result vector_resize(Vector* vector, Size newCapacity) {
     }
 
     vector->capacity = newCapacity;
-    vector->size = min64(vector->size, newCapacity);
-    memcpy(newStorage, vector->storage, vector->size * sizeof(Object));
+    vector->size = algorithms_min64(vector->size, newCapacity);
+    memory_memcpy(newStorage, vector->storage, vector->size * sizeof(Object));
     memory_free(vector->storage);
     vector->storage = newStorage;
 
@@ -64,7 +64,7 @@ Result vector_erease(Vector* vector, Index64 index) {
         return RESULT_FAIL;
     }
 
-    memmove(vector->storage + index, vector->storage + index + 1, (vector->capacity - index - 1) * sizeof(Object));
+    memory_memmove(vector->storage + index, vector->storage + index + 1, (vector->capacity - index - 1) * sizeof(Object));
     return RESULT_SUCCESS;
 }
 

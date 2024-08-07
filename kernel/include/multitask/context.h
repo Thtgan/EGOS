@@ -13,7 +13,7 @@ typedef struct {
     Uint64 rsp;
 } __attribute__((packed)) Context;
 
-void switchContext(Context* from, Context* to);
+void context_switch(Context* from, Context* to);
 
 typedef struct {
     Uint64 r15;
@@ -43,7 +43,7 @@ typedef struct {
     Uint64 eflags;
 } __attribute__((packed)) Registers;
 
-#define SAVE_REGISTERS_WITH_FRAME() \
+#define REGISTERS_SAVE_WITH_FRAME() \
 asm volatile(                       \
     "pushfq;"                       \
     "push %rbp;"                    \
@@ -71,7 +71,7 @@ asm volatile(                       \
     "push %r15;"                    \
 )
 
-#define SAVE_REGISTERS()    \
+#define REGISTERS_SAVE()    \
 asm volatile(               \
     "pushfq;"               \
     "push %rbp;"            \
@@ -98,7 +98,7 @@ asm volatile(               \
     "push %r15;"            \
 )
 
-#define RESTORE_REGISTERS() \
+#define REGISTERS_RESTORE() \
 asm volatile(               \
     "pop %r15;"             \
     "pop %r14;"             \
@@ -138,6 +138,6 @@ asm volatile(               \
  * @param outputLevel Which terminal level to print
  * @param registers Registers to print
  */
-void printRegisters(TerminalLevel outputLevel, Registers* registers);
+void registers_print(TerminalLevel outputLevel, Registers* registers);
 
 #endif // __CONTEXT_H

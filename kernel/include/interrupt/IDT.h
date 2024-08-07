@@ -16,8 +16,8 @@
 #define IDT_FLAGS_PRIVIEGE_3            VAL_LEFT_SHIFT(3, 5)
 #define IDT_FLAGS_PRESENT               FLAG8(7)
 
-#define REMAP_BASE_1                    0x20
-#define REMAP_BASE_2                    (REMAP_BASE_1 + 8)
+#define IDT_REMAP_BASE_1                0x20
+#define IDT_REMAP_BASE_2                (IDT_REMAP_BASE_1 + 8)
 
 /**
  * @brief Entry to describe a interrupt handler
@@ -55,7 +55,7 @@ typedef struct {
  * 
  * @return Result Result of the operation
  */
-Result initIDT();
+Result idt_init();
 
 /**
  * @brief Bind a interrupt service routine to the mapping from PIC, and unmask the interrupt to enable it
@@ -64,27 +64,27 @@ Result initIDT();
  * @param isr The interrupt service routine to bind
  * @param attributes arrtibutes
  */
-void registerISR(Uint8 vector, void* isr, Uint8 attributes);
+void idt_registerISR(Uint8 vector, void* isr, Uint8 attributes);
 
 /**
  * @brief Disable the interrupt, and return if the interrupt is enabled before
  * 
  * @return If the interrupt is enabled before
  */
-bool disableInterrupt();
+bool idt_disableInterrupt();
 
 /**
  * @brief Enable the interrupt, and return if the interrupt is enabled before
  * 
  * @return If the interrupt is enabled before
  */
-bool enableInterrupt();
+bool idt_enableInterrupt();
 
 /**
  * @brief Enable or disable the interrupt
  * 
  * @param enable if true, enable interrupt, disable if false
  */
-void setInterrupt(bool enable);
+void idt_setInterrupt(bool enable);
 
 #endif // __IDT_H

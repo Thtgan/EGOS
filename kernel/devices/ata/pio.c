@@ -3,51 +3,51 @@
 #include<devices/ata/ata.h>
 #include<real/simpleAsmLines.h>
 
-Result ATA_PIOreadData(ATAdevice* device, ATAcommand* command, void* buffer) {
+Result ata_pio_readData(ATAdevice* device, ATAcommand* command, void* buffer) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
-    if (TEST_FLAGS(ATA_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
+    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
         return RESULT_FAIL;
     }
 
-    if (ATA_sendCommand(channel, command) == RESULT_FAIL || ATA_PIOreadBlocks(portBase, command->sectorCount, buffer) == RESULT_FAIL) {
+    if (ata_sendCommand(channel, command) == RESULT_FAIL || ata_pio_readBlocks(portBase, command->sectorCount, buffer) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Result ATA_PIOwriteData(ATAdevice* device, ATAcommand* command, const void* buffer) {
+Result ata_pio_writeData(ATAdevice* device, ATAcommand* command, const void* buffer) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
-    if (TEST_FLAGS(ATA_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
+    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
         return RESULT_FAIL;
     }
 
-    if (ATA_sendCommand(channel, command) == RESULT_FAIL || ATA_PIOwriteBlocks(portBase, command->sectorCount, buffer) == RESULT_FAIL) {
+    if (ata_sendCommand(channel, command) == RESULT_FAIL || ata_pio_writeBlocks(portBase, command->sectorCount, buffer) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Result ATA_PIOnoData(ATAdevice* device, ATAcommand* command) {
+Result ata_pio_noData(ATAdevice* device, ATAcommand* command) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
-    if (TEST_FLAGS(ATA_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
+    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
         return RESULT_FAIL;
     }
 
-    if (ATA_sendCommand(channel, command) == RESULT_FAIL) {
+    if (ata_sendCommand(channel, command) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     return RESULT_SUCCESS;
 }
 
-Result ATA_PIOreadBlocks(Uint16 channelPortBase, Size n, void* buffer) {
+Result ata_pio_readBlocks(Uint16 channelPortBase, Size n, void* buffer) {
     while (n--) {
-        if (ATA_waitForData(channelPortBase) == RESULT_FAIL) {
+        if (ata_waitForData(channelPortBase) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -59,9 +59,9 @@ Result ATA_PIOreadBlocks(Uint16 channelPortBase, Size n, void* buffer) {
     return RESULT_SUCCESS;
 }
 
-Result ATA_PIOwriteBlocks(Uint16 channelPortBase, Size n, const void* buffer) {
+Result ata_pio_writeBlocks(Uint16 channelPortBase, Size n, const void* buffer) {
     while (n--) {
-        if (ATA_waitForData(channelPortBase) == RESULT_FAIL) {
+        if (ata_waitForData(channelPortBase) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 

@@ -3,6 +3,6 @@
 
 #include<multitask/schedule.h>
 
-Scheduler* createSimpleScheduler();
+Scheduler* simpleScheduler_create();
 
 #endif // __SIMPLE_SCHEDULE

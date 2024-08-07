@@ -120,21 +120,21 @@ typedef struct {
  * @param height Height of terminal on display
  * @return Result Result of the operation
  */
-Result initTerminal(Terminal* terminal, void* buffer, Size bufferSize, Size width, Size height);
+Result terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize, Size width, Size height);
 
 /**
  * @brief Set current terminal
  * 
  * @param terminal Terminal to set
  */
-void setCurrentTerminal(Terminal* terminal);
+void terminal_setCurrentTerminal(Terminal* terminal);
 
 /**
  * @brief Get current terminal
  * 
  * @return Terminal* Current terminal
  */
-Terminal* getCurrentTerminal();
+Terminal* terminal_getCurrentTerminal();
 
 /**
  * @brief Switch cursor enabled or disabled
@@ -142,12 +142,12 @@ Terminal* getCurrentTerminal();
  * @param terminal Terminal
  * @param enable Cursor enabled or disabled
  */
-void switchCursor(Terminal* terminal, bool enable);
+void terminal_switchCursor(Terminal* terminal, bool enable);
 
 /**
  * @brief Refresh display to current terminal's buffer
  */
-void flushDisplay();
+void terminal_flushDisplay();
 
 /**
  * @brief Scroll up
@@ -155,7 +155,7 @@ void flushDisplay();
  * @param terminal Terminal
  * @return Result Result of the operation
  */
-Result terminalScrollUp(Terminal* terminal);
+Result terminal_scrollUp(Terminal* terminal);
 
 /**
  * @brief Scroll down
@@ -163,7 +163,7 @@ Result terminalScrollUp(Terminal* terminal);
  * @param terminal Terminal
  * @return Result Result of the operation
  */
-Result terminalScrollDown(Terminal* terminal);
+Result terminal_scrollDown(Terminal* terminal);
 
 /**
  * @brief Output string to terminal, support control characters
@@ -171,7 +171,7 @@ Result terminalScrollDown(Terminal* terminal);
  * @param terminal Terminal
  * @param str String
  */
-void terminalOutputString(Terminal* terminal, ConstCstring str);
+void terminal_outputString(Terminal* terminal, ConstCstring str);
 
 /**
  * @brief Output character to terminal, support control characters
@@ -179,7 +179,7 @@ void terminalOutputString(Terminal* terminal, ConstCstring str);
  * @param terminal Terminal
  * @param str String
  */
-void terminalOutputChar(Terminal* terminal, char ch);
+void terminal_outputChar(Terminal* terminal, char ch);
 
 /**
  * @brief Set pattern of the output
@@ -188,7 +188,7 @@ void terminalOutputChar(Terminal* terminal, char ch);
  * @param background Output background color
  * @param foreground Output foreground color
  */
-void terminalSetPattern(Terminal* terminal, Uint8 background, Uint8 foreground);
+void terminal_setPattern(Terminal* terminal, Uint8 background, Uint8 foreground);
 
 /**
  * @brief Set how mant spaces does a tab strides
@@ -196,21 +196,21 @@ void terminalSetPattern(Terminal* terminal, Uint8 background, Uint8 foreground);
  * @param terminal Terminal
  * @param stride Num of spaces
  */
-void terminalSetTabStride(Terminal* terminal, Uint8 stride);
+void terminal_setTabStride(Terminal* terminal, Uint8 stride);
 
 /**
  * @brief Perform effect of key home
  * 
  * @param terminal Terminal
  */
-void terminalCursorHome(Terminal* terminal);
+void terminal_cursorHome(Terminal* terminal);
 
 /**
  * @brief Perform effect of key end
  * 
  * @param terminal Terminal
  */
-void terminalCursorEnd(Terminal* terminal);
+void terminal_cursorEnd(Terminal* terminal);
 
 /**
  * @brief Enable/disable input mode, initialized terminal has input mode disabled
@@ -218,7 +218,7 @@ void terminalCursorEnd(Terminal* terminal);
  * @param terminal Terminal
  * @param enabled Enable input?
  */
-void terminalSwitchInput(Terminal* terminal, bool enabled);
+void terminal_switchInput(Terminal* terminal, bool enabled);
 
 /**
  * @brief Input string to terminal, nothing happens if input mode is disabled
@@ -226,7 +226,7 @@ void terminalSwitchInput(Terminal* terminal, bool enabled);
  * @param terminal Terminal
  * @param str String
  */
-void terminalInputString(Terminal* terminal, ConstCstring str);
+void terminal_inputString(Terminal* terminal, ConstCstring str);
 
 /**
  * @brief Input character to terminal, nothing happens if input mode is disabled
@@ -234,7 +234,7 @@ void terminalInputString(Terminal* terminal, ConstCstring str);
  * @param terminal Terminal
  * @param ch Character
  */
-void terminalInputChar(Terminal* terminal, char ch);
+void terminal_inputChar(Terminal* terminal, char ch);
 
 /**
  * @brief Get a line input to terminal, ends with '\n'
@@ -243,7 +243,7 @@ void terminalInputChar(Terminal* terminal, char ch);
  * @param buffer String buffer
  * @return int Num of character read
  */
-int terminalGetline(Terminal* terminal, Cstring buffer);
+int terminal_getline(Terminal* terminal, Cstring buffer);
 
 /**
  * @brief Get a character input to terminal
@@ -251,7 +251,7 @@ int terminalGetline(Terminal* terminal, Cstring buffer);
  * @param terminal Terminal
  * @return int Character returned
  */
-int terminalGetChar(Terminal* terminal);
+int terminal_getChar(Terminal* terminal);
 
 // /**
 //  * @brief Initialize terminal as a virtual device

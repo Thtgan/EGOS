@@ -17,8 +17,8 @@
 void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
 __attribute__((aligned(PAGE_SIZE)))
-IDTentry IDTtable[256];
-IDTdesc idtDesc;
+static IDTentry idt_idtEntryTable[256];
+static IDTdesc idt_idtDesc;
 
 extern void (*stubs[256])();
 
@@ -29,62 +29,62 @@ extern void (*stubs[256])();
  * @param isr 
  * @param attributes 
  */
-static void __setIDTentry(Uint8 vector, void* isr, Uint8 attributes);
+static void __idt_setEntry(Uint8 vector, void* isr, Uint8 attributes);
 
-ISR_FUNC_HEADER(__defaultISRHalt) { //Just die
+ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
     cli();
-    printf(TERMINAL_LEVEL_DEBUG, "%#04X Interrupt triggered!\n", vec);
-    printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
-    printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
-    printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
-    printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
-    printRegisters(TERMINAL_LEVEL_DEBUG, registers);
+    print_printf(TERMINAL_LEVEL_DEBUG, "%#04X Interrupt triggered!\n", vec);
+    print_printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
+    print_printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
+    print_printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
+    print_printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
+    registers_print(TERMINAL_LEVEL_DEBUG, registers);
     debug_blowup("DEAD\n");
 }
 
-Result initIDT() {
-    idtDesc.size = (Uint16)sizeof(IDTtable) - 1;  //Initialize the IDT desc
-    idtDesc.tablePtr = (Uintptr)IDTtable;
+Result idt_init() {
+    idt_idtDesc.size = (Uint16)sizeof(idt_idtEntryTable) - 1;  //Initialize the IDT desc
+    idt_idtDesc.tablePtr = (Uintptr)idt_idtEntryTable;
 
     for (int vec = 0; vec < 256; ++vec) {
-        handlers[vec] = __defaultISRHalt;
-        __setIDTentry(vec, stubs[vec], IDT_FLAGS_PRESENT | (vec < 0x20 ? IDT_FLAGS_TYPE_TRAP_GATE32 : IDT_FLAGS_TYPE_INTERRUPT_GATE32));
+        handlers[vec] = __defaultInterruptHandler;
+        __idt_setEntry(vec, stubs[vec], IDT_FLAGS_PRESENT | (vec < 0x20 ? IDT_FLAGS_TYPE_TRAP_GATE32 : IDT_FLAGS_TYPE_INTERRUPT_GATE32));
     }
 
-    remapPIC(REMAP_BASE_1, REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
+    pic_remap(IDT_REMAP_BASE_1, IDT_REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
 
-    setPICMask(0b11111011, 0b11111111);
+    pic_setMask(0b11111011, 0b11111111);
     //                ^ (DONT set this bit)
     //           +----+
     //           |
     //Mask1's bit 2 MUST be CLEARED otherwise the slave PIC's interrupt WONT be rised
     //Bloody lesson, I have struggled for why IRQ 14 and 15 cannot be rised for a whole day!
 
-    asm volatile ("lidt %0" : : "m" (idtDesc));
+    asm volatile ("lidt %0" : : "m" (idt_idtDesc));
 
     return RESULT_SUCCESS;
 }
 
-void registerISR(Uint8 vector, void* isr, Uint8 attributes) {
+void idt_registerISR(Uint8 vector, void* isr, Uint8 attributes) {
     Uint8 mask1, mask2;
-    getPICMask(&mask1, &mask2);
+    pic_getMask(&mask1, &mask2);
 
-    if (REMAP_BASE_1 <= vector && vector < REMAP_BASE_2 + 8) {
-        if (vector < REMAP_BASE_2) {
-            CLEAR_FLAG_BACK(mask1, FLAG8(vector - REMAP_BASE_1));
+    if (IDT_REMAP_BASE_1 <= vector && vector < IDT_REMAP_BASE_2 + 8) {
+        if (vector < IDT_REMAP_BASE_2) {
+            CLEAR_FLAG_BACK(mask1, FLAG8(vector - IDT_REMAP_BASE_1));
         } else {
-            CLEAR_FLAG_BACK(mask2, FLAG8(vector - REMAP_BASE_2));
+            CLEAR_FLAG_BACK(mask2, FLAG8(vector - IDT_REMAP_BASE_2));
         }
     }
 
-    setPICMask(mask1, mask2);
+    pic_setMask(mask1, mask2);
 
-    __setIDTentry(vector, stubs[vector], attributes);
+    __idt_setEntry(vector, stubs[vector], attributes);
     handlers[vector] = isr;
 }
 
-static void __setIDTentry(Uint8 vector, void* isr, Uint8 attributes) {
-    IDTtable[vector] = (IDTentry) {
+static void __idt_setEntry(Uint8 vector, void* isr, Uint8 attributes) {
+    idt_idtEntryTable[vector] = (IDTentry) {
         EXTRACT_VAL((Uint64)isr, 64, 0, 16),
         SEGMENT_KERNEL_CODE,
         0,
@@ -95,19 +95,19 @@ static void __setIDTentry(Uint8 vector, void* isr, Uint8 attributes) {
     };
 }
 
-bool disableInterrupt() {
+bool idt_disableInterrupt() {
     Uint32 eflags = readEFlags64();
     cli();
     return TEST_FLAGS(eflags, EFLAGS_IF);
 }
 
-bool enableInterrupt() {
+bool idt_enableInterrupt() {
     Uint32 eflags = readEFlags64();
     sti();
     return TEST_FLAGS(eflags, EFLAGS_IF);
 }
 
-void setInterrupt(bool enable) {
+void idt_setInterrupt(bool enable) {
     if (enable) {
         sti();
     } else {

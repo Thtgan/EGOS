@@ -11,7 +11,7 @@ __attribute__((regparm(1)))
  * 
  * @param sema Semaphore
  */
-void __down_handler(Semaphore* sema);
+void __semaphore_down_handler(Semaphore* sema);
 
 __attribute__((regparm(1)))
 /**
@@ -19,7 +19,7 @@ __attribute__((regparm(1)))
  * 
  * @param sema Semaphore
  */
-void __up_handler(Semaphore* sema);
+void __semaphore_up_handler(Semaphore* sema);
 
 void initSemaphore(Semaphore* sema, int count) {
     sema->counter = count;
@@ -27,7 +27,7 @@ void initSemaphore(Semaphore* sema, int count) {
     queue_initStruct(&sema->waitQueue);
 }
 
-void down(Semaphore* sema) {
+void semaphore_down(Semaphore* sema) {
     asm volatile(
         "lock;"
         "decl %0;"
@@ -35,7 +35,7 @@ void down(Semaphore* sema) {
         "pushq %%rax;"
         "pushq %%rdx;"
         "pushq %%rcx;"
-        "call __down_handler;"
+        "call __semaphore_down_handler;"
         "popq %%rcx;"
         "popq %%rdx;"
         "popq %%rax;"
@@ -46,7 +46,7 @@ void down(Semaphore* sema) {
     );
 }
 
-void up(Semaphore* sema) {
+void semaphore_up(Semaphore* sema) {
     asm volatile(
         "lock;"
         "incl %0;"
@@ -54,7 +54,7 @@ void up(Semaphore* sema) {
         "pushq %%rax;"
         "pushq %%rdx;"
         "pushq %%rcx;"
-        "call __up_handler;"
+        "call __semaphore_up_handler;"
         "popq %%rcx;"
         "popq %%rdx;"
         "popq %%rax;"
@@ -66,8 +66,8 @@ void up(Semaphore* sema) {
 }
 
 __attribute__((regparm(1)))
-void __down_handler(Semaphore* sema) {
-    spinlockLock(&sema->queueLock);
+void __semaphore_down_handler(Semaphore* sema) {
+    spinlock_lock(&sema->queueLock);
 
     QueueNode* node = &schedulerGetCurrentProcess()->semaWaitQueueNode;
     queueNode_initStruct(node);
@@ -77,9 +77,9 @@ void __down_handler(Semaphore* sema) {
         //Add current process to wait list
         queue_push(&sema->waitQueue, node);
 
-        spinlockUnlock(&sema->queueLock);
+        spinlock_unlock(&sema->queueLock);
         schedulerBlockProcess(schedulerGetCurrentProcess());
-        spinlockLock(&sema->queueLock);
+        spinlock_lock(&sema->queueLock);
 
         asm volatile(
             "lock;"
@@ -91,12 +91,12 @@ void __down_handler(Semaphore* sema) {
         );
     } while (loop);
 
-    spinlockUnlock(&sema->queueLock);
+    spinlock_unlock(&sema->queueLock);
 }
 
 __attribute__((regparm(1)))
-void __up_handler(Semaphore* sema) {
-    spinlockLock(&sema->queueLock);
+void __semaphore_up_handler(Semaphore* sema) {
+    spinlock_lock(&sema->queueLock);
 
     if (!queue_isEmpty(&sema->waitQueue)) {
         Process* p = HOST_POINTER(queue_front(&sema->waitQueue), Process, semaWaitQueueNode);
@@ -105,10 +105,10 @@ void __up_handler(Semaphore* sema) {
         queueNode_initStruct(&p->semaWaitQueueNode);
         schedulerWakeProcess(p);
 
-        spinlockUnlock(&sema->queueLock);
+        spinlock_unlock(&sema->queueLock);
         schedulerYield();
-        spinlockLock(&sema->queueLock);
+        spinlock_lock(&sema->queueLock);
     }
 
-    spinlockUnlock(&sema->queueLock);
+    spinlock_unlock(&sema->queueLock);
 }

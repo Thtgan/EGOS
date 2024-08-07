@@ -6,14 +6,14 @@
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
 
-Uint64 __CPUclockReadTick(ClockSource* this);
+Uint64 __CPUclock_readTick(ClockSource* this);
 
 #define __CPU_CLOCK_CALIBRATE_I8254_HZ      20  //The largest latch i8254's count register can holds, for more accurate calibrate
 #define __CPU_CLOCK_CALIBRATE_TEST_ROUND    5   //The largest latch i8254's count register can holds, for more accurate calibrate
 
-Result initClockSourceCPU(ClockSource* clockSource) {
+Result CPUclock_initClockSource(ClockSource* clockSource) {
     ClockSourceType calibrateClockSourceType = CLOCK_SOURCE_TYPE_I8254;
-    ClockSource* calibrateClockSource = getClockSource(calibrateClockSourceType);
+    ClockSource* calibrateClockSource = clockSource_getSource(calibrateClockSourceType);
     if (TEST_FLAGS_FAIL(calibrateClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
         return RESULT_FAIL;
     }
@@ -45,7 +45,7 @@ Result initClockSourceCPU(ClockSource* clockSource) {
         .tickConvertMultiplier  = CLOCK_SOURCE_HZ_TO_TICK_CONVERT_MULTIPLER(hz),
         .lock                   = SPINLOCK_UNLOCKED,
         .flags                  = CLOCK_SOURCE_FLAGS_PRESENT | CLOCK_SOURCE_FLAGS_AUTO_UPDATE,
-        .readTick               = __CPUclockReadTick,
+        .readTick               = __CPUclock_readTick,
         .updateTick             = NULL,
         .start                  = NULL,
         .stop                   = NULL
@@ -54,6 +54,6 @@ Result initClockSourceCPU(ClockSource* clockSource) {
     return RESULT_SUCCESS;
 }
 
-Uint64 __CPUclockReadTick(ClockSource* this) {
+Uint64 __CPUclock_readTick(ClockSource* this) {
     return rdtsc();
 }

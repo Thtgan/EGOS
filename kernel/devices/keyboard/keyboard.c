@@ -10,7 +10,7 @@
 #include<real/simpleAsmLines.h>
 
 __attribute__((aligned(4)))
-static KeyEntry _keyEntries[128] = {
+static KeyEntry _keyboard_keyEntries[128] = {
     KEY_ENTRY('\0', '\0',   0),                            //0x00 -- NULL
     KEY_ENTRY('\0', '\0',   0),                            //0x01 -- ESC
     KEY_ENTRY('1',  '!',    ASCII | ALT_ASCII),            //0x02 -- 1
@@ -101,16 +101,16 @@ static KeyEntry _keyEntries[128] = {
     KEY_ENTRY('\0', '\0',   FUNCTION),                      //0x57 -- F11
     KEY_ENTRY('\0', '\0',   FUNCTION),                      //0x58 -- F12
 };
-
-static bool _pressed[128];
-static bool _capslock;
+//TODO: Capsule these fields
+static bool _keyboard_pressed[128];
+static bool _keyboard_capslock;
 
 /**
  * @brief Read the scancode from keyboard
  * 
  * @return Scancode from keyboard
  */
-static inline Uint8 __readScancode();
+static inline Uint8 __keyboard_readScancode();
 
 /**
  * @brief Convert key to ASCII character, affected by shift and capslock
@@ -118,48 +118,48 @@ static inline Uint8 __readScancode();
  * @param key key ID, should has ASCII flag
  * @return ASCII byte
  */
-static Uint8 __toASCII(const Uint8 key);
+static Uint8 __keyboard_keyToASCII(const Uint8 key);
 
-ISR_FUNC_HEADER(__keyboardInterrupt) {
-    const Uint8 scancode = __readScancode();
+ISR_FUNC_HEADER(__keyboard_interruptHandler) {
+    const Uint8 scancode = __keyboard_readScancode();
     const Uint8 key = SCANCODE_TRIM(scancode);
 
-    _pressed[key] = TEST_FLAGS_NONE(scancode, 0x80);
+    _keyboard_pressed[key] = TEST_FLAGS_NONE(scancode, 0x80);
 
-    if (_pressed[KEY_CAPSLOCK] && key == KEY_CAPSLOCK) {
-        _capslock ^= true;
+    if (_keyboard_pressed[KEY_CAPSLOCK] && key == KEY_CAPSLOCK) {
+        _keyboard_capslock ^= true;
     }
-    else if (_pressed[key]) {
-        Terminal* terminal = getCurrentTerminal();
-        if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ASCII)) {
-            terminalInputChar(terminal, __toASCII(key));
-        } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, KEYPAD)) {
+    else if (_keyboard_pressed[key]) {
+        Terminal* terminal = terminal_getCurrentTerminal();
+        if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, ASCII)) {
+            terminal_inputChar(terminal, __keyboard_keyToASCII(key));
+        } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, KEYPAD)) {
             switch (key)
             {
             case KEY_KEYPAD_3: {
-                terminalScrollDown(terminal);
+                terminal_scrollDown(terminal);
                 break;
             }
             case KEY_KEYPAD_9: {
-                terminalScrollUp(terminal);
+                terminal_scrollUp(terminal);
                 break;
             }
             default:
                 break;
             }
-        } else if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, FUNCTION)) {
+        } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, FUNCTION)) {
             switch (key)
             {
             case KEY_F1: {
-                switchTerminalLevel(TERMINAL_LEVEL_OUTPUT);
+                terminalSwitch_setLevel(TERMINAL_LEVEL_OUTPUT);
                 break;
             }
             case KEY_F2: {
-                switchTerminalLevel(TERMINAL_LEVEL_DEV);
+                terminalSwitch_setLevel(TERMINAL_LEVEL_DEV);
                 break;
             }
             case KEY_F3: {
-                switchTerminalLevel(TERMINAL_LEVEL_DEBUG);
+                terminalSwitch_setLevel(TERMINAL_LEVEL_DEBUG);
                 break;
             }
             default:
@@ -167,33 +167,33 @@ ISR_FUNC_HEADER(__keyboardInterrupt) {
             }
         }
 
-        flushDisplay();
+        terminal_flushDisplay();
     }
 }
 
-Result initKeyboard() {
+Result keyboard_init() {
     for (int i = 0; i < 128; ++i) {
-        _pressed[i] = false;
+        _keyboard_pressed[i] = false;
     }
-    _capslock = false;
-    registerISR(0x21, __keyboardInterrupt, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    _keyboard_capslock = false;
+    idt_registerISR(0x21, __keyboard_interruptHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
 
     return RESULT_SUCCESS;
 }
 
-static inline Uint8 __readScancode() {
+static inline Uint8 __keyboard_readScancode() {
     return inb(KEYBOARD_DATA_INPUT_BUFFER);
 }
 
-static Uint8 __toASCII(const Uint8 key) {
-    Uint8 ret = _keyEntries[key].ascii;
+static Uint8 __keyboard_keyToASCII(const Uint8 key) {
+    Uint8 ret = _keyboard_keyEntries[key].ascii;
 
-    if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALT_ASCII)) {
-        if (TEST_FLAGS_CONTAIN(_keyEntries[key].flags, ALPHA)) {
-            ret = (_capslock ^ (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT])) ? _keyEntries[key].alt_ascii : ret;
+    if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, ALT_ASCII)) {
+        if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, ALPHA)) {
+            ret = (_keyboard_capslock ^ (_keyboard_pressed[KEY_LEFT_SHIFT] || _keyboard_pressed[KEY_RIGHT_SHIFT])) ? _keyboard_keyEntries[key].alt_ascii : ret;
         }
         else {
-            ret = (_pressed[KEY_LEFT_SHIFT] || _pressed[KEY_RIGHT_SHIFT]) ? _keyEntries[key].alt_ascii : ret;
+            ret = (_keyboard_pressed[KEY_LEFT_SHIFT] || _keyboard_pressed[KEY_RIGHT_SHIFT]) ? _keyboard_keyEntries[key].alt_ascii : ret;
         }
     }
 

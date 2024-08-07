@@ -7,10 +7,10 @@
 #include<system/GDT.h>
 #include<system/TSS.h>
 
-static TSS _tss;
+static TSS _tss; //TODO: Capsule this
 
-Result initTSS() {
-    memset(&_tss, 0, sizeof(TSS));
+Result tss_init() {
+    memory_memset(&_tss, 0, sizeof(TSS));
     _tss.ist[0] = (Uintptr)memory_allocateFrame(4);
     _tss.rsp[0] = (Uintptr)memory_allocateFrame(4);
 

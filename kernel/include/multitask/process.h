@@ -11,7 +11,7 @@
 #include<system/pageTable.h>
 #include<system/systemInfo.h>
 
-#define MAXIMUM_PROCESS_NUM         (1u << 16)
+#define PROCESS_MAXIMUM_PROCESS_NUM (1u << 16)
 #define PROCESS_KERNEL_STACK_SIZE   (4 * PAGE_SIZE)
 
 typedef enum {
@@ -23,10 +23,10 @@ typedef enum {
     PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
 } ProcessStatus;
 
-#define PROCESS_TICK                10
-#define MAIN_PROCESS_RESERVE_PID    0
-#define INVALID_PID                 -1
-#define MAX_OPENED_FILE_NUM         (PAGE_SIZE / sizeof(File*))
+#define PROCESS_TICK                        10
+#define PROCESS_MAIN_PROCESS_RESERVE_PID    0
+#define PROCESS_INVALID_PID                 -1
+#define PROCESS_MAX_OPENED_FILE_NUM         (PAGE_SIZE / sizeof(File*))
 
 typedef struct {
     Uint16 pid;
@@ -55,7 +55,7 @@ typedef struct {
  * 
  * @return Process* Main process initialized
  */
-Process* initProcess();
+Process* process_init();
 
 /**
  * @brief Switch process

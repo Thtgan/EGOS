@@ -32,9 +32,9 @@ typedef struct {
     Uint8 padding[8];
 } __DevFSdirectoryEntry;
 
-void __devfs_fsentry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut);
+void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut);
 
-static fsEntryOperations _DEVFSfileSystemEntryOperations = {    //Actually, only directory uses these operations, no-one knows what those device file will use
+static fsEntryOperations _devfs_fsEntryOperations = {   //Actually, only directory uses these operations, no-one knows what those device file will use
     .seek           = fsEntry_genericSeek,
     .read           = fsEntry_genericRead,
     .write          = fsEntry_genericWrite,
@@ -49,7 +49,7 @@ static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
 
 static Result __devfs_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild);
 
-static fsEntryDirOperations _DEVFSfileSystemEntryDirOperations = {
+static fsEntryDirOperations _devfs_fsEntryDirOperations = {
     .readEntry      = __devfs_fsEntry_readEntry,
     .addEntry       = __devfs_fsEntry_addEntry,
     .removeEntry    = __devfs_fsEntry_removeEntry,
@@ -58,7 +58,7 @@ static fsEntryDirOperations _DEVFSfileSystemEntryDirOperations = {
 
 Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut);
 
-void __devfs_fsentry_fsEntryDescToDirectoryEntry(fsEntryDesc* descOut, __DevFSdirectoryEntry* dirEntryOut);
+void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* descOut, __DevFSdirectoryEntry* dirEntryOut);
 
 Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
     if (fsEntry_genericOpen(superBlock, entry, desc) == RESULT_FAIL) {
@@ -73,9 +73,9 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
 
         entry->operations = (fsEntryOperations*)device->operations;
     } else {
-        entry->operations = &_DEVFSfileSystemEntryOperations;
+        entry->operations = &_devfs_fsEntryOperations;
         if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
-            entry->dirOperations = &_DEVFSfileSystemEntryDirOperations;
+            entry->dirOperations = &_devfs_fsEntryDirOperations;
         }
     }
 
@@ -84,7 +84,7 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
 
 Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
     DevFSblockChains* chains = &((DEVFSspecificInfo*)superBlock->specificInfo)->chains;
-    Uint64 rootDirBegin = DEVFS_blockChain_allocChain(chains, 1);
+    Uint64 rootDirBegin = devfs_blockChain_allocChain(chains, 1);
     if (rootDirBegin == INVALID_INDEX) {
         return RESULT_FAIL;
     }
@@ -113,7 +113,7 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
         .attribute = __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DUMMY,
         .magic = __DEVFS_DIRECTORY_ENTRY_MAGIC
     };
-    memset(endDummy.name, 0, DEVFS_DIRECTORY_ENTRY_NAME_LIMIT + 1);
+    memory_memset(endDummy.name, 0, DEVFS_DIRECTORY_ENTRY_NAME_LIMIT + 1);
 
     fsEntry_rawSeek(&rootDir, 0);
     if (fsEntry_rawWrite(&rootDir, &endDummy, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL) {
@@ -133,7 +133,7 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
     fsEntryDesc desc;
     for (MajorDeviceID major = device_iterateMajor(INVALID_DEVICE_ID); major != INVALID_DEVICE_ID; major = device_iterateMajor(major)) {
         for (Device* device = device_iterateMinor(major, INVALID_DEVICE_ID); device != NULL; device = device_iterateMinor(major, MINOR_FROM_DEVICE_ID(device->id))) {
-            __devfs_fsentry_deviceToDirectoryEntry(device, &deviceEntry);
+            __devfs_fsEntry_deviceToDirectoryEntry(device, &deviceEntry);
             __devfs_fsentry_directoryEntryToFSentryDesc(&rootDir.desc->identifier, &deviceEntry, &desc);
             fsEntry_rawSeek(&rootDir, 0);
             if (fsEntry_rawDirAddEntry(&rootDir, &desc) == RESULT_FAIL) {
@@ -147,9 +147,9 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
     return RESULT_SUCCESS;
 }
 
-void __devfs_fsentry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut) {
-    memset(dirEntryOut, 0, sizeof(__DevFSdirectoryEntry));
-    strcpy(dirEntryOut->name, device->name);
+void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut) {
+    memory_memset(dirEntryOut, 0, sizeof(__DevFSdirectoryEntry));
+    cstring_strcpy(dirEntryOut->name, device->name);
     dirEntryOut->device     = device->id;
     dirEntryOut->attribute  = __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE;
     dirEntryOut->magic      = __DEVFS_DIRECTORY_ENTRY_MAGIC;
@@ -202,8 +202,8 @@ Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory,
     return fsEntryDesc_initStruct(descOut, &args);
 }
 
-void __devfs_fsentry_fsEntryDescToDirectoryEntry(fsEntryDesc* desc, __DevFSdirectoryEntry* dirEntryOut) {
-    strcpy(dirEntryOut->name, desc->identifier.name.data);
+void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* desc, __DevFSdirectoryEntry* dirEntryOut) {
+    cstring_strcpy(dirEntryOut->name, desc->identifier.name.data);
 
     if (desc->identifier.type == FS_ENTRY_TYPE_DUMMY) {
         dirEntryOut->dataRange = RANGE(FS_ENTRY_INVALID_POSITION, FS_ENTRY_INVALID_SIZE);
@@ -238,7 +238,7 @@ static Result __devfs_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToA
     }
 
     __DevFSdirectoryEntry newEntry;
-    __devfs_fsentry_fsEntryDescToDirectoryEntry(childToAdd, &newEntry);
+    __devfs_fsEntry_fsEntryDescToDirectoryEntry(childToAdd, &newEntry);
     if (fsEntry_rawWrite(directory, &newEntry, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -283,7 +283,7 @@ static Result __devfs_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier*
     }
 
     __DevFSdirectoryEntry updatedEntry;
-    __devfs_fsentry_fsEntryDescToDirectoryEntry(newChild, &updatedEntry);
+    __devfs_fsEntry_fsEntryDescToDirectoryEntry(newChild, &updatedEntry);
     if (fsEntry_rawWrite(directory, &updatedEntry, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL) {
         return RESULT_FAIL;
     }

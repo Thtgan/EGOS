@@ -7,12 +7,12 @@
 #include<structs/queue.h>
 #include<system/pageTable.h>
 
-#define __NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(Uint16))
+#define __INPUT_BUFFER_NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(Uint16))
 
 typedef struct {
     QueueNode node;
     Uint16 begin, end;
-    char buffer[__NODE_BUFFER_SIZE];
+    char buffer[__INPUT_BUFFER_NODE_BUFFER_SIZE];
 } __InputBufferNode;
 
 DEBUG_ASSERT_COMPILE(sizeof(__InputBufferNode) == PAGE_SIZE);
@@ -22,24 +22,24 @@ DEBUG_ASSERT_COMPILE(sizeof(__InputBufferNode) == PAGE_SIZE);
  * 
  * @return __InputBufferNode* Buffer node
  */
-static __InputBufferNode* __allocateNode();
+static __InputBufferNode* __inputBufferNode_allocateNode();
 
 /**
  * @brief Release a buffer node
  * 
  * @param node Buffer node
  */
-static void __releaseNode(__InputBufferNode* node);
+static void __inputBufferNode_freeNode(__InputBufferNode* node);
 
-void initInputBuffer(InputBuffer* buffer) {
+void inputBuffer_initStruct(InputBuffer* buffer) {
     queue_initStruct(&buffer->bufferQueue);
     buffer->bufferSize = 0;
     initSemaphore(&buffer->queueLock, 1);
     initSemaphore(&buffer->lineNumSema, 0);
 }
 
-void inputChar(InputBuffer* buffer, char ch) {
-    down(&buffer->queueLock);
+void inputBuffer_inputChar(InputBuffer* buffer, char ch) {
+    semaphore_down(&buffer->queueLock);
     if (ch == '\b') {
         __InputBufferNode* lastNode = HOST_POINTER(buffer->bufferQueue.qTail, __InputBufferNode, node);
         bool deleted = false;
@@ -55,48 +55,48 @@ void inputChar(InputBuffer* buffer, char ch) {
             }
             singlyLinkedList_deleteNext(last);
             buffer->bufferQueue.qTail = last;
-            __releaseNode(lastNode);
+            __inputBufferNode_freeNode(lastNode);
         }
     } else {
         __InputBufferNode* lastNode = HOST_POINTER(buffer->bufferQueue.qTail, __InputBufferNode, node);
-        if (queue_isEmpty(&buffer->bufferQueue) || lastNode->end == __NODE_BUFFER_SIZE) {
-            lastNode = __allocateNode();
+        if (queue_isEmpty(&buffer->bufferQueue) || lastNode->end == __INPUT_BUFFER_NODE_BUFFER_SIZE) {
+            lastNode = __inputBufferNode_allocateNode();
             queue_push(&buffer->bufferQueue, &lastNode->node);
         }
         lastNode->buffer[lastNode->end++] = ch;
         ++buffer->bufferSize;
 
         if (ch == '\n') {
-            up(&buffer->lineNumSema);
+            semaphore_up(&buffer->lineNumSema);
         }
     }
 
-    up(&buffer->queueLock);
+    semaphore_up(&buffer->queueLock);
 }
 
-int bufferGetChar(InputBuffer* buffer) {
-    down(&buffer->queueLock);
-    down(&buffer->lineNumSema);
+int inputBuffer_getChar(InputBuffer* buffer) {
+    semaphore_down(&buffer->queueLock);
+    semaphore_down(&buffer->lineNumSema);
 
     __InputBufferNode* firstNode = HOST_POINTER(queue_front(&buffer->bufferQueue), __InputBufferNode, node);
     int ret = (int)firstNode->buffer[firstNode->begin++];
     if (firstNode->begin == firstNode->end) {
         queue_pop(&buffer->bufferQueue);
-        __releaseNode(firstNode);
+        __inputBufferNode_freeNode(firstNode);
     }
     --buffer->bufferSize;
 
     if (ret != '\n') {
-        up(&buffer->lineNumSema);
+        semaphore_up(&buffer->lineNumSema);
     }
 
-    up(&buffer->queueLock);
+    semaphore_up(&buffer->queueLock);
     return ret;
 }
 
-int bufferGetLine(InputBuffer* buffer, char* writeTo) {
-    down(&buffer->lineNumSema);
-    down(&buffer->queueLock);
+int inputBuffer_getLine(InputBuffer* buffer, char* writeTo) {
+    semaphore_down(&buffer->lineNumSema);
+    semaphore_down(&buffer->queueLock);
 
     int ret = 0;
     __InputBufferNode* node = HOST_POINTER(queue_front(&buffer->bufferQueue), __InputBufferNode, node);
@@ -104,28 +104,28 @@ int bufferGetLine(InputBuffer* buffer, char* writeTo) {
         writeTo[ret++] = node->buffer[node->begin++];
         if (node->begin == node->end) {
             queue_pop(&buffer->bufferQueue);
-            __releaseNode(node);
+            __inputBufferNode_freeNode(node);
             node = HOST_POINTER(queue_front(&buffer->bufferQueue), __InputBufferNode, node);
         }
     }
     ++node->begin;
     writeTo[ret] = '\0';
 
-    up(&buffer->queueLock);
+    semaphore_up(&buffer->queueLock);
     return ret;
 }
 
-static __InputBufferNode* __allocateNode() {
+static __InputBufferNode* __inputBufferNode_allocateNode() {
     __InputBufferNode* ret = paging_convertAddressP2V(memory_allocateFrame(1));
 
     queueNode_initStruct(&ret->node);
     ret->begin = ret->end = 0;
-    memset(ret->buffer, '\0', __NODE_BUFFER_SIZE);
+    memory_memset(ret->buffer, '\0', __INPUT_BUFFER_NODE_BUFFER_SIZE);
     
     return ret;
 }
 
-static void __releaseNode(__InputBufferNode* node) {
-    memset(node, 0, PAGE_SIZE);
+static void __inputBufferNode_freeNode(__InputBufferNode* node) {
+    memory_memset(node, 0, PAGE_SIZE);
     memory_freeFrame(paging_convertAddressV2P(node));
 }

@@ -13,13 +13,13 @@
 void* extendedPageTable_allocateFrame() {
     void* ret = memory_allocateFrame(EXTENDED_PAGE_TABLE_FRAME_SIZE);
     if (ret != NULL) {
-        memset(paging_convertAddressP2V(ret), 0, sizeof(ExtendedPageTable));
+        memory_memset(paging_convertAddressP2V(ret), 0, sizeof(ExtendedPageTable));
     }
     return ret;
 }
 
 void extendedPageTable_freeFrame(void* frame) {
-    memset(paging_convertAddressP2V(frame), 0, sizeof(ExtendedPageTable));
+    memory_memset(paging_convertAddressP2V(frame), 0, sizeof(ExtendedPageTable));
     memory_freeFrame(frame);
 }
 
@@ -30,8 +30,8 @@ ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry) {
 
 Result extraPageTableContext_initStruct(ExtraPageTableContext* context) {
     context->presetCnt = 0;
-    memset(context->presets, 0, sizeof(context->presets));
-    memset(context->presetType2id, 0, sizeof(context->presetType2id));
+    memory_memset(context->presets, 0, sizeof(context->presets));
+    memory_memset(context->presetType2id, 0, sizeof(context->presetType2id));
 
     if (memoryPreset_registerDefaultPresets(context) == RESULT_FAIL) {
         return RESULT_FAIL;
@@ -113,7 +113,7 @@ Result __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel l
 
     Size remainingN = subN;
     for (int i = begin; i < end; ++i) {
-        Size subSubN = umin64(remainingN, (ALIGN_UP((Uintptr)currentV + 1, span) - (Uintptr)currentV) >> PAGE_SIZE_SHIFT);
+        Size subSubN = algorithms_umin64(remainingN, (ALIGN_UP((Uintptr)currentV + 1, span) - (Uintptr)currentV) >> PAGE_SIZE_SHIFT);
         
         PagingEntry* entry = &currentTable->table.tableEntries[i];
         ExtraPageTableEntry* extraEntry = &currentTable->extraTable.tableEntries[i];
@@ -192,7 +192,7 @@ Result __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel 
     
     Size remainingN = subN;
     for (int i = begin; i < end; ++i) {
-        Size subSubN = umin64(remainingN, (ALIGN_UP((Uintptr)currentV + 1, span) - (Uintptr)currentV) >> PAGE_SIZE_SHIFT);
+        Size subSubN = algorithms_umin64(remainingN, (ALIGN_UP((Uintptr)currentV + 1, span) - (Uintptr)currentV) >> PAGE_SIZE_SHIFT);
         PagingEntry* entry = &currentTable->table.tableEntries[i];
         ExtraPageTableEntry* extraEntry = &currentTable->extraTable.tableEntries[i];
 

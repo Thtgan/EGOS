@@ -4,9 +4,9 @@
 #include<fs/fsStructs.h>
 #include<kit/types.h>
 
-#define FILE_SEEK_BEGIN     0
-#define FILE_SEEK_CURRENT   1
-#define FILE_SEEK_END       2
+#define FSUTIL_FILE_SEEK_BEGIN      0
+#define FSUTIL_FILE_SEEK_CURRENT    1
+#define FSUTIL_FILE_SEEK_END        2
 
 /**
  * @brief Seek file pointer to position, sets errorcode to indicate error

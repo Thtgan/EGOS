@@ -23,7 +23,7 @@ __attribute__((naked))
  * @param programBegin Beginning of user mode program
  * @param stackBottom Stack bottom of user mode
  */
-void __jumpToUserMode(void* programBegin, void* stackBottom);
+void __usermode_jumpToUserMode(void* programBegin, void* stackBottom);
 
 __attribute__((naked))
 /**
@@ -31,25 +31,25 @@ __attribute__((naked))
  * 
  * @param ret Return value of user program
  */
-void __syscallHandlerExit(int ret);
+void __usermode_syscallHandlerExit(int ret);
 
-static int __doExecute(ConstCstring path, File* file);
+static int __usermode_doExecute(ConstCstring path, File* file);
 
-Result initUsermode() {
-    initSyscall();
+Result usermode_init() {
+    syscall_init();
 
-    registerSyscallHandler(SYSCALL_EXIT, __syscallHandlerExit);
+    syscall_registerHandler(SYSCALL_EXIT, __usermode_syscallHandlerExit);
 
     return RESULT_SUCCESS;
 }
 
-int execute(ConstCstring path) {    //TODO: Unstable code
+int usermode_exsecute(ConstCstring path) {  //TODO: Unstable code
     fsEntry entry;
     if (fsutil_openfsEntry(rootFS->superBlock, path, FS_ENTRY_TYPE_FILE, &entry) == RESULT_FAIL) {
         return -1;
     }
 
-    int ret = __doExecute(path, &entry);
+    int ret = __usermode_doExecute(path, &entry);
 
     fsutil_closefsEntry(&entry);
 
@@ -57,7 +57,7 @@ int execute(ConstCstring path) {    //TODO: Unstable code
 }
 
 __attribute__((naked))
-void __jumpToUserMode(void* programBegin, void* stackBottom) {
+void __usermode_jumpToUserMode(void* programBegin, void* stackBottom) {
     asm volatile(
         "pushq %0;" //SS
         "pushq %1;" //RSP
@@ -75,7 +75,7 @@ void __jumpToUserMode(void* programBegin, void* stackBottom) {
 extern void* __execute_return;
 
 __attribute__((naked))
-void __syscallHandlerExit(int ret) {
+void __usermode_syscallHandlerExit(int ret) {
     asm volatile(
         "pushq %1;"         //SS
         "pushq %2;"         //RSP
@@ -92,19 +92,19 @@ void __syscallHandlerExit(int ret) {
     );
 }
 
-#define __USER_STACK_SIZE       (16ull * DATA_UNIT_KB)
-#define __USER_STACK_PAGE_NUM   DIVIDE_ROUND_UP(__USER_STACK_SIZE, PAGE_SIZE)
+#define __USERMODE_STACK_SIZE       (16ull * DATA_UNIT_KB)
+#define __USERMODE_STACK_PAGE_NUM   DIVIDE_ROUND_UP(__USERMODE_STACK_SIZE, PAGE_SIZE)
 
-static int __doExecute(ConstCstring path, File* file) {
+static int __usermode_doExecute(ConstCstring path, File* file) {
     Uint64 old = readRegister_RSP_64();
     ELF64Header header;
-    if (readELF64Header(file, &header) == RESULT_FAIL) {
+    if (elf_readELF64Header(file, &header) == RESULT_FAIL) {
         return -1;
     }
 
     ELF64ProgramHeader programHeader;
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
+        if (elf_readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
             return -1;
         }
 
@@ -112,12 +112,12 @@ static int __doExecute(ConstCstring path, File* file) {
             continue;
         }
 
-        if (checkELF64ProgramHeader(&programHeader) == RESULT_FAIL) {
+        if (elf_checkELF64ProgramHeader(&programHeader) == RESULT_FAIL) {
             ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
             return -1;
         }
 
-        if (loadELF64Program(file, &programHeader) == RESULT_FAIL) {
+        if (elf_loadELF64Program(file, &programHeader) == RESULT_FAIL) {
             return -1;
         }
     }
@@ -125,7 +125,7 @@ static int __doExecute(ConstCstring path, File* file) {
     ExtendedPageTableRoot* extendedTable = mm->extendedTable;
 
 #define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
-    for (Uintptr i = PAGE_SIZE; i <= __USER_STACK_SIZE; i += PAGE_SIZE) {
+    for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
         if (extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i) != NULL) {
             return -1;
         }
@@ -138,21 +138,21 @@ static int __doExecute(ConstCstring path, File* file) {
 
     pushq(0);   //Reserved for return value
     
-    SAVE_REGISTERS();
+    REGISTERS_SAVE();
     
     Process* process = schedulerGetCurrentProcess();
     process->userExitStackTop = (void*)readRegister_RSP_64();
-    __jumpToUserMode((void*)header.entryVaddr, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM);
+    __usermode_jumpToUserMode((void*)header.entryVaddr, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM);
     asm volatile (
         "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :
         : "i"(sizeof(Registers))
     );
     
-    RESTORE_REGISTERS();    //Restore context
+    REGISTERS_RESTORE();    //Restore context
 
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
+        if (elf_readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
             return -1;
         }
 
@@ -160,12 +160,12 @@ static int __doExecute(ConstCstring path, File* file) {
             continue;
         }
 
-        if (unloadELF64Program(&programHeader) == RESULT_FAIL) {
+        if (elf_unloadELF64Program(&programHeader) == RESULT_FAIL) {
             return -1;
         }
     }
 
-    for (Uintptr i = PAGE_SIZE; i <= __USER_STACK_SIZE; i += PAGE_SIZE) {
+    for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
         void* pAddr = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
         if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
             return -1;

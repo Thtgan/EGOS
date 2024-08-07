@@ -117,6 +117,6 @@ typedef struct {
  * 
  * @return Result Result of the operation
  */
-Result initKeyboard();
+Result keyboard_init();
 
 #endif // __KEYBOARD_H

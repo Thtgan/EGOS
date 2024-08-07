@@ -18,7 +18,7 @@ Result heap_push(Heap* heap, Object object) {
     Object* objectArray = heap->objectArray;
     objectArray[++heap->size] = object;
     for (int i = heap->size; i != 1 && heap->compareFunc(objectArray[i], objectArray[i >> 1]) < 0; i >>= 1) {
-        swap64(&objectArray[i], &objectArray[i >> 1]);
+        algorithms_swap64(&objectArray[i], &objectArray[i >> 1]);
     }
 
     return RESULT_SUCCESS;
@@ -40,7 +40,7 @@ Result heap_pop(Heap* heap) {
     }
 
     Object* objectArray = heap->objectArray;
-    swap64(&objectArray[1], &objectArray[heap->size--]);
+    algorithms_swap64(&objectArray[1], &objectArray[heap->size--]);
     for (int i = 1, limit = heap->size >> 1; i <= limit; ) {
         int next = i << 1;
         if (next < heap->size && heap->compareFunc(objectArray[next | 1], objectArray[next]) < 0) {
@@ -51,7 +51,7 @@ Result heap_pop(Heap* heap) {
             break;
         }
 
-        swap64(&objectArray[i], &objectArray[next]);
+        algorithms_swap64(&objectArray[i], &objectArray[next]);
         i = next;
     }
 

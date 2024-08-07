@@ -16,14 +16,14 @@ typedef enum {
  * 
  * @return Result Result of the operation
  */
-Result initTerminalSwitch();
+Result terminalSwitch_init();
 
 /**
  * @brief Switch terminal to specific level
  * 
  * @param level Terminal level
  */
-void switchTerminalLevel(TerminalLevel level);
+void terminalSwitch_setLevel(TerminalLevel level);
 
 /**
  * @brief Get corresponded terminal of level
@@ -31,6 +31,6 @@ void switchTerminalLevel(TerminalLevel level);
  * @param level Terminal level
  * @return Terminal* Corresponded terminal
  */
-Terminal* getLevelTerminal(TerminalLevel level);
+Terminal* terminalSwitch_getLevel(TerminalLevel level);
 
 #endif // __TERMINAL_SWITCH_H

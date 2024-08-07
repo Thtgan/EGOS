@@ -38,9 +38,9 @@ STRUCT_PRIVATE_DEFINE(ClockSource) {
 #define CLOCK_SOURCE_GET_TICK_REMAIN(__CLOCK_SOURCE, __TIME, __TICK, __UNIT)    ((__TICK) - ((__TIME) * (__CLOCK_SOURCE)->hz) / (TIME_UNIT_SECOND / (__UNIT)))
 #define CLOCK_SOURCE_CONVERT_TIME_TO_TICK(__CLOCK_SOURCE, __TIME, __UNIT)       ((__TIME) * (__UNIT) * (__CLOCK_SOURCE)->hz / TIME_UNIT_SECOND)
 
-void initClockSources();
+void clockSources_init();
 
-ClockSource* getClockSource(ClockSourceType type);
+ClockSource* clockSource_getSource(ClockSourceType type);
 
 static inline Uint64 rawClockSourceReadTick(ClockSource* clockSource) {
     return clockSource->readTick(clockSource);

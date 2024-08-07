@@ -15,18 +15,18 @@ typedef enum {
 
 #define FAT32_CLSUTER_END_OF_CHAIN 0x0FFFFFFF
 
-FAT32ClusterType FAT32_cluster_getType(FAT32info* info, Index32 cluster);
+FAT32ClusterType fat32_getClusterType(FAT32info* info, Index32 cluster);
 
-Index32 FAT32_cluster_get(FAT32info* info, Index32 firstCluster, Index32 index);
+Index32 fat32_getCluster(FAT32info* info, Index32 firstCluster, Index32 index);
 
-Size FAT32_cluster_getChainLength(FAT32info* info, Index32 firstCluster);
+Size fat32_getClusterChainLength(FAT32info* info, Index32 firstCluster);
 
-Index32 FAT32_cluster_allocChain(FAT32info* info, Size length);
+Index32 fat32_allocateClusterChain(FAT32info* info, Size length);
 
-void FAT32_cluster_freeChain(FAT32info* info, Index32 clusterChainFirst);
+void fat32_freeClusterChain(FAT32info* info, Index32 clusterChainFirst);
 
-Index32 FAT32_cluster_cutChain(FAT32info* info, Index32 cluster);
+Index32 fat32_cutClusterChain(FAT32info* info, Index32 cluster);
 
-void FAT32_cluster_insertChain(FAT32info* info, Index32 cluster, Index32 clusterChainFirst);
+void fat32_insertClusterChain(FAT32info* info, Index32 cluster, Index32 clusterChainFirst);
 
 #endif // __FAT32_CLUSTER_H

@@ -9,7 +9,7 @@
  * @param str String
  * @return Size The length of the string
  */
-Size strlen(ConstCstring str);
+Size cstring_strlen(ConstCstring str);
 
 /**
  * @brief Return the first position in str1 where character not appeared in str2
@@ -18,7 +18,7 @@ Size strlen(ConstCstring str);
  * @param str2 Character set
  * @return Size First position in str1 where character not appeared in str2, length of str1 if all characters in str1 contained in str2
  */
-Size strspn(ConstCstring str1, ConstCstring str2);
+Size cstring_strspn(ConstCstring str1, ConstCstring str2);
 
 /**
  * @brief Return the first position in str1 where character appeared in str2
@@ -27,7 +27,7 @@ Size strspn(ConstCstring str1, ConstCstring str2);
  * @param str2 Character set
  * @return Size First position in str1 where character appeared in str2, length of str1 if all characters in str1 not contained in str2
  */
-Size strcspn(ConstCstring str1, ConstCstring str2);
+Size cstring_strcspn(ConstCstring str1, ConstCstring str2);
 
 /**
  * @brief Return the pointer to the position str2 first appeared in str1
@@ -36,7 +36,7 @@ Size strcspn(ConstCstring str1, ConstCstring str2);
  * @param str2 Pattern to search
  * @return Cstring Position str2 first appeared in str1, NULL if str2 not appeared in str1
  */
-Cstring strstr(ConstCstring str1, ConstCstring str2);
+Cstring cstring_strstr(ConstCstring str1, ConstCstring str2);
 
 /**
  * @brief Split string into tokens, '\0' will be added to end of the token
@@ -45,7 +45,7 @@ Cstring strstr(ConstCstring str1, ConstCstring str2);
  * @param delimiters Delimeters in str
  * @return Cstring The beginning of the token, NULL if token not exists
  */
-Cstring strtok(Cstring str, ConstCstring delimiters);
+Cstring cstring_strtok(Cstring str, ConstCstring delimiters);
 
 /**
  * @brief Return the pointer to the first character both appeared in str1 and str2
@@ -54,7 +54,7 @@ Cstring strtok(Cstring str, ConstCstring delimiters);
  * @param str2 Character set
  * @return Cstring Pointer to the first character both appeared in str1 and str2, NULL if all characters in str1 not appeared in str2
  */
-Cstring strpbrk(ConstCstring str1, ConstCstring str2);
+Cstring cstring_strpbrk(ConstCstring str1, ConstCstring str2);
 
 /**
  * @brief Return the first position where character appear in string
@@ -63,7 +63,7 @@ Cstring strpbrk(ConstCstring str1, ConstCstring str2);
  * @param ch Character to search
  * @return char* First position where character appear in string, NULL if character not appeared in string
  */
-char* strchr(ConstCstring str, int ch);
+char* cstring_strchr(ConstCstring str, int ch);
 
 /**
  * @brief Return the last position where character appear in string
@@ -72,7 +72,7 @@ char* strchr(ConstCstring str, int ch);
  * @param ch Character to search
  * @return char* Last position where character appear in string, NULL if character not appeared in string
  */
-char* strrchr(ConstCstring str, int ch);
+char* cstring_strrchr(ConstCstring str, int ch);
 
 /**
  * @brief Copy string
@@ -81,7 +81,7 @@ char* strrchr(ConstCstring str, int ch);
  * @param src Copy source
  * @return Cstring des
  */
-Cstring strcpy(Cstring des, ConstCstring src);
+Cstring cstring_strcpy(Cstring des, ConstCstring src);
 
 /**
  * @brief Copy string with limitation
@@ -91,7 +91,7 @@ Cstring strcpy(Cstring des, ConstCstring src);
  * @param n Maximum number of characters bytes to copy
  * @return Cstring des
  */
-Cstring strncpy(Cstring des, ConstCstring src, Size n);
+Cstring cstring_strncpy(Cstring des, ConstCstring src, Size n);
 
 /**
  * @brief Compare two strings
@@ -100,7 +100,7 @@ Cstring strncpy(Cstring des, ConstCstring src, Size n);
  * @param str2 String to compare
  * @return -1 if first different character in str1 is smaller than str2's, 1 if first different character in str1 is greater than str2's, 0 if both strings are the same
  */
-int strcmp(ConstCstring str1, ConstCstring str2);
+int cstring_strcmp(ConstCstring str1, ConstCstring str2);
 
 /**
  * @brief Compare two strings with limitation
@@ -110,7 +110,7 @@ int strcmp(ConstCstring str1, ConstCstring str2);
  * @param n Maximum number of characters to compare
  * @return int -1 if first different character in str1 is smaller than str2's, 1 if first different character in str1 is greater than str2's, 0 if both strings are the same
  */
-int strncmp(ConstCstring str1, ConstCstring str2, Size n);
+int cstring_strncmp(ConstCstring str1, ConstCstring str2, Size n);
 
 /**
  * @brief Get SDBM hash of the string
@@ -118,6 +118,6 @@ int strncmp(ConstCstring str1, ConstCstring str2, Size n);
  * @param str String to hash
  * @return Size Hash value of string
  */
-Size strhash(ConstCstring str);
+Size cstring_strhash(ConstCstring str);
 
 #endif // __CSTRING_H

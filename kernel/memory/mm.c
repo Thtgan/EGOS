@@ -33,7 +33,7 @@ Result mm_init() {
 
     mm = &_memoryManager;
 
-    memcpy(&mm->mMap, sysInfo->mMap, sizeof(MemoryMap));
+    memory_memcpy(&mm->mMap, sysInfo->mMap, sizeof(MemoryMap));
     __mm_auditE820(mm);
 
     frameMetadata_initStruct(&mm->frameMetadata);

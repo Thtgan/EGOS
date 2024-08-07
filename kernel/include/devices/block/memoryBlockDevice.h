@@ -4,6 +4,6 @@
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
 
-Result createMemoryBlockDevice(BlockDevice* device, void* region, Size size, ConstCstring name);
+Result memoryBlockDevice_initStruct(BlockDevice* device, void* region, Size size, ConstCstring name);
 
 #endif // MEMORY_BLOCK_DEVICE_H

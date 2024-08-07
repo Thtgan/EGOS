@@ -11,12 +11,12 @@
 Result fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
     Index64 base = file->pointer;
     switch (begin) {
-        case FILE_SEEK_BEGIN:
+        case FSUTIL_FILE_SEEK_BEGIN:
             base = 0;
             break;
-        case FILE_SEEK_CURRENT:
+        case FSUTIL_FILE_SEEK_CURRENT:
             break;
-        case FILE_SEEK_END:
+        case FSUTIL_FILE_SEEK_END:
             base = file->desc->dataRange.length;
             break;
         default:
@@ -46,7 +46,7 @@ Result fsutil_fileRead(File* file, void* buffer, Size n) {
     }
 
     Timestamp timestamp;
-    readTimestamp(&timestamp);
+    time_getTimestamp(&timestamp);
 
     file->desc->lastAccessTime = timestamp.second;
 
@@ -59,7 +59,7 @@ Result fsutil_fileWrite(File* file, const void* buffer, Size n) {
     }
 
     Timestamp timestamp;
-    readTimestamp(&timestamp);
+    time_getTimestamp(&timestamp);
 
     file->desc->lastAccessTime = file->desc->lastModifyTime = timestamp.second;
 
@@ -91,9 +91,9 @@ Result fsutil_lookupEntryDesc(Directory* directory, fsEntryIdentifier* identifie
             return RESULT_CONTINUE; //TODO: Bad, set a new result for failed but no error
         }
 
-        if (strcmp(identifier->name.data, tmpDesc.identifier.name.data) == 0 && identifier->type == tmpDesc.identifier.type) {
+        if (cstring_strcmp(identifier->name.data, tmpDesc.identifier.name.data) == 0 && identifier->type == tmpDesc.identifier.type) {
             if (descOut != NULL) {
-                memcpy(descOut, &tmpDesc, sizeof(fsEntryDesc));
+                memory_memcpy(descOut, &tmpDesc, sizeof(fsEntryDesc));
             }
 
             if (entrySizeOut != NULL) {

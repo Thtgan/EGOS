@@ -10,7 +10,7 @@
  * @param offset1 vector offset for master PIC map IRQs(Interrupt Request) to (offset1 ... offset1 + 7)
  * @param offset2 vector offset for slave PIC map IRQs(Interrupt Request) to  (offset2 ... offset2 + 7)
  */
-void remapPIC(Uint8 offset1, Uint8 offset2);
+void pic_remap(Uint8 offset1, Uint8 offset2);
 
 /**
  * @brief Get the mask of PIC
@@ -18,7 +18,7 @@ void remapPIC(Uint8 offset1, Uint8 offset2);
  * @param mask1 ptr to PIC1 mask
  * @param mask2 ptr to PIC2 mask
  */
-void getPICMask(Uint8* mask1, Uint8* mask2);
+void pic_getMask(Uint8* mask1, Uint8* mask2);
 
 /**
  * @brief Set the mask of PIC
@@ -26,6 +26,6 @@ void getPICMask(Uint8* mask1, Uint8* mask2);
  * @param mask1 PIC1 mask
  * @param mask2 PIC2 mask
  */
-void setPICMask(Uint8 mask1, Uint8 mask2);
+void pic_setMask(Uint8 mask1, Uint8 mask2);
 
 #endif // __PIC_H

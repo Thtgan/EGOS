@@ -4,8 +4,8 @@
 #include<devices/ata/ata.h>
 #include<kit/types.h>
 
-Result ATA_resetChannel(ATAchannel* channel);
+Result ata_channel_reset(ATAchannel* channel);
 
-bool ATA_selectDevice(ATAchannel* channel, Uint8 deviceSelect);
+bool ata_channel_selectDevice(ATAchannel* channel, Uint8 deviceSelect);
 
 #endif // __CHANNEL_H

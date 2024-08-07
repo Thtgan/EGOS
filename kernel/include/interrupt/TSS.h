@@ -8,6 +8,6 @@
  * 
  * @return Result Result of the operation
  */
-Result initTSS();
+Result tss_init();
 
 #endif // __TSS_H

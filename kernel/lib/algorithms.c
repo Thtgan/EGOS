@@ -11,13 +11,13 @@
  * @param len Length of the sub-list
  * @return LinkedListNode* Beginning node of the sorted sub-list
  */
-static LinkedListNode* __algo_linkedList_doMergeSort(LinkedListNode* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode));
+static LinkedListNode* __algorithms_linkedList_doMergeSort(LinkedListNode* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode));
 
-void algo_linkedList_mergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode)) {
-    __algo_linkedList_doMergeSort(list->next, len, comparator);
+void algorithms_linkedList_mergeSort(LinkedList* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode)) {
+    __algorithms_linkedList_doMergeSort(list->next, len, comparator);
 }
 
-static LinkedListNode* __algo_linkedList_doMergeSort(LinkedListNode* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode)) {
+static LinkedListNode* __algorithms_linkedList_doMergeSort(LinkedListNode* list, Size len, COMPARATOR_PTR(comparator, LinkedListNode)) {
     if (len == 1) {
         return list; //Just return
     } else if (len == 2) {
@@ -48,8 +48,8 @@ static LinkedListNode* __algo_linkedList_doMergeSort(LinkedListNode* list, Size 
         next = next->next;
     }
 
-    subList1 = __algo_linkedList_doMergeSort(subList1, len1, comparator);
-    subList2 = __algo_linkedList_doMergeSort(subList2, len2, comparator);
+    subList1 = __algorithms_linkedList_doMergeSort(subList1, len1, comparator);
+    subList2 = __algorithms_linkedList_doMergeSort(subList2, len2, comparator);
 
     prev->next = next; //Sort connect the previous and next node of the sub-list
     next->prev = prev;
@@ -100,13 +100,13 @@ static LinkedListNode* __algo_linkedList_doMergeSort(LinkedListNode* list, Size 
  * @param len Length of the sub-list
  * @return SinglyLinkedListNode* Beginning node of the sorted sub-list
  */
-static SinglyLinkedListNode* __algo_singlyLinkedList_doMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
+static SinglyLinkedListNode* __algorithms_singlyLinkedList_doMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
 
-void algo_singlyLinkedList_mergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
-    __algo_singlyLinkedList_doMergeSort(list, list->next, len, comparator);
+void algorithms_singlyLinkedList_mergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
+    __algorithms_singlyLinkedList_doMergeSort(list, list->next, len, comparator);
 }
 
-static SinglyLinkedListNode* __algo_singlyLinkedList_doMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
+static SinglyLinkedListNode* __algorithms_singlyLinkedList_doMergeSort(SinglyLinkedListNode* prev, SinglyLinkedListNode* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode)) {
     if (len == 1) {
         return list; //Just return
     } else if (len == 2) {
@@ -127,7 +127,7 @@ static SinglyLinkedListNode* __algo_singlyLinkedList_doMergeSort(SinglyLinkedLis
     Size len1 = len >> 1, len2 = len - len1;
     SinglyLinkedListNode* subList1 = list, * subPrev = NULL, * subList2 = NULL, * next = NULL;
 
-    subPrev = subList1 = __algo_singlyLinkedList_doMergeSort(prev, subList1, len1, comparator);
+    subPrev = subList1 = __algorithms_singlyLinkedList_doMergeSort(prev, subList1, len1, comparator);
 
     for (int i = 1; i < len1; ++i) {
         subPrev = subPrev->next;
@@ -138,7 +138,7 @@ static SinglyLinkedListNode* __algo_singlyLinkedList_doMergeSort(SinglyLinkedLis
         next = next->next;
     }
 
-    subList2 = __algo_singlyLinkedList_doMergeSort(subPrev, subList2, len2, comparator);
+    subList2 = __algorithms_singlyLinkedList_doMergeSort(subPrev, subList2, len2, comparator);
 
     prev->next = next; //Short connect the previous and next node of the sub-list
 

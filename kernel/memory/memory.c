@@ -4,7 +4,7 @@
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
 
-void* memset(void* dst, int byte, Size n) {
+void* memory_memset(void* dst, int byte, Size n) {
     void* ret = dst;
     asm volatile(
         "rep stosb;"
@@ -14,7 +14,7 @@ void* memset(void* dst, int byte, Size n) {
     return ret;
 }
 
-void* memcpy(void* dst, const void* src, Size n) {
+void* memory_memcpy(void* dst, const void* src, Size n) {
     void* ret = dst;
     asm volatile(
         "rep movsb;"
@@ -24,20 +24,20 @@ void* memcpy(void* dst, const void* src, Size n) {
     return ret;
 }
 
-int memcmp(const void* src1, const void* src2, Size n) {
+int memory_memcmp(const void* src1, const void* src2, Size n) {
     const char* p1 = src1, * p2 = src2;
     int ret = 0;
     for (int i = 0; i < n && ((ret = *p1 - *p2) == 0); ++i, ++p1, ++p2);
     return ret;
 }
 
-void* memchr(const void* ptr, int val, Size n) {
+void* memory_memchr(const void* ptr, int val, Size n) {
     const char* p = ptr;
     for (; n > 0 && *p != val; --n, ++p);
     return n == 0 ? NULL : (void*)p;
 }
 
-void* memmove(void* dst, const void* src, Size n) {
+void* memory_memmove(void* dst, const void* src, Size n) {
     void* ret = dst;
     if (dst < src) {
         asm volatile(

@@ -87,16 +87,16 @@ typedef struct {
     Uint8 addr3;
 } ATAcommand;
 
-Result initATAdevices();
+Result ata_initdevices();
 
-Result ATA_sendCommand(ATAchannel* channel, ATAcommand* command);
+Result ata_sendCommand(ATAchannel* channel, ATAcommand* command);
 
-Flags8 ATA_waitTillClear(Uint16 channelPortBase, Flags8 waitFlags);
+Flags8 ata_waitTillClear(Uint16 channelPortBase, Flags8 waitFlags);
 
-Flags8 ATA_waitTillSet(Uint16 channelPortBase, Flags8 waitFlags);
+Flags8 ata_waitTillSet(Uint16 channelPortBase, Flags8 waitFlags);
 
-Result ATA_waitForData(Uint16 channelPortBase);
+Result ata_waitForData(Uint16 channelPortBase);
 
-Result ATA_resetChannel(ATAchannel* channel);
+Result ata_channel_reset(ATAchannel* channel);
 
 #endif // __ATA_H

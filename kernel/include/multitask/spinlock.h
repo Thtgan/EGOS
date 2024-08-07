@@ -15,7 +15,7 @@ typedef struct {
  * 
  * @param lock Spinlock to lock
  */
-static inline void spinlockLock(Spinlock* lock) {
+static inline void spinlock_lock(Spinlock* lock) {
     asm volatile(
         "1:"
         "lock;"
@@ -40,7 +40,7 @@ static inline void spinlockLock(Spinlock* lock) {
  * @param lock Spinlock to lock
  * @return bool True if lock succeeded
  */
-static inline bool spinlockTryLock(Spinlock* lock) {
+static inline bool spinlock_tryLock(Spinlock* lock) {
     char ret = 0;
     asm volatile(
         "lock;"
@@ -58,7 +58,7 @@ static inline bool spinlockTryLock(Spinlock* lock) {
  * 
  * @param lock Spinlock to unlock
  */
-static inline void spinlockUnlock(Spinlock* lock) {
+static inline void spinlock_unlock(Spinlock* lock) {
     asm volatile(
         "movb $1, %0"
         : "=m" (lock->counter)

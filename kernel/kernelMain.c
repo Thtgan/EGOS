@@ -33,11 +33,11 @@ static void printLOGO();
 #include<memory/memory.h>
 
 static void __timerFunc1(Timer* timer) {
-    printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
+    print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
 }
 
 static void __timerFunc2(Timer* timer) {
-    printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER2\n");
+    print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER2\n");
     if (--timer->data == 0) {
         CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
     }
@@ -49,7 +49,7 @@ void kernelMain(SystemInfo* info) {
         debug_blowup("Boot magic not match");
     }
 
-    if (initKernel() == RESULT_FAIL) {
+    if (init_initKernel() == RESULT_FAIL) {
         debug_blowup("Initialization failed");
     }
 
@@ -59,47 +59,47 @@ void kernelMain(SystemInfo* info) {
     initSemaphore(&sema2, -1);
 
     arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW));
-    printf(TERMINAL_LEVEL_OUTPUT, "%p %p\n", arr1, arr2);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
     if (fork("Forked") != NULL) {
-        printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
     } else {
-        printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", schedulerGetCurrentProcess()->name);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", schedulerGetCurrentProcess()->name);
     }
 
-    if (strcmp(schedulerGetCurrentProcess()->name, "Init") == 0) {
+    if (cstring_strcmp(schedulerGetCurrentProcess()->name, "Init") == 0) {
         arr1[0] = 3;
-        up(&sema1);
-        down(&sema2);
-        printf(TERMINAL_LEVEL_OUTPUT, "DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
+        semaphore_up(&sema1);
+        semaphore_down(&sema2);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
     } else {
-        down(&sema1);
+        semaphore_down(&sema1);
         arr1[0] = 2, arr2[0] = 1919810;
-        printf(TERMINAL_LEVEL_OUTPUT, "DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
-        up(&sema2);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
+        semaphore_up(&sema2);
         while (true) {
-            printf(TERMINAL_LEVEL_OUTPUT, "Waiting for input: ");
-            int len = terminalGetline(getLevelTerminal(TERMINAL_LEVEL_OUTPUT), str);
+            print_printf(TERMINAL_LEVEL_OUTPUT, "Waiting for input: ");
+            int len = terminal_getline(terminalSwitch_getLevel(TERMINAL_LEVEL_OUTPUT), str);
 
-            if (strcmp(str, "PASS") == 0 || len == 0) {
+            if (cstring_strcmp(str, "PASS") == 0 || len == 0) {
                 break;
             }
-            printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
+            print_printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
         }
 
         //TODO: Calling userprogram goes wrong here
 
-        up(&sema2);
+        semaphore_up(&sema2);
         exitProcess();
     }
 
-    int ret = execute("/bin/test");
-    printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
+    int ret = usermode_exsecute("/bin/test");
+    print_printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
     memory_free(arr1);
     memory_free(arr2);
 
-    printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
 
     fsEntry entry;
     if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {
@@ -107,8 +107,8 @@ void kernelMain(SystemInfo* info) {
     }
 
     Timer timer1, timer2;
-    initTimer(&timer1, 500, TIME_UNIT_MILLISECOND);
-    initTimer(&timer2, 500, TIME_UNIT_MILLISECOND);
+    timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);
+    timer_initStruct(&timer2, 500, TIME_UNIT_MILLISECOND);
     SET_FLAG_BACK(timer2.flags, TIMER_FLAGS_SYNCHRONIZE | TIMER_FLAGS_REPEAT);
 
     timer1.handler = __timerFunc1;
@@ -116,11 +116,11 @@ void kernelMain(SystemInfo* info) {
     timer2.handler = __timerFunc2;
 
 
-    timerStart(&timer1);
-    timerStart(&timer2);
+    timer_start(&timer1);
+    timer_start(&timer2);
     fs_close(rootFS); //TODO: Move to better place
 
-    printf(TERMINAL_LEVEL_OUTPUT, "DEAD\n");
+    print_printf(TERMINAL_LEVEL_OUTPUT, "DEAD\n");
 
     die();
 }
@@ -129,22 +129,22 @@ static void printLOGO() {
     char buffer[1024];
     fsEntry entry;
     if (fsutil_openfsEntry(rootFS->superBlock, "/LOGO.txt", FS_ENTRY_TYPE_FILE, &entry) == RESULT_SUCCESS) {
-        fsutil_fileSeek(&entry, 0, FILE_SEEK_END);
+        fsutil_fileSeek(&entry, 0, FSUTIL_FILE_SEEK_END);
         Size fileSize = fsutil_fileGetPointer(&entry);
-        fsutil_fileSeek(&entry, 0, FILE_SEEK_BEGIN);
+        fsutil_fileSeek(&entry, 0, FSUTIL_FILE_SEEK_BEGIN);
 
         if (fsutil_fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
             buffer[fileSize] = '\0';
-            printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
+            print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
 
         fsEntryDesc* desc = entry.desc;
-        printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->createTime);
-        printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastAccessTime);
-        printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastModifyTime);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->createTime);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastAccessTime);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastModifyTime);
 
         BlockDevice* device = entry.iNode->superBlock->device;
         fsutil_closefsEntry(&entry);
-        blockDeviceSynchronize(device);
+        blockDevice_flush(device);
     }
 }

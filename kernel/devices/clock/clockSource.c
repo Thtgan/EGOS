@@ -7,13 +7,13 @@
 
 static ClockSource _clockSources[CLOCK_SOURCE_TYPE_NUM];
 
-void initClockSources() {
-    initClockSourceCMOS(&_clockSources[CLOCK_SOURCE_TYPE_CMOS]);
-    initClockSourceI8254(&_clockSources[CLOCK_SOURCE_TYPE_I8254]);
-    initClockSourceCPU(&_clockSources[CLOCK_SOURCE_TYPE_CPU]);
+void clockSources_init() {
+    CMOS_initClockSource(&_clockSources[CLOCK_SOURCE_TYPE_CMOS]);
+    i8254_initClockSource(&_clockSources[CLOCK_SOURCE_TYPE_I8254]);
+    CPUclock_initClockSource(&_clockSources[CLOCK_SOURCE_TYPE_CPU]);
 }
 
-ClockSource* getClockSource(ClockSourceType type) {
+ClockSource* clockSource_getSource(ClockSourceType type) {
     if (type >= CLOCK_SOURCE_TYPE_NUM) {
         return NULL;
     }

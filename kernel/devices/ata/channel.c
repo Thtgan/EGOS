@@ -4,21 +4,21 @@
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 
-Result ATA_resetChannel(ATAchannel* channel) {
+Result ata_channel_reset(ATAchannel* channel) {
     Uint16 portBase = channel->portBase;
     outb(ATA_REGISTER_CONTROL(portBase), ATA_CONTROL_SOFTWARE_RESET | ATA_CONTROL_NO_INTERRUPT);
     ATA_DELAY_400NS(portBase);
     outb(ATA_REGISTER_CONTROL(portBase), ATA_CONTROL_SOFTWARE_RESET);
     ATA_DELAY_400NS(portBase);
 
-    if (TEST_FLAGS(ATA_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
+    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
         return RESULT_FAIL;
     }
 
     if (channel->deviceSelect < 2) {
-        ATA_selectDevice(channel, channel->deviceSelect);
+        ata_channel_selectDevice(channel, channel->deviceSelect);
 
-        if (TEST_FLAGS(ATA_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
+        if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
             return RESULT_FAIL;
         }
     }
@@ -26,7 +26,7 @@ Result ATA_resetChannel(ATAchannel* channel) {
     RESULT_SUCCESS;
 }
 
-bool ATA_selectDevice(ATAchannel* channel, Uint8 deviceSelect) {
+bool ata_channel_selectDevice(ATAchannel* channel, Uint8 deviceSelect) {
     if (channel->deviceSelect == deviceSelect) {
         return false;
     }

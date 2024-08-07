@@ -23,13 +23,13 @@ void initSemaphore(Semaphore* sema, int count);
  * 
  * @param sema Semaphore
  */
-void down(Semaphore* sema);
+void semaphore_down(Semaphore* sema);
 
 /**
  * @brief Perform up to semaphore, may wake the process blocked by this semaphore
  * 
  * @param sema Semaphore
  */
-void up(Semaphore* sema);
+void semaphore_up(Semaphore* sema);
 
 #endif // __SEMAPHORE_H

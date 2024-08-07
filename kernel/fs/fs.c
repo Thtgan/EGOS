@@ -26,16 +26,16 @@ typedef struct {
 
 static __FileSystemSupport _supports[FS_TYPE_NUM] = {
     [FS_TYPE_FAT32] = {
-        .init       = FAT32_fs_init,
-        .checkType  = FAT32_fs_checkType,
-        .open       = FAT32_fs_open,
-        .close      = FAT32_fs_close
+        .init       = fat32_init,
+        .checkType  = fat32_checkType,
+        .open       = fat32_open,
+        .close      = fat32_close
     },
     [FS_TYPE_DEVFS] = {
-        .init       = devfs_fs_init,
-        .checkType  = devfs_fs_checkType,
-        .open       = devfs_fs_open,
-        .close      = devfs_fs_close
+        .init       = devfs_init,
+        .checkType  = devfs_checkType,
+        .open       = devfs_open,
+        .close      = devfs_close
     }
 };
 
@@ -60,8 +60,8 @@ Result fs_init() {
         return RESULT_FAIL;
     }
     
-    void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_FS_BLOCKDEVICE_BLOCK_NUM * DEFAULT_BLOCK_SIZE / PAGE_SIZE));
-    if (region == NULL || createMemoryBlockDevice(&devfsBlockDevice, region, DEVFS_FS_BLOCKDEVICE_BLOCK_NUM * DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE") == RESULT_FAIL) {
+    void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE));
+    if (region == NULL || memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE") == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 

@@ -115,7 +115,7 @@ static void* __buddyHeapAllocatorBuddyList_recursivelyGetBlock(BuddyHeapAllocato
 
 static void __buddyHeapAllocatorBuddyList_tidyup(BuddyHeapAllocator* allocator, BuddyHeapAllocatorBuddyList* list) {
 
-    algo_singlyLinkedList_mergeSort(&list->list, list->remaining, __buddyHeapAllocatorBuddyList_compareBlock);
+    algorithms_singlyLinkedList_mergeSort(&list->list, list->remaining, __buddyHeapAllocatorBuddyList_compareBlock);
 
     Uintptr orderPageLen = BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(list->order);
     for (
@@ -242,7 +242,7 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
         for (order = 0; order <= BUDDY_HEAP_ALLOCATOR_MAX_ORDER && BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(order) < realSize; ++order);
 
         if (order > BUDDY_HEAP_ALLOCATOR_MAX_ORDER) {
-            printf(TERMINAL_LEVEL_DEBUG, "Buddy Allocator allocating goes wrong!\n");
+            print_printf(TERMINAL_LEVEL_DEBUG, "Buddy Allocator allocating goes wrong!\n");
             return NULL;
         }
 
@@ -285,16 +285,16 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     void* base = (void*)header - header->padding;
     __BuddyTail* tail = (__BuddyTail*)(base + header->size - sizeof(__BuddyTail));
     if (header->magic != REGION_HEADER_MAGIC) {
-        printf(TERMINAL_LEVEL_DEBUG, "%p: Memory header not match!\n", ptr);
+        print_printf(TERMINAL_LEVEL_DEBUG, "%p: Memory header not match!\n", ptr);
         return;
     }
     
     if (tail->magic != REGION_TAIL_MAGIC) {
-        printf(TERMINAL_LEVEL_DEBUG, "WARNING: %p tail magic not match!\n", ptr);
+        print_printf(TERMINAL_LEVEL_DEBUG, "WARNING: %p tail magic not match!\n", ptr);
     }
 
     Size size = header->size;
-    memset(header, 0, sizeof(__BuddyHeader)); //TODO: When free the COW area not handled by page fault
+    memory_memset(header, 0, sizeof(__BuddyHeader)); //TODO: When free the COW area not handled by page fault
 
     if (size > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) {
         if (extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE)) == RESULT_FAIL) {

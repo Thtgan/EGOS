@@ -23,14 +23,14 @@ STRUCT_PRIVATE_DEFINE(Timer) {
 #define TIMER_FLAGS_SYNCHRONIZE FLAG8(2)
 };
 
-void initTimers(ClockSource* timerClockSource);
+void timer_init(ClockSource* timerClockSource);
 
-void initTimer(Timer* timer, Int64 time, TimeUnit unit);
+void timer_initStruct(Timer* timer, Int64 time, TimeUnit unit);
 
-Result timerStart(Timer* timer);
+Result timer_start(Timer* timer);
 
-Result timerStop(Timer* timer);
+Result timer_stop(Timer* timer);
 
-void updateTimers();
+void timer_updateTimers();
 
 #endif // __TIMER_H

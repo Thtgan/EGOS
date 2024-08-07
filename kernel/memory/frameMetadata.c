@@ -72,7 +72,7 @@ FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* p, S
         return NULL;
     }
 
-    memset(__FRAME_METADATA_BASE(newHeader), 0, newHeader->frameNum * sizeof(FrameMetadata));
+    memory_memset(__FRAME_METADATA_BASE(newHeader), 0, newHeader->frameNum * sizeof(FrameMetadata));
 
     linkedListNode_insertFront(insertBefore, &newHeader->node);
 

@@ -10,11 +10,11 @@ void debug_blowup(const Cstring format, ...) {
     va_list args;
     va_start(args, format);
 
-    vprintf(TERMINAL_LEVEL_DEBUG, format, args);
+    print_vprintf(TERMINAL_LEVEL_DEBUG, format, args);
 
     va_end(args);
 
-    switchTerminalLevel(TERMINAL_LEVEL_DEBUG);
+    terminalSwitch_setLevel(TERMINAL_LEVEL_DEBUG);
 
     cli();
     die();

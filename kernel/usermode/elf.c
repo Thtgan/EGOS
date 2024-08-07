@@ -12,8 +12,8 @@
 #include<print.h>
 #include<system/pageTable.h>
 
-Result readELF64Header(File* file, ELF64Header* header) {
-    if (fsutil_fileSeek(file, 0, FILE_SEEK_BEGIN) == INVALID_INDEX) {
+Result elf_readELF64Header(File* file, ELF64Header* header) {
+    if (fsutil_fileSeek(file, 0, FSUTIL_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
@@ -29,29 +29,29 @@ Result readELF64Header(File* file, ELF64Header* header) {
     return RESULT_SUCCESS;
 }
 
-void printELF64Header(TerminalLevel level, ELF64Header* header) {
-    printf(level, "ELF File Header:\n");
-    printf(level, "MAGIC:                       %X\n", header->identification.magic);
-    printf(level, "CLASS:                       %u\n", header->identification.class);
-    printf(level, "ENDIAN:                      %u\n", header->identification.endian);
-    printf(level, "VERSION:                     %u\n", header->identification.version);
-    printf(level, "OSABI:                       %u\n", header->identification.osABI);
-    printf(level, "TYPE:                        %u\n", header->type);
-    printf(level, "MACHINE:                     %u\n", header->machine);
-    printf(level, "ELF VERSION:                 %u\n", header->elfVersion);
-    printf(level, "ENTRY:                       %#018llX\n", header->entryVaddr);
-    printf(level, "PROGRAM HEADER BEGIN:        %#018llX\n", header->programHeadersBegin);
-    printf(level, "SECTION HEADER BEGIN:        %#018llX\n", header->sectionHeadersBegin);
-    printf(level, "FLAGS:                       %#018llX\n", header->flags);
-    printf(level, "HEADER SIZE:                 %u\n", header->headerSize);
-    printf(level, "PROGRAM HEADER SIZE:         %u\n", header->programHeaderEntrySize);
-    printf(level, "PROGRAM HEADER NUM:          %u\n", header->programHeaderEntryNum);
-    printf(level, "SECTION HEADER SIZE:         %u\n", header->sectionHeaderEntrySize);
-    printf(level, "SECTION HEADER NUM:          %u\n", header->sectionHeaderEntryNum);
-    printf(level, "NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
+void elf_printELF64Header(TerminalLevel level, ELF64Header* header) {
+    print_printf(level, "ELF File Header:\n");
+    print_printf(level, "MAGIC:                       %X\n", header->identification.magic);
+    print_printf(level, "CLASS:                       %u\n", header->identification.class);
+    print_printf(level, "ENDIAN:                      %u\n", header->identification.endian);
+    print_printf(level, "VERSION:                     %u\n", header->identification.version);
+    print_printf(level, "OSABI:                       %u\n", header->identification.osABI);
+    print_printf(level, "TYPE:                        %u\n", header->type);
+    print_printf(level, "MACHINE:                     %u\n", header->machine);
+    print_printf(level, "ELF VERSION:                 %u\n", header->elfVersion);
+    print_printf(level, "ENTRY:                       %#018llX\n", header->entryVaddr);
+    print_printf(level, "PROGRAM HEADER BEGIN:        %#018llX\n", header->programHeadersBegin);
+    print_printf(level, "SECTION HEADER BEGIN:        %#018llX\n", header->sectionHeadersBegin);
+    print_printf(level, "FLAGS:                       %#018llX\n", header->flags);
+    print_printf(level, "HEADER SIZE:                 %u\n", header->headerSize);
+    print_printf(level, "PROGRAM HEADER SIZE:         %u\n", header->programHeaderEntrySize);
+    print_printf(level, "PROGRAM HEADER NUM:          %u\n", header->programHeaderEntryNum);
+    print_printf(level, "SECTION HEADER SIZE:         %u\n", header->sectionHeaderEntrySize);
+    print_printf(level, "SECTION HEADER NUM:          %u\n", header->sectionHeaderEntryNum);
+    print_printf(level, "NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
 }
 
-Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
+Result elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
     if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
         ERROR_CODE_SET(ERROR_CODE_OBJECT_DATA, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_FAIL;
@@ -62,7 +62,7 @@ Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHe
         return RESULT_FAIL;
     }
 
-    if (fsutil_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fsutil_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FSUTIL_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
@@ -73,19 +73,19 @@ Result readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHe
     return RESULT_SUCCESS;
 }
 
-void printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header) {
-    printf(level, "ELF File Program Header:\n");
-    printf(level, "TYPE:        %u\n", header->type);
-    printf(level, "FLAGS:       %u\n", header->flags);
-    printf(level, "OFFSET:      %#018llX\n", header->offset);
-    printf(level, "VADDR:       %#018llX\n", header->vAddr);
-    printf(level, "PADDR:       %#018llX\n", header->pAddr);
-    printf(level, "MEMORY SIZE: %#018llX\n", header->segmentSizeInMemory);
-    printf(level, "FILE SIZE:   %#018llX\n", header->segmentSizeInFile);
-    printf(level, "ALIGN:       %#018llX\n", header->align);
+void elf_printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header) {
+    print_printf(level, "ELF File Program Header:\n");
+    print_printf(level, "TYPE:        %u\n", header->type);
+    print_printf(level, "FLAGS:       %u\n", header->flags);
+    print_printf(level, "OFFSET:      %#018llX\n", header->offset);
+    print_printf(level, "VADDR:       %#018llX\n", header->vAddr);
+    print_printf(level, "PADDR:       %#018llX\n", header->pAddr);
+    print_printf(level, "MEMORY SIZE: %#018llX\n", header->segmentSizeInMemory);
+    print_printf(level, "FILE SIZE:   %#018llX\n", header->segmentSizeInFile);
+    print_printf(level, "ALIGN:       %#018llX\n", header->align);
 }
 
-Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
+Result elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     if (programHeader->vAddr >= MEMORY_LAYOUT_KERNEL_BEGIN) {
         return RESULT_FAIL;
     }
@@ -101,7 +101,7 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     return RESULT_SUCCESS;
 }
 
-Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
+Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     Uintptr
         pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT),
         fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
@@ -111,13 +111,13 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         memoryRemain = programHeader->segmentSizeInMemory;
 
     ExtendedPageTableRoot* extendedTable = schedulerGetCurrentProcess()->context.extendedTable;
-    if (fsutil_fileSeek(file, fileBegin, FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fsutil_fileSeek(file, fileBegin, FSUTIL_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
     Uint64 flags = PAGING_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGING_ENTRY_FLAG_RW : 0) | PAGING_ENTRY_FLAG_PRESENT;
     
-    Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
+    Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = NULL;
@@ -128,7 +128,7 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
             }
         }
 
-        Size readN = min64(readRemain, to - from);
+        Size readN = algorithms_min64(readRemain, to - from);
         if (readN > 0) {
             if (fsutil_fileRead(file, (void*)from, readN) == RESULT_FAIL) {
                 return RESULT_FAIL;
@@ -139,24 +139,24 @@ Result loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         memoryRemain -= readN;
 
         if (to - from > readN) {
-            memset((void*)from + readN, 0, to - from - readN);
+            memory_memset((void*)from + readN, 0, to - from - readN);
             memoryRemain -= (to - from - readN);
         }
 
         base += PAGE_SIZE;
         from = to;
-        to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
+        to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
     }
 
     return RESULT_SUCCESS;
 }
 
-Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
+Result elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     Size memoryRemain = programHeader->segmentSizeInMemory;
 
     ExtendedPageTableRoot* extendedTable = schedulerGetCurrentProcess()->context.extendedTable;
-    Uintptr from = programHeader->vAddr, to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
+    Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = extendedPageTableRoot_translate(extendedTable, base);
@@ -168,7 +168,7 @@ Result unloadELF64Program(ELF64ProgramHeader* programHeader) {
         memoryRemain -= (to - from);
 
         from = to;
-        to = min64(programHeader->vAddr + programHeader->segmentSizeInMemory, to + PAGE_SIZE);
+        to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, to + PAGE_SIZE);
     }
 
     return RESULT_SUCCESS;

@@ -28,14 +28,14 @@ STRUCT_PRIVATE_DEFINE(Scheduler) {
  * 
  * @return Result Result of the operation
  */
-Result initSchedule();
+Result schedule_init();
 
 /**
  * @brief Get current scheduler
  * 
  * @return Current scheduler in use
  */
-Scheduler* getScheduler();
+Scheduler* schedule_getCurrentScheduler();
 
 /**
  * @brief Wrapper function of scheduler start
@@ -44,7 +44,7 @@ Scheduler* getScheduler();
  * @return Result Result of the operation
  */
 static inline Result schedulerStart(Process* initProcess) {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->start(scheduler, initProcess);
 }
 
@@ -52,7 +52,7 @@ static inline Result schedulerStart(Process* initProcess) {
  * @brief Wrapper function of scheduler tick
  */
 static inline void schedulerTick() {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     scheduler->tick(scheduler);
 }
 
@@ -60,7 +60,7 @@ static inline void schedulerTick() {
  * @brief Wrapper function of scheduler yield
  */
 static inline void schedulerYield() {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     scheduler->yield(scheduler);
 }
 
@@ -71,7 +71,7 @@ static inline void schedulerYield() {
  * @return Result Result of the operation
  */
 static inline Result schedulerAddProcess(Process* process) {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->addProcess(scheduler, process);
 }
 
@@ -82,7 +82,7 @@ static inline Result schedulerAddProcess(Process* process) {
  * @return Result Result of the operation
  */
 static inline Result schedulerTerminateProcess(Process* process) {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->terminateProcess(scheduler, process);
 }
 
@@ -93,7 +93,7 @@ static inline Result schedulerTerminateProcess(Process* process) {
  * @return Result Result of the operation
  */
 static inline Result schedulerBlockProcess(Process* process) {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->blockProcess(scheduler, process);
 }
 
@@ -104,7 +104,7 @@ static inline Result schedulerBlockProcess(Process* process) {
  * @return Result Result of the operation
  */
 static inline Result schedulerWakeProcess(Process* process) {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->wakeProcess(scheduler, process);
 }
 
@@ -114,7 +114,7 @@ static inline Result schedulerWakeProcess(Process* process) {
  * @return Process* current process running
  */
 static inline Process* schedulerGetCurrentProcess() {
-    Scheduler* scheduler = getScheduler();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->currentProcess;
 }
 

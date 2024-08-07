@@ -11,20 +11,20 @@ typedef struct {
     Uint8 firstFreeBlock;
 } DevFSblockChains;
 
-void DEVFS_blockChain_initStruct(DevFSblockChains* blockChains);
+void devfs_blockChain_initStruct(DevFSblockChains* blockChains);
 
-void DEVFS_blockChain_clearStruct(DevFSblockChains* blockChains);
+void devfs_blockChain_clearStruct(DevFSblockChains* blockChains);
 
-Index8 DEVFS_blockChain_get(DevFSblockChains* blockChains, Index8 chainFirst, Index8 index);
+Index8 devfs_blockChain_get(DevFSblockChains* blockChains, Index8 chainFirst, Index8 index);
 
-Size DEVFS_blockChain_getChainLength(DevFSblockChains* blockChains, Index8 chainFirst);
+Size devfs_blockChain_getChainLength(DevFSblockChains* blockChains, Index8 chainFirst);
 
-Index8 DEVFS_blockChain_allocChain(DevFSblockChains* blockChains, Size length);
+Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length);
 
-void DEVFS_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst);
+void devfs_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst);
 
-Index8 DEVFS_blockChain_cutChain(DevFSblockChains* blockChains, Index8 block);
+Index8 devfs_blockChain_cutChain(DevFSblockChains* blockChains, Index8 block);
 
-void DEVFS_blockChain_insertChain(DevFSblockChains* blockChains, Index8 block, Index8 chainFirst);
+void devfs_blockChain_insertChain(DevFSblockChains* blockChains, Index8 block, Index8 chainFirst);
 
 #endif // __DEVFS_BLOCKCHAIN_H

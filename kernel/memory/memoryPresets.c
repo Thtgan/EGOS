@@ -186,7 +186,7 @@ static Result __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Exten
     if (unit->cow > 0) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
         void* copyTo = memory_allocateFrame(span >> PAGE_SIZE_SHIFT);
-        memcpy(paging_convertAddressP2V(copyTo), paging_convertAddressP2V(pageTable_getNextLevelPage(level, *entry)), span);
+        memory_memcpy(paging_convertAddressP2V(copyTo), paging_convertAddressP2V(pageTable_getNextLevelPage(level, *entry)), span);
 
         --unit->cow;
         *entry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), copyTo, FLAGS_FROM_PAGING_ENTRY(*entry));

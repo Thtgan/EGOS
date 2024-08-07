@@ -16,7 +16,7 @@ typedef struct {
  * 
  * @param buffer Input buffer struct
  */
-void initInputBuffer(InputBuffer* buffer);
+void inputBuffer_initStruct(InputBuffer* buffer);
 
 /**
  * @brief Put a char to input buffer
@@ -24,7 +24,7 @@ void initInputBuffer(InputBuffer* buffer);
  * @param buffer Input buffer
  * @param ch char
  */
-void inputChar(InputBuffer* buffer, char ch);
+void inputBuffer_inputChar(InputBuffer* buffer, char ch);
 
 /**
  * @brief Get a char from input buffer
@@ -32,7 +32,7 @@ void inputChar(InputBuffer* buffer, char ch);
  * @param buffer Input buffer
  * @return int char returned
  */
-int bufferGetChar(InputBuffer* buffer);
+int inputBuffer_getChar(InputBuffer* buffer);
 
 /**
  * @brief Get a string from input buffer, strings in buffer ends with '\n', and replaced with '\0' after read
@@ -41,6 +41,6 @@ int bufferGetChar(InputBuffer* buffer);
  * @param writeTo String buffer
  * @return int Num of character read
  */
-int bufferGetLine(InputBuffer* buffer, Cstring writeTo);
+int inputBuffer_getLine(InputBuffer* buffer, Cstring writeTo);
 
 #endif // __INPUT_BUFFER_H

@@ -1,7 +1,7 @@
 #include<system/GDT.h>
 
 __attribute__((aligned(16), used))
-GDTEntry GDTable64[16] = {
+GDTEntry gdt_gdtTable64[16] = {
     //In 64-bit mode, the processor DOES NOT perform runtime limit checking on code or data segments. However, the processor does check descriptor-table limits.
     //That's why we can jump to kernel starts at position far above segment's limitation
     //<<Intel® 64 and IA-32 Architectures Software Developer’s Manual>> 5.3.1

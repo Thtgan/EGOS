@@ -14,10 +14,10 @@
 // static int __syscall_close(int fileDescriptor);
 
 // void initFSsyscall() {
-//     registerSyscallHandler(SYSCALL_READ, __syscall_read);
-//     registerSyscallHandler(SYSCALL_WRITE, __syscall_write);
-//     registerSyscallHandler(SYSCALL_OPEN, __syscall_open);
-//     registerSyscallHandler(SYSCALL_CLOSE, __syscall_close);
+//     syscall_registerHandler(SYSCALL_READ, __syscall_read);
+//     syscall_registerHandler(SYSCALL_WRITE, __syscall_write);
+//     syscall_registerHandler(SYSCALL_OPEN, __syscall_open);
+//     syscall_registerHandler(SYSCALL_CLOSE, __syscall_close);
 // }
 
 // static int __syscall_read(int fileDescriptor, void* buffer, Size n) {

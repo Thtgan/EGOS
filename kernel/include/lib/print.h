@@ -15,7 +15,7 @@
  * @param ... Data
  * @return The length of final string printed
  */
-int printf(TerminalLevel level, const char* format, ...);
+int print_printf(TerminalLevel level, const char* format, ...);
 
 /**
  * @brief Write the string to buffer with given data in format
@@ -25,7 +25,7 @@ int printf(TerminalLevel level, const char* format, ...);
  * @param ... Data
  * @return int The length of final string printed
  */
-int sprintf(char* buffer, const char* format, ...);
+int print_sprintf(char* buffer, const char* format, ...);
 
 /**
  * @brief Print the string on the screen with given data in format
@@ -35,7 +35,7 @@ int sprintf(char* buffer, const char* format, ...);
  * @param args Data
  * @return The length of final string printed
  */
-int vprintf(TerminalLevel level, const char* format, va_list args);
+int print_vprintf(TerminalLevel level, const char* format, va_list args);
 
 /**
  * @brief Write the string to buffer with given data in format
@@ -45,7 +45,7 @@ int vprintf(TerminalLevel level, const char* format, va_list args);
  * @param args Data
  * @return int The length of final string printed
  */
-int vsprintf(char* buffer, const char* format, va_list args);
+int print_vsprintf(char* buffer, const char* format, va_list args);
 
 /**
  * @brief Print a character to screen
@@ -54,6 +54,6 @@ int vsprintf(char* buffer, const char* format, va_list args);
  * @param ch Character
  * @return int The character
  */
-int putchar(TerminalLevel level, int ch);
+int print_putchar(TerminalLevel level, int ch);
 
 #endif // __PRINT_H

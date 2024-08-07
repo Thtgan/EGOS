@@ -8,7 +8,7 @@
 #include<memory/memory.h>
 #include<structs/RBtree.h>
 
-RBtree _deviceMajorTree;
+RBtree _device_majorDeviceTree;
 
 typedef struct {
     MajorDeviceID   major;
@@ -25,13 +25,13 @@ int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 
 void device_initStruct(Device* device, DeviceID id, ConstCstring name, BlockDevice* dev, void* operations) {
     device->id = id;
-    strcpy(device->name, name);
+    cstring_strcpy(device->name, name);
     device->dev = dev;
     device->operations = operations;
 }
 
 Result device_init() {
-    RBtree_initStruct(&_deviceMajorTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
+    RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
     if (pseudoDevice_init() == RESULT_FAIL) {
         return RESULT_FAIL;
     }
@@ -40,14 +40,14 @@ Result device_init() {
 }
 
 MajorDeviceID device_allocMajor() {
-    RBtreeNode* majorFirst = RBtree_getFirst(&_deviceMajorTree);
+    RBtreeNode* majorFirst = RBtree_getFirst(&_device_majorDeviceTree);
     MajorDeviceID ret = INVALID_DEVICE_ID;
     if (majorFirst == NULL || HOST_POINTER(majorFirst, __DeviceMajorTreeNode, majorTreeNode)->major != 0) {
         ret = 0;
     } else {
         RBtreeNode* current = majorFirst;
         for (MajorDeviceID i = 1; i < POWER_2(32 - DEVICE_ID_MAJOR_SHIFT) - 1; ++i) {
-            current = RBtree_getSuccessor(&_deviceMajorTree, current);
+            current = RBtree_getSuccessor(&_device_majorDeviceTree, current);
             if (current == NULL || HOST_POINTER(current, __DeviceMajorTreeNode, majorTreeNode)->major != i) {
                 ret = i;
                 break;
@@ -60,22 +60,22 @@ MajorDeviceID device_allocMajor() {
         newNode->major = ret;
         newNode->deviceNum = 0;
         RBtree_initStruct(&newNode->minorTree, __device_deviceMinorTreeCmpFunc, __device_deviceMinorTreeSearchFunc);
-        RBtreeNode_initStruct(&_deviceMajorTree, &newNode->majorTreeNode);
+        RBtreeNode_initStruct(&_device_majorDeviceTree, &newNode->majorTreeNode);
 
-        RBtree_insert(&_deviceMajorTree, &newNode->majorTreeNode);
+        RBtree_insert(&_device_majorDeviceTree, &newNode->majorTreeNode);
     }
 
     return ret;
 }
 
 Result device_releaseMajor(MajorDeviceID major) {
-    RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)major);
+    RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return RESULT_FAIL;
     }
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
-    if (node->deviceNum > 0 || RBtree_delete(&_deviceMajorTree, (Object)major) != found) {
+    if (node->deviceNum > 0 || RBtree_delete(&_device_majorDeviceTree, (Object)major) != found) {
         return RESULT_FAIL;
     }
 
@@ -85,7 +85,7 @@ Result device_releaseMajor(MajorDeviceID major) {
 }
 
 MinorDeviceID device_allocMinor(MajorDeviceID major) {
-    RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)major);
+    RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return 0;
     }
@@ -117,7 +117,7 @@ MinorDeviceID device_allocMinor(MajorDeviceID major) {
 
 Result device_registerDevice(Device* device) {
     MajorDeviceID major = MAJOR_FROM_DEVICE_ID(device->id);
-    RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)major);
+    RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return RESULT_FAIL;
     }
@@ -135,7 +135,7 @@ Result device_unregisterDevice(DeviceID id) {
     MajorDeviceID major = MAJOR_FROM_DEVICE_ID(id);
     MinorDeviceID minor = MINOR_FROM_DEVICE_ID(id);
 
-    RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)major);
+    RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return RESULT_FAIL;
     }
@@ -153,7 +153,7 @@ Device* device_getDevice(DeviceID id) {
     MajorDeviceID major = MAJOR_FROM_DEVICE_ID(id);
     MinorDeviceID minor = MINOR_FROM_DEVICE_ID(id);
 
-    RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)major);
+    RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return NULL;
     }
@@ -170,14 +170,14 @@ Device* device_getDevice(DeviceID id) {
 MajorDeviceID device_iterateMajor(MajorDeviceID current) {
     RBtreeNode* next;
     if (current == INVALID_DEVICE_ID) {
-        next = RBtree_getFirst(&_deviceMajorTree);
+        next = RBtree_getFirst(&_device_majorDeviceTree);
     } else {
-        RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)current);
+        RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)current);
         if (found == NULL) {
             return INVALID_DEVICE_ID;
         }
 
-        next = RBtree_getSuccessor(&_deviceMajorTree, found);
+        next = RBtree_getSuccessor(&_device_majorDeviceTree, found);
     }
 
     if (next == NULL) {
@@ -188,7 +188,7 @@ MajorDeviceID device_iterateMajor(MajorDeviceID current) {
 }
 
 Device* device_iterateMinor(MajorDeviceID major, MinorDeviceID current) {
-    RBtreeNode* found = RBtree_search(&_deviceMajorTree, (Object)major);
+    RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return NULL;
     }

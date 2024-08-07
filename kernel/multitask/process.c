@@ -25,70 +25,70 @@
  * @param name Name of process
  * @return Process* Created process
  */
-static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStackTop);
+static Process* __process_create(Uint16 pid, ConstCstring name, void* kernelStackTop);
 
 /**
  * @brief Allocate a PID
  * 
  * @return Uint16 PID allocated
  */
-static Uint16 __allocatePID();
+static Uint16 __process_allocatePID();
 
 /**
  * @brief Release a PID
  * 
  * @param pid PID to release
  */
-static void __releasePID(Uint16 pid);
+static void __process_releasePID(Uint16 pid);
 
-static Uint16 _lastGeneratePID = 0;
-static Bitmap _pidBitmap;
-static Uint8 _pidBitmapBits[MAXIMUM_PROCESS_NUM / 8];
+static Uint16 _process_lastGeneratePID = 0;
+static Bitmap _process_pidBitmap;
+static Uint8 _process_pidBitmapBits[PROCESS_MAXIMUM_PROCESS_NUM / 8];
 
 __attribute__((aligned(PAGE_SIZE)))
-char initKernelStack[PROCESS_KERNEL_STACK_SIZE];
+char process_initKernelStack[PROCESS_KERNEL_STACK_SIZE];
 
-Process* initProcess() {
-    memset(&_pidBitmapBits, 0, sizeof(_pidBitmapBits));
-    bitmap_initStruct(&_pidBitmap, MAXIMUM_PROCESS_NUM, &_pidBitmap);
-    bitmap_setBit(&_pidBitmap, MAIN_PROCESS_RESERVE_PID);
+Process* process_init() {
+    memory_memset(&_process_pidBitmapBits, 0, sizeof(_process_pidBitmapBits));
+    bitmap_initStruct(&_process_pidBitmap, PROCESS_MAXIMUM_PROCESS_NUM, &_process_pidBitmap);
+    bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
 
-    Process* mainProcess = __createProcess(MAIN_PROCESS_RESERVE_PID, "Init", initKernelStack + PROCESS_KERNEL_STACK_SIZE);
-    mainProcess->ppid = MAIN_PROCESS_RESERVE_PID;
+    Process* mainProcess = __process_create(PROCESS_MAIN_PROCESS_RESERVE_PID, "Init", process_initKernelStack + PROCESS_KERNEL_STACK_SIZE);
+    mainProcess->ppid = PROCESS_MAIN_PROCESS_RESERVE_PID;
     mainProcess->context.extendedTable = mm->extendedTable;
 
     return mainProcess;
 }
 
 void switchProcess(Process* from, Process* to) {
-    SAVE_REGISTERS();
+    REGISTERS_SAVE();
 
     from->registers = (Registers*)readRegister_RSP_64();
     
-    switchContext(&from->context, &to->context);
+    context_switch(&from->context, &to->context);
 
-    RESTORE_REGISTERS();
+    REGISTERS_RESTORE();
 }
 
 extern void* __fork_return;
 
 Process* fork(ConstCstring name) {
-    Uint32 oldPID = schedulerGetCurrentProcess()->pid, newPID = __allocatePID();
+    Uint32 oldPID = schedulerGetCurrentProcess()->pid, newPID = __process_allocatePID();
 
-    if (newPID == INVALID_PID) {
+    if (newPID == PROCESS_INVALID_PID) {
         return NULL;
     }
     
     void* newStack = paging_convertAddressP2V(memory_allocateFrame(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE)));
 
-    Process* newProcess = __createProcess(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
+    Process* newProcess = __process_create(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
     newProcess->ppid = oldPID;
     ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(schedulerGetCurrentProcess()->context.extendedTable);
 
     Uintptr currentStackTop = schedulerGetCurrentProcess()->kernelStackTop;
 
-    SAVE_REGISTERS();
-    memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
+    REGISTERS_SAVE();
+    memory_memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
 
     newProcess->context.extendedTable = newTable;
     newProcess->context.rip = (Uint64)&__fork_return;
@@ -99,7 +99,7 @@ Process* fork(ConstCstring name) {
     asm volatile("__fork_return:");
     //New process starts from here
 
-    RESTORE_REGISTERS();
+    REGISTERS_RESTORE();
 
     return schedulerGetCurrentProcess()->pid == oldPID ? newProcess : NULL;
 }
@@ -112,48 +112,48 @@ void exitProcess() {
 
 void releaseProcess(Process* process) {
     void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
-    memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
+    memory_memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
     memory_freeFrame(paging_convertAddressV2P(stackBottom));
 
     //TODO: What if user program is running
     extendedPageTableRoot_releaseTable(process->context.extendedTable);
 
-    __releasePID(process->pid);
+    __process_releasePID(process->pid);
 
     //TODO: Check these codes again
-    // for (int i = 1; i < MAX_OPENED_FILE_NUM; ++i) {
+    // for (int i = 1; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
     //     if (process->fileSlots[i] != NULL) {
     //         fsutil_closefsEntry(process->fileSlots[i]);
     //     }
     // }
-    // Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    // Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
     // memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
     // physicalPage_free(convertAddressV2P(process->fileSlots));
 
 
-    memset(process, 0, PAGE_SIZE);
+    memory_memset(process, 0, PAGE_SIZE);
     memory_freeFrame(paging_convertAddressV2P(process));
 }
 
-static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStackTop) {
+static Process* __process_create(Uint16 pid, ConstCstring name, void* kernelStackTop) {
     Process* ret = paging_convertAddressP2V(memory_allocateFrame(1));
-    memset(ret, 0, PAGE_SIZE);
+    memory_memset(ret, 0, PAGE_SIZE);
 
     ret->pid = pid, ret->ppid = 0;
-    memcpy(ret->name, name, strlen(name));
+    memory_memcpy(ret->name, name, cstring_strlen(name));
 
     ret->remainTick = PROCESS_TICK;
     ret->status = PROCESS_STATUS_UNKNOWN;
 
     ret->kernelStackTop = (Uintptr)kernelStackTop;
-    memset(&ret->context, 0, sizeof(Context));
+    memory_memset(&ret->context, 0, sizeof(Context));
     ret->registers = NULL;
                   
     queueNode_initStruct(&ret->statusQueueNode);
     queueNode_initStruct(&ret->semaWaitQueueNode);
 
     //TODO: Check these codes again
-    // Size openedFilePageSize = DIVIDE_ROUND_UP(MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    // Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
     // // ret->fileSlots = convertAddressP2V(physicalPage_alloc(openedFilePageSize, PHYSICAL_PAGE_ATTRIBUTE_PRIVATE));
     // ret->fileSlots = paging_convertAddressP2V(frameAllocator_allocateFrame(mm->frameAllocator, openedFilePageSize));
     // memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
@@ -164,7 +164,7 @@ static Process* __createProcess(Uint16 pid, ConstCstring name, void* kernelStack
 }
 
 int allocateFileSlot(Process* process, File* file) {
-    for (int i = 0; i < MAX_OPENED_FILE_NUM; ++i) {
+    for (int i = 0; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
         if (process->fileSlots[i] == NULL) {
             process->fileSlots[i] = file;
             return i;
@@ -175,7 +175,7 @@ int allocateFileSlot(Process* process, File* file) {
 }
 
 File* getFileFromSlot(Process* process, int index) {
-    if (index >= MAX_OPENED_FILE_NUM) {
+    if (index >= PROCESS_MAX_OPENED_FILE_NUM) {
         return NULL;
     }
 
@@ -183,7 +183,7 @@ File* getFileFromSlot(Process* process, int index) {
 }
 
 File* releaseFileSlot(Process* process, int index) {
-    if (index >= MAX_OPENED_FILE_NUM) {
+    if (index >= PROCESS_MAX_OPENED_FILE_NUM) {
         return NULL;
     }
 
@@ -193,15 +193,15 @@ File* releaseFileSlot(Process* process, int index) {
     return ret;
 }
 
-static Uint16 __allocatePID() {
-    Uint16 pid = bitmap_findFirstClear(&_pidBitmap, _lastGeneratePID);
-    if (pid != INVALID_PID) {
-        bitmap_setBit(&_pidBitmap, pid);
-        _lastGeneratePID = pid;
+static Uint16 __process_allocatePID() {
+    Uint16 pid = bitmap_findFirstClear(&_process_pidBitmap, _process_lastGeneratePID);
+    if (pid != PROCESS_INVALID_PID) {
+        bitmap_setBit(&_process_pidBitmap, pid);
+        _process_lastGeneratePID = pid;
     }
     return pid;
 }
 
-static void __releasePID(Uint16 pid) {
-    bitmap_clearBit(&_pidBitmap, pid);
+static void __process_releasePID(Uint16 pid) {
+    bitmap_clearBit(&_process_pidBitmap, pid);
 }

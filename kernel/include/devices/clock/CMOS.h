@@ -4,6 +4,6 @@
 #include<devices/clock/clockSource.h>
 #include<kit/types.h>
 
-Result initClockSourceCMOS(ClockSource* clockSource);
+Result CMOS_initClockSource(ClockSource* clockSource);
 
 #endif // __CMOS_H

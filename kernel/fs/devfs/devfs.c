@@ -11,8 +11,8 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 
-static ConstCstring __devfs_fs_name = "DEVFS";
-static SuperBlockOperations __devfs_fs_superBlockOperations = {
+static ConstCstring __devfs_name = "DEVFS";
+static SuperBlockOperations __devfs_superBlockOperations = {
     .openInode      = devfs_iNode_open,
     .closeInode     = devfs_iNode_close,
     .openfsEntry    = devfs_fsEntry_open,
@@ -21,23 +21,24 @@ static SuperBlockOperations __devfs_fs_superBlockOperations = {
     .unmount        = NULL
 };
 
+//TODO: Capsule these data
 static bool _devfs_opened = false;
 
-static DEVFSspecificInfo _devfsSpecificInfo;
+static DEVFSspecificInfo _devfs_specificInfo;
 
-Result devfs_fs_init() {
+Result devfs_init() {
     return RESULT_SUCCESS;
 }
 
-Result devfs_fs_checkType(BlockDevice* device) {
+Result devfs_checkType(BlockDevice* device) {
     return RESULT_SUCCESS;
 }
 
 #define __DEVFS_SUPERBLOCK_HASH_BUCKET  16
 #define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET))
 
-Result devfs_fs_open(FS* fs, BlockDevice* device) {
-    if (_devfs_opened || device->availableBlockNum != DEVFS_FS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
+Result devfs_open(FS* fs, BlockDevice* device) {
+    if (_devfs_opened || device->availableBlockNum != DEVFS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
         return RESULT_FAIL;
     }
 
@@ -54,13 +55,13 @@ Result devfs_fs_open(FS* fs, BlockDevice* device) {
         (SinglyLinkedList, fsEntryDescChains, __DEVFS_SUPERBLOCK_HASH_BUCKET)
     );
 
-    DEVFS_blockChain_initStruct(&_devfsSpecificInfo.chains);
+    devfs_blockChain_initStruct(&_devfs_specificInfo.chains);
 
     SuperBlockInitArgs args = {
         .device             = device,
-        .operations         = &__devfs_fs_superBlockOperations,
+        .operations         = &__devfs_superBlockOperations,
         .rootDirDesc        = desc,
-        .specificInfo       = &_devfsSpecificInfo,
+        .specificInfo       = &_devfs_specificInfo,
         .openedInodeBucket  = __DEVFS_SUPERBLOCK_HASH_BUCKET,
         .openedInodeChains  = openedInodeChains,
         .mountedBucket      = __DEVFS_SUPERBLOCK_HASH_BUCKET,
@@ -79,7 +80,7 @@ Result devfs_fs_open(FS* fs, BlockDevice* device) {
     }
 
     fs->superBlock = superBlock;
-    fs->name = __devfs_fs_name;
+    fs->name = __devfs_name;
     fs->type = FS_TYPE_DEVFS;
 
     _devfs_opened = true;
@@ -87,7 +88,7 @@ Result devfs_fs_open(FS* fs, BlockDevice* device) {
     return RESULT_SUCCESS;
 }
 
-Result devfs_fs_close(FS* fs) {
+Result devfs_close(FS* fs) {
     _devfs_opened = false;
 
     return RESULT_SUCCESS;

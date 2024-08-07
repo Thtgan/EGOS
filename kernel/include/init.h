@@ -8,6 +8,6 @@
  * 
  * @return Result Result of the operation
  */
-Result initKernel();
+Result init_initKernel();
 
 #endif // __INIT_H
