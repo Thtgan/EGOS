@@ -1,9 +1,11 @@
 #if !defined(__DEBUG_H)
 #define __DEBUG_H
 
+#include<multitask/context.h>
 #include<kit/macro.h>
 #include<kit/types.h>
 #include<print.h>
+#include<structs/singlyLinkedList.h>
 
 __attribute__((noreturn))
 /**
@@ -12,6 +14,12 @@ __attribute__((noreturn))
  * @param ...: Values printed by func
  */
 void debug_blowup(const Cstring format, ...);
+
+void debug_dump_registers(Registers* regs);
+
+void debug_dump_memory(void* data, Size n);
+
+void debug_dump_stack(void* rbp, Size maxDepth);
 
 #define DEBUG_MARK_PRINT(__FORMAT, ...)                 printf(TERMINAL_LEVEL_DEBUG, "[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 

@@ -132,12 +132,4 @@ asm volatile(               \
 #define REGISTER_ARGUMENTS_5        r8
 #define REGISTER_ARGUMENTS_6        r9
 
-/**
- * @brief Print registers
- * 
- * @param outputLevel Which terminal level to print
- * @param registers Registers to print
- */
-void registers_print(TerminalLevel outputLevel, Registers* registers);
-
 #endif // __CONTEXT_H
