@@ -128,42 +128,37 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
 
     if (_keyboard_pressed[KEY_CAPSLOCK] && key == KEY_CAPSLOCK) {
         _keyboard_capslock ^= true;
-    }
-    else if (_keyboard_pressed[key]) {
+    } else if (_keyboard_pressed[key]) {
         Terminal* terminal = terminal_getCurrentTerminal();
         if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, ASCII)) {
             terminal_inputChar(terminal, __keyboard_keyToASCII(key));
         } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, KEYPAD)) {
-            switch (key)
-            {
-            case KEY_KEYPAD_3: {
-                terminal_scrollDown(terminal);
-                break;
-            }
-            case KEY_KEYPAD_9: {
-                terminal_scrollUp(terminal);
-                break;
-            }
-            default:
-                break;
+            switch (key) {
+                case KEY_KEYPAD_3: {
+                    terminal_scrollDown(terminal);
+                    break;
+                }
+                case KEY_KEYPAD_9: {
+                    terminal_scrollUp(terminal);
+                    break;
+                }
+                default: {
+                    break;
+                }
             }
         } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, FUNCTION)) {
-            switch (key)
-            {
-            case KEY_F1: {
-                terminalSwitch_setLevel(TERMINAL_LEVEL_OUTPUT);
-                break;
-            }
-            case KEY_F2: {
-                terminalSwitch_setLevel(TERMINAL_LEVEL_DEV);
-                break;
-            }
-            case KEY_F3: {
-                terminalSwitch_setLevel(TERMINAL_LEVEL_DEBUG);
-                break;
-            }
-            default:
-                break;
+            switch (key) {
+                case KEY_F1: {
+                    terminalSwitch_setLevel(TERMINAL_LEVEL_OUTPUT);
+                    break;
+                }
+                case KEY_F2: {
+                    terminalSwitch_setLevel(TERMINAL_LEVEL_DEBUG);
+                    break;
+                }
+                default: {
+                    break;
+                }
             }
         }
 

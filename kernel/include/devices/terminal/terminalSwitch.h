@@ -6,7 +6,6 @@
 
 typedef enum {
     TERMINAL_LEVEL_OUTPUT,
-    TERMINAL_LEVEL_DEV,
     TERMINAL_LEVEL_DEBUG,
     TERMINAL_LEVEL_NUM
 } TerminalLevel;
