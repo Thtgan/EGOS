@@ -2,6 +2,7 @@
 
 #include<debug.h>
 #include<fs/fsutil.h>
+#include<fs/fsStructs.h>
 #include<fs/fsSyscall.h>
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -49,10 +50,16 @@ static Uint8 _process_pidBitmapBits[PROCESS_MAXIMUM_PROCESS_NUM / 8];
 __attribute__((aligned(PAGE_SIZE)))
 char process_initKernelStack[PROCESS_KERNEL_STACK_SIZE];
 
+static File _process_stdoutFile;
+
 Process* process_init() {
     memory_memset(&_process_pidBitmapBits, 0, sizeof(_process_pidBitmapBits));
     bitmap_initStruct(&_process_pidBitmap, PROCESS_MAXIMUM_PROCESS_NUM, &_process_pidBitmap);
     bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
+
+    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/stdout", FS_ENTRY_TYPE_DEVICE, &_process_stdoutFile) == RESULT_FAIL) {
+        return NULL;
+    }
 
     Process* mainProcess = __process_create(PROCESS_MAIN_PROCESS_RESERVE_PID, "Init", process_initKernelStack + PROCESS_KERNEL_STACK_SIZE);
     mainProcess->ppid = PROCESS_MAIN_PROCESS_RESERVE_PID;
@@ -157,7 +164,7 @@ static Process* __process_create(Uint16 pid, ConstCstring name, void* kernelStac
     ret->fileSlots = paging_convertAddressP2V(frameAllocator_allocateFrame(mm->frameAllocator, openedFilePageSize));
     memory_memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
-    ret->fileSlots[FSSYSCALL_STANDARD_OUTPUT_FILE_DESCRIPTOR] = fsSyscall_getStandardOutputFile();
+    ret->fileSlots[FSSYSCALL_STANDARD_OUTPUT_FILE_DESCRIPTOR] = &_process_stdoutFile;
 
     return ret;
 }

@@ -41,7 +41,7 @@ Index64 fsutil_fileGetPointer(File* file) {
 }
 
 Result fsutil_fileRead(File* file, void* buffer, Size n) {
-    if (fsEntry_rawRead(file, buffer, n) == RESULT_FAIL || fsEntry_rawSeek(file, file->pointer + n) == RESULT_FAIL) {   //TODO: No, seek returns pointer after seek
+    if (fsEntry_rawRead(file, buffer, n) == RESULT_FAIL || fsEntry_rawSeek(file, file->pointer + n) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 
@@ -54,7 +54,7 @@ Result fsutil_fileRead(File* file, void* buffer, Size n) {
 }    
 
 Result fsutil_fileWrite(File* file, const void* buffer, Size n) {
-    if (fsEntry_rawWrite(file, buffer, n) == RESULT_FAIL || fsEntry_rawSeek(file, file->pointer + n) == RESULT_FAIL) {
+    if (fsEntry_rawWrite(file, buffer, n) == RESULT_FAIL || fsEntry_rawSeek(file, file->pointer + n) == INVALID_INDEX) {
         return RESULT_FAIL;
     }
 

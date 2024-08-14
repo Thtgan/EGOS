@@ -131,7 +131,7 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
 
     __DevFSdirectoryEntry deviceEntry;
     fsEntryDesc desc;
-    for (MajorDeviceID major = device_iterateMajor(INVALID_DEVICE_ID); major != INVALID_DEVICE_ID; major = device_iterateMajor(major)) {
+    for (MajorDeviceID major = device_iterateMajor(INVALID_DEVICE_ID); major != INVALID_DEVICE_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
         for (Device* device = device_iterateMinor(major, INVALID_DEVICE_ID); device != NULL; device = device_iterateMinor(major, MINOR_FROM_DEVICE_ID(device->id))) {
             __devfs_fsEntry_deviceToDirectoryEntry(device, &deviceEntry);
             __devfs_fsentry_directoryEntryToFSentryDesc(&rootDir.desc->identifier, &deviceEntry, &desc);
