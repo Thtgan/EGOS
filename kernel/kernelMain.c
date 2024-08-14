@@ -61,13 +61,13 @@ void kernelMain(SystemInfo* info) {
     arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW));
     print_printf(TERMINAL_LEVEL_OUTPUT, "%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
-    if (fork("Forked") != NULL) {
-        print_printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", schedulerGetCurrentProcess()->name);
+    if (process_fork("Forked") != NULL) {
+        print_printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", scheduler_getCurrentProcess()->name);
     } else {
-        print_printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", schedulerGetCurrentProcess()->name);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", scheduler_getCurrentProcess()->name);
     }
 
-    if (cstring_strcmp(schedulerGetCurrentProcess()->name, "Init") == 0) {
+    if (cstring_strcmp(scheduler_getCurrentProcess()->name, "Init") == 0) {
         arr1[0] = 3;
         semaphore_up(&sema1);
         semaphore_down(&sema2);
@@ -90,7 +90,7 @@ void kernelMain(SystemInfo* info) {
         //TODO: Calling userprogram goes wrong here
 
         semaphore_up(&sema2);
-        exitProcess();
+        process_exit();
     }
 
     int ret = usermode_exsecute("/bin/test");
@@ -99,12 +99,14 @@ void kernelMain(SystemInfo* info) {
     memory_free(arr1);
     memory_free(arr2);
 
-    print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", schedulerGetCurrentProcess()->name);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess()->name);
 
     fsEntry entry;
     if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {
         fsutil_fileWrite(&entry, "1145141919810", 14);
     }
+
+    File* stdout = process_getFileFromSlot(scheduler_getCurrentProcess(), 0);
 
     Timer timer1, timer2;
     timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);

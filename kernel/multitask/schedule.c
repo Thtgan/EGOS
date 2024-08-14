@@ -13,9 +13,9 @@ static Scheduler* _schedule_currentScheduler = NULL;
 Result schedule_init() {
     _schedule_currentScheduler = simpleScheduler_create();
 
-    schedulerStart(process_init());
+    scheduler_start(process_init());
 
-    if (fork("Idle") == NULL) {
+    if (process_fork("Idle") == NULL) {
         __schedule_idle();
     }
 

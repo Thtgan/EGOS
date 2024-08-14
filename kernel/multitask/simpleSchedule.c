@@ -107,7 +107,7 @@ void __simpleScheduler_tick(Scheduler* this) {
     Process* p = this->currentProcess;
     if (--p->remainTick == 0) {
         p->remainTick = PROCESS_TICK;
-        schedulerYield();
+        scheduler_yield();
     }
 }
 
@@ -132,7 +132,7 @@ Result __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
         return RESULT_FAIL;
     }
 
-    if (process == schedulerGetCurrentProcess(this)) {
+    if (process == scheduler_getCurrentProcess(this)) {
         __simpleScheduler_schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_DYING);
         debug_blowup("Terminated process still alive\n");
     }
@@ -146,7 +146,7 @@ Result __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
         return RESULT_FAIL;
     }
 
-    if (process == schedulerGetCurrentProcess(this)) {
+    if (process == scheduler_getCurrentProcess(this)) {
         __simpleScheduler_schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_WAITING);
 
         return RESULT_SUCCESS;
@@ -173,14 +173,14 @@ static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStat
         __simpleScheduler_setProcessStatus(scheduler, next, PROCESS_STATUS_RUNNING);
 
         if (current != next) {
-            switchProcess(current, next);
+            process_switch(current, next);
         }
     }
 
     while (!queue_isEmpty(&scheduler->statusQueues[PROCESS_STATUS_DYING])) {
         Process* dyingProcess = __simpleScheduler_getStatusQueueHead(scheduler, PROCESS_STATUS_DYING);
         __simpleScheduler_removeProcessFromQueue(scheduler, dyingProcess);
-        releaseProcess(dyingProcess);
+        process_release(dyingProcess);
     }
 }
 

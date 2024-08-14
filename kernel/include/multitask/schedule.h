@@ -43,7 +43,7 @@ Scheduler* schedule_getCurrentScheduler();
  * @param initProcess Initial process
  * @return Result Result of the operation
  */
-static inline Result schedulerStart(Process* initProcess) {
+static inline Result scheduler_start(Process* initProcess) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->start(scheduler, initProcess);
 }
@@ -51,7 +51,7 @@ static inline Result schedulerStart(Process* initProcess) {
 /**
  * @brief Wrapper function of scheduler tick
  */
-static inline void schedulerTick() {
+static inline void scheduler_tick() {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     scheduler->tick(scheduler);
 }
@@ -59,7 +59,7 @@ static inline void schedulerTick() {
 /**
  * @brief Wrapper function of scheduler yield
  */
-static inline void schedulerYield() {
+static inline void scheduler_yield() {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     scheduler->yield(scheduler);
 }
@@ -70,7 +70,7 @@ static inline void schedulerYield() {
  * @param process Process
  * @return Result Result of the operation
  */
-static inline Result schedulerAddProcess(Process* process) {
+static inline Result scheduler_addProcess(Process* process) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->addProcess(scheduler, process);
 }
@@ -81,7 +81,7 @@ static inline Result schedulerAddProcess(Process* process) {
  * @param process Process
  * @return Result Result of the operation
  */
-static inline Result schedulerTerminateProcess(Process* process) {
+static inline Result scheduler_terminateProcess(Process* process) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->terminateProcess(scheduler, process);
 }
@@ -92,7 +92,7 @@ static inline Result schedulerTerminateProcess(Process* process) {
  * @param process Process
  * @return Result Result of the operation
  */
-static inline Result schedulerBlockProcess(Process* process) {
+static inline Result scheduler_blockProcess(Process* process) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->blockProcess(scheduler, process);
 }
@@ -103,7 +103,7 @@ static inline Result schedulerBlockProcess(Process* process) {
  * @param process Process
  * @return Result Result of the operation
  */
-static inline Result schedulerWakeProcess(Process* process) {
+static inline Result scheduler_wakeProcess(Process* process) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->wakeProcess(scheduler, process);
 }
@@ -113,7 +113,7 @@ static inline Result schedulerWakeProcess(Process* process) {
  * 
  * @return Process* current process running
  */
-static inline Process* schedulerGetCurrentProcess() {
+static inline Process* scheduler_getCurrentProcess() {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     return scheduler->currentProcess;
 }

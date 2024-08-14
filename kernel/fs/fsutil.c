@@ -41,7 +41,7 @@ Index64 fsutil_fileGetPointer(File* file) {
 }
 
 Result fsutil_fileRead(File* file, void* buffer, Size n) {
-    if (fsEntry_rawRead(file, buffer, n) == RESULT_FAIL || fsEntry_rawSeek(file, file->pointer + n) == RESULT_FAIL) {
+    if (fsEntry_rawRead(file, buffer, n) == RESULT_FAIL || fsEntry_rawSeek(file, file->pointer + n) == RESULT_FAIL) {   //TODO: No, seek returns pointer after seek
         return RESULT_FAIL;
     }
 

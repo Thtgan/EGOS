@@ -88,7 +88,7 @@ void __usermode_syscallHandlerExit(int ret) {
         "mov %0, %%eax;"
         "iretq;"
         :
-        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedulerGetCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
+        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(scheduler_getCurrentProcess()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
     );
 }
 
@@ -140,7 +140,7 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     
     REGISTERS_SAVE();
     
-    Process* process = schedulerGetCurrentProcess();
+    Process* process = scheduler_getCurrentProcess();
     process->userExitStackTop = (void*)readRegister_RSP_64();
     __usermode_jumpToUserMode((void*)header.entryVaddr, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM);
     asm volatile (

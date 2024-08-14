@@ -2,6 +2,7 @@
 
 #include<debug.h>
 #include<fs/fsutil.h>
+#include<fs/fsSyscall.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -60,7 +61,7 @@ Process* process_init() {
     return mainProcess;
 }
 
-void switchProcess(Process* from, Process* to) {
+void process_switch(Process* from, Process* to) {
     REGISTERS_SAVE();
 
     from->registers = (Registers*)readRegister_RSP_64();
@@ -72,8 +73,8 @@ void switchProcess(Process* from, Process* to) {
 
 extern void* __fork_return;
 
-Process* fork(ConstCstring name) {
-    Uint32 oldPID = schedulerGetCurrentProcess()->pid, newPID = __process_allocatePID();
+Process* process_fork(ConstCstring name) {
+    Uint32 oldPID = scheduler_getCurrentProcess()->pid, newPID = __process_allocatePID();
 
     if (newPID == PROCESS_INVALID_PID) {
         return NULL;
@@ -83,9 +84,9 @@ Process* fork(ConstCstring name) {
 
     Process* newProcess = __process_create(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
     newProcess->ppid = oldPID;
-    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(schedulerGetCurrentProcess()->context.extendedTable);
+    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(scheduler_getCurrentProcess()->context.extendedTable);
 
-    Uintptr currentStackTop = schedulerGetCurrentProcess()->kernelStackTop;
+    Uintptr currentStackTop = scheduler_getCurrentProcess()->kernelStackTop;
 
     REGISTERS_SAVE();
     memory_memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
@@ -94,23 +95,23 @@ Process* fork(ConstCstring name) {
     newProcess->context.rip = (Uint64)&__fork_return;
     newProcess->context.rsp = newProcess->kernelStackTop - (currentStackTop - readRegister_RSP_64());
 
-    schedulerAddProcess(newProcess);
+    scheduler_addProcess(newProcess);
 
     asm volatile("__fork_return:");
     //New process starts from here
 
     REGISTERS_RESTORE();
 
-    return schedulerGetCurrentProcess()->pid == oldPID ? newProcess : NULL;
+    return scheduler_getCurrentProcess()->pid == oldPID ? newProcess : NULL;
 }
 
-void exitProcess() {
-    schedulerTerminateProcess(schedulerGetCurrentProcess());
+void process_exit() {
+    scheduler_terminateProcess(scheduler_getCurrentProcess());
 
-    debug_blowup("Func exitProcess is trying to return\n");
+    debug_blowup("Func process_exit is trying to return\n");
 }
 
-void releaseProcess(Process* process) {
+void process_release(Process* process) {
     void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
     memory_memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
     memory_freeFrame(paging_convertAddressV2P(stackBottom));
@@ -121,15 +122,14 @@ void releaseProcess(Process* process) {
     __process_releasePID(process->pid);
 
     //TODO: Check these codes again
-    // for (int i = 1; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
-    //     if (process->fileSlots[i] != NULL) {
-    //         fsutil_closefsEntry(process->fileSlots[i]);
-    //     }
-    // }
-    // Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
-    // memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    // physicalPage_free(convertAddressV2P(process->fileSlots));
-
+    for (int i = 1; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
+        if (process->fileSlots[i] != NULL) {
+            fsutil_closefsEntry(process->fileSlots[i]);
+        }
+    }
+    Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    memory_memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    memory_freeFrame(paging_convertAddressV2P(process->fileSlots));
 
     memory_memset(process, 0, PAGE_SIZE);
     memory_freeFrame(paging_convertAddressV2P(process));
@@ -153,17 +153,16 @@ static Process* __process_create(Uint16 pid, ConstCstring name, void* kernelStac
     queueNode_initStruct(&ret->semaWaitQueueNode);
 
     //TODO: Check these codes again
-    // Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
-    // // ret->fileSlots = convertAddressP2V(physicalPage_alloc(openedFilePageSize, PHYSICAL_PAGE_ATTRIBUTE_PRIVATE));
-    // ret->fileSlots = paging_convertAddressP2V(frameAllocator_allocateFrame(mm->frameAllocator, openedFilePageSize));
-    // memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
+    Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
+    ret->fileSlots = paging_convertAddressP2V(frameAllocator_allocateFrame(mm->frameAllocator, openedFilePageSize));
+    memory_memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
 
-    // ret->fileSlots[0] = getStandardOutputFile();
+    ret->fileSlots[FSSYSCALL_STANDARD_OUTPUT_FILE_DESCRIPTOR] = fsSyscall_getStandardOutputFile();
 
     return ret;
 }
 
-int allocateFileSlot(Process* process, File* file) {
+int process_allocateFileSlot(Process* process, File* file) {
     for (int i = 0; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
         if (process->fileSlots[i] == NULL) {
             process->fileSlots[i] = file;
@@ -174,7 +173,7 @@ int allocateFileSlot(Process* process, File* file) {
     return INVALID_INDEX;
 }
 
-File* getFileFromSlot(Process* process, int index) {
+File* process_getFileFromSlot(Process* process, int index) {
     if (index >= PROCESS_MAX_OPENED_FILE_NUM) {
         return NULL;
     }
@@ -182,7 +181,7 @@ File* getFileFromSlot(Process* process, int index) {
     return process->fileSlots[index];
 }
 
-File* releaseFileSlot(Process* process, int index) {
+File* process_releaseFileSlot(Process* process, int index) {
     if (index >= PROCESS_MAX_OPENED_FILE_NUM) {
         return NULL;
     }

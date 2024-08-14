@@ -5,6 +5,7 @@
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/fs.h>
+#include<fs/fsSyscall.h>
 #include<interrupt/IDT.h>
 #include<interrupt/TSS.h>
 #include<kit/types.h>
@@ -22,7 +23,9 @@ typedef struct {
 
 static Result __init_printBootSlogan();
 
-static Result __init_enableInterrupt();
+static Result __init_enableInterrupt();     //TODO: Maybe remove these
+
+static Result __init_disableInterrupt();    //TODO: Maybe remove these
 
 static __InitFunc _initFuncs[] = {
     { terminalSwitch_init       ,   "Terminal"    },
@@ -32,12 +35,15 @@ static __InitFunc _initFuncs[] = {
     { tss_init                  ,   "TSS"         },
     { keyboard_init             ,   "Keyboard"    },
     { device_init               ,   "Device"      },
-    { time_init                 ,   "Time"        },
-    { schedule_init             ,   "Schedule"    },
     { __init_enableInterrupt    ,   NULL          },
     { ata_initdevices           ,   "ATA Devices" },
     { fs_init                   ,   "File System" },
     { usermode_init             ,   "User Mode"   },
+    { fsSyscall_init            ,   "FS syscall"  },
+    { __init_disableInterrupt   ,   NULL          },
+    { time_init                 ,   "Time"        },
+    { schedule_init             ,   "Schedule"    },
+    { __init_enableInterrupt    ,   NULL          },
     { NULL, NULL }
 };
 
@@ -65,5 +71,10 @@ static Result __init_printBootSlogan() {
 
 static Result __init_enableInterrupt() {
     sti();
+    return RESULT_SUCCESS;
+}
+
+static Result __init_disableInterrupt() {
+    cli();
     return RESULT_SUCCESS;
 }

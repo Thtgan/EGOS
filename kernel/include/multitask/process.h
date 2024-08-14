@@ -63,7 +63,7 @@ Process* process_init();
  * @param from Switch from process
  * @param to Switch to process
  */
-void switchProcess(Process* from, Process* to);
+void process_switch(Process* from, Process* to);
 
 /**
  * @brief Fork from the current process, a new process will be created, and start from here
@@ -71,19 +71,19 @@ void switchProcess(Process* from, Process* to);
  * @param name New process's name
  * @return Process* Forked process for caller process, return NULL when forked process exit from this function
  */
-Process* fork(ConstCstring name);
+Process* process_fork(ConstCstring name);
 
 /**
  * @brief Exit from process, this function has no return
  */
-void exitProcess();
+void process_exit();
 
 /**
  * @brief Release a process
  * 
  * @param process Process to release
  */
-void releaseProcess(Process* process);
+void process_release(Process* process);
 
 /**
  * @brief Allocate a slot for file
@@ -92,7 +92,7 @@ void releaseProcess(Process* process);
  * @param file File pointer
  * @return int Index of slot for file, INVALID_INDEX if slots are full
  */
-int allocateFileSlot(Process* process, File* file);
+int process_allocateFileSlot(Process* process, File* file);
 
 /**
  * @brief Get file from slot
@@ -101,7 +101,7 @@ int allocateFileSlot(Process* process, File* file);
  * @param index Index of slot
  * @return File* File pointer in slot, NULL if slot is empty
  */
-File* getFileFromSlot(Process* process, int index);
+File* process_getFileFromSlot(Process* process, int index);
 
 /**
  * @brief Release a file slot
@@ -110,6 +110,6 @@ File* getFileFromSlot(Process* process, int index);
  * @param index Index of slot to release
  * @return File* File stored in slot, NULL if slot is empty
  */
-File* releaseFileSlot(Process* process, int index);
+File* process_releaseFileSlot(Process* process, int index);
 
 #endif // __PROCESS_H

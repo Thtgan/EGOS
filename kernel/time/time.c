@@ -113,7 +113,7 @@ ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower th
     spinlock_unlock(&_clock.timeLock);
 
     if (schedule_getCurrentScheduler()->started) {  //TODO: Ugly code, This code is not independent from scheduler
-        schedulerTick();
+        scheduler_tick();
     }
 
     timer_updateTimers();
