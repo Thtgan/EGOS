@@ -102,11 +102,10 @@ void kernelMain(SystemInfo* info) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess()->name);
 
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {
+    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
+        DEBUG_MARK_PRINT("MARK\n");
         fsutil_fileWrite(&entry, "1145141919810", 14);
     }
-
-    File* stdout = process_getFileFromSlot(scheduler_getCurrentProcess(), 0);
 
     Timer timer1, timer2;
     timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);
@@ -145,7 +144,7 @@ static void printLOGO() {
         print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastAccessTime);
         print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastModifyTime);
 
-        BlockDevice* device = entry.iNode->superBlock->device;
+        BlockDevice* device = entry.iNode->superBlock->blockDevice;
         fsutil_closefsEntry(&entry);
         blockDevice_flush(device);
     }

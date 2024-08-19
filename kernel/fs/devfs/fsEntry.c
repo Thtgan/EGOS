@@ -32,7 +32,7 @@ typedef struct {
     Uint8 padding[8];
 } __DevFSdirectoryEntry;
 
-void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut);
+static void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut);
 
 static fsEntryOperations _devfs_fsEntryOperations = {   //Actually, only directory uses these operations, no-one knows what those device file will use
     .seek           = fsEntry_genericSeek,
@@ -56,24 +56,24 @@ static fsEntryDirOperations _devfs_fsEntryDirOperations = {
     .updateEntry    = __devfs_fsEntry_updateEntry
 };
 
-Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut);
+static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut);
 
-void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* descOut, __DevFSdirectoryEntry* dirEntryOut);
+static void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* descOut, __DevFSdirectoryEntry* dirEntryOut);
 
 Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
     if (fsEntry_genericOpen(superBlock, entry, desc) == RESULT_FAIL) {
+        DEBUG_MARK_PRINT("MARK\n");
         return RESULT_FAIL;
     }
 
+    entry->operations = &_devfs_fsEntryOperations;
     if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
         Device* device = device_getDevice(desc->device);
         if (device == NULL) {
+            DEBUG_MARK_PRINT("MARK\n");
             return RESULT_FAIL;
         }
-
-        entry->operations = (fsEntryOperations*)device->operations;
     } else {
-        entry->operations = &_devfs_fsEntryOperations;
         if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
             entry->dirOperations = &_devfs_fsEntryDirOperations;
         }
@@ -89,12 +89,13 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
         return RESULT_FAIL;
     }
 
+    Device* device = &superBlock->blockDevice->device;
     fsEntryDescInitArgs args = {
         .name = "",
         .parentPath = "",
         .type = FS_ENTRY_TYPE_DIRECTORY,
         .isDevice = false,
-        .dataRange = RANGE(rootDirBegin << superBlock->device->bytePerBlockShift, sizeof(__DevFSdirectoryEntry)),
+        .dataRange = RANGE(rootDirBegin * POWER_2(device->granularity), sizeof(__DevFSdirectoryEntry)),
         .flags = EMPTY_FLAGS,
         .createTime = 0,
         .lastAccessTime = 0,
@@ -131,8 +132,8 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
 
     __DevFSdirectoryEntry deviceEntry;
     fsEntryDesc desc;
-    for (MajorDeviceID major = device_iterateMajor(INVALID_DEVICE_ID); major != INVALID_DEVICE_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
-        for (Device* device = device_iterateMinor(major, INVALID_DEVICE_ID); device != NULL; device = device_iterateMinor(major, MINOR_FROM_DEVICE_ID(device->id))) {
+    for (MajorDeviceID major = device_iterateMajor(DEVICE_INVALID_ID); major != DEVICE_INVALID_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
+        for (Device* device = device_iterateMinor(major, DEVICE_INVALID_ID); device != NULL; device = device_iterateMinor(major, DEVICE_MINOR_FROM_ID(device->id))) {
             __devfs_fsEntry_deviceToDirectoryEntry(device, &deviceEntry);
             __devfs_fsentry_directoryEntryToFSentryDesc(&rootDir.desc->identifier, &deviceEntry, &desc);
             fsEntry_rawSeek(&rootDir, 0);
@@ -147,7 +148,7 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
     return RESULT_SUCCESS;
 }
 
-void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut) {
+static void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntry* dirEntryOut) {
     memory_memset(dirEntryOut, 0, sizeof(__DevFSdirectoryEntry));
     cstring_strcpy(dirEntryOut->name, device->name);
     dirEntryOut->device     = device->id;
@@ -155,7 +156,7 @@ void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirectoryEntr
     dirEntryOut->magic      = __DEVFS_DIRECTORY_ENTRY_MAGIC;
 }
 
-Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut) {
+static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut) {
     if (dirEntry->magic != __DEVFS_DIRECTORY_ENTRY_MAGIC) {
         return RESULT_FAIL;
     }
@@ -202,7 +203,7 @@ Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory,
     return fsEntryDesc_initStruct(descOut, &args);
 }
 
-void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* desc, __DevFSdirectoryEntry* dirEntryOut) {
+static void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* desc, __DevFSdirectoryEntry* dirEntryOut) {
     cstring_strcpy(dirEntryOut->name, desc->identifier.name.data);
 
     if (desc->identifier.type == FS_ENTRY_TYPE_DUMMY) {

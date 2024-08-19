@@ -39,6 +39,7 @@ ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
     print_printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
     print_printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
     debug_dump_registers(registers);
+    debug_dump_stack((void*)registers->rbp, INFINITE);
     debug_blowup("DEAD\n");
 }
 

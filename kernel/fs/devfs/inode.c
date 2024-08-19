@@ -9,10 +9,7 @@
 #include<memory/memory.h>
 
 typedef struct {
-    union {
-        Index8      firstBlock;
-        DeviceID    device;
-    };
+    Index8  firstBlock;
 } __DEVFSiNodeInfo;
 
 static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
@@ -25,27 +22,35 @@ static iNodeOperations _devfs_iNodeOperations = {
 };
 
 Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
+    DEBUG_MARK_PRINT("MARK\n");
     __DEVFSiNodeInfo* iNodeInfo = memory_allocate(sizeof(__DEVFSiNodeInfo));
-
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
     }
 
-    BlockDevice* device     = superBlock->device;
+    BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
+    Size granularity = superBlockBlockDevice->device.granularity;
     if (desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
-        iNodeInfo->device = desc->device;   //TODO: Is this necessary?
+        Device* device = device_getDevice(desc->device);
+        if (device == NULL) {
+            return RESULT_FAIL;
+        }
+
+        iNode->sizeInBlock      = INFINITE;
+        iNode->device           = device;
+        DEBUG_MARK_PRINT("%p %s\n", device, device->name);
     } else {
-        iNodeInfo->firstBlock = DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlock->device->bytePerBlockShift);
+        iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, granularity) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);
+        iNodeInfo->firstBlock   = DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);
+        iNode->specificInfo     = (Object)iNodeInfo;
     }
 
     iNode->signature        = INODE_SIGNATURE;
-    iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, device->bytePerBlockShift) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, device->bytePerBlockShift);
     iNode->superBlock       = superBlock;
     iNode->openCnt          = 1;
     iNode->operations       = &_devfs_iNodeOperations;
     hashChainNode_initStruct(&iNode->openedNode);
     singlyLinkedListNode_initStruct(&iNode->mountNode);
-    iNode->specificInfo     = (Object)iNodeInfo;
 
     return RESULT_SUCCESS;
 }
@@ -114,7 +119,7 @@ static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
 static Result __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
     DevFSblockChains* blockChains = (DevFSblockChains*)iNode->superBlock->specificInfo;
     __DEVFSiNodeInfo* iNodeInfo = (__DEVFSiNodeInfo*)iNode->specificInfo;
-    Size newSizeInBlock = DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), oldSizeInBlock = iNode->sizeInBlock;
+    Size newSizeInBlock = DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->blockDevice->device.granularity), oldSizeInBlock = iNode->sizeInBlock;
 
     if (newSizeInBlock < oldSizeInBlock) {
         Index32 tail = devfs_blockChain_get(blockChains, iNodeInfo->firstBlock, newSizeInBlock - 1);

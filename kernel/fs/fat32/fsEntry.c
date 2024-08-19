@@ -252,14 +252,15 @@ static Result __fat32_fsEntry_doReadEntry(fsEntry* directory, fsEntryDesc* child
         time_convertRealTimeToTimestamp(&realTime, &timestamp);
         lastModifyTime = timestamp.second;
 
+        Device* superBlockDevice = &superBlock->blockDevice->device;
         args = (fsEntryDescInitArgs) {
             .name           = nameBuffer,
             .parentPath     = directoryPath->data,
             .type           = type,
             .isDevice       = false,
             .dataRange      = RANGE(
-                (clusterBegin * BPB->sectorPerCluster + info->dataBlockRange.begin) << superBlock->device->bytePerBlockShift,
-                type == FS_ENTRY_TYPE_FILE ? directoryEntry->size : ((fat32_getClusterChainLength(info, clusterBegin) * BPB->sectorPerCluster) << superBlock->device->bytePerBlockShift)
+                (clusterBegin * BPB->sectorPerCluster + info->dataBlockRange.begin) << superBlockDevice->granularity,
+                type == FS_ENTRY_TYPE_FILE ? directoryEntry->size : ((fat32_getClusterChainLength(info, clusterBegin) * BPB->sectorPerCluster) << superBlockDevice->granularity)
             ),
             .flags          = EMPTY_FLAGS,
             .createTime     = createTime,

@@ -30,15 +30,16 @@ Result devfs_init() {
     return RESULT_SUCCESS;
 }
 
-Result devfs_checkType(BlockDevice* device) {
-    return RESULT_SUCCESS;
+Result devfs_checkType(BlockDevice* blockDevice) {
+    return RESULT_SUCCESS;  //TODO: Not a good logic
 }
 
 #define __DEVFS_SUPERBLOCK_HASH_BUCKET  16
 #define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET))
 
-Result devfs_open(FS* fs, BlockDevice* device) {
-    if (_devfs_opened || device->availableBlockNum != DEVFS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
+Result devfs_open(FS* fs, BlockDevice* blockDevice) {
+    Device* device = &blockDevice->device;
+    if (_devfs_opened || device->capacity != DEVFS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
         return RESULT_FAIL;
     }
 
@@ -58,7 +59,7 @@ Result devfs_open(FS* fs, BlockDevice* device) {
     devfs_blockChain_initStruct(&_devfs_specificInfo.chains);
 
     SuperBlockInitArgs args = {
-        .device             = device,
+        .blockDevice        = blockDevice,
         .operations         = &__devfs_superBlockOperations,
         .rootDirDesc        = desc,
         .specificInfo       = &_devfs_specificInfo,

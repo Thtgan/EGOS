@@ -1,6 +1,7 @@
 #include<devices/block/blockDevice.h>
 
 #include<devices/block/blockBuffer.h>
+#include<devices/device.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -12,73 +13,59 @@
 
 static Result __blockDevice_doProbePartitions(BlockDevice* device, void* buffer);
 
-static Result __blockDevice_partition_readBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n);
-static Result __blockDevice_partition_writeBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n);
+static Result __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n);
+static Result __blockDevice_partition_write(Device* device, Index64 index, const void* buffer, Size n);
+static Result __blockDevice_partition_flush(Device* device);
 
-static BlockDeviceOperation _blockDevice_partition_blockDeviceOperations = {
-    .readBlocks     = __blockDevice_partition_readBlocks,
-    .writeBlocks    = __blockDevice_partition_writeBlocks
+static DeviceOperations _blockDevice_partition_deviceOperations = {
+    .read   = __blockDevice_partition_read,
+    .write  = __blockDevice_partition_write,
+    .flush  = __blockDevice_partition_flush
 };
 
-Result blockDevice_initStruct(BlockDevice* device, BlockDeviceArgs* args) {
-    memory_memset(device, 0, sizeof(BlockDevice));
-
-    cstring_strncpy(device->name, args->name, BLOCK_DEVICE_NAME_LENGTH);
-
-    device->availableBlockNum   = args->availableBlockNum;
-    Size bytePerBlockShift      = args->bytePerBlockShift == 0 ? BLOCK_DEVICE_DEFAULT_BLOCK_SIZE_SHIFT : args->bytePerBlockShift;
-    device->bytePerBlockShift   = bytePerBlockShift;
-
-    device->flags               = EMPTY_FLAGS;
-
-    device->parent              = args->parent;
-    device->childNum = 0;
-    singlyLinkedList_initStruct(&device->children);
-    singlyLinkedListNode_initStruct(&device->node);
-    if (device->parent != NULL) {
-        ++device->parent->childNum;
-        singlyLinkedList_insertNext(&device->parent->children, &device->node);
+Result blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args) {
+    if (args->deviceInitArgs.granularity == 0) {
+        return RESULT_FAIL;
     }
 
-    if (args->buffered) {
+    Device* device = &blockDevice->device;
+    device_initStruct(device, &args->deviceInitArgs);
+    if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         BlockBuffer* blockBuffer = memory_allocate(sizeof(BlockBuffer));
-        if (blockBuffer == NULL || blockBuffer_initStruct(blockBuffer, BLOCK_BUFFER_DEFAULT_HASH_SIZE, BLOCK_BUFFER_DEFAULT_MAX_BLOCK_NUM, bytePerBlockShift) == RESULT_FAIL) {
+        if (blockBuffer == NULL || blockBuffer_initStruct(blockBuffer, BLOCK_BUFFER_DEFAULT_HASH_SIZE, BLOCK_BUFFER_DEFAULT_MAX_BLOCK_NUM, device->granularity) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
-        device->blockBuffer     = blockBuffer;
-        SET_FLAG_BACK(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED);
+        blockDevice->blockBuffer = blockBuffer;
     }
-
-    device->operations          = args->operations;
-    device->specificInfo        = args->specificInfo;
-    hashChainNode_initStruct(&device->hashChainNode);
 
     return RESULT_SUCCESS;
 }
 
-Result blockDevice_readBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n) {
-    if (device->operations->readBlocks == NULL || blockIndex >= device->availableBlockNum) {
+Result blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n) {
+    Device* device = &blockDevice->device;
+    if (device->operations->read == NULL || blockIndex >= device->capacity) {
         return RESULT_FAIL;
     }
 
-    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
+    if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         for (int i = 0; i < n; ++i) {
             Index64 index = blockIndex + i;
-            Block* block = blockBuffer_pop(device->blockBuffer, index);
+            Block* block = blockBuffer_pop(blockDevice->blockBuffer, index);
             if (block == NULL) {
                 return RESULT_FAIL;
             }
 
             if (TEST_FLAGS_FAIL(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_PRESENT)) {
-                if (device->operations->readBlocks(device, index, block->data, 1) == RESULT_FAIL) { //TODO: May be this happens too frequently?
+                // DEBUG_MARK_PRINT("MARK %s %X\n", device->device.name, index);
+                if (device_rawRead(device, index, block->data, 1) == RESULT_FAIL) { //TODO: May be this happens too frequently?
                     return RESULT_FAIL;
                 }
             }
 
-            memory_memcpy(buffer + (((Index64)i) << device->bytePerBlockShift), block->data, 1 << device->bytePerBlockShift);
+            memory_memcpy(buffer + ((Index64)i * POWER_2(device->granularity)), block->data, POWER_2(device->granularity));
 
-            if (blockBuffer_push(device->blockBuffer, index, block) == RESULT_FAIL) {
+            if (blockBuffer_push(blockDevice->blockBuffer, index, block) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
         }
@@ -86,32 +73,33 @@ Result blockDevice_readBlocks(BlockDevice* device, Index64 blockIndex, void* buf
         return RESULT_SUCCESS;
     }
 
-    return device->operations->readBlocks(device, blockIndex, buffer, n);
+    return device_rawRead(device, blockIndex, buffer, n);
 } 
 
-Result blockDevice_writeBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n) {
-    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_READONLY) || device->operations->writeBlocks == NULL || blockIndex >= device->availableBlockNum) {
+Result blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const void* buffer, Size n) {
+    Device* device = &blockDevice->device;
+    if (TEST_FLAGS(device->flags, DEVICE_FLAGS_READONLY) || device->operations->write == NULL || blockIndex >= device->capacity) {
         return RESULT_FAIL;
     }
 
-    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
+    if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         for (int i = 0; i < n; ++i) {
             Index64 index = blockIndex + i;
-            Block* block = blockBuffer_pop(device->blockBuffer, index);
+            Block* block = blockBuffer_pop(blockDevice->blockBuffer, index);
             if (block == NULL) {
                 return RESULT_FAIL;
             }
 
             if (index != block->blockIndex && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
-                if (device->operations->writeBlocks(device, block->blockIndex, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
+                if (device_rawWrite(device, block->blockIndex, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
                     return RESULT_FAIL;
                 }
             }
 
-            memory_memcpy(block->data, buffer + (((Index64)i) << device->bytePerBlockShift), 1 << device->bytePerBlockShift);
+            memory_memcpy(block->data, buffer + ((Index64)i * POWER_2(device->granularity)), POWER_2(device->granularity));
             SET_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
 
-            if (blockBuffer_push(device->blockBuffer, index, block) == RESULT_FAIL) {
+            if (blockBuffer_push(blockDevice->blockBuffer, index, block) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
         }
@@ -119,43 +107,47 @@ Result blockDevice_writeBlocks(BlockDevice* device, Index64 blockIndex, const vo
         return RESULT_SUCCESS;
     }
 
-    return device->operations->writeBlocks(device, blockIndex, buffer, n);
+    return device_rawWrite(device, blockIndex, buffer, n);
 }
 
-Result blockDevice_flush(BlockDevice* device) {
-    if (TEST_FLAGS(device->flags, BLOCK_DEVICE_FLAGS_BUFFERED)) {
-        BlockBuffer* blockBuffer = device->blockBuffer;
+Result blockDevice_flush(BlockDevice* blockDevice) {
+    Device* device = &blockDevice->device;
+    if (device->operations->flush == NULL) {
+        return RESULT_FAIL;
+    }
+
+    if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
+        BlockBuffer* blockBuffer = blockDevice->blockBuffer;
         for (int i = 0; i < blockBuffer->blockNum; ++i) {
-            Block* block = blockBuffer_pop(device->blockBuffer, INVALID_INDEX);
+            Block* block = blockBuffer_pop(blockBuffer, INVALID_INDEX);
             if (block == NULL) {
                 return RESULT_FAIL;
             }
 
             if (block->blockIndex != INVALID_INDEX && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
-                if (device->operations->writeBlocks(device, block->blockIndex, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
+                if (device_rawWrite(device, block->blockIndex, block->data, 1) == RESULT_FAIL) {    //TODO: May be this happens too frequently?
                     return RESULT_FAIL;
                 }
 
                 CLEAR_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY);
             }
 
-            if (blockBuffer_push(device->blockBuffer, block->blockIndex, block) == RESULT_FAIL) {
+            if (blockBuffer_push(blockBuffer, block->blockIndex, block) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
         }
-        return RESULT_SUCCESS;
     }
 
-    return RESULT_SUCCESS;
+    return device_rawFlush(device);
 }
 
-Result blockDevice_probePartitions(BlockDevice* device) {
+Result blockDevice_probePartitions(BlockDevice* blopckDevice) {
     void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
     if (buffer == NULL) {
         return RESULT_FAIL;
     }
 
-    Result ret = __blockDevice_doProbePartitions(device, buffer);
+    Result ret = __blockDevice_doProbePartitions(blopckDevice, buffer);
 
     memory_free(buffer);
     return ret;
@@ -176,30 +168,39 @@ typedef struct {
 
 BlockDevice* firstBootablePartition;    //TODO: Ugly, figure out a method to know which device we are booting from
 
-static Result __blockDevice_doProbePartitions(BlockDevice* device, void* buffer) {
-    if (blockDevice_readBlocks(device, 0, buffer, 1) == RESULT_FAIL) {
+static Result __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* buffer) {
+    if (blockDevice_readBlocks(blockDevice, 0, buffer, 1) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
-    char nameBuffer[16];
+    Device* device = &blockDevice->device;
+    char nameBuffer[DEVICE_NAME_MAX_LENGTH + 1];
     if (PTR_TO_VALUE(16, buffer + 0x1FE) == 0xAA55) {
-        singlyLinkedList_initStruct(&device->children);
         for (int i = 0; i < 4; ++i) {
             __MBRpartitionEntry* entry = (__MBRpartitionEntry*)(buffer + 0x1BE + i * sizeof(__MBRpartitionEntry));
             if (entry->systemID == 0) {
                 continue;
             }
 
-            print_sprintf(nameBuffer, "%s-p%d", device->name, i);
+            print_sprintf(nameBuffer, "%s-p%d", device->name, i);    //TODO: sprintf not working correctly
 
-            BlockDeviceArgs args = {
-                .name               = nameBuffer,
-                .availableBlockNum  = entry->sectorNum,
-                .bytePerBlockShift  = device->bytePerBlockShift,
-                .parent             = device,
-                .specificInfo       = entry->sectorBegin,
-                .operations         = &_blockDevice_partition_blockDeviceOperations,
-                .buffered           = true
+            MajorDeviceID major = DEVICE_MAJOR_FROM_ID(device->id);
+            MinorDeviceID minor = device_allocMinor(major);
+            if (minor == DEVICE_INVALID_ID) {
+                return RESULT_FAIL;
+            }
+
+            BlockDeviceInitArgs args = {
+                .deviceInitArgs     = (DeviceInitArgs) {
+                    .id             = DEVICE_BUILD_ID(major, minor),
+                    .name           = nameBuffer,
+                    .parent         = device,
+                    .granularity    = device->granularity,
+                    .capacity       = entry->sectorNum,
+                    .flags          = CLEAR_FLAG(device->flags, DEVICE_FLAGS_BUFFERED),
+                    .operations     = &_blockDevice_partition_deviceOperations,
+                    .specificInfo   = entry->sectorBegin
+                },
             };
 
             BlockDevice* partitionDevice = memory_allocate(sizeof(BlockDevice));
@@ -207,11 +208,9 @@ static Result __blockDevice_doProbePartitions(BlockDevice* device, void* buffer)
                 continue;
             }
             
-            if (entry->driveArttribute == 0x80) {
-                SET_FLAG_BACK(partitionDevice->flags, BLOCK_DEVICE_FLAGS_BOOTABLE);
-                if (firstBootablePartition == NULL) {
-                    firstBootablePartition = partitionDevice;
-                }
+            if (firstBootablePartition == NULL) {
+                // DEBUG_MARK_PRINT("MARK %X\n", entry->sectorBegin);
+                firstBootablePartition = partitionDevice;
             }
         }
     }
@@ -219,18 +218,28 @@ static Result __blockDevice_doProbePartitions(BlockDevice* device, void* buffer)
     return RESULT_SUCCESS;
 }
 
-static Result __blockDevice_partition_readBlocks(BlockDevice* device, Index64 blockIndex, void* buffer, Size n) {
-    if (blockIndex >= device->availableBlockNum) {
+static Result __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n) {
+    if (index >= device->capacity) {
         return RESULT_FAIL;
     }
+    // DEBUG_MARK_PRINT("MARK %lX %lX\n", (Index64)device->device.specificInfo, blockIndex);
 
-    return blockDevice_readBlocks(device->parent, (Index64)device->specificInfo + blockIndex, buffer, n);
+    // if (blockIndex > 0x100) {
+    //     debug_dump_stack((void*)readRegister_RBP_64(), INFINITE);
+    //     debug_blowup("TEST\n");
+    // }
+
+    return blockDevice_readBlocks(HOST_POINTER(device->parent, BlockDevice, device), (Index64)device->specificInfo + index, buffer, n);
 }
 
-static Result __blockDevice_partition_writeBlocks(BlockDevice* device, Index64 blockIndex, const void* buffer, Size n) {
-    if (blockIndex >= device->availableBlockNum) {
+static Result __blockDevice_partition_write(Device* device, Index64 index, const void* buffer, Size n) {
+    if (index >= device->capacity) {
         return RESULT_FAIL;
     }
 
-    return blockDevice_writeBlocks(device->parent, (Index64)device->specificInfo + blockIndex, buffer, n);
+    return blockDevice_writeBlocks(HOST_POINTER(device->parent, BlockDevice, device), (Index64)device->specificInfo + index, buffer, n);
+}
+
+static Result __blockDevice_partition_flush(Device* device) {
+    return blockDevice_flush(HOST_POINTER(device->parent, BlockDevice, device));
 }

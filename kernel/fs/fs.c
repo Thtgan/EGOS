@@ -52,20 +52,24 @@ Result fs_init() {
     }
 
     if (_supports[type].init() == RESULT_FAIL) {
+        DEBUG_MARK_PRINT("MARK\n");
         return RESULT_FAIL;
     }
 
     rootFS = memory_allocate(sizeof(FS));
     if (rootFS == NULL || fs_open(rootFS, firstBootablePartition) == RESULT_FAIL) {
+        DEBUG_MARK_PRINT("MARK %p %p\n", rootFS, firstBootablePartition);
         return RESULT_FAIL;
     }
     
     void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE));
     if (region == NULL || memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE") == RESULT_FAIL) {
+        DEBUG_MARK_PRINT("MARK\n");
         return RESULT_FAIL;
     }
 
     if (_supports[FS_TYPE_DEVFS].init() == RESULT_FAIL) {
+        DEBUG_MARK_PRINT("MARK\n");
         return RESULT_FAIL;
     }
 
@@ -97,6 +101,7 @@ FStype fs_checkType(BlockDevice* device) {
 
 Result fs_open(FS* fs, BlockDevice* device) {
     FStype type = fs_checkType(device);
+    DEBUG_MARK_PRINT("MARK %u %s\n", type, device->device.name);
     return _supports[type].open(fs, device);
 }
 

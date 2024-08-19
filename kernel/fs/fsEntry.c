@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<cstring.h>
 #include<devices/block/blockDevice.h>
+#include<devices/char/charDevice.h>
 #include<fs/fsutil.h>
 #include<fs/fs.h>
 #include<fs/fsStructs.h>
@@ -86,6 +87,7 @@ void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
 }
 
 Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
+    DEBUG_MARK_PRINT("MARK %u %s\n", desc->identifier.type, desc->identifier.name.data);
     entry->desc     = desc;
     entry->pointer  = 0;
     entry->iNode    = iNode_open(superBlock, desc);
@@ -117,17 +119,27 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
 }
 
 Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
+    fsEntryType type = entry->desc->identifier.type;
     iNode* iNode = entry->iNode;
-    SuperBlock* superBlock = iNode->superBlock;
-    BlockDevice* device = superBlock->device;
 
-    void* blockBuffer = memory_allocate(POWER_2(device->bytePerBlockShift));
+    BlockDevice* targetBlockDevice = iNode->superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+
+    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+        targetDevice = iNode->device;
+    }
+
+    if (!device_isBlockDevice(targetDevice)) {
+        return charDevice_read(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
+    }
+
+    void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
     if (blockBuffer == NULL) {
         return RESULT_FAIL;
     }
 
-    Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
-    Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = algorithms_min64(n, entry->desc->dataRange.length - entry->pointer);
+    Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, targetDevice->granularity), offsetInBlock = entry->pointer % POWER_2(targetDevice->granularity);
+    Size blockSize = POWER_2(targetDevice->granularity), remainByteNum = algorithms_min64(n, entry->desc->dataRange.length - entry->pointer);   //TODO: Or fail when access exceeds limitation?
     Range range;
 
     if (offsetInBlock != 0) {
@@ -136,11 +148,11 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
             return RESULT_FAIL;
         }
 
-        if (blockDevice_readBlocks(device, range.begin, blockBuffer, 1) == RESULT_FAIL) {
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
-        Size byteReadN = algorithms_min64(remainByteNum, POWER_2(device->bytePerBlockShift) - offsetInBlock);
+        Size byteReadN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(buffer, blockBuffer + offsetInBlock, byteReadN);
 
         buffer += byteReadN;
@@ -148,14 +160,14 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     }
 
     if (remainByteNum >= blockSize) {
-        Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, device->bytePerBlockShift);
+        Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
         Result res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
-            if (blockDevice_readBlocks(device, range.begin, buffer, range.length) == RESULT_FAIL) {
+            if (blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
 
-            Size byteReadN = range.length << device->bytePerBlockShift;
+            Size byteReadN = range.length * POWER_2(targetDevice->granularity);
             buffer += byteReadN;
             remainByteNum -= byteReadN;
         }
@@ -171,7 +183,7 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
             return RESULT_FAIL;
         }
 
-        if (blockDevice_readBlocks(device, range.begin, blockBuffer, 1) == RESULT_FAIL) {
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -186,17 +198,28 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 }
 
 Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
+    fsEntryType type = entry->desc->identifier.type;
     iNode* iNode = entry->iNode;
-    SuperBlock* superBlock = iNode->superBlock;
-    BlockDevice* device = superBlock->device;
 
-    void* blockBuffer = memory_allocate(POWER_2(device->bytePerBlockShift));
+    BlockDevice* targetBlockDevice = iNode->superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+
+    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+        targetDevice = iNode->device;
+    }
+
+    if (!device_isBlockDevice(targetDevice)) {
+        DEBUG_MARK_PRINT("%p %u\n", HOST_POINTER(targetDevice, CharDevice, device), n);
+        return charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
+    }
+
+    void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
     if (blockBuffer == NULL) {
         return RESULT_FAIL;
     }
 
-    Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, device->bytePerBlockShift), offsetInBlock = entry->pointer % POWER_2(device->bytePerBlockShift);
-    Size blockSize = POWER_2(device->bytePerBlockShift), remainByteNum = n;
+    Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, targetDevice->granularity), offsetInBlock = entry->pointer % POWER_2(targetDevice->granularity);
+    Size blockSize = POWER_2(targetDevice->granularity), remainByteNum = n;
     if (entry->pointer + n > entry->desc->dataRange.length) {
         if (fsEntry_rawResize(entry, entry->pointer + n) == RESULT_FAIL) {  //TODO: May be remove this?
             return RESULT_FAIL;
@@ -210,14 +233,14 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
             return RESULT_FAIL;
         }
 
-        if (blockDevice_readBlocks(device, range.begin, blockBuffer, 1) == RESULT_FAIL) {
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
-        Size byteWriteN = algorithms_min64(remainByteNum, POWER_2(device->bytePerBlockShift) - offsetInBlock);
+        Size byteWriteN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(blockBuffer + offsetInBlock, buffer, byteWriteN);
 
-        if (blockDevice_writeBlocks(device, range.begin, blockBuffer, 1) == RESULT_FAIL) {
+        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
@@ -226,14 +249,14 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     }
 
     if (remainByteNum >= blockSize) {
-        Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, device->bytePerBlockShift);
+        Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
         Result res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
-            if (blockDevice_writeBlocks(device, range.begin, buffer, range.length) == RESULT_FAIL) {
+            if (blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_FAIL) {
                 return RESULT_FAIL;
             }
 
-            Size byteWriteN = range.length << device->bytePerBlockShift;
+            Size byteWriteN = range.length * POWER_2(targetDevice->granularity);
             buffer += byteWriteN;
             remainByteNum -= byteWriteN;
         }
@@ -249,13 +272,13 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
             return RESULT_FAIL;
         }
 
-        if (blockDevice_readBlocks(device, range.begin, blockBuffer, 1) == RESULT_FAIL) {
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 
         memory_memcpy(blockBuffer, buffer, remainByteNum);
 
-        if (blockDevice_writeBlocks(device, range.begin, blockBuffer, 1) == RESULT_FAIL) {
+        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
 

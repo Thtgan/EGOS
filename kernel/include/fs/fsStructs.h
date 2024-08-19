@@ -44,7 +44,7 @@ typedef struct {
 } SuperBlockOperations;
 
 typedef struct {
-    BlockDevice*            device;
+    BlockDevice*            blockDevice;
     SuperBlockOperations*   operations;
     fsEntryDesc*            rootDirDesc;
     void*                   specificInfo;
@@ -71,7 +71,7 @@ typedef struct {
 } Mount;
 
 STRUCT_PRIVATE_DEFINE(SuperBlock) { //TODO: Try fix this with a file with pre-defines
-    BlockDevice*            device;
+    BlockDevice*            blockDevice;
     SuperBlockOperations*   operations;
 
     fsEntryDesc*            rootDirDesc;
@@ -97,7 +97,10 @@ STRUCT_PRIVATE_DEFINE(iNode) {
     HashChainNode           openedNode;
     SinglyLinkedListNode    mountNode;
 
-    Object                  specificInfo;
+    union {
+        Object              specificInfo;
+        Device*             device; //Only for when iNode is mapped to a device
+    };
 };
 
 typedef enum {

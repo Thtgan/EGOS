@@ -49,9 +49,9 @@ typedef struct {
 
 Result fat32_init();
 
-Result fat32_checkType(BlockDevice* device);
+Result fat32_checkType(BlockDevice* blockDevice);
 
-Result fat32_open(FS* fs, BlockDevice* device);
+Result fat32_open(FS* fs, BlockDevice* blockDevice);
 
 Result fat32_close(FS* fs);
 

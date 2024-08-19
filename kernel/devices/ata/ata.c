@@ -3,6 +3,7 @@
 #include<devices/ata/channel.h>
 #include<devices/ata/pio.h>
 #include<devices/block/blockDevice.h>
+#include<devices/device.h>
 #include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -22,13 +23,16 @@ static Uint16 _ata_defauleChannelPortBases[2] = {
     0x1F0, 0x170
 };
 
-static Result __ata_readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n);
+static Result __ata_read(Device* device, Index64 index, void* buffer, Size n);
 
-static Result __ata_writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n);
+static Result __ata_write(Device* device, Index64 index, const void* buffer, Size n);
 
-static BlockDeviceOperation _ata_blockDeviceOperations = {
-    .readBlocks = __ata_readBlocks,
-    .writeBlocks = __ata_writeBlocks
+static Result __ata_flush(Device* device);
+
+static DeviceOperations _ata_deviceOperations = (DeviceOperations) {
+    .read   = __ata_read,
+    .write  = __ata_write,
+    .flush  = __ata_flush
 };
 
 static ATAdevice _ata_devices[4];
@@ -38,6 +42,12 @@ static ATAchannel _ata_channels[2];
 Result ata_initdevices() {
     ATAchannel dummy1;
     ATAdevice dummy2;
+
+    MajorDeviceID major = device_allocMajor();
+    if (major == DEVICE_INVALID_ID) {
+        return RESULT_FAIL;
+    }
+
     for (int i = 0; i < 2; ++i) {
         Uint16 portBase = _ata_defauleChannelPortBases[i];
 
@@ -80,15 +90,23 @@ Result ata_initdevices() {
             ATAdevice->channel = channel;
             ATAdevice->type = __ata_getDeviceType(channel, j);
 
-            BlockDeviceArgs args = {
-                .name               = ATAdevice->name,
-                .availableBlockNum  = ATAdevice->sectorNum,
-                .bytePerBlockShift  = BLOCK_DEVICE_DEFAULT_BLOCK_SIZE_SHIFT,
-                .parent             = NULL,
-                .specificInfo       = (Object)ATAdevice,
-                .operations         = &_ata_blockDeviceOperations
-            };
+            MajorDeviceID minor = device_allocMinor(major);
+            if (minor == DEVICE_INVALID_ID) {
+                return RESULT_FAIL;
+            }
 
+            BlockDeviceInitArgs args = {
+                .deviceInitArgs     = (DeviceInitArgs) {
+                    .id             = DEVICE_BUILD_ID(major, minor),
+                    .name           = ATAdevice->name,
+                    .parent         = NULL,
+                    .granularity    = BLOCK_DEVICE_DEFAULT_BLOCK_SIZE_SHIFT,
+                    .capacity       = ATAdevice->sectorNum,
+                    .flags          = DEVICE_FLAGS_BUFFERED,
+                    .operations     = &_ata_deviceOperations,
+                    .specificInfo   = (Object)ATAdevice
+                },
+            };
 
             BlockDevice* blockDevice = _ata_blockDevices + ((i << 1) | j);
             if (blockDevice_initStruct(blockDevice, &args) == RESULT_FAIL || blockDevice_probePartitions(blockDevice) == RESULT_FAIL) {
@@ -259,34 +277,39 @@ static Result __atapi_identifyDevice(ATAchannel* channel, void* buffer) {
     return RESULT_SUCCESS;
 }
 
-static Result __ata_readBlocks(BlockDevice* this, Index64 blockIndex, void* buffer, Size n) {
-    ATAdevice* device = (ATAdevice*)this->specificInfo;
+static Result __ata_read(Device* device, Index64 index, void* buffer, Size n) {
+    ATAdevice* ataDevice = (ATAdevice*)device->specificInfo;
 
-    Index32 LBA28 = blockIndex;
+    Index32 LBA28 = index;
     ATAcommand command = {
         .command = ATA_COMMAND_READ_SECTORS,
-        .device = (device->channel->devices[0] == device ? ATA_DEVICE_DEVICE0 : ATA_DEVICE_DEVICE1) | ATA_DEVICE_LBA | EXTRACT_VAL(LBA28, 32, 24, 28),
+        .device = (ataDevice->channel->devices[0] == ataDevice ? ATA_DEVICE_DEVICE0 : ATA_DEVICE_DEVICE1) | ATA_DEVICE_LBA | EXTRACT_VAL(LBA28, 32, 24, 28),
         .feature = 0,
         .sectorCount = n,
         .addr1 = EXTRACT_VAL(LBA28, 32, 0, 8),
         .addr2 = EXTRACT_VAL(LBA28, 32, 8, 16),
         .addr3 = EXTRACT_VAL(LBA28, 32, 16, 24),
     };
-    return ata_pio_readData(device, &command, buffer);
+    // DEBUG_MARK_PRINT("MARK\n");
+    return ata_pio_readData(ataDevice, &command, buffer);
 }
 
-static Result __ata_writeBlocks(BlockDevice* this, Index64 blockIndex, const void* buffer, Size n) {
-    ATAdevice* device = (ATAdevice*)this->specificInfo;
+static Result __ata_write(Device* device, Index64 index, const void* buffer, Size n) {
+    ATAdevice* ataDevice = (ATAdevice*)device->specificInfo;
 
-    Index32 LBA28 = blockIndex;
+    Index32 LBA28 = index;
     ATAcommand command = {
         .command = ATA_COMMAND_WRITE_SECTORS,
-        .device = (device->channel->devices[0] == device ? ATA_DEVICE_DEVICE0 : ATA_DEVICE_DEVICE1) | ATA_DEVICE_LBA | EXTRACT_VAL(LBA28, 32, 24, 28),
+        .device = (ataDevice->channel->devices[0] == ataDevice ? ATA_DEVICE_DEVICE0 : ATA_DEVICE_DEVICE1) | ATA_DEVICE_LBA | EXTRACT_VAL(LBA28, 32, 24, 28),
         .feature = 0,
         .sectorCount = n,
         .addr1 = EXTRACT_VAL(LBA28, 32, 0, 8),
         .addr2 = EXTRACT_VAL(LBA28, 32, 8, 16),
         .addr3 = EXTRACT_VAL(LBA28, 32, 16, 24),
     };
-    return ata_pio_writeData(device, &command, buffer);
+    return ata_pio_writeData(ataDevice, &command, buffer);
+}
+
+static Result __ata_flush(Device* device) {
+    return RESULT_SUCCESS;  //TODO: Maybe more procedure?
 }

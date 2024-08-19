@@ -1,5 +1,6 @@
 #include<fs/inode.h>
 
+#include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<kit/types.h>
@@ -20,18 +21,24 @@ Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
 }
 
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
-    iNode* ret = iNode_openFromOpened(&superBlock->openedInode, desc->dataRange.begin >> superBlock->device->bytePerBlockShift);
+    BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
+    Index64 key = desc->identifier.type == FS_ENTRY_TYPE_DEVICE ? desc->device + superBlockBlockDevice->device.capacity : desc->dataRange.begin >> superBlockBlockDevice->device.granularity;
+    DEBUG_MARK_PRINT("%s %lX\n", superBlockBlockDevice->device.name, key);
+    iNode* ret = iNode_openFromOpened(&superBlock->openedInode, key);
     if (ret == NULL) {
         ret = memory_allocate(sizeof(iNode));
         if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) == RESULT_FAIL) {
+            DEBUG_MARK_PRINT("MARK\n");
             return NULL;
         }
 
-        if (iNode_addToOpened(&superBlock->openedInode, ret, desc->dataRange.begin >> superBlock->device->bytePerBlockShift) == RESULT_FAIL) {
+        if (iNode_addToOpened(&superBlock->openedInode, ret, key) == RESULT_FAIL) {
+            DEBUG_MARK_PRINT("MARK\n");
             memory_free(ret);
             return NULL;
         }
     } else {
+        DEBUG_MARK_PRINT("MARK\n");
         ++ret->openCnt;
     }
 
@@ -40,8 +47,10 @@ iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
 
 Result iNode_close(iNode* iNode, fsEntryDesc* desc) {
     SuperBlock* superBlock = iNode->superBlock;
+    BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
+    Index64 key = desc->identifier.type == FS_ENTRY_TYPE_DEVICE ? desc->device + superBlockBlockDevice->device.capacity : desc->dataRange.begin >> superBlockBlockDevice->device.granularity;
     if (--iNode->openCnt == 0) {
-        if (iNode_removeFromOpened(&superBlock->openedInode, desc->dataRange.begin >> superBlock->device->bytePerBlockShift) == RESULT_FAIL) {
+        if (iNode_removeFromOpened(&superBlock->openedInode, key) == RESULT_FAIL) {
             return RESULT_FAIL;
         }
         

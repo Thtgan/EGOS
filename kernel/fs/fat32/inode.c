@@ -30,19 +30,19 @@ Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
         return RESULT_FAIL;
     }
 
-    FAT32info* info         = superBlock->specificInfo;
-    FAT32BPB* BPB           = info->BPB;
-    BlockDevice* device     = superBlock->device;
-    iNodeInfo->firstCluster = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlock->device->bytePerBlockShift) - info->dataBlockRange.begin, BPB->sectorPerCluster);
+    FAT32info* info             = superBlock->specificInfo;
+    FAT32BPB* BPB               = info->BPB;
+    Device* superBlockDevice    = &superBlock->blockDevice->device;
+    iNodeInfo->firstCluster     = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlockDevice->granularity) - info->dataBlockRange.begin, BPB->sectorPerCluster);
 
-    iNode->signature        = INODE_SIGNATURE;
-    iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, device->bytePerBlockShift) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, device->bytePerBlockShift);
-    iNode->superBlock       = superBlock;
-    iNode->openCnt          = 1;
-    iNode->operations       = &_fat32_iNodeOperations;
+    iNode->signature            = INODE_SIGNATURE;
+    iNode->sizeInBlock          = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, superBlockDevice->granularity) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlockDevice->granularity);
+    iNode->superBlock           = superBlock;
+    iNode->openCnt              = 1;
+    iNode->operations           = &_fat32_iNodeOperations;
     hashChainNode_initStruct(&iNode->openedNode);
     singlyLinkedListNode_initStruct(&iNode->mountNode);
-    iNode->specificInfo     = (Object)iNodeInfo;
+    iNode->specificInfo         = (Object)iNodeInfo;
 
     return RESULT_SUCCESS;
 }
@@ -58,7 +58,6 @@ static Result __fat32_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
     }
 
     SuperBlock* superBlock = iNode->superBlock;
-    BlockDevice* device = superBlock->device;
     Index32 vBlockEnd = iNode->sizeInBlock;
     if (*vBlockIndex + *n > vBlockEnd) {
         return RESULT_FAIL;
@@ -123,7 +122,9 @@ static Result __fat32_iNode_resize(iNode* iNode, Size newSizeInByte) {
     FAT32info* info = (FAT32info*)iNode->superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
     __FAT32iNodeInfo* iNodeInfo = (__FAT32iNodeInfo*)iNode->specificInfo;
-    Size newSizeInCluster = DIVIDE_ROUND_UP(DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->device->bytePerBlockShift), BPB->sectorPerCluster), oldSizeInCluster = DIVIDE_ROUND_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
+    Device* superBlockDevice = &iNode->superBlock->blockDevice->device;
+
+    Size newSizeInCluster = DIVIDE_ROUND_UP(DIVIDE_ROUND_UP_SHIFT(newSizeInByte, superBlockDevice->granularity), BPB->sectorPerCluster), oldSizeInCluster = DIVIDE_ROUND_UP(iNode->sizeInBlock, BPB->sectorPerCluster);
 
     if (newSizeInCluster < oldSizeInCluster) {
         Index32 tail = fat32_getCluster(info, iNodeInfo->firstCluster, newSizeInCluster - 1);

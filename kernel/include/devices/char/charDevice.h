@@ -1,0 +1,24 @@
+#if !defined(__CHAR_DEVICE_H)
+#define __CHAR_DEVICE_H
+
+#include<devices/device.h>
+#include<kit/oop.h>
+#include<kit/types.h>
+
+typedef struct CharDeviceInitArgs {
+    DeviceInitArgs          deviceInitArgs;
+} CharDeviceInitArgs;
+
+typedef struct CharDevice {
+    Device                      device;
+} CharDevice;
+
+Result charDevice_initStruct(CharDevice* device, CharDeviceInitArgs* args);
+
+Result charDevice_read(CharDevice* device, Index64 index, void* buffer, Size n);
+
+Result charDevice_write(CharDevice* device, Index64 index, const void* buffer, Size n);
+
+Result charDevice_flush(CharDevice* device);
+
+#endif // __CHAR_DEVICE_H

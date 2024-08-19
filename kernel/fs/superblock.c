@@ -13,7 +13,7 @@
 #include<structs/string.h>
 
 void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args) {
-    superBlock->device          = args->device;
+    superBlock->blockDevice     = args->blockDevice;
     superBlock->operations      = args->operations;
     superBlock->rootDirDesc     = args->rootDirDesc;
     superBlock->specificInfo    = args->specificInfo;
@@ -42,6 +42,8 @@ static Result __superBlock_doReadfsEntryDesc(SuperBlock* superBlock, fsEntryIden
         memory_memcpy(descOut, &superBlock->rootDirDesc, sizeof(fsEntryDesc));
         return RESULT_SUCCESS;
     }
+
+    DEBUG_MARK_PRINT("%s %s %s %u\n", superBlock->blockDevice->device.name, identifier->name.data, identifier->parentPath.data, identifier->type);
 
     fsEntry currentDirectory;
     fsEntryDesc currentEntryDesc, nextEntryDesc;
@@ -92,6 +94,8 @@ static Result __superBlock_doReadfsEntryDesc(SuperBlock* superBlock, fsEntryIden
         name = next;
         memory_memcpy(&currentEntryDesc, &nextEntryDesc, sizeof(fsEntryDesc));
     }
+
+    DEBUG_MARK_PRINT("MARK\n");
 
     return RESULT_SUCCESS;
 }
@@ -155,7 +159,7 @@ fsEntryDesc* superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier
     string_clearStruct(&parentPath);
     string_clearStruct(&fullPath);
     
-    Object key = cstring_strhash(finalIdentifier.parentPath.data) + cstring_strhash(finalIdentifier.parentPath.data);
+    Object key = cstring_strhash(finalIdentifier.parentPath.data) + cstring_strhash(finalIdentifier.name.data);
     HashChainNode* found = hashTable_find(&currentSuperBlock->fsEntryDescs, key);
 
     fsEntryDesc* ret = NULL;
@@ -170,7 +174,7 @@ fsEntryDesc* superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier
             return NULL;
         }
 
-        if (superBlock_readfsEntryDesc(currentSuperBlock, & finalIdentifier, ret) == RESULT_FAIL) {
+        if (superBlock_readfsEntryDesc(currentSuperBlock, &finalIdentifier, ret) == RESULT_FAIL) {
             memory_free(ret);
             if (superBlockOut != NULL) {
                 *superBlockOut = NULL;

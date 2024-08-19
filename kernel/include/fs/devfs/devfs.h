@@ -14,9 +14,9 @@ typedef struct {
 
 Result devfs_init();
 
-Result devfs_checkType(BlockDevice* device);
+Result devfs_checkType(BlockDevice* blockDevice);
 
-Result devfs_open(FS* fs, BlockDevice* device);
+Result devfs_open(FS* fs, BlockDevice* blockDevice);
 
 Result devfs_close(FS* fs);
 
