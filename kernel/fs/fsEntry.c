@@ -87,7 +87,6 @@ void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
 }
 
 Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
-    DEBUG_MARK_PRINT("MARK %u %s\n", desc->identifier.type, desc->identifier.name.data);
     entry->desc     = desc;
     entry->pointer  = 0;
     entry->iNode    = iNode_open(superBlock, desc);
@@ -209,7 +208,6 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     }
 
     if (!device_isBlockDevice(targetDevice)) {
-        DEBUG_MARK_PRINT("%p %u\n", HOST_POINTER(targetDevice, CharDevice, device), n);
         return charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
     }
 

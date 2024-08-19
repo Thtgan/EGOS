@@ -22,7 +22,6 @@ static iNodeOperations _devfs_iNodeOperations = {
 };
 
 Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
-    DEBUG_MARK_PRINT("MARK\n");
     __DEVFSiNodeInfo* iNodeInfo = memory_allocate(sizeof(__DEVFSiNodeInfo));
     if (iNodeInfo == NULL) {
         return RESULT_FAIL;
@@ -38,7 +37,6 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
 
         iNode->sizeInBlock      = INFINITE;
         iNode->device           = device;
-        DEBUG_MARK_PRINT("%p %s\n", device, device->name);
     } else {
         iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, granularity) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);
         iNodeInfo->firstBlock   = DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);

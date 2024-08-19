@@ -103,7 +103,6 @@ void kernelMain(SystemInfo* info) {
 
     fsEntry entry;
     if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
-        DEBUG_MARK_PRINT("MARK\n");
         fsutil_fileWrite(&entry, "1145141919810", 14);
     }
 

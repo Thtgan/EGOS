@@ -62,7 +62,6 @@ static void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* descOut, __
 
 Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
     if (fsEntry_genericOpen(superBlock, entry, desc) == RESULT_FAIL) {
-        DEBUG_MARK_PRINT("MARK\n");
         return RESULT_FAIL;
     }
 
@@ -70,7 +69,6 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
         Device* device = device_getDevice(desc->device);
         if (device == NULL) {
-            DEBUG_MARK_PRINT("MARK\n");
             return RESULT_FAIL;
         }
     } else {

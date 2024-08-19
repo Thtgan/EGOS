@@ -23,22 +23,18 @@ Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     Index64 key = desc->identifier.type == FS_ENTRY_TYPE_DEVICE ? desc->device + superBlockBlockDevice->device.capacity : desc->dataRange.begin >> superBlockBlockDevice->device.granularity;
-    DEBUG_MARK_PRINT("%s %lX\n", superBlockBlockDevice->device.name, key);
     iNode* ret = iNode_openFromOpened(&superBlock->openedInode, key);
     if (ret == NULL) {
         ret = memory_allocate(sizeof(iNode));
         if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) == RESULT_FAIL) {
-            DEBUG_MARK_PRINT("MARK\n");
             return NULL;
         }
 
         if (iNode_addToOpened(&superBlock->openedInode, ret, key) == RESULT_FAIL) {
-            DEBUG_MARK_PRINT("MARK\n");
             memory_free(ret);
             return NULL;
         }
     } else {
-        DEBUG_MARK_PRINT("MARK\n");
         ++ret->openCnt;
     }
 

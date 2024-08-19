@@ -290,7 +290,6 @@ static Result __ata_read(Device* device, Index64 index, void* buffer, Size n) {
         .addr2 = EXTRACT_VAL(LBA28, 32, 8, 16),
         .addr3 = EXTRACT_VAL(LBA28, 32, 16, 24),
     };
-    // DEBUG_MARK_PRINT("MARK\n");
     return ata_pio_readData(ataDevice, &command, buffer);
 }
 

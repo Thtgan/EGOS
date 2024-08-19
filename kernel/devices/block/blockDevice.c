@@ -57,7 +57,6 @@ Result blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void
             }
 
             if (TEST_FLAGS_FAIL(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_PRESENT)) {
-                // DEBUG_MARK_PRINT("MARK %s %X\n", device->device.name, index);
                 if (device_rawRead(device, index, block->data, 1) == RESULT_FAIL) { //TODO: May be this happens too frequently?
                     return RESULT_FAIL;
                 }
@@ -209,7 +208,6 @@ static Result __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* bu
             }
             
             if (firstBootablePartition == NULL) {
-                // DEBUG_MARK_PRINT("MARK %X\n", entry->sectorBegin);
                 firstBootablePartition = partitionDevice;
             }
         }
@@ -222,12 +220,6 @@ static Result __blockDevice_partition_read(Device* device, Index64 index, void* 
     if (index >= device->capacity) {
         return RESULT_FAIL;
     }
-    // DEBUG_MARK_PRINT("MARK %lX %lX\n", (Index64)device->device.specificInfo, blockIndex);
-
-    // if (blockIndex > 0x100) {
-    //     debug_dump_stack((void*)readRegister_RBP_64(), INFINITE);
-    //     debug_blowup("TEST\n");
-    // }
 
     return blockDevice_readBlocks(HOST_POINTER(device->parent, BlockDevice, device), (Index64)device->specificInfo + index, buffer, n);
 }

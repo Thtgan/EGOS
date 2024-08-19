@@ -92,9 +92,8 @@ static Result __pseudo_nullDevice_operations_read(Device* device, Index64 index,
     PTR_TO_VALUE(8, buffer) = 0;
     return RESULT_SUCCESS;
 }
-#include<debug.h>
+
 static Result __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
-    DEBUG_MARK_PRINT("%s\n", buffer);
     return RESULT_SUCCESS;
 }
 

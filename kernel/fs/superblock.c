@@ -43,8 +43,6 @@ static Result __superBlock_doReadfsEntryDesc(SuperBlock* superBlock, fsEntryIden
         return RESULT_SUCCESS;
     }
 
-    DEBUG_MARK_PRINT("%s %s %s %u\n", superBlock->blockDevice->device.name, identifier->name.data, identifier->parentPath.data, identifier->type);
-
     fsEntry currentDirectory;
     fsEntryDesc currentEntryDesc, nextEntryDesc;
     memory_memcpy(&currentEntryDesc, superBlock->rootDirDesc, sizeof(fsEntryDesc));
@@ -94,8 +92,6 @@ static Result __superBlock_doReadfsEntryDesc(SuperBlock* superBlock, fsEntryIden
         name = next;
         memory_memcpy(&currentEntryDesc, &nextEntryDesc, sizeof(fsEntryDesc));
     }
-
-    DEBUG_MARK_PRINT("MARK\n");
 
     return RESULT_SUCCESS;
 }

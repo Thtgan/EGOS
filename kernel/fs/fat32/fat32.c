@@ -148,7 +148,6 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAlloca
     };
 
     if (fsEntryDesc_initStruct(desc, &args1) == RESULT_FAIL) {
-        DEBUG_MARK_PRINT("MARK\n");
         return RESULT_FAIL;
     }
 
