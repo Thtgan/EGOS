@@ -1,45 +1,11 @@
 #if !defined(__TERMINAL_H)
 #define __TERMINAL_H
 
+#include<devices/display/vga.h>
 #include<devices/terminal/inputBuffer.h>
 #include<kit/types.h>
 #include<structs/queue.h>
 #include<multitask/semaphore.h>
-
-#define TEXT_MODE_BUFFER_BEGIN              0xB8000
-#define TEXT_MODE_WIDTH                     80 
-#define TEXT_MODE_HEIGHT                    25
-#define TEXT_MODE_SIZE                      TEXT_MODE_WIDTH * TEXT_MODE_HEIGHT
-
-typedef struct {
-    Uint8 character, colorPattern;
-} __attribute__((packed)) TerminalDisplayUnit;
-
-//Bit 7 6 5 4 3 2 1 0
-//    | | | | | | | |
-//    | | | | | ^-^-^-- Foreground color
-//    | | | | ^-------- Foreground color bright bit
-//    | ^-^-^---------- Background color
-//    ^---------------- Background color bright bit or enables blinking
-
-#define TERMINAL_PATTERN_COLOR_BLACK           0
-#define TERMINAL_PATTERN_COLOR_BLUE            1
-#define TERMINAL_PATTERN_COLOR_GREEN           2
-#define TERMINAL_PATTERN_COLOR_CYAN            3
-#define TERMINAL_PATTERN_COLOR_RED             4
-#define TERMINAL_PATTERN_COLOR_MAGENTA         5
-#define TERMINAL_PATTERN_COLOR_BROWN           6
-#define TERMINAL_PATTERN_COLOR_LIGHT_GRAY      7
-#define TERMINAL_PATTERN_COLOR_DARK_GRAY       8
-#define TERMINAL_PATTERN_COLOR_LIGHT_BLUE      9
-#define TERMINAL_PATTERN_COLOR_LIGHT_GREEN     10
-#define TERMINAL_PATTERN_COLOR_LIGHT_CYAN      11
-#define TERMINAL_PATTERN_COLOR_LIGHT_RED       12
-#define TERMINAL_PATTERN_COLOR_LIGHT_MAGNETA   13
-#define TERMINAL_PATTERN_COLOR_YELLOW          14
-#define TERMINAL_PATTERN_COLOR_WHITE           15
-
-#define BUILD_PATTERN(__BACKGROUND_COLOR, __FOREGROUND_COLOR) (Uint8)VAL_OR(__FOREGROUND_COLOR, VAL_LEFT_SHIFT(__BACKGROUND_COLOR, 4))
 
 /**
  * Window width
@@ -87,14 +53,12 @@ typedef struct {
  */
 
 typedef struct {
+    VGAtextModeContext* vgaContext;
     Index16 loopRowBegin;                           //Which row in buffer does loop begin
-    Size bufferRowSize;                           //Size of buffer (in row)
+    Size bufferRowSize;                             //Size of buffer (in row)
+
     char* buffer;                                   //Buffer
-
-    Uint16 windowWidth, windowHeight, windowSize; //Window size
     Index16 windowRowBegin;                         //Which row in buffer does window
-
-    Index16 rollRange;                              //Range of scrolling
 
     Semaphore outputLock;                           //Lock for output, used to handle output in multitask sence
 
@@ -120,7 +84,7 @@ typedef struct {
  * @param height Height of terminal on display
  * @return Result Result of the operation
  */
-Result terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize, Size width, Size height);
+Result terminal_initStruct(Terminal* terminal, VGAtextModeContext* vgaContext, void* buffer, Size bufferSize);
 
 /**
  * @brief Set current terminal
