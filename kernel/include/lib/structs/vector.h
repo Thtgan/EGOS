@@ -14,7 +14,7 @@ typedef struct {
  * 
  * @param vector Vector struct
  */
-void vector_init(Vector* vector);
+void vector_initStruct(Vector* vector);
 
 /**
  * @brief Release vector

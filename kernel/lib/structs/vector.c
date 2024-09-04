@@ -6,7 +6,7 @@
 
 #define __VECTOR_INIT_STORAGE_SIZE  48
 
-void vector_init(Vector* vector) {
+void vector_initStruct(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
     vector->storage = memory_allocate(__VECTOR_INIT_STORAGE_SIZE);

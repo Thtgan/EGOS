@@ -1,6 +1,7 @@
 #include<init.h>
 
 #include<devices/ata/ata.h>
+#include<devices/bus/pci.h>
 #include<devices/device.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
@@ -35,8 +36,9 @@ static __InitFunc _initFuncs[] = {
     { tss_init                  ,   "TSS"         },
     { keyboard_init             ,   "Keyboard"    },
     { device_init               ,   "Device"      },
+    { pci_init                  ,   "PCI bus"     },
     { __init_enableInterrupt    ,   NULL          },
-    { ata_initdevices           ,   "ATA Devices" },
+    { ata_initDevices           ,   "ATA Devices" },
     { fs_init                   ,   "File System" },
     { usermode_init             ,   "User Mode"   },
     { fsSyscall_init            ,   "FS syscall"  },

@@ -87,7 +87,7 @@ typedef struct {
     Uint8 addr3;
 } ATAcommand;
 
-Result ata_initdevices();
+Result ata_initDevices();
 
 Result ata_sendCommand(ATAchannel* channel, ATAcommand* command);
 

@@ -54,4 +54,6 @@
                                                                     FOREACH_MACRO_CALL(__BATCH_ALLOCATE_ASSIGN_PTRS_CALL, , __VA_ARGS__)    \
                                                                 }                                                                           \
 
+#define SIZE_OF_STRUCT_MEMBER(__TYPE, __MEMBER)                 (sizeof(((__TYPE*)NULL)->__MEMBER))
+
 #endif // __UTIL_H

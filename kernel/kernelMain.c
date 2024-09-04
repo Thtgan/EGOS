@@ -1,4 +1,5 @@
 #include<debug.h>
+#include<devices/bus/pci.h>
 #include<fs/fsutil.h>
 #include<init.h>
 #include<kit/types.h>
@@ -54,6 +55,26 @@ void kernelMain(SystemInfo* info) {
     }
 
     printLOGO();
+
+    Uint32 pciDeviceNum = pci_getDeviceNum();
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%u PCI devices found\n", pciDeviceNum);
+    if (pciDeviceNum != 0) {
+        print_printf(TERMINAL_LEVEL_OUTPUT, "Bus Dev Func Vendor Device Class SubClass\n");
+        for (int i = 0; i < pciDeviceNum; ++i) {
+            PCIdevice* device = pci_getDevice(i);
+            print_printf(
+                TERMINAL_LEVEL_OUTPUT, 
+                "%02x  %02x  %02x   %04x   %04x   %02x    %02x\n", 
+                PCI_BUS_NUMBER_FROM_ADDR(device->baseAddr),
+                PCI_DEVICE_NUMBER_FROM_ADDR(device->baseAddr),
+                PCI_FUNCTION_NUMBER_FROM_ADDR(device->baseAddr),
+                device->vendorID,
+                device->deviceID,
+                device->class,
+                device->subClass
+            );
+        }
+    }
 
     initSemaphore(&sema1, 0);
     initSemaphore(&sema2, -1);

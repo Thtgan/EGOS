@@ -39,7 +39,7 @@ static ATAdevice _ata_devices[4];
 static BlockDevice _ata_blockDevices[4];
 static ATAchannel _ata_channels[2];
 
-Result ata_initdevices() {
+Result ata_initDevices() {
     ATAchannel dummy1;
     ATAdevice dummy2;
 
