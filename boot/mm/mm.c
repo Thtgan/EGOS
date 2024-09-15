@@ -29,10 +29,10 @@ Result initMemoryManager(MemoryMap* mMap) {
         return RESULT_FAIL;
     }
 
-    entry->type = MEMORY_MAP_ENTRY_TYPE_RESERVED;
     if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN - entry->base, &entry) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
+    entry->type = MEMORY_MAP_ENTRY_TYPE_RESERVED;
 
     if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, &entry) == RESULT_FAIL) {
         return RESULT_FAIL;

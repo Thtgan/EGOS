@@ -112,7 +112,7 @@ static Result __memoryPresetsOperations_deepCopyEntry(PagingLevel level, Extende
     PagingEntry* srcEntry = &srcExtendedTable->table.tableEntries[index], * desEntry = &desExtendedTable->table.tableEntries[index];
     ExtraPageTableEntry* srcExtraEntry = &srcExtendedTable->extraTable.tableEntries[index], * desExtraEntry = &desExtendedTable->extraTable.tableEntries[index];
 
-    void* newExtendedTableFrames = extendedPageTable_allocateFrame();
+    void* newExtendedTableFrames = extendedPageTable_allocateFrame();   //TODO: Allocate frames at low address for possible realmode switch back requirement
     if (newExtendedTableFrames == NULL) {
         return RESULT_FAIL;
     }

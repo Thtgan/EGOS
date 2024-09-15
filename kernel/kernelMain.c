@@ -33,6 +33,8 @@ static void printLOGO();
 
 #include<memory/memory.h>
 
+#include<realmode.h>
+
 static void __timerFunc1(Timer* timer) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
 }
@@ -53,6 +55,17 @@ void kernelMain(SystemInfo* info) {
     if (init_initKernel() == RESULT_FAIL) {
         debug_blowup("Initialization failed");
     }
+
+    RealmodeRegs regs;
+    memory_memset(&regs, 0, sizeof(RealmodeRegs));
+
+    regs.ax = 0x1145;
+    regs.bx = 0x1419;
+    regs.cx = 0x1981;
+
+    realmode_exec(0, &regs, &regs);
+
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%X %X\n", regs.eax, regs.ebx);
 
     printLOGO();
 

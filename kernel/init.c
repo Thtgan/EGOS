@@ -14,6 +14,7 @@
 #include<multitask/schedule.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
+#include<realmode.h>
 #include<time/time.h>
 #include<usermode/usermode.h>
 
@@ -45,6 +46,7 @@ static __InitFunc _initFuncs[] = {
     { __init_disableInterrupt   ,   NULL          },
     { time_init                 ,   "Time"        },
     { schedule_init             ,   "Schedule"    },
+    { realmode_init             ,   "Realmode"    },
     { __init_enableInterrupt    ,   NULL          },
     { NULL, NULL }
 };

@@ -3,7 +3,7 @@
 
 .section .text
 .code32
-FUNC_BEGIN(enterKernel)
+ASM_FUNC_BEGIN(enterKernel):
     mov     8(%esp), %esi
     mov     4(%esp), %eax
     mov     $MEMORY_LAYOUT_KERNEL_STACK_BOTTOM, %esp
@@ -13,4 +13,4 @@ FUNC_BEGIN(enterKernel)
     xor     %edi, %edi
 
     jmp     *%eax
-FUNC_END(enterKernel)
+ASM_FUNC_END(enterKernel)

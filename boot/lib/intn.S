@@ -4,7 +4,7 @@
 
 .section .text.intn
 .code32
-FUNC_BEGIN(intn)
+ASM_FUNC_BEGIN(intn):
     push    %ebp
     mov     %esp, %ebp
     mov     0x08(%ebp), %al
@@ -119,7 +119,7 @@ intnExecuteEnd:
 
     leave
     ret
-FUNC_END(intn)
+ASM_FUNC_END(intn)
 
 .align 8
 espSave:

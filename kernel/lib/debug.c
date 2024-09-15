@@ -46,7 +46,7 @@ void debug_dump_memory(void* data, Size n) {
 
     Uint8* ptr = data;
     for (int base = 0; n > 0; base += 16) {
-        int rowN = algorithms_umin8(n, 16);
+        int rowN = algorithms_umin64(n, 16);
         print_printf(TERMINAL_LEVEL_DEBUG, "%016lX", (Uintptr)ptr);
         for (int j = 0; j < rowN; ++j) {
             print_printf(TERMINAL_LEVEL_DEBUG, " %02X", *ptr);
