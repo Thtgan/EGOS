@@ -30,6 +30,8 @@
 
 #define RANGE_WITHIN(__L1, __R1, __L2, __R2, __CMP1, __CMP2)    ((__L1) __CMP1 (__L2) && (__R2) __CMP2 (__R1))
 
+#define RANGE_HAS_OVERLAP(__L1, __R1, __L2, __R2)               (((Int64)(__R2) - (Int64)(__L1)) * ((Int64)(__R1) - (Int64)(__L2)) > 0)
+
 #define VALUE_WITHIN(__L1, __R1, __VAL, __CMP1, __CMP2)         ((__L1) __CMP1 (__VAL) && (__VAL) __CMP2 (__R1))
 
 #define POWER_2(__SHIFT)                                        (VAL_LEFT_SHIFT(ONE(64), __SHIFT))

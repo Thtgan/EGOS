@@ -56,17 +56,6 @@ void kernelMain(SystemInfo* info) {
         debug_blowup("Initialization failed");
     }
 
-    RealmodeRegs regs;
-    memory_memset(&regs, 0, sizeof(RealmodeRegs));
-
-    regs.ax = 0x1145;
-    regs.bx = 0x1419;
-    regs.cx = 0x1981;
-
-    realmode_exec(0, &regs, &regs);
-
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%X %X\n", regs.eax, regs.ebx);
-
     printLOGO();
 
     Uint32 pciDeviceNum = pci_getDeviceNum();

@@ -1,6 +1,7 @@
 #if !defined(__LIB_REALMODE_H)
 #define __LIB_REALMODE_H
 
+#include<carrier.h>
 #include<kit/types.h>
 #include<multitask/context.h>
 
@@ -44,11 +45,8 @@ typedef struct {
 
 Result realmode_init();
 
-// Result realmode_exec(Uintptr realmodeCode, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 Result realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
-// void* realmode_getFunc(Index16 index);
-
-Index16 realmode_registerFunc(void* func);
+Result realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet);
 
 #endif // __LIB_REALMODE_H

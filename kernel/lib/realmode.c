@@ -2,10 +2,12 @@
 
 #include<algorithms.h>
 #include<carrier.h>
+#include<debug.h>
 #include<kernel.h>
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/memoryMap.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
 #include<interrupt/IDT.h>
@@ -18,23 +20,20 @@ static realmodeExecFunc _realmode_doExecFunc;
 extern void realmode_doExec(Uintptr realmodeCode, Uintptr stack, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
 extern char realmode_begin, realmode_end;
-extern char realmodeFuncs_begin, realmodeFuncs_end;
 
 extern CarrierMovMetadata* realmode_carryList;
-extern CarrierMovMetadata* realmodeFuncs_carryList;
 
 extern Uint32 realmode_protectedModePageDirectory, realmode_compatabilityModePML4;
 
 static void* _realMode_stack;
 
-static void* _realMode_funcs[16];
+#define __REALMODE_MAX_FUNC_NUM 16
+static void* _realMode_funcs[__REALMODE_MAX_FUNC_NUM];
 static int _realMode_funcNum;
-
-extern char realmodeFuncs_test;
 
 void* __realmode_getFunc(Index16 index);
 
-void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size requiredPageNum);
+void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n);
 
 void __realmode_setupPageTables(void* pageTableFrames);
 
@@ -47,17 +46,33 @@ Result realmode_init() {
 
     Uint32 requiredPageNum = DIVIDE_ROUND_UP(codeSize, PAGE_SIZE);
     void* copyTo = __realmode_findHighestMemory(mMap, 0x10000, requiredPageNum);
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%p\n", copyTo);
-
-    void* realmodeFuncs_beginPtr = &realmodeFuncs_begin;
-    void* realmodeFuncs_endPtr = &realmodeFuncs_end;
-    Size funcsCodeSize = realmodeFuncs_endPtr - realmodeFuncs_beginPtr;
+    if (
+        extendedPageTableRoot_draw(
+            mm->extendedTable,
+            copyTo, copyTo, 
+            requiredPageNum,
+            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
+        ) == RESULT_FAIL
+    ) {
+        return RESULT_FAIL;
+    }
 
     Uint32 stackNum = 1;
-    requiredPageNum = stackNum + DIVIDE_ROUND_UP(funcsCodeSize, PAGE_SIZE);
+    Uint32 stackPageNum = stackNum;
 
-    void* funcsCopyTo = __realmode_findHighestMemory(mMap, 0x100000, requiredPageNum);
-    _realMode_stack = funcsCopyTo + ALIGN_UP(funcsCodeSize, PAGE_SIZE);
+    _realMode_stack = __realmode_findHighestMemory(mMap, 0x100000, requiredPageNum);
+    if (
+        extendedPageTableRoot_draw(
+            mm->extendedTable,
+            _realMode_stack, _realMode_stack, 
+            stackPageNum,
+            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
+        ) == RESULT_FAIL
+    ) {
+        return RESULT_FAIL;
+    }
+
+    _realMode_stack = _realMode_stack + stackPageNum * PAGE_SIZE;
 
     void* pageTableFrames = memory_allocateFrame(3);    //TODO: Make sure it allocates fromn lower 4GB
     if ((Uintptr)pageTableFrames + 3 * PAGE_SIZE > 0x100000000) {
@@ -68,15 +83,11 @@ Result realmode_init() {
 
     _realmode_doExecFunc = (void*)realmode_doExec - realmode_beginPtr + copyTo;
 
-    if (carrier_carry(realmode_beginPtr, copyTo, codeSize, &realmode_carryList) == RESULT_FAIL || carrier_carry(realmodeFuncs_beginPtr, funcsCopyTo, funcsCodeSize, &realmodeFuncs_carryList) == RESULT_FAIL) {
+    if (carrier_carry(realmode_beginPtr, copyTo, codeSize, &realmode_carryList) == RESULT_FAIL) {
         return RESULT_FAIL;
     }
 
     _realMode_funcNum = 0;
-
-    if (realmode_registerFunc((void*)((Uintptr)&realmodeFuncs_test - (Uintptr)realmodeFuncs_beginPtr + (Uintptr)funcsCopyTo)) == INVALID_INDEX) {
-        return RESULT_FAIL;
-    }
 
     return RESULT_SUCCESS;
 }
@@ -100,21 +111,27 @@ Result realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outR
     return RESULT_SUCCESS;
 }
 
-Index16 realmode_registerFunc(void* func) {
-    if (_realMode_funcNum == 16 || (Uintptr)func >= 0x100000) {
-        return INVALID_INDEX;
+Result realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet) {
+    DEBUG_ASSERT(_realMode_funcNum + funcNum <= __REALMODE_MAX_FUNC_NUM && indexRet != NULL, "");
+
+    void* copyTo = __realmode_findHighestMemory(&mm->mMap, 0x10000, DIVIDE_ROUND_UP(codeSize, PAGE_SIZE));
+    if (copyTo == NULL || carrier_carry(codeBegin, paging_convertAddressP2V(copyTo), codeSize, carrierList) == RESULT_FAIL) {
+        return RESULT_FAIL;
     }
 
-    _realMode_funcs[_realMode_funcNum] = func;
+    for (int i = 0; i < funcNum; ++i, ++_realMode_funcNum) {
+        _realMode_funcs[_realMode_funcNum] = (Uintptr)(funcList[i] - codeBegin) + copyTo;
+        indexRet[i] = _realMode_funcNum;
+    }
 
-    return _realMode_funcNum++;
+    return RESULT_SUCCESS;
 }
 
 void* __realmode_getFunc(Index16 index) {
     return index > _realMode_funcNum ? NULL : _realMode_funcs[index];
 }
 
-void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size requiredPageNum) {
+void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n) {
     MemoryMapEntry* target = NULL;
     for (int i = 0; i < mMap->entryNum; ++i) {  //TODO: Pack this into a E820 function
         MemoryMapEntry* e = mMap->memoryMapEntries + i;
@@ -128,7 +145,7 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size required
         }
 
         Uintptr top = algorithms_umin64(ALIGN_DOWN(e->base + e->length, PAGE_SIZE), below);
-        if (top - requiredPageNum * PAGE_SIZE >= e->base && (target == NULL || target->base < e->base)) {
+        if (top - n * PAGE_SIZE >= e->base && (target == NULL || target->base < e->base)) {
             target = e;
         }
     }
@@ -137,16 +154,9 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size required
         return NULL;
     }
 
-    void* ret = (void*)algorithms_umin64(ALIGN_DOWN(target->base + target->length, PAGE_SIZE), below) - requiredPageNum * PAGE_SIZE;
+    void* ret = (void*)algorithms_umin64(ALIGN_DOWN(target->base + target->length, PAGE_SIZE), below) - n * PAGE_SIZE;
 
-    if (
-        extendedPageTableRoot_draw(
-            mm->extendedTable,
-            ret, ret, 
-            requiredPageNum,
-            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
-        ) == RESULT_FAIL
-    ) {
+    if (memoryMap_splitEntryAndTidyup(mMap, target, (Uint64)ret - target->base, MEMORY_MAP_ENTRY_TYPE_RESERVED, NULL) == RESULT_FAIL) {
         return NULL;
     }
 

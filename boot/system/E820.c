@@ -95,7 +95,7 @@ Result E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, 
 Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     MemoryMapEntry* nextEntry = entry + 1;
-    if (index == MEMORY_MAP_ENTRY_NUM - 1 || entry->type != nextEntry->type || entry->base + entry->length != nextEntry->base) {
+    if (index == mMap->entryNum - 1 || entry->type != nextEntry->type || entry->base + entry->length != nextEntry->base) {
         return RESULT_FAIL;
     }
 
