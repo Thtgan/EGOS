@@ -1,5 +1,5 @@
-#if !defined(__CPUID_H)
-#define __CPUID_H
+#if !defined(__REAL_CPUID_H)
+#define __REAL_CPUID_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -144,4 +144,4 @@ asm volatile(                                                                   
     : "0"(__IN_EAX), "2"(__IN_ECX)                                                              \
     );
 
-#endif // __CPUID_H
+#endif // __REAL_CPUID_H

@@ -1,5 +1,5 @@
-#if !defined(__MEMORY_LAYOUT_H)
-#define __MEMORY_LAYOUT_H
+#if !defined(__SYSTEM_MEMORYLAYOUT_H)
+#define __SYSTEM_MEMORYLAYOUT_H
 
 #define DATA_UNIT_B                                 (1ull)
 #define DATA_UNIT_KB                                (1ull << 10)
@@ -34,4 +34,4 @@
 #define MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN      0xFFFFFFFFC0000000
 #define MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END        0xFFFFFFFFE0000000
 
-#endif // __MEMORY_LAYOUT_H
+#endif // __SYSTEM_MEMORYLAYOUT_H

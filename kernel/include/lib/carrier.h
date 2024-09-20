@@ -1,5 +1,5 @@
-#if !defined(__CARRIER_H)
-#define __CARRIER_H
+#if !defined(__LIB_CARRIER_H)
+#define __LIB_CARRIER_H
 
 #include<kit/macro.h>
 
@@ -49,4 +49,4 @@ Result carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** car
 
 #endif // __ASSEMBLER__
 
-#endif // __CARRIER_H
+#endif // __LIB_CARRIER_H

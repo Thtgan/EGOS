@@ -1,5 +1,5 @@
-#if !defined(__ISR_H)
-#define __ISR_H
+#if !defined(__INTERRUPT_ISR_H)
+#define __INTERRUPT_ISR_H
 
 #include<interrupt/IDT.h>
 #include<kit/types.h>
@@ -20,4 +20,4 @@ static inline void EOI() {
     outb(PIC_COMMAND_2, PIC_OCW2_EOI_REQUEST);
 }
 
-#endif // __ISR_H
+#endif // __INTERRUPT_ISR_H

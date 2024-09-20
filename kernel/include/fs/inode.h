@@ -1,5 +1,5 @@
-#if !defined(__INODE_H)
-#define __INODE_H
+#if !defined(__FS_INODE_H)
+#define __FS_INODE_H
 
 #include<fs/fsStructs.h>
 #include<kit/types.h>
@@ -23,4 +23,4 @@ iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc);
 
 Result iNode_close(iNode* iNode, fsEntryDesc* desc);
 
-#endif // __INODE_H
+#endif // __FS_INODE_H

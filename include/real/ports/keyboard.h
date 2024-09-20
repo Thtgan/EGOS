@@ -1,5 +1,5 @@
-#if !defined(_PORTS_KEYBOARD_H)
-#define _PORTS_KEYBOARD_H
+#if !defined(__REAL_PORTS_KEYBOARD_H)
+#define __REAL_PORTS_KEYBOARD_H
 
 #include<kit/bit.h>
 
@@ -28,4 +28,4 @@
 #define KEYBOARD_CONTROLLER_WRITE_OUTPUT                            0xD1
 #define KEYBOARD_CONTROLLER_OUTPUT_FLAG_A20_CONTROL                 FLAG8(1)
 
-#endif // _PORTS_KEYBOARD_H
+#endif // __REAL_PORTS_KEYBOARD_H

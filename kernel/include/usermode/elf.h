@@ -1,5 +1,5 @@
-#if !defined(__ELF_H)
-#define __ELF_H
+#if !defined(__USERMODE_ELF_H)
+#define __USERMODE_ELF_H
 
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/fsutil.h>
@@ -242,4 +242,4 @@ Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
  */
 Result elf_unloadELF64Program(ELF64ProgramHeader* programHeader);
 
-#endif // __ELF_H
+#endif // __USERMODE_ELF_H

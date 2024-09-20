@@ -1,5 +1,5 @@
-#if !defined(__PAGING_H)
-#define __PAGING_H
+#if !defined(__MEMORY_PAGING_H)
+#define __MEMORY_PAGING_H
 
 #include<kernel.h>
 #include<kit/bit.h>
@@ -42,4 +42,4 @@ static inline void* paging_convertAddressP2V(void* p) {
     return (void*)FILL_VAL((Uintptr)p, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN);
 }
 
-#endif // __PAGING_H
+#endif // __MEMORY_PAGING_H

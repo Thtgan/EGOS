@@ -1,5 +1,5 @@
-#if !defined(__EFLAGS_H)
-#define __EFLAGS_H
+#if !defined(__REAL_FLAGS_EFLAGS_H)
+#define __REAL_FLAGS_EFLAGS_H
 
 #include<kit/bit.h>
 
@@ -77,4 +77,4 @@
 #define EFLAGS_ID_INDEX         21
 #define EFLAGS_ID               FLAG32(EFLAGS_ID_INDEX)
 
-#endif // __EFLAGS_H
+#endif // __REAL_FLAGS_EFLAGS_H

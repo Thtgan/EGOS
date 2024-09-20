@@ -1,5 +1,5 @@
-#if !defined(__EXCEPTIONS_H)
-#define __EXCEPTIONS_H
+#if !defined(__INTERRUPT_EXCEPTIONS_H)
+#define __INTERRUPT_EXCEPTIONS_H
 
 //Reference: https://wiki.osdev.org/Exceptions
 
@@ -27,4 +27,4 @@
 #define EXCEPTION_VEC_VMM_COMMUNICATION_EXCEPTION   0x1D
 #define EXCEPTION_VEC_SECURITY_EXCEPTION            0x1E
 
-#endif // __EXCEPTIONS_H
+#endif // __INTERRUPT_EXCEPTIONS_H

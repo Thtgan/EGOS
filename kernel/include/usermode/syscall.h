@@ -1,5 +1,5 @@
-#if !defined(__SYSCALL_H)
-#define __SYSCALL_H
+#if !defined(__USERMODE_SYSCALL_H)
+#define __USERMODE_SYSCALL_H
 
 typedef enum {
     SYSCALL_READ,
@@ -24,4 +24,4 @@ void syscall_init();
  */
 void syscall_registerHandler(SyscallType type, void* handler);
 
-#endif // __SYSCALL_H
+#endif // __USERMODE_SYSCALL_H

@@ -1,5 +1,5 @@
-#if !defined(__FRAME_METADATA_H)
-#define __FRAME_METADATA_H
+#if !defined(__MEMORY_FRAMEMETADATA_H)
+#define __MEMORY_FRAMEMETADATA_H
 
 #include<debug.h>
 #include<kit/bit.h>
@@ -49,4 +49,4 @@ FrameMetadataHeader* frameMetadata_getFrameMetadataHeader(FrameMetadata* metadat
 
 FrameMetadataUnit* frameMetadata_getFrameMetadataUnit(FrameMetadata* metadata, void* p);
 
-#endif // __FRAME_METADATA_H
+#endif // __MEMORY_FRAMEMETADATA_H

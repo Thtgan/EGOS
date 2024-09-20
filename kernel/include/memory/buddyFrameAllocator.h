@@ -1,5 +1,5 @@
-#if !defined(__BUDDY_FRAME_ALLOCATOR)
-#define __BUDDY_FRAME_ALLOCATOR
+#if !defined(__MEMORY_BUDDYFRAMEALLOCATOR_H)
+#define __MEMORY_BUDDYFRAMEALLOCATOR_H
 
 #include<memory/allocator.h>
 #include<kit/types.h>
@@ -24,4 +24,4 @@ typedef struct {
 
 Result buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator);
 
-#endif // __BUDDY_FRAME_ALLOCATOR
+#endif // __MEMORY_BUDDYFRAMEALLOCATOR_H

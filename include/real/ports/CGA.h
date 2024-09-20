@@ -1,5 +1,5 @@
-#if !defined(__PORTS_CGA_H)
-#define __PORTS_CGA_H
+#if !defined(__REAL_PORTS_CGA_H)
+#define __REAL_PORTS_CGA_H
 
 //CGA(Color Graphics Adapter)
 
@@ -29,4 +29,4 @@
 //CGA CRT data port
 #define CGA_CRT_DATA                    0x03D5
 
-#endif // __PORTS_CGA_H
+#endif // __REAL_PORTS_CGA_H

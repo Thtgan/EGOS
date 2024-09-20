@@ -1,5 +1,5 @@
-#if !defined(__TIME_H)
-#define __TIME_H
+#if !defined(__TIME_TIME_H)
+#define __TIME_TIME_H
 
 #include<kit/types.h>
 #include<multitask/spinlock.h>
@@ -40,4 +40,4 @@ Result time_init();
 
 void time_getTimestamp(Timestamp* timestamp);
 
-#endif // __TIME_H
+#endif // __TIME_TIME_H

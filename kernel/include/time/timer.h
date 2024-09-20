@@ -1,5 +1,5 @@
-#if !defined(__TIMER_H)
-#define __TIMER_H
+#if !defined(__TIME_TIMER_H)
+#define __TIME_TIMER_H
 
 #include<devices/clock/clockSource.h>
 #include<kit/bit.h>
@@ -33,4 +33,4 @@ Result timer_stop(Timer* timer);
 
 void timer_updateTimers();
 
-#endif // __TIMER_H
+#endif // __TIME_TIMER_H

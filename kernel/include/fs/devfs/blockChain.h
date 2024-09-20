@@ -1,5 +1,5 @@
-#if !defined(__DEVFS_BLOCKCHAIN_H)
-#define __DEVFS_BLOCKCHAIN_H
+#if !defined(__FS_DEVFS_BLOCKCHAIN_H)
+#define __FS_DEVFS_BLOCKCHAIN_H
 
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
@@ -27,4 +27,4 @@ Index8 devfs_blockChain_cutChain(DevFSblockChains* blockChains, Index8 block);
 
 void devfs_blockChain_insertChain(DevFSblockChains* blockChains, Index8 block, Index8 chainFirst);
 
-#endif // __DEVFS_BLOCKCHAIN_H
+#endif // __FS_DEVFS_BLOCKCHAIN_H

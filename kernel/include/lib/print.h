@@ -1,5 +1,5 @@
-#if !defined(__PRINT_H)
-#define __PRINT_H
+#if !defined(__LIB_PRINT_H)
+#define __LIB_PRINT_H
 
 #include<devices/terminal/terminalSwitch.h>
 #include<kit/types.h>
@@ -56,4 +56,4 @@ int print_vsprintf(char* buffer, const char* format, va_list args);
  */
 int print_putchar(TerminalLevel level, int ch);
 
-#endif // __PRINT_H
+#endif // __LIB_PRINT_H

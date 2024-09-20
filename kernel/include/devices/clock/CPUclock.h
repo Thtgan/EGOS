@@ -1,9 +1,9 @@
-#if !defined(__CPU_CLOCK_H)
-#define __CPU_CLOCK_H
+#if !defined(__DEVICES_CLOCK_CPUCLOCK_H)
+#define __DEVICES_CLOCK_CPUCLOCK_H
 
 #include<devices/clock/clockSource.h>
 #include<kit/types.h>
 
 Result CPUclock_initClockSource(ClockSource* clockSource);
 
-#endif // __CPU_CLOCK_H
+#endif // __DEVICES_CLOCK_CPUCLOCK_H

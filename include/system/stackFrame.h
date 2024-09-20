@@ -1,5 +1,5 @@
-#if !defined(__STACK_FRAME_H)
-#define __STACK_FRAME_H
+#if !defined(__SYSTEM_STACKFRAME_H)
+#define __SYSTEM_STACKFRAME_H
 
 #include<kit/types.h>
 
@@ -10,4 +10,4 @@ typedef struct {
 
 #define STACK_FRAME_HEADER_FROM_STACK_BASE(__STACK_BASE)    ((StackFrameHeader*)(__STACK_BASE - sizeof(StackFrameHeader)))
 
-#endif // __STACK_FRAME_H
+#endif // __SYSTEM_STACKFRAME_H

@@ -1,5 +1,5 @@
-#if !defined(__TSS_H)
-#define __TSS_H
+#if !defined(__INTERRUPT_TSS_H)
+#define __INTERRUPT_TSS_H
 
 #include<kit/types.h>
 
@@ -10,4 +10,4 @@
  */
 Result tss_init();
 
-#endif // __TSS_H
+#endif // __INTERRUPT_TSS_H

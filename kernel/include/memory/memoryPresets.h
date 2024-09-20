@@ -1,5 +1,5 @@
-#if !defined(__MEMORY_PRESETS_H)
-#define __MEMORY_PRESETS_H
+#if !defined(__MEMORY_MEMORYPRESETS_H)
+#define __MEMORY_MEMORYPRESETS_H
 
 #include<kit/types.h>
 #include<system/pageTable.h>
@@ -36,4 +36,4 @@ typedef struct ExtraPageTableContext ExtraPageTableContext;
 
 Result memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
 
-#endif // __MEMORY_PRESETS_H
+#endif // __MEMORY_MEMORYPRESETS_H

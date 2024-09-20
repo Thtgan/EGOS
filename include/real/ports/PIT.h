@@ -1,5 +1,5 @@
-#if !defined(__PORTS_PIT_H)
-#define __PORTS_PIT_H
+#if !defined(__REAL_PORTS_PIT_H)
+#define __REAL_PORTS_PIT_H
 
 #include<kit/bit.h>
 
@@ -39,4 +39,4 @@
 #define PIT_READBACK_NO_LATCH_COUNT                     FLAG8(5)
 #define PIT_READBACK_CHANNEL(__CHANNEL)                 VAL_LEFT_SHIFT(__CHANNEL, 1)
 
-#endif // __PORTS_PIT_H
+#endif // __REAL_PORTS_PIT_H

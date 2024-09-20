@@ -1,5 +1,5 @@
-#if !defined(__REALMODE_H)
-#define __REALMODE_H
+#if !defined(__LIB_REALMODE_H)
+#define __LIB_REALMODE_H
 
 #include<kit/types.h>
 #include<multitask/context.h>
@@ -51,4 +51,4 @@ Result realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outR
 
 Index16 realmode_registerFunc(void* func);
 
-#endif // __REALMODE_H
+#endif // __LIB_REALMODE_H

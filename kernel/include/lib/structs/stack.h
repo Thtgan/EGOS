@@ -1,5 +1,5 @@
-#if !defined(STACK_H)
-#define STACK_H
+#if !defined(__LIB_STRUCTS_STACK_H)
+#define __LIB_STRUCTS_STACK_H
 
 #include<kit/types.h>
 
@@ -80,4 +80,4 @@ static inline Result stack_pop(Stack* stack) {
     return RESULT_SUCCESS;
 }
 
-#endif // STACK_H
+#endif // __LIB_STRUCTS_STACK_H

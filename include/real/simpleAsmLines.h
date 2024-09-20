@@ -1,5 +1,5 @@
-#if !defined(__SIMPLE_ASM_LINES_H)
-#define __SIMPLE_ASM_LINES_H
+#if !defined(__REAL_SIMPLEASMLINES_H)
+#define __REAL_SIMPLEASMLINES_H
 
 #include<kit/bit.h>
 #include<kit/macro.h>
@@ -499,4 +499,4 @@ static inline Uint64 rdtsc(void) {
 	return ((Uint64)edx << 32) | eax;
 }
 
-#endif // __SIMPLE_ASM_LINES_H
+#endif // __REAL_SIMPLEASMLINES_H

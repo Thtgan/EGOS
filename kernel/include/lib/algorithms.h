@@ -1,5 +1,5 @@
-#if !defined(__ALGORITHMS_H)
-#define __ALGORITHMS_H
+#if !defined(__LIB_ALGORITHMS_H)
+#define __LIB_ALGORITHMS_H
 
 #include<kit/types.h>
 #include<structs/linkedList.h>
@@ -126,4 +126,4 @@ void algorithms_linkedList_mergeSort(LinkedList* list, Size len, COMPARATOR_PTR(
  */
 void algorithms_singlyLinkedList_mergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
 
-#endif // __ALGORITHMS_H
+#endif // __LIB_ALGORITHMS_H

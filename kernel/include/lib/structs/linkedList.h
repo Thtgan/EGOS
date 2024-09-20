@@ -1,5 +1,5 @@
-#if !defined(__LINKED_LIST)
-#define __LINKED_LIST
+#if !defined(__LIB_STRUCTS_LINKEDLIST_H)
+#define __LIB_STRUCTS_LINKEDLIST_H
 
 #include<kit/types.h>
 
@@ -95,4 +95,4 @@ static inline void linkedListNode_delete(LinkedListNode* node) {
     node->next->prev = node->prev;
 }
 
-#endif // __LINKED_LIST
+#endif // __LIB_STRUCTS_LINKEDLIST_H

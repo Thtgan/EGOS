@@ -1,5 +1,5 @@
-#if !defined(__STRING_H)
-#define __STRING_H
+#if !defined(__LIB_STRUCTS_STRING_H)
+#define __LIB_STRUCTS_STRING_H
 
 #include<kit/types.h>
 
@@ -30,4 +30,4 @@ Result string_resize(String* str, Size newCapacity);
 
 Result string_copy(String* str, String* src);
 
-#endif // __STRING_H
+#endif // __LIB_STRUCTS_STRING_H

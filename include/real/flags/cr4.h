@@ -1,5 +1,5 @@
-#if !defined(__CR4_H)
-#define __CR4_H
+#if !defined(__REAL_FLAGS_CR4_H)
+#define __REAL_FLAGS_CR4_H
 
 #include<kit/bit.h>
 
@@ -93,4 +93,4 @@
 #define CR4_PKS_INDEX           24
 #define CR4_PKS                 FLAG32(CR4_PKS_INDEX)
 
-#endif // __CR4_H
+#endif // __REAL_FLAGS_CR4_H

@@ -1,5 +1,5 @@
-#if !defined(__GDT_H)
-#define __GDT_H
+#if !defined(__SYSTEM_GDT_H)
+#define __SYSTEM_GDT_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -138,4 +138,4 @@ typedef struct {
     Uint64    table;
 } __attribute__((packed)) GDTDesc64;
 
-#endif // __GDT_H
+#endif // __SYSTEM_GDT_H

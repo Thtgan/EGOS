@@ -1,5 +1,5 @@
-#if !defined(__SEMAPHORE_H)
-#define __SEMAPHORE_H
+#if !defined(__MULTITASK_SEMAPHORE_H)
+#define __MULTITASK_SEMAPHORE_H
 
 #include<multitask/spinlock.h>
 #include<structs/queue.h>
@@ -32,4 +32,4 @@ void semaphore_down(Semaphore* sema);
  */
 void semaphore_up(Semaphore* sema);
 
-#endif // __SEMAPHORE_H
+#endif // __MULTITASK_SEMAPHORE_H

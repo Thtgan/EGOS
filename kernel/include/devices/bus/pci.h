@@ -1,5 +1,5 @@
-#if !defined(__PCI_H)
-#define __PCI_H
+#if !defined(__DEVICES_BUS_PCI_H)
+#define __DEVICES_BUS_PCI_H
 
 #include<debug.h>
 #include<kit/bit.h>
@@ -212,4 +212,4 @@ Uint32 pci_getDeviceNum();
 
 PCIdevice* pci_getDevice(Index32 index);
 
-#endif // __PCI_H
+#endif // __DEVICES_BUS_PCI_H

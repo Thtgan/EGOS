@@ -1,5 +1,5 @@
-#if !defined(__MACRO_H)
-#define __MACRO_H
+#if !defined(__KIT_MACRO_H)
+#define __KIT_MACRO_H
 
 #define MACRO_RESCAN(__X) __X
 
@@ -29,4 +29,4 @@
 
 #define __FOREACH_MACRO_CALL_RECURSIVE()  __FOREACH_MACRO_CALL_HELPER
 
-#endif // __MACRO_H
+#endif // __KIT_MACRO_H

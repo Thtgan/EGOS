@@ -1,5 +1,5 @@
-#if !defined(__DEVFS_H)
-#define __DEVFS_H
+#if !defined(__FS_DEVFS_DEVFS_H)
+#define __FS_DEVFS_DEVFS_H
 
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
@@ -20,4 +20,4 @@ Result devfs_open(FS* fs, BlockDevice* blockDevice);
 
 Result devfs_close(FS* fs);
 
-#endif // __DEVFS_H
+#endif // __FS_DEVFS_DEVFS_H

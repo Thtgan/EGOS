@@ -1,5 +1,5 @@
-#if !defined(__PORTS_POS_H)
-#define __PORTS_POS_H
+#if !defined(__REAL_PORTS_POS_H)
+#define __REAL_PORTS_POS_H
 
 #include<kit/bit.h>
 
@@ -15,4 +15,4 @@
 #define POS_WATCHDOG_TIMEOUT        FLAG8(4)     //Wathcdog timeout (not) occured
 #define POS_ACTIVITY_LIGHT_ON       FLAG8(6)     //Turn activity light on/off (6-7 bit all 0)
 
-#endif // __PORTS_POS_H
+#endif // __REAL_PORTS_POS_H

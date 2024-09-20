@@ -1,5 +1,5 @@
-#if !defined(__MEMORY_AREA_H)
-#define __MEMORY_AREA_H
+#if !defined(__SYSTEM_MEMORYMAP_H)
+#define __SYSTEM_MEMORYMAP_H
 
 #include<kit/types.h>
 
@@ -23,4 +23,4 @@ typedef struct {
     MemoryMapEntry memoryMapEntries[MEMORY_MAP_ENTRY_NUM];
 } MemoryMap;
 
-#endif // __MEMORY_AREA_H
+#endif // __SYSTEM_MEMORYMAP_H

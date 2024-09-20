@@ -1,5 +1,5 @@
-#if !defined(__FS_H)
-#define __FS_H
+#if !defined(__FS_FS_H)
+#define __FS_FS_H
 
 #include<devices/block/blockDevice.h>
 #include<fs/fsStructs.h>
@@ -41,4 +41,4 @@ Result fs_open(FS* fs, BlockDevice* device);
  */
 Result fs_close(FS* fs);
 
-#endif // __FS_H
+#endif // __FS_FS_H

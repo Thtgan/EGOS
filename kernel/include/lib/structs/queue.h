@@ -1,5 +1,5 @@
-#if !defined(__QUEUE_H)
-#define __QUEUE_H
+#if !defined(__LIB_STRUCTS_QUEUE_H)
+#define __LIB_STRUCTS_QUEUE_H
 
 #include<structs/singlyLinkedList.h>
 #include<kit/types.h>
@@ -79,4 +79,4 @@ static inline QueueNode* queue_front(Queue* q) {
     return singlyLinkedList_isEmpty(&q->q) ? NULL : singlyLinkedList_getNext(&q->q);
 }
 
-#endif // __QUEUE_H
+#endif // __LIB_STRUCTS_QUEUE_H

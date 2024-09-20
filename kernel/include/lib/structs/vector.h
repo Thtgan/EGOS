@@ -1,5 +1,5 @@
-#if !defined(__VECTOR_H)
-#define __VECTOR_H
+#if !defined(__LIB_STRUCTS_VECTOR_H)
+#define __LIB_STRUCTS_VECTOR_H
 
 #include<kit/types.h>
 
@@ -102,4 +102,4 @@ Result vector_push(Vector* vector, Object item);
  */
 Result vector_pop(Vector* vector);
 
-#endif // __VECTOR_H
+#endif // __LIB_STRUCTS_VECTOR_H

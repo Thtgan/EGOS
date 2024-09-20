@@ -1,5 +1,5 @@
-#if !defined(__PORTS_PIC_H)
-#define __PORTS_PIC_H
+#if !defined(__REAL_PORTS_PIC_H)
+#define __REAL_PORTS_PIC_H
 
 #include<kit/bit.h>
 
@@ -52,4 +52,4 @@
 #define PIC_OCW2_SL                                 FLAG8(6)    //Selection
 #define PIC_OCW2_R                                  FLAG8(7)    //Rotation
 
-#endif // __PORTS_PIC_H
+#endif // __REAL_PORTS_PIC_H

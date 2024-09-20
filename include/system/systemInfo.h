@@ -1,5 +1,5 @@
-#if !defined(__SYSTEM_INFO_H)
-#define __SYSTEM_INFO_H
+#if !defined(__SYSTEM_SYSTEMINFO_H)
+#define __SYSTEM_SYSTEMINFO_H
 
 #include<kit/types.h>
 #include<system/GDT.h>
@@ -14,4 +14,4 @@ typedef struct {
 } SystemInfo;
 //Don't remove this attribute, passing these data with no conflicting between modes is all counting on it
 
-#endif // __SYSTEM_INFO_H
+#endif // __SYSTEM_SYSTEMINFO_H

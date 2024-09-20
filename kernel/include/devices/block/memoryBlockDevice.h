@@ -1,9 +1,9 @@
-#if !defined(MEMORY_BLOCK_DEVICE_H)
-#define MEMORY_BLOCK_DEVICE_H
+#if !defined(__DEVICES_BLOCK_MEMORYBLOCKDEVICE_H)
+#define __DEVICES_BLOCK_MEMORYBLOCKDEVICE_H
 
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
 
 Result memoryBlockDevice_initStruct(BlockDevice* device, void* region, Size size, ConstCstring name);
 
-#endif // MEMORY_BLOCK_DEVICE_H
+#endif // __DEVICES_BLOCK_MEMORYBLOCKDEVICE_H

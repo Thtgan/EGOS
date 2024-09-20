@@ -1,5 +1,5 @@
-#if !defined(__TYPES_H)
-#define __TYPES_H
+#if !defined(__KIT_TYPES_H)
+#define __KIT_TYPES_H
 
 #include<kit/macro.h>
 
@@ -89,4 +89,4 @@ typedef struct {
 
 #define RANGE_N(__N, __BEGIN, __LENGTH)        (RangeN){ __N, __BEGIN, __LENGTH }
 
-#endif // __TYPES_H
+#endif // __KIT_TYPES_H

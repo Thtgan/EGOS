@@ -1,5 +1,5 @@
-#if !defined(__FAT32_CLUSTER_H)
-#define __FAT32_CLUSTER_H
+#if !defined(__FS_FAT32_CLUSTER_H)
+#define __FS_FAT32_CLUSTER_H
 
 #include<fs/fat32/fat32.h>
 #include<kit/types.h>
@@ -29,4 +29,4 @@ Index32 fat32_cutClusterChain(FAT32info* info, Index32 cluster);
 
 void fat32_insertClusterChain(FAT32info* info, Index32 cluster, Index32 clusterChainFirst);
 
-#endif // __FAT32_CLUSTER_H
+#endif // __FS_FAT32_CLUSTER_H

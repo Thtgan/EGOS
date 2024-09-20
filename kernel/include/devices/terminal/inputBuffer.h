@@ -1,5 +1,5 @@
-#if !defined(__INPUT_BUFFER_H)
-#define __INPUT_BUFFER_H
+#if !defined(__DEVICES_TERMINAL_INPUTBUFFER_H)
+#define __DEVICES_TERMINAL_INPUTBUFFER_H
 
 #include<multitask/semaphore.h>
 #include<structs/queue.h>
@@ -43,4 +43,4 @@ int inputBuffer_getChar(InputBuffer* buffer);
  */
 int inputBuffer_getLine(InputBuffer* buffer, Cstring writeTo);
 
-#endif // __INPUT_BUFFER_H
+#endif // __DEVICES_TERMINAL_INPUTBUFFER_H

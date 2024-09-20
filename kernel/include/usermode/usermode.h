@@ -1,5 +1,5 @@
-#if !defined(__USERMODE_H)
-#define __USERMODE_H
+#if !defined(__USERMODE_USERMODE_H)
+#define __USERMODE_USERMODE_H
 
 #include<kit/types.h>
 
@@ -18,4 +18,4 @@ Result usermode_init();
  */
 int usermode_exsecute(ConstCstring path);
 
-#endif // __USERMODE_H
+#endif // __USERMODE_USERMODE_H

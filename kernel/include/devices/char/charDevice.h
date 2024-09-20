@@ -1,5 +1,5 @@
-#if !defined(__CHAR_DEVICE_H)
-#define __CHAR_DEVICE_H
+#if !defined(__DEVICES_CHAR_CHARDEVICE_H)
+#define __DEVICES_CHAR_CHARDEVICE_H
 
 #include<devices/device.h>
 #include<kit/oop.h>
@@ -21,4 +21,4 @@ Result charDevice_write(CharDevice* device, Index64 index, const void* buffer, S
 
 Result charDevice_flush(CharDevice* device);
 
-#endif // __CHAR_DEVICE_H
+#endif // __DEVICES_CHAR_CHARDEVICE_H

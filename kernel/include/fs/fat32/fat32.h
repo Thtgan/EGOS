@@ -1,5 +1,5 @@
-#if !defined(__FAT32_H)
-#define __FAT32_H
+#if !defined(__FS_FAT32_FAT32_H)
+#define __FS_FAT32_FAT32_H
 
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
@@ -55,4 +55,4 @@ Result fat32_open(FS* fs, BlockDevice* blockDevice);
 
 Result fat32_close(FS* fs);
 
-#endif // __FAT32_H
+#endif // __FS_FAT32_FAT32_H

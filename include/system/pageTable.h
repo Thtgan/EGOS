@@ -1,5 +1,5 @@
-#if !defined(__PAGE_TABLE_H)
-#define __PAGE_TABLE_H
+#if !defined(__SYSTEM_PAGETABLE_H)
+#define __SYSTEM_PAGETABLE_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -212,4 +212,4 @@ typedef PagingTable PageDirectory;
 
 typedef PagingTable PageTable;
 
-#endif // __PAGE_TABLE_H
+#endif // __SYSTEM_PAGETABLE_H

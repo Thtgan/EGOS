@@ -1,5 +1,5 @@
-#if !defined(__TERMINAL_SWITCH_H)
-#define __TERMINAL_SWITCH_H
+#if !defined(__DEVICES_TERMINAL_TERMINALSWITCH_H)
+#define __DEVICES_TERMINAL_TERMINALSWITCH_H
 
 #include<devices/terminal/terminal.h>
 #include<kit/types.h>
@@ -32,4 +32,4 @@ void terminalSwitch_setLevel(TerminalLevel level);
  */
 Terminal* terminalSwitch_getLevel(TerminalLevel level);
 
-#endif // __TERMINAL_SWITCH_H
+#endif // __DEVICES_TERMINAL_TERMINALSWITCH_H

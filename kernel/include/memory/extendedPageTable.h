@@ -1,5 +1,5 @@
-#if !defined(__EXTENDED_PAGE_TABLE_H)
-#define __EXTENDED_PAGE_TABLE_H
+#if !defined(__MEMORY_EXTENDEDPAGETABLE_H)
+#define __MEMORY_EXTENDEDPAGETABLE_H
 
 #include<debug.h>
 #include<kit/types.h>
@@ -99,4 +99,4 @@ static inline Result extendedPageTableRoot_pageFaultHandler(ExtendedPageTableRoo
     return EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET(root->context, presetID)->operations.pageFaultHandler(level, extendedTable, index, v, handlerStackFrame, regs);
 }
 
-#endif // __EXTENDED_PAGE_TABLE_H
+#endif // __MEMORY_EXTENDEDPAGETABLE_H

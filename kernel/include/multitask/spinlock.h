@@ -1,5 +1,5 @@
-#if !defined(__SPINLOCK_H)
-#define __SPINLOCK_H
+#if !defined(__MULTITASK_SPINLOCK_H)
+#define __MULTITASK_SPINLOCK_H
 
 #include<kit/types.h>
 
@@ -67,4 +67,4 @@ static inline void spinlock_unlock(Spinlock* lock) {
     );
 }
 
-#endif // __SPINLOCK_H
+#endif // __MULTITASK_SPINLOCK_H

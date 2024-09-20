@@ -1,5 +1,5 @@
-#if !defined(__PORTS_CMOS_H)
-#define __PORTS_CMOS_H
+#if !defined(__REAL_PORTS_CMOS_H)
+#define __REAL_PORTS_CMOS_H
 
 #include<kit/bit.h>
 
@@ -80,4 +80,4 @@
 #define CMOS_SHUTDOWN_STATUS_INT15_BLOCK_MOVE               0x09
 #define CMOS_SHUTDOWN_STATUS_JUMP_DWORD_POINTER_NO_EOI      0x0A
 
-#endif // __PORTS_CMOS_H
+#endif // __REAL_PORTS_CMOS_H

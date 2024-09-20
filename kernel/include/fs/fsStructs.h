@@ -1,5 +1,5 @@
-#if !defined(__FS_STRUCT_H)
-#define __FS_STRUCT_H
+#if !defined(__FS_FSSTRUCTS_H)
+#define __FS_FSSTRUCTS_H
 
 #include<devices/block/blockDevice.h>
 #include<devices/device.h>
@@ -189,4 +189,4 @@ STRUCT_PRIVATE_DEFINE(fsEntry) {    //TODO: Add RW lock
     SinglyLinkedList        mounted;
 };
 
-#endif // __FS_STRUCT_H
+#endif // __FS_FSSTRUCTS_H

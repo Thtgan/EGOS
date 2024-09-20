@@ -1,5 +1,5 @@
-#if !defined(__HEAP_ALLOCATOR_H)
-#define __HEAP_ALLOCATOR_H
+#if !defined(__MEMORY_BUDDYHEAPALLOCATOR_H)
+#define __MEMORY_BUDDYHEAPALLOCATOR_H
 
 #include<kit/types.h>
 #include<kit/util.h>
@@ -26,4 +26,4 @@ typedef struct {
 
 Result buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 presetID);
 
-#endif // __HEAP_ALLOCATOR_H
+#endif // __MEMORY_BUDDYHEAPALLOCATOR_H

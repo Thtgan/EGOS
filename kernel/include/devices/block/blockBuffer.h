@@ -1,5 +1,5 @@
-#if !defined(__BLOCK_BUFFER_H)
-#define __BLOCK_BUFFER_H
+#if !defined(__DEVICES_BLOCK_BLOCKBUFFER_H)
+#define __DEVICES_BLOCK_BLOCKBUFFER_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -37,4 +37,4 @@ Block* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex);
 
 Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, Block* block);
 
-#endif // __BLOCK_BUFFER_H
+#endif // __DEVICES_BLOCK_BLOCKBUFFER_H

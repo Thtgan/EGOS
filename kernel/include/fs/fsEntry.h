@@ -1,5 +1,5 @@
-#if !defined(__FS_ENTRY)
-#define __FS_ENTRY
+#if !defined(__FS_FSENTRY_H)
+#define __FS_FSENTRY_H
 
 #include<cstring.h>
 #include<fs/fsStructs.h>
@@ -65,4 +65,4 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n);
 
 Result fsEntry_genericResize(fsEntry* entry, Size newSizeInByte);
 
-#endif // __FS_ENTRY
+#endif // __FS_FSENTRY_H

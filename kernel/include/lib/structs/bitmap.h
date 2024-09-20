@@ -1,5 +1,5 @@
-#if !defined(__BITMAP_H)
-#define __BITMAP_H
+#if !defined(__LIB_STRUCTS_BITMAP_H)
+#define __LIB_STRUCTS_BITMAP_H
 
 #include<kit/types.h>
 
@@ -82,4 +82,4 @@ Index64 bitmap_findFirstSet(Bitmap* b, Size begin);
  */
 Index64 bitmap_findFirstClear(Bitmap* b, Size begin);
 
-#endif // __BITMAP_H
+#endif // __LIB_STRUCTS_BITMAP_H

@@ -1,5 +1,5 @@
-#if !defined(__PORTS_PCI_H)
-#define __PORTS_PCI_H
+#if !defined(__REAL_PORTS_PCI_H)
+#define __REAL_PORTS_PCI_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -38,4 +38,4 @@ static inline Uint32 pci_buildAddr(Uint8 bus, Uint8 device, Uint8 func, Uint8 re
 #define PCI_DEVICE_NUMBER_FROM_ADDR(__ADDR)     EXTRACT_VAL(__ADDR, 32, PCI_CONFIG_ADDR_DEVICE_NUMBER_BEGIN, PCI_CONFIG_ADDR_DEVICE_NUMBER_BEGIN + PCI_CONFIG_ADDR_DEVICE_NUMBER_LENGTH)
 #define PCI_BUS_NUMBER_FROM_ADDR(__ADDR)        EXTRACT_VAL(__ADDR, 32, PCI_CONFIG_ADDR_BUS_NUMBER_BEGIN, PCI_CONFIG_ADDR_BUS_NUMBER_BEGIN + PCI_CONFIG_ADDR_BUS_NUMBER_LENGTH)
 
-#endif // __PORTS_PCI_H
+#endif // __REAL_PORTS_PCI_H

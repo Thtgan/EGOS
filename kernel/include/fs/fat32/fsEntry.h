@@ -1,5 +1,5 @@
-#if !defined(__FAT32_FS_ENTRY_H)
-#define __FAT32_FS_ENTRY_H
+#if !defined(__FS_FAT32_FSENTRY_H)
+#define __FS_FAT32_FSENTRY_H
 
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
@@ -9,4 +9,4 @@
 
 Result fat32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);
 
-#endif // __FAT32_FS_ENTRY_H
+#endif // __FS_FAT32_FSENTRY_H

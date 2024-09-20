@@ -1,8 +1,8 @@
-#if !defined(__SIMPLE_SCHEDULE)
-#define __SIMPLE_SCHEDULE
+#if !defined(__MULTITASK_SIMPLESCHEDULE_H)
+#define __MULTITASK_SIMPLESCHEDULE_H
 
 #include<multitask/schedule.h>
 
 Scheduler* simpleScheduler_create();
 
-#endif // __SIMPLE_SCHEDULE
+#endif // __MULTITASK_SIMPLESCHEDULE_H

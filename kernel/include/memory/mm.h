@@ -1,5 +1,5 @@
-#if !defined(__MM_H)
-#define __MM_H
+#if !defined(__MEMORY_MM_H)
+#define __MEMORY_MM_H
 
 #include<kit/types.h>
 #include<memory/allocator.h>
@@ -23,4 +23,4 @@ Result mm_init();
 
 bool dbgCheck();
 
-#endif // __MM_H
+#endif // __MEMORY_MM_H

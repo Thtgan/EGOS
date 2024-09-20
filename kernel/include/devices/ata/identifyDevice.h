@@ -1,5 +1,5 @@
-#if !defined(__INDENTIFY_DEVICE_H)
-#define __INDENTIFY_DEVICE_H
+#if !defined(__DEVICES_ATA_IDENTIFYDEVICE_H)
+#define __DEVICES_ATA_IDENTIFYDEVICE_H
 
 #include<kit/types.h>
 
@@ -496,4 +496,4 @@ typedef struct {
     } integrity;                                        //Word 255
 } __attribute__((packed)) PacketDeviceIdentifyData;
 
-#endif // __INDENTIFY_DEVICE_H
+#endif // __DEVICES_ATA_IDENTIFYDEVICE_H

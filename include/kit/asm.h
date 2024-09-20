@@ -1,5 +1,5 @@
-#if !defined(__ASM_H)
-#define __ASM_H
+#if !defined(__KIT_ASM_H)
+#define __KIT_ASM_H
 
 #if defined(__ASSEMBLER__)
 
@@ -21,4 +21,4 @@
 
 #endif // __ASSEMBLER__
 
-#endif // __ASM_H
+#endif // __KIT_ASM_H

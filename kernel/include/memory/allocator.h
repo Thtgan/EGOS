@@ -1,5 +1,5 @@
-#if !defined(__ALLOCATOR_H)
-#define __ALLOCATOR_H
+#if !defined(__MEMORY_ALLOCATOR_H)
+#define __MEMORY_ALLOCATOR_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -66,4 +66,4 @@ static inline void heapAllocator_free(HeapAllocator* allocator, void* ptr) {
 
 void allocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID);
 
-#endif // __ALLOCATOR_H
+#endif // __MEMORY_ALLOCATOR_H

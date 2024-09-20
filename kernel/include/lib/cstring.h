@@ -1,5 +1,5 @@
-#if !defined(__CSTRING_H)
-#define __CSTRING_H
+#if !defined(__LIB_CSTRING_H)
+#define __LIB_CSTRING_H
 
 #include<kit/types.h>
 
@@ -120,4 +120,4 @@ int cstring_strncmp(ConstCstring str1, ConstCstring str2, Size n);
  */
 Size cstring_strhash(ConstCstring str);
 
-#endif // __CSTRING_H
+#endif // __LIB_CSTRING_H

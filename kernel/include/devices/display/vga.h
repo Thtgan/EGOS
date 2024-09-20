@@ -1,5 +1,5 @@
-#if !defined(__VGA_H)
-#define __VGA_H
+#if !defined(__DEVICES_DISPLAY_VGA_H)
+#define __DEVICES_DISPLAY_VGA_H
 
 #include<cstring.h>
 #include<kit/bit.h>
@@ -64,4 +64,4 @@ void vgaTextmodeContext_setCursorPosition(VGAtextModeContext* context, Uint8 pos
 
 void vgaTextmodeContext_switchCursor(VGAtextModeContext* context, bool enable);
 
-#endif // __VGA_H
+#endif // __DEVICES_DISPLAY_VGA_H

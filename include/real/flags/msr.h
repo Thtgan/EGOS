@@ -1,5 +1,5 @@
-#if !defined(__MSR_H)
-#define __MSR_H
+#if !defined(__REAL_FLAGS_MSR_H)
+#define __REAL_FLAGS_MSR_H
 
 #include<kit/bit.h>
 
@@ -46,4 +46,4 @@
 #define MSR_EFER_TCE_INDEX      15
 #define MSR_EFER_TCE            FLAG32(MSR_EFER_TCE)
 
-#endif // __MSR_H
+#endif // __REAL_FLAGS_MSR_H

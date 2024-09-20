@@ -1,5 +1,5 @@
-#if !defined(__HASH_TABLE_H)
-#define __HASH_TABLE_H
+#if !defined(__LIB_STRUCTS_HASHTABLE_H)
+#define __LIB_STRUCTS_HASHTABLE_H
 
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -67,4 +67,4 @@ HashChainNode* hashTable_delete(HashTable* table, Object key);
  */
 HashChainNode* hashTable_find(HashTable* table, Object key);
 
-#endif // __HASH_TABLE_H
+#endif // __LIB_STRUCTS_HASHTABLE_H

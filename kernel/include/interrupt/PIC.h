@@ -1,5 +1,5 @@
-#if !defined(__PIC_H)
-#define __PIC_H
+#if !defined(__INTERRUPT_PIC_H)
+#define __INTERRUPT_PIC_H
 
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
@@ -28,4 +28,4 @@ void pic_getMask(Uint8* mask1, Uint8* mask2);
  */
 void pic_setMask(Uint8 mask1, Uint8 mask2);
 
-#endif // __PIC_H
+#endif // __INTERRUPT_PIC_H

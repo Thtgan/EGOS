@@ -1,5 +1,5 @@
-#if !defined(__MEMORY_H)
-#define __MEMORY_H
+#if !defined(__MEMORY_MEMORY_H)
+#define __MEMORY_MEMORY_H
 
 #include<kernel.h>
 #include<kit/bit.h>
@@ -69,4 +69,4 @@ void* memory_allocate(Size n);
 
 void memory_free(void* p);
 
-#endif // __MEMORY_H
+#endif // __MEMORY_MEMORY_H

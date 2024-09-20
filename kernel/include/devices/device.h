@@ -1,5 +1,5 @@
-#if !defined(__DEVICE_H)
-#define __DEVICE_H
+#if !defined(__DEVICES_DEVICE_H)
+#define __DEVICES_DEVICE_H
 
 #include<kit/bit.h>
 #include<kit/oop.h>
@@ -98,4 +98,4 @@ static inline Result device_rawFlush(Device* device) {
     return device->operations->flush(device);
 }
 
-#endif // __DEVICE_H
+#endif // __DEVICES_DEVICE_H

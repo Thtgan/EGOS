@@ -1,5 +1,5 @@
-#if !defined(TSS_H)
-#define TSS_H
+#if !defined(__SYSTEM_TSS_H)
+#define __SYSTEM_TSS_H
 
 #include<kit/types.h>
 
@@ -13,4 +13,4 @@ typedef struct {
     Uint16 ioMapBaseAddress;
 } __attribute__((packed)) TSS;
 
-#endif // TSS_H
+#endif // __SYSTEM_TSS_H

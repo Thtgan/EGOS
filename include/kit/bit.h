@@ -1,5 +1,5 @@
-#if !defined(__BIT_MACRO_H)
-#define __BIT_MACRO_H
+#if !defined(__KIT_BIT_H)
+#define __KIT_BIT_H
 
 #include<kit/macro.h>
 #include<kit/types.h>
@@ -65,4 +65,4 @@
 
 #define LOWER_BIT(__VAL)                                            VAL_AND((__VAL), -(__VAL))
 
-#endif // __BIT_MACRO_H
+#endif // __KIT_BIT_H

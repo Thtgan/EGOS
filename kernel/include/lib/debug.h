@@ -1,5 +1,5 @@
-#if !defined(__DEBUG_H)
-#define __DEBUG_H
+#if !defined(__LIB_DEBUG_H)
+#define __LIB_DEBUG_H
 
 #include<multitask/context.h>
 #include<kit/macro.h>
@@ -29,4 +29,4 @@ void debug_dump_stack(void* rbp, Size maxDepth);
 
 #define DEBUG_ASSERT_COMPILE(__EXPRESSION)              typedef char MACRO_CALL(MACRO_CONCENTRATE2, COMPILE_ASSERT_FAILED_, __LINE__)[-!(__EXPRESSION)]
 
-#endif // __DEBUG_H
+#endif // __LIB_DEBUG_H

@@ -1,5 +1,5 @@
-#if !defined(__SCHEDULE_H)
-#define __SCHEDULE_H
+#if !defined(__MULTITASK_SCHEDULE_H)
+#define __MULTITASK_SCHEDULE_H
 
 #include<kit/types.h>
 #include<kit/oop.h>
@@ -118,4 +118,4 @@ static inline Process* scheduler_getCurrentProcess() {
     return scheduler->currentProcess;
 }
 
-#endif // __SCHEDULE_H
+#endif // __MULTITASK_SCHEDULE_H

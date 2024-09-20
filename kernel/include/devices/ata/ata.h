@@ -1,5 +1,5 @@
-#if !defined(__ATA_H)
-#define __ATA_H
+#if !defined(__DEVICES_ATA_ATA_H)
+#define __DEVICES_ATA_ATA_H
 
 #include<devices/ata/identifyDevice.h>
 #include<kit/bit.h>
@@ -99,4 +99,4 @@ Result ata_waitForData(Uint16 channelPortBase);
 
 Result ata_channel_reset(ATAchannel* channel);
 
-#endif // __ATA_H
+#endif // __DEVICES_ATA_ATA_H

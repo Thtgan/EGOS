@@ -1,5 +1,5 @@
-#if !defined(OOP_H)
-#define OOP_H
+#if !defined(__KIT_OOP_H)
+#define __KIT_OOP_H
 
 #include<kit/macro.h>
 
@@ -14,4 +14,4 @@ STRUCT_PRIVATE_DEFINE(__STRUCT_NAME);                               \
 typedef struct MACRO_CONCENTRATE2(__, __STRUCT_NAME) __STRUCT_NAME; \
 struct MACRO_CONCENTRATE2(__, __STRUCT_NAME)
 
-#endif // OOP_H
+#endif // __KIT_OOP_H

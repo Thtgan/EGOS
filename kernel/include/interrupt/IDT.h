@@ -1,5 +1,5 @@
-#if !defined(__IDT_H)
-#define __IDT_H
+#if !defined(__INTERRUPT_IDT_H)
+#define __INTERRUPT_IDT_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -87,4 +87,4 @@ bool idt_enableInterrupt();
  */
 void idt_setInterrupt(bool enable);
 
-#endif // __IDT_H
+#endif // __INTERRUPT_IDT_H

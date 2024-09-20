@@ -1,5 +1,5 @@
-#if !defined(__UTIL_H)
-#define __UTIL_H
+#if !defined(__KIT_UTIL_H)
+#define __KIT_UTIL_H
 
 #include<kit/bit.h>
 #include<kit/macro.h>
@@ -56,4 +56,4 @@
 
 #define SIZE_OF_STRUCT_MEMBER(__TYPE, __MEMBER)                 (sizeof(((__TYPE*)NULL)->__MEMBER))
 
-#endif // __UTIL_H
+#endif // __KIT_UTIL_H

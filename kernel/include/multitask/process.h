@@ -1,5 +1,5 @@
-#if !defined(__PROCESS_H)
-#define __PROCESS_H
+#if !defined(__MULTITASK_PROCESS_H)
+#define __MULTITASK_PROCESS_H
 
 #include<fs/fs.h>
 #include<interrupt/IDT.h>
@@ -112,4 +112,4 @@ File* process_getFileFromSlot(Process* process, int index);
  */
 File* process_releaseFileSlot(Process* process, int index);
 
-#endif // __PROCESS_H
+#endif // __MULTITASK_PROCESS_H

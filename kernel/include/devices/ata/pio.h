@@ -1,5 +1,5 @@
-#if !defined(__PIO_H)
-#define __PIO_H
+#if !defined(__DEVICES_ATA_PIO_H)
+#define __DEVICES_ATA_PIO_H
 
 #include<kit/types.h>
 
@@ -15,4 +15,4 @@ Result ata_pio_readBlocks(Uint16 channelPortBase, Size n, void* buffer);
 
 Result ata_pio_writeBlocks(Uint16 channelPortBase, Size n, const void* buffer);
 
-#endif // __PIO_H
+#endif // __DEVICES_ATA_PIO_H

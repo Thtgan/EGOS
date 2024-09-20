@@ -1,5 +1,5 @@
-#if !defined(__FSUTIL_H)
-#define __FSUTIL_H
+#if !defined(__FS_FSUTIL_H)
+#define __FS_FSUTIL_H
 
 #include<fs/fsStructs.h>
 #include<kit/types.h>
@@ -52,4 +52,4 @@ Result fsutil_closefsEntry(fsEntry* entry);
 
 Result fsutil_lookupEntryDesc(Directory* directory, fsEntryIdentifier* identifier, fsEntryDesc* descOut, Size* entrySizeOut);
 
-#endif // __FSUTIL_H
+#endif // __FS_FSUTIL_H

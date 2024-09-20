@@ -1,5 +1,5 @@
-#if !defined(__CLOCK_H)
-#define __CLOCK_H
+#if !defined(__DEVICES_CLOCK_CLOCKSOURCE_H)
+#define __DEVICES_CLOCK_CLOCKSOURCE_H
 
 #include<kit/bit.h>
 #include<kit/oop.h>
@@ -58,4 +58,4 @@ static inline Result rawClockSourceStop(ClockSource* clockSource) {
     return clockSource->stop(clockSource);
 }
 
-#endif // __CLOCK_H
+#endif // __DEVICES_CLOCK_CLOCKSOURCE_H

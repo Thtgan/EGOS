@@ -1,5 +1,5 @@
-#if !defined(__I8254_H)
-#define __I8254_H
+#if !defined(__DEVICES_CLOCK_I8254_H)
+#define __DEVICES_CLOCK_I8254_H
 
 #include<devices/clock/clockSource.h>
 #include<kit/types.h>
@@ -8,4 +8,4 @@
 
 Result i8254_initClockSource(ClockSource* clockSource);
 
-#endif // __I8254_H
+#endif // __DEVICES_CLOCK_I8254_H

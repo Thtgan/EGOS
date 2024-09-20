@@ -1,5 +1,5 @@
-#if !defined(__TERMINAL_H)
-#define __TERMINAL_H
+#if !defined(__DEVICES_TERMINAL_TERMINAL_H)
+#define __DEVICES_TERMINAL_TERMINAL_H
 
 #include<devices/display/vga.h>
 #include<devices/terminal/inputBuffer.h>
@@ -224,4 +224,4 @@ int terminal_getChar(Terminal* terminal);
 //  */
 // FileOperations* initTerminalDevice();
 
-#endif // __TERMINAL_H
+#endif // __DEVICES_TERMINAL_TERMINAL_H

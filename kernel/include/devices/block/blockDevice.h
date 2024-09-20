@@ -1,5 +1,5 @@
-#if !defined(__BLOCK_DEVICE_H)
-#define __BLOCK_DEVICE_H
+#if !defined(__DEVICES_BLOCK_BLOCKDEVICE_H)
+#define __DEVICES_BLOCK_BLOCKDEVICE_H
 
 #include<devices/device.h>
 #include<devices/block/blockBuffer.h>
@@ -28,4 +28,4 @@ Result blockDevice_flush(BlockDevice* blockDevice);
 
 Result blockDevice_probePartitions(BlockDevice* blockDevice);
 
-#endif // __BLOCK_DEVICE_H
+#endif // __DEVICES_BLOCK_BLOCKDEVICE_H

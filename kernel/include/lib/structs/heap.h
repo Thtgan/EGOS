@@ -1,5 +1,5 @@
-#if !defined(__HEAP_H)
-#define __HEAP_H
+#if !defined(__LIB_STRUCTS_HEAP_H)
+#define __LIB_STRUCTS_HEAP_H
 
 #include<kit/types.h>
 
@@ -20,4 +20,4 @@ Result heap_top(Heap* heap, Object* object);
 
 Result heap_pop(Heap* heap);
 
-#endif // __HEAP_H
+#endif // __LIB_STRUCTS_HEAP_H

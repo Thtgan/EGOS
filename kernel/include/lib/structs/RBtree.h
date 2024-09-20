@@ -1,5 +1,5 @@
-#if !defined(__RB_TREE_H)
-#define __RB_TREE_H
+#if !defined(__LIB_STRUCTS_RBTREE_H)
+#define __LIB_STRUCTS_RBTREE_H
 
 #include<kit/types.h>
 
@@ -92,4 +92,4 @@ RBtreeNode* RBtree_lowerBound(RBtree* tree, Object val);
 
 RBtreeNode* RBtree_upperBound(RBtree* tree, Object val);
 
-#endif // __RB_TREE_H
+#endif // __LIB_STRUCTS_RBTREE_H

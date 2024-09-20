@@ -1,5 +1,5 @@
-#if !defined(__SUPERBLOCK_H)
-#define __SUPERBLOCK_H
+#if !defined(__FS_SUPERBLOCK_H)
+#define __FS_SUPERBLOCK_H
 
 #include<devices/block/blockDevice.h>
 #include<fs/fsStructs.h>
@@ -53,4 +53,4 @@ Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identi
 
 Result superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier);
 
-#endif // __SUPERBLOCK_H
+#endif // __FS_SUPERBLOCK_H

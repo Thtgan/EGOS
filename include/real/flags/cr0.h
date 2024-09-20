@@ -1,5 +1,5 @@
-#if !defined(__CR0_H)
-#define __CR0_H
+#if !defined(__REAL_FLAGS_CR0_H)
+#define __REAL_FLAGS_CR0_H
 
 #include<kit/bit.h>
 
@@ -49,4 +49,4 @@
 #define CR0_PG_INDEX    31
 #define CR0_PG          FLAG32(CR0_PG_INDEX)
 
-#endif // __CR0_H
+#endif // __REAL_FLAGS_CR0_H

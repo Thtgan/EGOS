@@ -1,5 +1,5 @@
-#if !defined(__SINGLE_LINKED_LIST_H)
-#define __SINGLE_LINKED_LIST_H
+#if !defined(__LIB_STRUCTS_SINGLYLINKEDLIST_H)
+#define __LIB_STRUCTS_SINGLYLINKEDLIST_H
 
 #include<kit/types.h>
 
@@ -74,4 +74,4 @@ static inline void singlyLinkedList_deleteNext(SinglyLinkedList* node) {
     node->next = node->next->next;
 }
 
-#endif // __SINGLE_LINKED_LIST_H
+#endif // __LIB_STRUCTS_SINGLYLINKEDLIST_H

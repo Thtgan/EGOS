@@ -1,5 +1,5 @@
-#if !defined(__KEYBOARD_H)
-#define __KEYBOARD_H
+#if !defined(__DEVICES_KEYBOARD_KEYBOARD_H)
+#define __DEVICES_KEYBOARD_KEYBOARD_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -119,4 +119,4 @@ typedef struct {
  */
 Result keyboard_init();
 
-#endif // __KEYBOARD_H
+#endif // __DEVICES_KEYBOARD_KEYBOARD_H

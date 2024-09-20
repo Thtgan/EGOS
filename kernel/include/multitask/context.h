@@ -1,5 +1,5 @@
-#if !defined(__CONTEXT_H)
-#define __CONTEXT_H
+#if !defined(__MULTITASK_CONTEXT_H)
+#define __MULTITASK_CONTEXT_H
 
 #include<devices/terminal/terminalSwitch.h>
 #include<kit/macro.h>
@@ -132,4 +132,4 @@ asm volatile(               \
 #define REGISTER_ARGUMENTS_5        r8
 #define REGISTER_ARGUMENTS_6        r9
 
-#endif // __CONTEXT_H
+#endif // __MULTITASK_CONTEXT_H

@@ -1,5 +1,5 @@
-#if !defined(__DEVFS_FS_ENTRY_H)
-#define __DEVFS_FS_ENTRY_H
+#if !defined(__FS_DEVFS_FSENTRY_H)
+#define __FS_DEVFS_FSENTRY_H
 
 #include<fs/fsStructs.h>
 #include<kit/types.h>
@@ -10,4 +10,4 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock);
 
 Result devfs_fsEntry_initRootDir(SuperBlock* superBlock);
 
-#endif // __DEVFS_FS_ENTRY_H
+#endif // __FS_DEVFS_FSENTRY_H

@@ -1,5 +1,5 @@
-#if !defined(__ERROR_H)
-#define __ERROR_H
+#if !defined(__LIB_ERROR_H)
+#define __LIB_ERROR_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -33,4 +33,4 @@
 #define ERROR_CODE_STATUS_OPERATION_FAIL        0x0008
 #define ERROR_CODE_STATUS_IS_NULL               0x0009
 
-#endif // __ERROR_H
+#endif // __LIB_ERROR_H
