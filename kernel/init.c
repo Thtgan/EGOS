@@ -3,6 +3,7 @@
 #include<devices/ata/ata.h>
 #include<devices/bus/pci.h>
 #include<devices/device.h>
+#include<devices/display/vga/vga.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/fs.h>
@@ -48,6 +49,7 @@ static __InitFunc _initFuncs[] = {
     { schedule_init             ,   "Schedule"    },
     { realmode_init             ,   "Realmode"    },
     { __init_enableInterrupt    ,   NULL          },
+    { vga_init                  ,   "VGA"         },
     { NULL, NULL }
 };
 
@@ -69,7 +71,7 @@ Result init_initKernel() {
 }
 
 static Result __init_printBootSlogan() {
-    print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    // print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
     return RESULT_SUCCESS;
 }
 

@@ -179,3 +179,68 @@ static SinglyLinkedListNode* __algorithms_singlyLinkedList_doMergeSort(SinglyLin
 
     return prev->next;
 }
+
+static void __algorithms_doQuickSort(Object* arr, Index64 low, Index64 high, QuickSortCompareFunc compare);
+
+static Index64 __algorithms_partition(Object* arr, Index64 low, Index64 high, QuickSortCompareFunc compare);
+
+void algorithms_quickSort(Object* arr, Size n, QuickSortCompareFunc compare) {
+    __algorithms_doQuickSort(arr, 0, n, compare);
+}
+
+static void __algorithms_doQuickSort(Object* arr, Index64 low, Index64 high, QuickSortCompareFunc compare) {
+    if (low >= high) {
+        return;
+    }
+
+    Index64 pivot = __algorithms_partition(arr, low, high, compare);
+    __algorithms_doQuickSort(arr, low, pivot, compare);
+    __algorithms_doQuickSort(arr, pivot + 1, high, compare);
+}
+
+static Index64 __algorithms_partition(Object* arr, Index64 low, Index64 high, QuickSortCompareFunc compare) {
+    Object pivot = arr[low];
+    Index64 l = low + 1, r = high - 1;
+
+    while (l <= r) {
+        while (l <= r && compare(pivot, arr[l]) >= 0) {
+            ++l;
+        }
+
+        while (l <= r && compare(pivot, arr[r]) <= 0) {
+            --r;
+        }
+
+        if (l <= r) {
+            algorithms_swap64((Uint64*)&arr[l], (Uint64*)&arr[r]);
+        }
+    }
+
+    algorithms_swap64((Uint64*)&arr[low], (Uint64*)&arr[r]);
+
+    return r;
+}
+
+//TODO: Make a real sqrt
+Uint32 algorithms_sqrt(Uint64 n) {
+    if (n == 0 || n == 1) {
+        return n;
+    }
+
+    Uint64 l = 1, r = algorithms_umin64(n, (Uint32)-1);
+    while (l < r) {
+        Uint64 mid = (l + r) >> 1;
+        if (mid * mid >= n) {
+            r = mid;
+        } else {
+            l = mid + 1;
+        }
+    }
+
+    Uint64 ret = l;
+    if (n - (ret - 1) * (ret - 1) < ret * ret - n) {
+        --ret;
+    }
+
+    return l;
+}

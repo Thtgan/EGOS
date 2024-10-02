@@ -69,19 +69,19 @@ static inline Uint64 algorithms_umin64(Uint64 a, Uint64 b) {
     return a < b ? a : b;
 }
 
-static inline Uint8 algorithms_abs8(Int8 val) {
+static inline Int8 algorithms_abs8(Int8 val) {
     return val < 0 ? -val : val;
 }
 
-static inline Uint8 algorithms_abs16(Int16 val) {
+static inline Int16 algorithms_abs16(Int16 val) {
     return val < 0 ? -val : val;
 }
 
-static inline Uint8 algorithms_abs32(Int32 val) {
+static inline Int32 algorithms_abs32(Int32 val) {
     return val < 0 ? -val : val;
 }
 
-static inline Uint8 algorithms_abs64(Int64 val) {
+static inline Int64 algorithms_abs64(Int64 val) {
     return val < 0 ? -val : val;
 }
 
@@ -125,5 +125,11 @@ void algorithms_linkedList_mergeSort(LinkedList* list, Size len, COMPARATOR_PTR(
  * @param comparator Comparator applied to compare the elements in the list
  */
 void algorithms_singlyLinkedList_mergeSort(SinglyLinkedList* list, Size len, COMPARATOR_PTR(comparator, SinglyLinkedListNode));
+
+typedef int QuickSortCompareFunc(const Object o1, const Object o2);
+
+void algorithms_quickSort(Object* arr, Size n, QuickSortCompareFunc compare);
+
+Uint32 algorithms_sqrt(Uint64 n);
 
 #endif // __LIB_ALGORITHMS_H

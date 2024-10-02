@@ -35,6 +35,11 @@ static void printLOGO();
 
 #include<realmode.h>
 
+#include<devices/display/vga/registers.h>
+#include<devices/display/vga/dac.h>
+#include<devices/display/vga/vga.h>
+#include<devices/display/vga/memory.h>
+
 static void __timerFunc1(Timer* timer) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
 }
@@ -55,6 +60,17 @@ void kernelMain(SystemInfo* info) {
     if (init_initKernel() == RESULT_FAIL) {
         debug_blowup("Initialization failed");
     }
+
+    // vga_switchMode(vgaMode_getModeHeader(VGA_MODE_GRAPHIC_200X320_D8), false);
+    // VGAmodeHeader* mode = vga_getCurrentMode();
+
+    // DisplayPosition pos = { 0, 0 };
+    // for (int i = 0; i < mode->height; ++i) {
+    //     pos.x = i;
+    //     vgaMemory_linearSetPixel(HOST_POINTER(mode, VGAgraphicMode, header), &pos, i, mode->width);
+    // }
+    // DisplayPosition p1 = {0, 0};
+    // DisplayPosition p2 = {mode->height - 1, mode->width - 1};
 
     printLOGO();
 

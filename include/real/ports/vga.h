@@ -1,0 +1,107 @@
+#if !defined(__REAL_PORTS_VGA_H)
+#define __REAL_PORTS_VGA_H
+
+//VGA(Video Graphics Array) IO ports
+
+//General Registers
+#define VGA_MISCELLANEOUS_READ_DATA_REG                         0x3CC
+#define VGA_MISCELLANEOUS_WRITE_DATA_REG                        0x3C2
+//Read only
+#define VGA_INPUT_STATUS_0_REG                                  0x3C2
+//Read only
+#define VGA_INPUT_STATUS_1_REG                                  0x3DA
+#define VGA_INPUT_STATUS_1_ALT_REG                              0x3BA
+//Feature Control all bits reserved
+#define VGA_FEATURE_CONTROL_READ_REG                            0x3CA
+#define VGA_FEATURE_CONTROL_WRITE_REG                           0x3DA
+#define VGA_FEATURE_CONTROL_WRITE_ALT_REG                       0x3BA
+//Video Subsystem Enable all bits reserved
+#define VGA_VIDEO_SUBSYSTEM_ENABLE_REG                          0x3C3
+
+//Sequencer Registers
+#define VGA_SEQUENCER_INDEX_REG                                 0x3C4
+#define VGA_SEQUENCER_DATA_REG                                  0x3C5
+#define VGA_SEQUENCER_INDEX_RESET                               0x00
+#define VGA_SEQUENCER_INDEX_CLOCKING_MODE                       0x01
+#define VGA_SEQUENCER_INDEX_MAP_MASK                            0x02
+#define VGA_SEQUENCER_INDEX_CHARACTER_MAP_SELECT                0x03
+#define VGA_SEQUENCER_INDEX_MEMORY_MODE                         0x04
+
+//CRT Controller Registers
+#define VGA_CRT_CONTROLLER_INDEX_REG                            0x3D4
+#define VGA_CRT_CONTROLLER_DATA_REG                             0x3D5
+#define VGA_CRT_CONTROLLER_INDEX_ALT_REG                        0x3B4
+#define VGA_CRT_CONTROLLER_DATA_ALT_REG                         0x3B5
+#define VGA_CRT_CONTROLLER_INDEX_HORIZONTAL_TOTAL               0x00
+#define VGA_CRT_CONTROLLER_INDEX_HORIZONTAL_DISPLAY_ENABLE_END  0x01
+#define VGA_CRT_CONTROLLER_INDEX_HORIZONTAL_BLANKING_START      0x02
+#define VGA_CRT_CONTROLLER_INDEX_HORIZONTAL_BLANKING_END        0x03
+#define VGA_CRT_CONTROLLER_INDEX_HORIZONTAL_RETRACE_PULSE_START 0x04
+#define VGA_CRT_CONTROLLER_INDEX_HORIZONTAL_RETRACE_END         0x05
+#define VGA_CRT_CONTROLLER_INDEX_VERTICAL_TOTAL                 0x06
+#define VGA_CRT_CONTROLLER_INDEX_OVERFLOW                       0x07
+#define VGA_CRT_CONTROLLER_INDEX_PRESET_ROW_SCAN                0x08
+#define VGA_CRT_CONTROLLER_INDEX_MAXIMUM_SCAN_LINE              0x09
+#define VGA_CRT_CONTROLLER_INDEX_CURSOR_START                   0x0A
+#define VGA_CRT_CONTROLLER_INDEX_CURSOR_END                     0x0B
+#define VGA_CRT_CONTROLLER_INDEX_START_ADDRESS_HIGH             0x0C
+#define VGA_CRT_CONTROLLER_INDEX_START_ADDRESS_LOW              0x0D
+#define VGA_CRT_CONTROLLER_INDEX_CURSOR_LOCATION_HIGH           0x0E
+#define VGA_CRT_CONTROLLER_INDEX_CURSOR_LOCATION_LOW            0x0F
+#define VGA_CRT_CONTROLLER_INDEX_VERTICAL_RETRACE_START         0x10
+#define VGA_CRT_CONTROLLER_INDEX_VERTICAL_RETRACE_END           0x11
+#define VGA_CRT_CONTROLLER_INDEX_VERTICAL_DISPLAY_ENABLE_END    0x12
+#define VGA_CRT_CONTROLLER_INDEX_OFFSET                         0x13
+#define VGA_CRT_CONTROLLER_INDEX_UNDERLINE_LOCATION             0x14
+#define VGA_CRT_CONTROLLER_INDEX_VERTICAL_BLANKING_START        0x15
+#define VGA_CRT_CONTROLLER_INDEX_VERTICAL_BLANKING_END          0x16
+#define VGA_CRT_CONTROLLER_INDEX_CRT_MODE_CONTROL               0x17
+#define VGA_CRT_CONTROLLER_INDEX_LINE_COMPARE                   0x18
+
+//Graphic Controller Registers
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_REG                        0x3CE
+#define VGA_GRAPHIC_CONTROLLER_DATA_REG                         0x3CF
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_SET_RESET                  0x00
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_ENABLE_SET_RESET           0x01
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_COLOR_COMPARE              0x02
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_DATA_ROTATE                0x03
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_READ_MAP_SELECT            0x04
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_GRAPHIC_MODE               0x05
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_MISCELLANEOUS              0x06
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_COLOR_DONT_CARE            0x07
+#define VGA_GRAPHIC_CONTROLLER_IDNEX_BIT_MASK                   0x08
+
+//Attribute Controller Registers
+#define VGA_ATTRIBUTE_CONTROLLER_INDEX_REG                      0x3C0
+#define VGA_ATTRIBUTE_CONTROLLER_WRITE_DATA_REG                 0x3C0
+#define VGA_ATTRIBUTE_CONTROLLER_READ_DATA_REG                  0x3C1
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_00            0x00
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_01            0x01
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_02            0x02
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_03            0x03
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_04            0x04
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_05            0x05
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_06            0x06
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_07            0x07
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_08            0x08
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_09            0x09
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_10            0x0A
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_11            0x0B
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_12            0x0C
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_13            0x0D
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_14            0x0E
+#define VGA_ATTRIBUTE_CONTROLLER_INTERNAL_PALETTE_15            0x0F
+#define VGA_ATTRIBUTE_CONTROLLER_ATTRIBUTE_MODE_CONTROL         0x10
+#define VGA_ATTRIBUTE_CONTROLLER_OVERSCAN_COLOR                 0x11
+#define VGA_ATTRIBUTE_CONTROLLER_COLOR_PLANE_ENABLE             0x12
+#define VGA_ATTRIBUTE_CONTROLLER_HORIZONTAL_PEL_PANNING         0x13
+#define VGA_ATTRIBUTE_CONTROLLER_COLOR_SELECT                   0x14
+
+//DAC (Digital-to-Analog Converter)
+#define VGA_DAC_PEL_MASK                                        0x3C6
+#define VGA_DAC_STATE                                           0x3C7
+#define VGA_DAC_INDEX_READ                                      0x3C7
+#define VGA_DAC_INDEX_WRITE                                     0x3C8
+#define VGA_DAC_PALETTE_DATA                                    0x3C9
+
+#endif // __REAL_PORTS_VGA_H
