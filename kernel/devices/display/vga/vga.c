@@ -297,8 +297,8 @@ static void __vga_setCursorPosition(DisplayPosition* position) {
         return;
     }
 
-    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_REG : VGA_CRT_CONTROLLER_INDEX_ALT_REG;
-    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_DATA_REG : VGA_CRT_CONTROLLER_DATA_ALT_REG;
+    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_ALT_REG : VGA_CRT_CONTROLLER_INDEX_REG;
+    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_DATA_ALT_REG : VGA_CRT_CONTROLLER_DATA_REG;
 
     Uint16 index = _vga_currentMode->width * position->x + position->y;
     vgaHardwareRegisters_writeCRTcontrollerRegister(crtControllerIndexRegister, crtControllerDataRegister, VGA_CRT_CONTROLLER_INDEX_CURSOR_LOCATION_LOW, EXTRACT_VAL(index, 16, 0, 8));
@@ -310,8 +310,8 @@ static void __vga_switchCursor(bool enable) {
         return;
     }
 
-    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_REG : VGA_CRT_CONTROLLER_INDEX_ALT_REG;
-    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_DATA_REG : VGA_CRT_CONTROLLER_DATA_ALT_REG;
+    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_ALT_REG : VGA_CRT_CONTROLLER_INDEX_REG;
+    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_DATA_ALT_REG : VGA_CRT_CONTROLLER_DATA_REG;
 
     Uint8 cursorStart = vgaHardwareRegisters_readCRTcontrollerRegister(crtControllerIndexRegister, crtControllerDataRegister, VGA_CRT_CONTROLLER_INDEX_CURSOR_START);
     if (enable) {

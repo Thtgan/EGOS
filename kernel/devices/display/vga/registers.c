@@ -27,8 +27,8 @@ void vgaHardwareRegisters_releaseFontAccess(VGAhardwareRegisters* registers) {
 void vgaHardwareRegisters_readHardwareRegisters(VGAhardwareRegisters* registers) {
     registers->miscellaneous = vgaHardwareRegisters_readMiscelleaneous();
 
-    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_REG : VGA_CRT_CONTROLLER_INDEX_ALT_REG;
-    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_DATA_REG : VGA_CRT_CONTROLLER_DATA_ALT_REG;
+    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_ALT_REG : VGA_CRT_CONTROLLER_INDEX_REG;
+    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_DATA_ALT_REG : VGA_CRT_CONTROLLER_DATA_REG;
 
     for (int i = 0; i < VGA_REGISTERS_SEQUENCER_REGISTER_NUM; ++i) {
         registers->sequencerRegisters.data[i] = vgaHardwareRegisters_readSequencerRegister(i);
@@ -48,8 +48,8 @@ void vgaHardwareRegisters_readHardwareRegisters(VGAhardwareRegisters* registers)
 }
 
 void vgaHardwareRegisters_writeHardwareRegisters(VGAhardwareRegisters* registers) {
-    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_REG : VGA_CRT_CONTROLLER_INDEX_ALT_REG;
-    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_DATA_REG : VGA_CRT_CONTROLLER_DATA_ALT_REG;
+    Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_ALT_REG : VGA_CRT_CONTROLLER_INDEX_REG;
+    Uint16 crtControllerDataRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(registers->miscellaneous) ? VGA_CRT_CONTROLLER_DATA_ALT_REG : VGA_CRT_CONTROLLER_DATA_REG;
 
     for (int i = 0; i < VGA_REGISTERS_SEQUENCER_REGISTER_NUM; ++i) {
         vgaHardwareRegisters_writeSequencerRegister(i, registers->sequencerRegisters.data[i]);
