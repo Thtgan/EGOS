@@ -1,7 +1,7 @@
 #if !defined(__DEVICES_TERMINAL_TERMINAL_H)
 #define __DEVICES_TERMINAL_TERMINAL_H
 
-#include<devices/display/vga.h>
+#include<devices/display/display.h>
 #include<devices/terminal/inputBuffer.h>
 #include<kit/types.h>
 #include<structs/queue.h>
@@ -53,9 +53,9 @@
  */
 
 typedef struct {
-    VGAtextModeContext* vgaContext;
     Index16 loopRowBegin;                           //Which row in buffer does loop begin
-    Size bufferRowSize;                             //Size of buffer (in row)
+    DisplayContext* displayContext;
+    Size bufferSize, bufferRowSize;                 //Size of buffer (in row)
 
     char* buffer;                                   //Buffer
     Index16 windowRowBegin;                         //Which row in buffer does window
@@ -65,7 +65,6 @@ typedef struct {
     bool cursorLastInWindow, cursorEnabled;
     Index16 cursorPosX, cursorPosY;                 //Cursor position, starts from beginning of loop, (0, 0) means first character in first row of loop
 
-    Uint8 colorPattern;
     Uint8 tabStride;
 
     bool inputMode;
@@ -84,7 +83,9 @@ typedef struct {
  * @param height Height of terminal on display
  * @return Result Result of the operation
  */
-Result terminal_initStruct(Terminal* terminal, VGAtextModeContext* vgaContext, void* buffer, Size bufferSize);
+Result terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
+
+void terminal_updateDisplayContext(Terminal* terminal);
 
 /**
  * @brief Set current terminal
@@ -144,15 +145,6 @@ void terminal_outputString(Terminal* terminal, ConstCstring str);
  * @param str String
  */
 void terminal_outputChar(Terminal* terminal, char ch);
-
-/**
- * @brief Set pattern of the output
- * 
- * @param terminal Terminal
- * @param background Output background color
- * @param foreground Output foreground color
- */
-void terminal_setPattern(Terminal* terminal, Uint8 background, Uint8 foreground);
 
 /**
  * @brief Set how mant spaces does a tab strides

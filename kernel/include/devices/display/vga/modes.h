@@ -1,11 +1,12 @@
 #if !defined(__DEVICES_DISPLAY_VGA_MODES_H)
 #define __DEVICES_DISPLAY_VGA_MODES_H
 
-typedef enum VGAmode {
-    VGA_MODE_TEXT_25X80_D4,
-    VGA_MODE_GRAPHIC_200X320_D8,
-    VGA_MODE_NUM
-} VGAmode;
+typedef enum VGAmodeType {
+    VGA_MODE_TYPE_TEXT_25X80_D4,
+    VGA_MODE_TYPE_TEXT_50X80_D4,
+    VGA_MODE_TYPE_GRAPHIC_200X320_D8,
+    VGA_MODE_TYPE_NUM
+} VGAmodeType;
 
 typedef struct VGAmodeHeader VGAmodeHeader;
 typedef struct VGAtextMode VGAtextMode;
@@ -15,6 +16,7 @@ typedef struct VGAgraphicModeOperations VGAgraphicModeOperations;
 
 #include<devices/display/display.h>
 #include<devices/display/vga/dac.h>
+#include<devices/display/vga/font.h>
 #include<devices/display/vga/memory.h>
 #include<devices/display/vga/registers.h>
 #include<devices/display/vga/vga.h>
@@ -33,6 +35,8 @@ typedef struct VGAmodeHeader {
 typedef struct VGAtextMode {
     VGAmodeHeader header;
     Uint8 characterWidth, characterHeight;
+    VGAfontType fontType;
+    Uint8 cursorBegin, cursorEnd;
     VGAtextModeOperations* operations;
 } VGAtextMode;
 
@@ -89,7 +93,7 @@ static inline void vgaGraphicMode_movePixel(VGAgraphicMode* mode, DisplayPositio
 
 Result vgaMode_init();
 
-VGAmodeHeader* vgaMode_getModeHeader(VGAmode mode);
+VGAmodeHeader* vgaMode_getModeHeader(VGAmodeType mode);
 
 VGAmodeHeader* vgaMode_searchModeFromLegacy(int legacyMode);
 

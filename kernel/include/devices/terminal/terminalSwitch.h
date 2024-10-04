@@ -1,6 +1,7 @@
 #if !defined(__DEVICES_TERMINAL_TERMINALSWITCH_H)
 #define __DEVICES_TERMINAL_TERMINALSWITCH_H
 
+#include<devices/display/display.h>
 #include<devices/terminal/terminal.h>
 #include<kit/types.h>
 
@@ -16,6 +17,8 @@ typedef enum {
  * @return Result Result of the operation
  */
 Result terminalSwitch_init();
+
+void terminalSwitch_switchDisplayMode(DisplayMode mode);
 
 /**
  * @brief Switch terminal to specific level

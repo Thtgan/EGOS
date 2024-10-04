@@ -2,13 +2,12 @@
 
 #include<algorithms.h>
 #include<debug.h>
-#include<devices/display/vga.h>
+#include<devices/display/display.h>
 #include<devices/terminal/inputBuffer.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<multitask/semaphore.h>
-#include<real/ports/CGA.h>
 #include<real/simpleAsmLines.h>
 #include<cstring.h>
 #include<structs/queue.h>
@@ -23,11 +22,11 @@ static inline Index16 __terminal_getRealRowInBuffer(Terminal* terminal, Index16 
 
 //Use this only when reading/writing buffer
 static inline Index16 __terminal_getRealIndexInBuffer(Terminal* terminal, Index16 xFromLoop, Index16 y) {
-    return __terminal_getRealRowInBuffer(terminal, xFromLoop) * terminal->vgaContext->width + y;
+    return __terminal_getRealRowInBuffer(terminal, xFromLoop) * terminal->displayContext->width + y;
 }
 
 static inline void __terminal_stepLoop(Terminal* terminal) {
-    memory_memset(terminal->buffer + terminal->loopRowBegin * terminal->vgaContext->width, '\0', terminal->vgaContext->width);  //Clear old first row
+    memory_memset(terminal->buffer + terminal->loopRowBegin * terminal->displayContext->width, '\0', terminal->displayContext->width);  //Clear old first row
     terminal->loopRowBegin = (terminal->loopRowBegin + 1) % terminal->bufferRowSize;                                            //Set new first row
     //Rows step 1 row back
     terminal->cursorPosX = (terminal->cursorPosX + terminal->bufferRowSize - 1) % terminal->bufferRowSize;
@@ -36,8 +35,8 @@ static inline void __terminal_stepLoop(Terminal* terminal) {
 
 static inline Uint16 __terminal_rowStrlen(Terminal* terminal, Index16 rowFromLoop) {
     return algorithms_umin16(
-        terminal->vgaContext->width,
-        cstring_strlen(terminal->buffer + __terminal_getRealRowInBuffer(terminal, rowFromLoop) * terminal->vgaContext->width)
+        display_getCurrentContext()->width,
+        cstring_strlen(terminal->buffer + __terminal_getRealRowInBuffer(terminal, rowFromLoop) * terminal->displayContext->width)
     );
 }
 
@@ -75,14 +74,15 @@ static void __terminal_putCharacter(Terminal* terminal, char ch);
  */
 static void __terminal_scrollWindowToRow(Terminal* terminal, Index16 row);
 
-Result terminal_initStruct(Terminal* terminal, VGAtextModeContext* vgaContext, void* buffer, Size bufferSize) {
-    if (bufferSize < vgaContext->width * vgaContext->height) {
+Result terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
+    terminal->displayContext = display_getCurrentContext(); //TODO: Only considering text mode now
+    if (terminal->displayContext == NULL || bufferSize < terminal->displayContext->width * terminal->displayContext->width) {
         return RESULT_FAIL;
     }
-    terminal->vgaContext = vgaContext;
 
     terminal->loopRowBegin = 0;
-    terminal->bufferRowSize = bufferSize / vgaContext->width;
+    terminal->bufferSize = bufferSize;
+    terminal->bufferRowSize = bufferSize / terminal->displayContext->width;
     terminal->buffer = buffer;
     memory_memset(buffer, '\0', bufferSize);
     
@@ -95,7 +95,6 @@ Result terminal_initStruct(Terminal* terminal, VGAtextModeContext* vgaContext, v
     terminal->cursorPosX = terminal->cursorPosY = 0;
 
     terminal->tabStride = 4;
-    terminal->colorPattern = VGA_TEXTMODE_DISPLAY_UNIT_BUILD_PATTERN(VGA_TEXTMODE_DISPLAY_UNIT_COLOR_BLACK, VGA_TEXTMODE_DISPLAY_UNIT_COLOR_LIGHT_GRAY);
 
     terminal->inputMode = false;
     terminal->inputLength = 0;
@@ -103,6 +102,11 @@ Result terminal_initStruct(Terminal* terminal, VGAtextModeContext* vgaContext, v
     inputBuffer_initStruct(&terminal->inputBuffer);
 
     return RESULT_SUCCESS;
+}
+
+void terminal_updateDisplayContext(Terminal* terminal) {
+    terminal->displayContext = display_getCurrentContext();
+    terminal->bufferRowSize = terminal->bufferSize / terminal->displayContext->width;
 }
 
 void terminal_setCurrentTerminal(Terminal* terminal) {
@@ -122,22 +126,22 @@ void terminal_switchCursor(Terminal* terminal, bool enable) {
 
     DEBUG_ASSERT_SILENT(_terminal_currentTerminal != NULL);
     semaphore_down(&_terminal_currentTerminal->outputLock);
-    // Index16 cursorRow = __terminal_getBufferRow(_terminal_currentTerminal, _terminal_currentTerminal->cursorPosX);
     Index16 cursorRow = _terminal_currentTerminal->cursorPosX;
     if (_terminal_currentTerminal->cursorEnabled && __terminal_isRowInWindow(_terminal_currentTerminal, cursorRow)) {
         if (!_terminal_currentTerminal->cursorLastInWindow) {
             _terminal_currentTerminal->cursorLastInWindow = true;
         }
 
-        vgaTextmodeContext_setCursorPosition(terminal->vgaContext,
+        DisplayPosition cursorPosition = {
             cursorRow - _terminal_currentTerminal->windowRowBegin,
-            _terminal_currentTerminal->vgaContext->cursorPositionY
-        );
+            _terminal_currentTerminal->cursorPosY
+        };
+        display_setCursorPosition(&cursorPosition);
     } else {
         _terminal_currentTerminal->cursorLastInWindow = false;
     }
 
-    vgaTextmodeContext_switchCursor(terminal->vgaContext, _terminal_currentTerminal->cursorLastInWindow);
+    display_switchCursor(_terminal_currentTerminal->cursorLastInWindow);
     semaphore_up(&_terminal_currentTerminal->outputLock);
 }
 
@@ -145,9 +149,11 @@ void terminal_flushDisplay() {
     DEBUG_ASSERT_SILENT(_terminal_currentTerminal != NULL);
     semaphore_down(&_terminal_currentTerminal->outputLock);
 
-    for (int i = 0, index = 0; i < _terminal_currentTerminal->vgaContext->height; ++i, index += _terminal_currentTerminal->vgaContext->width) {
-        char* src = _terminal_currentTerminal->buffer + __terminal_getRealRowInBuffer(_terminal_currentTerminal, _terminal_currentTerminal->windowRowBegin + i) * _terminal_currentTerminal->vgaContext->width;
-        vgaTextmodeContext_write(_terminal_currentTerminal->vgaContext, index, src, _terminal_currentTerminal->vgaContext->width, _terminal_currentTerminal->colorPattern);
+    DisplayPosition pos = { 0, 0 };
+    for (int i = 0; i < _terminal_currentTerminal->displayContext->height; ++i) {
+        pos.x = i;
+        char* src = _terminal_currentTerminal->buffer + __terminal_getRealRowInBuffer(_terminal_currentTerminal, _terminal_currentTerminal->windowRowBegin + i) * _terminal_currentTerminal->displayContext->width;
+        display_printString(&pos, src, _terminal_currentTerminal->displayContext->width, 0xFFFFFF);
     }
 
     semaphore_up(&_terminal_currentTerminal->outputLock);
@@ -166,7 +172,7 @@ Result terminal_scrollUp(Terminal* terminal) {
 }
 
 Result terminal_scrollDown(Terminal* terminal) {
-    if (terminal->windowRowBegin + terminal->vgaContext->height == terminal->bufferRowSize) {
+    if (terminal->windowRowBegin + terminal->displayContext->height == terminal->bufferRowSize) {
         return RESULT_FAIL;
     }
 
@@ -197,20 +203,22 @@ void terminal_outputChar(Terminal* terminal, char ch) {
     semaphore_up(&terminal->inputLock);
 }
 
-void terminal_setPattern(Terminal* terminal, Uint8 background, Uint8 foreground) {
-    terminal->colorPattern = VGA_TEXTMODE_DISPLAY_UNIT_BUILD_PATTERN(background, foreground);
-}
+// void terminal_setPattern(Terminal* terminal, Uint8 background, Uint8 foreground) {
+//     terminal->colorPattern = VGA_TEXTMODE_DISPLAY_UNIT_BUILD_PATTERN(background, foreground);
+// }
 
 void terminal_setTabStride(Terminal* terminal, Uint8 stride) {
     terminal->tabStride = stride;
 }
 
 void terminal_cursorHome(Terminal* terminal) {
-    terminal->vgaContext->cursorPositionY = 0;
+    // terminal->vgaContext->cursorPositionY = 0;
+    terminal->cursorPosY = 0;
 }
 
 void terminal_cursorEnd(Terminal* terminal) {
-    terminal->vgaContext->cursorPositionY = __terminal_rowStrlen(terminal, terminal->cursorPosX);
+    // terminal->vgaContext->cursorPositionY = __terminal_rowStrlen(terminal, terminal->cursorPosX);
+    terminal->cursorPosY = __terminal_rowStrlen(terminal, terminal->cursorPosX);;
 }
 
 void terminal_switchInput(Terminal* terminal, bool enabled) {
@@ -274,7 +282,7 @@ int terminal_getChar(Terminal* terminal) {
 }
 
 static bool __terminal_isRowInWindow(Terminal* terminal, Index16 row) {
-    return VALUE_WITHIN(terminal->windowRowBegin, terminal->windowRowBegin + terminal->vgaContext->height, row, <=, <);
+    return VALUE_WITHIN(terminal->windowRowBegin, terminal->windowRowBegin + terminal->displayContext->height, row, <=, <);
 }
 
 static void __terminal_putCharacter(Terminal* terminal, char ch) {
@@ -303,7 +311,7 @@ static void __terminal_putCharacter(Terminal* terminal, char ch) {
         }
         case '\t': {
             nextCursorPosX = currentCursorPosX, nextCursorPosY = currentCursorPosY + terminal->tabStride;
-            if (nextCursorPosY >= terminal->vgaContext->width) {
+            if (nextCursorPosY >= terminal->displayContext->width) {
                 nextCursorPosY = 0;
                 ++nextCursorPosX;
             }
@@ -322,7 +330,7 @@ static void __terminal_putCharacter(Terminal* terminal, char ch) {
         }
         default: {
             nextCursorPosX = currentCursorPosX, nextCursorPosY = currentCursorPosY + 1;
-            if (nextCursorPosY >= terminal->vgaContext->width) {
+            if (nextCursorPosY >= terminal->displayContext->width) {
                 nextCursorPosY = 0;
                 ++nextCursorPosX;
             }
@@ -340,7 +348,7 @@ static void __terminal_putCharacter(Terminal* terminal, char ch) {
     }
 
     DEBUG_ASSERT(
-        nextCursorPosX < terminal->bufferRowSize && nextCursorPosY < terminal->vgaContext->width,
+        nextCursorPosX < terminal->bufferRowSize && nextCursorPosY < terminal->displayContext->width,
         "Invalid next posX or posY: %u, %u",
         nextCursorPosX, nextCursorPosY
     );
@@ -390,12 +398,16 @@ static void __terminal_putCharacter(Terminal* terminal, char ch) {
 
     Index16 windowCursorPosX = terminal->cursorPosX - terminal->windowRowBegin, windowCursorPosY = nextCursorPosY;
     DEBUG_ASSERT(
-        windowCursorPosX < terminal->vgaContext->height && windowCursorPosY < terminal->vgaContext->width,
+        windowCursorPosX < terminal->displayContext->height && windowCursorPosY < terminal->displayContext->width,
         "Invalid window cursor posX or posY: %u, %u",
         windowCursorPosX, windowCursorPosY
     );
 
-    vgaTextmodeContext_setCursorPosition(terminal->vgaContext, windowCursorPosX, windowCursorPosY);
+    DisplayPosition cursorPosition = {
+        windowCursorPosX,
+        windowCursorPosY
+    };
+    display_setCursorPosition(&cursorPosition);
 }
 
 static void __terminal_scrollWindowToRow(Terminal* terminal, Index16 row) {

@@ -3,6 +3,27 @@
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 
+void vgaHardwareRegisters_selectPlane(int plane) {
+    plane &= 3;
+    vgaHardwareRegisters_writeGraphicControllerRegister(VGA_GRAPHIC_CONTROLLER_IDNEX_READ_MAP_SELECT, plane);
+    vgaHardwareRegisters_writeSequencerRegister(VGA_SEQUENCER_INDEX_MAP_MASK, FLAG8(plane));
+}
+
+void vgaHardwareRegisters_getFontAccess(VGAhardwareRegisters* registers) {
+    vgaHardwareRegisters_writeSequencerRegister(VGA_SEQUENCER_INDEX_MEMORY_MODE, SET_FLAG(registers->sequencerRegisters.memoryMode, VGA_HARDWARE_REGISTERS_SEQUENCER_MEMORY_MODE_FLAG_OE));
+    vgaHardwareRegisters_writeGraphicControllerRegister(VGA_GRAPHIC_CONTROLLER_IDNEX_GRAPHIC_MODE, CLEAR_FLAG(registers->graphicControllerRegisters.graphicMode, VGA_HARDWARE_REGISTERS_GRAPHIC_CONTROLLER_GRAPHIC_MODE_FLAG_OE));
+    vgaHardwareRegisters_writeGraphicControllerRegister(VGA_GRAPHIC_CONTROLLER_IDNEX_MISCELLANEOUS, VGA_HARDWARE_REGISTERS_GRAPHIC_CONTROLLER_MISCELLANEOUS_MM_A0000_64);
+    vgaHardwareRegisters_selectPlane(2);
+}
+
+void vgaHardwareRegisters_releaseFontAccess(VGAhardwareRegisters* registers) {
+    vgaHardwareRegisters_writeSequencerRegister(VGA_SEQUENCER_INDEX_MAP_MASK, registers->sequencerRegisters.mapMask);
+    vgaHardwareRegisters_writeSequencerRegister(VGA_SEQUENCER_INDEX_MEMORY_MODE, registers->sequencerRegisters.memoryMode);
+    vgaHardwareRegisters_writeGraphicControllerRegister(VGA_GRAPHIC_CONTROLLER_IDNEX_GRAPHIC_MODE, registers->graphicControllerRegisters.graphicMode);
+    vgaHardwareRegisters_writeGraphicControllerRegister(VGA_GRAPHIC_CONTROLLER_IDNEX_READ_MAP_SELECT, registers->graphicControllerRegisters.readMapSelect);
+    vgaHardwareRegisters_writeGraphicControllerRegister(VGA_GRAPHIC_CONTROLLER_IDNEX_MISCELLANEOUS, registers->graphicControllerRegisters.miscellaneous);
+}
+
 void vgaHardwareRegisters_readHardwareRegisters(VGAhardwareRegisters* registers) {
     registers->miscellaneous = vgaHardwareRegisters_readMiscelleaneous();
 

@@ -2,6 +2,7 @@
 #define __DEVICES_DISPLAY_VGA_VGA_H
 
 typedef struct VGAcontext VGAcontext;
+typedef struct VGAspecificDisplayInfo VGAspecificDisplayInfo;
 
 #include<kit/types.h>
 
@@ -18,25 +19,23 @@ typedef Uint8 VGAcolor;
 #define VGA_TEXT_MODE_CELL_EXTRACT_FOREGROUND(__CELL)   EXTRACT_VAL(__CELL, 16, 8, 12)
 #define VGA_TEXT_MODE_CELL_EXTRACT_BACKGROUND(__CELL)   EXTRACT_VAL(__CELL, 16, 12, 16)
 
+typedef struct VGAspecificDisplayInfo {
+    DisplayPosition cursorPosition;
+    bool cursorEnabled;
+    VGAmodeHeader* mode;
+} VGAspecificDisplayInfo;
+
 Result vga_init();
 
 void vga_callRealmodeInt10(RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
 VGAmodeHeader* vga_getCurrentMode();
 
+void vga_dumpDisplayContext(DisplayContext* context);
+
 Result vga_switchMode(VGAmodeHeader* mode, bool legacy);
 
 VGAcolor vga_approximateColor(RGBA color);
-
-void vga_drawPixel(DisplayPosition* position, RGBA color);
-
-RGBA vga_readPixel(DisplayPosition* position);
-
-void vga_drawLine(DisplayPosition* p1, DisplayPosition* p2, RGBA color);
-
-void vga_fill(DisplayPosition* p1, DisplayPosition* p2, RGBA color);
-
-void vga_printCharacter(DisplayPosition* position, Uint8 ch, RGBA color);
 
 void vga_clearScreen();
 

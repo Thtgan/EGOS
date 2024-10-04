@@ -61,7 +61,19 @@ void kernelMain(SystemInfo* info) {
         debug_blowup("Initialization failed");
     }
 
-    // vga_switchMode(vgaMode_getModeHeader(VGA_MODE_GRAPHIC_200X320_D8), false);
+    vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
+    terminalSwitch_switchDisplayMode(DISPLAY_MODE_VGA);
+
+    DisplayPosition p1 = {15, 15};
+    DisplayPosition p2 = {29, 29};
+    display_fill(&p1, &p2, 0x00FF00);
+
+    // vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_GRAPHIC_200X320_D8), false);
+
+    // DisplayPosition pos = { 30, 30 };
+    // display_printString(&pos, "TEST TEST-1145141919810  \n11 \r", 30, 0x00FF00);
+    
+    // vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_25X80_D4), false);
     // VGAmodeHeader* mode = vga_getCurrentMode();
 
     // DisplayPosition pos = { 0, 0 };
@@ -82,7 +94,7 @@ void kernelMain(SystemInfo* info) {
             PCIdevice* device = pci_getDevice(i);
             print_printf(
                 TERMINAL_LEVEL_OUTPUT, 
-                "%02x  %02x  %02x   %04x   %04x   %02x    %02x\n", 
+                "%02X  %02X  %02X   %04X   %04X   %02X    %02X\n", 
                 PCI_BUS_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_DEVICE_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_FUNCTION_NUMBER_FROM_ADDR(device->baseAddr),

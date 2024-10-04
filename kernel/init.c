@@ -3,7 +3,7 @@
 #include<devices/ata/ata.h>
 #include<devices/bus/pci.h>
 #include<devices/device.h>
-#include<devices/display/vga/vga.h>
+#include<devices/display/display.h>
 #include<devices/keyboard/keyboard.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/fs.h>
@@ -30,7 +30,10 @@ static Result __init_enableInterrupt();     //TODO: Maybe remove these
 
 static Result __init_disableInterrupt();    //TODO: Maybe remove these
 
+static Result __init_initVideo();    //TODO: Maybe remove these
+
 static __InitFunc _initFuncs[] = {
+    { display_init              ,   "Display"     },
     { terminalSwitch_init       ,   "Terminal"    },
     { __init_printBootSlogan    ,   NULL          },  //TODO: May crash after print slogan
     { idt_init                  ,   "Interrupt"   },
@@ -49,7 +52,7 @@ static __InitFunc _initFuncs[] = {
     { schedule_init             ,   "Schedule"    },
     { realmode_init             ,   "Realmode"    },
     { __init_enableInterrupt    ,   NULL          },
-    { vga_init                  ,   "VGA"         },
+    { __init_initVideo          ,   "Video"       },
     { NULL, NULL }
 };
 
@@ -71,7 +74,7 @@ Result init_initKernel() {
 }
 
 static Result __init_printBootSlogan() {
-    // print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
     return RESULT_SUCCESS;
 }
 
@@ -83,4 +86,8 @@ static Result __init_enableInterrupt() {
 static Result __init_disableInterrupt() {
     cli();
     return RESULT_SUCCESS;
+}
+
+static Result __init_initVideo() {
+    return display_initMode(DISPLAY_MODE_VGA);
 }

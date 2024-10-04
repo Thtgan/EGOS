@@ -1,10 +1,18 @@
 #if !defined(__DEVICES_DISPLAY_DISPLAY_H)
 #define __DEVICES_DISPLAY_DISPLAY_H
 
+typedef enum DisplayMode {
+    DISPLAY_MODE_DEFAULT,
+    DISPLAY_MODE_VGA,
+    DISPLAY_MODE_NUM
+} DisplayMode;
+
 #include<kit/types.h>
 
 typedef struct DisplayPosition DisplayPosition;
 typedef Uint32 RGBA;
+typedef struct DisplayContext DisplayContext;
+typedef struct DisplayOperations DisplayOperations;
 
 #include<kit/bit.h>
 
@@ -17,6 +25,32 @@ typedef struct DisplayPosition {
 #define RGBA_EXTRACT_G(__RGBA)  EXTRACT_VAL(__RGBA, 32, 8, 16)
 #define RGBA_EXTRACT_B(__RGBA)  EXTRACT_VAL(__RGBA, 32, 16, 24)
 #define RGBA_EXTRACT_A(__RGBA)  EXTRACT_VAL(__RGBA, 32, 24, 32)
+
+typedef struct DisplayContext {
+    Uint8 width, height;
+    Uint16 size;
+    Object specificInfo;
+    DisplayOperations* operations;
+} DisplayContext;
+
+typedef struct DisplayOperations {
+    void (*drawPixel)(DisplayPosition* position, RGBA color);
+    RGBA (*readPixel)(DisplayPosition* position);
+    void (*drawLine)(DisplayPosition* p1, DisplayPosition* p2, RGBA color);
+    void (*fill)(DisplayPosition* p1, DisplayPosition* p2, RGBA color);
+    void (*printCharacter)(DisplayPosition* position, Uint8 ch, RGBA color);
+    void (*printString)(DisplayPosition* position, ConstCstring str, Size n, RGBA color);
+    void (*setCursorPosition)(DisplayPosition* position);
+    void (*switchCursor)(bool enable);
+} DisplayOperations;
+
+Result display_init();
+
+DisplayContext* display_getCurrentContext();
+
+Result display_initMode(DisplayMode mode);
+
+Result display_switchMode(DisplayMode mode);
 
 static inline Uint32 display_buildRGBA(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     return (Uint32)r | VAL_LEFT_SHIFT((Uint32)g, 8) | VAL_LEFT_SHIFT((Uint32)b, 16) | VAL_LEFT_SHIFT((Uint32)a, 24);
@@ -34,6 +68,13 @@ void display_drawLine(DisplayPosition* p1, DisplayPosition* p2, RGBA color);
 
 void display_fill(DisplayPosition* p1, DisplayPosition* p2, RGBA color);
 
-void display_printCharacter(DisplayPosition* p1, Uint8 ch, RGBA color);
+void display_printCharacter(DisplayPosition* position, Uint8 ch, RGBA color);
+
+void display_printString(DisplayPosition* position, ConstCstring str, Size n, RGBA color);
+
+//TODO: Not sure if we should use such two interfaces
+void display_setCursorPosition(DisplayPosition* position);
+
+void display_switchCursor(bool enable);
 
 #endif // __DEVICES_DISPLAY_DISPLAY_H
