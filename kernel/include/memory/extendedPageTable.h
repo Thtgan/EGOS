@@ -1,11 +1,45 @@
 #if !defined(__MEMORY_EXTENDEDPAGETABLE_H)
 #define __MEMORY_EXTENDEDPAGETABLE_H
 
+typedef enum MemoryDefaultPresetType {
+    MEMORY_DEFAULT_PRESETS_TYPE_UNKNOWN,
+    MEMORY_DEFAULT_PRESETS_TYPE_KERNEL,
+    MEMORY_DEFAULT_PRESETS_TYPE_SHARE,
+    MEMORY_DEFAULT_PRESETS_TYPE_COW,
+    MEMORY_DEFAULT_PRESETS_TYPE_MIXED,
+    MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA,
+    MEMORY_DEFAULT_PRESETS_TYPE_USER_CODE,
+    MEMORY_DEFAULT_PRESETS_TYPE_NUM
+} __attribute__ ((packed)) MemoryDefaultPresetType;
+
+typedef struct MemoryPresetOperations MemoryPresetOperations;
+typedef struct MemoryPreset MemoryPreset;
+typedef struct ExtraPageTableEntry ExtraPageTableEntry;
+typedef struct ExtraPageTable ExtraPageTable;
+typedef struct ExtendedPageTable ExtendedPageTable;
+typedef struct ExtraPageTableContext ExtraPageTableContext;
+typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
+
 #include<debug.h>
+#include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<kit/bit.h>
-#include<memory/memoryPresets.h>
+#include<multitask/context.h>
 #include<system/pageTable.h>
+
+typedef struct MemoryPresetOperations {
+    Result (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+    Result (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+    Result (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+} MemoryPresetOperations;
+
+typedef struct MemoryPreset {
+    Uint8 id;
+    PagingEntry blankEntry;
+    MemoryPresetOperations operations;
+} MemoryPreset;
+
+Result memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
 
 //TODO: Split between ExtendedPageTable and MemoryPreset still unclear
 

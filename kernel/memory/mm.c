@@ -8,7 +8,6 @@
 #include<memory/buddyHeapAllocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
-#include<memory/memoryPresets.h>
 #include<memory/paging.h>
 #include<system/memoryMap.h>
 

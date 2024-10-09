@@ -1,10 +1,12 @@
 #if !defined(__DEVICES_TERMINAL_INPUTBUFFER_H)
 #define __DEVICES_TERMINAL_INPUTBUFFER_H
 
+typedef struct InputBuffer InputBuffer;
+
 #include<multitask/semaphore.h>
 #include<structs/queue.h>
 
-typedef struct {
+typedef struct InputBuffer {
     Queue bufferQueue;
     Size bufferSize;
     Semaphore queueLock;

@@ -1,12 +1,14 @@
 #if !defined(__FS_DEVFS_BLOCKCHAIN_H)
 #define __FS_DEVFS_BLOCKCHAIN_H
 
+typedef struct DevFSblockChains DevFSblockChains;
+
 #include<devices/block/blockDevice.h>
 #include<kit/types.h>
 
 #define DEVFS_BLOCKCHAIN_SIZE       64
 
-typedef struct {
+typedef struct DevFSblockChains {
     Uint8 nextBlocks[DEVFS_BLOCKCHAIN_SIZE];
     Uint8 firstFreeBlock;
 } DevFSblockChains;

@@ -1,11 +1,14 @@
 #if !defined(__FS_FAT32_FAT32_H)
 #define __FS_FAT32_FAT32_H
 
+typedef struct FAT32BPB FAT32BPB;
+typedef struct FAT32info FAT32info;
+
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<kit/types.h>
 
-typedef struct {
+typedef struct FAT32BPB {
     Uint8   jump[3];
     char    oem[8];
     Uint16  bytePerSector;
@@ -35,7 +38,7 @@ typedef struct {
     char    systemIdentifier[8];
 } __attribute__((packed)) FAT32BPB;
 
-typedef struct {
+typedef struct FAT32info {
     RangeN      FATrange;
     Range       dataBlockRange;
 

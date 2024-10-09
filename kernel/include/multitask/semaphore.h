@@ -1,10 +1,12 @@
 #if !defined(__MULTITASK_SEMAPHORE_H)
 #define __MULTITASK_SEMAPHORE_H
 
+typedef struct Semaphore Semaphore;
+
 #include<multitask/spinlock.h>
 #include<structs/queue.h>
 
-typedef struct {
+typedef struct Semaphore {
     volatile int counter;
     Spinlock queueLock;
     Queue waitQueue;

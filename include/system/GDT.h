@@ -1,6 +1,11 @@
 #if !defined(__SYSTEM_GDT_H)
 #define __SYSTEM_GDT_H
 
+typedef struct GDTEntry GDTEntry;
+typedef struct GDTEntryTSS_LDT GDTEntryTSS_LDT;
+typedef struct GDTDesc32 GDTDesc32;
+typedef struct GDTDesc64 GDTDesc64;
+
 #include<kit/bit.h>
 #include<kit/types.h>
 
@@ -56,7 +61,7 @@
 /**
  * @brief GDT table entry
  */
-typedef struct {
+typedef struct GDTEntry {
     Uint16  limit0_15;
     Uint16  base0_15;
     Uint8   base16_23;
@@ -105,7 +110,7 @@ typedef struct {
 #define GDT_TSS_LDT_AVL         FLAG8(0)
 #define GDT_TSS_LDT_BUSY        FLAG8(3)
 
-typedef struct {
+typedef struct GDTEntryTSS_LDT {
     Uint16    limit0_15;
     Uint16    base0_15;
     Uint8     base16_23;
@@ -128,12 +133,12 @@ typedef struct {
     0                                                                                   \
 }
 
-typedef struct {
+typedef struct GDTDesc32 {
     Uint16    size;
     Uint32    table;
 } __attribute__((packed)) GDTDesc32;
 
-typedef struct {
+typedef struct GDTDesc64 {
     Uint16    size;
     Uint64    table;
 } __attribute__((packed)) GDTDesc64;

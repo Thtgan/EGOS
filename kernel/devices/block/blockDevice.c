@@ -51,7 +51,7 @@ Result blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         for (int i = 0; i < n; ++i) {
             Index64 index = blockIndex + i;
-            Block* block = blockBuffer_pop(blockDevice->blockBuffer, index);
+            BlockBufferBlock* block = blockBuffer_pop(blockDevice->blockBuffer, index);
             if (block == NULL) {
                 return RESULT_FAIL;
             }
@@ -84,7 +84,7 @@ Result blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, con
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         for (int i = 0; i < n; ++i) {
             Index64 index = blockIndex + i;
-            Block* block = blockBuffer_pop(blockDevice->blockBuffer, index);
+            BlockBufferBlock* block = blockBuffer_pop(blockDevice->blockBuffer, index);
             if (block == NULL) {
                 return RESULT_FAIL;
             }
@@ -118,7 +118,7 @@ Result blockDevice_flush(BlockDevice* blockDevice) {
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         BlockBuffer* blockBuffer = blockDevice->blockBuffer;
         for (int i = 0; i < blockBuffer->blockNum; ++i) {
-            Block* block = blockBuffer_pop(blockBuffer, INVALID_INDEX);
+            BlockBufferBlock* block = blockBuffer_pop(blockBuffer, INVALID_INDEX);
             if (block == NULL) {
                 return RESULT_FAIL;
             }

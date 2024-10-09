@@ -1,12 +1,15 @@
 #if !defined(__MEMORY_BUDDYFRAMEALLOCATOR_H)
 #define __MEMORY_BUDDYFRAMEALLOCATOR_H
 
+typedef struct FrameBuddyList FrameBuddyList;
+typedef struct BuddyFrameAllocator BuddyFrameAllocator;
+
 #include<memory/allocator.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<structs/singlyLinkedList.h>
 
-typedef struct {
+typedef struct FrameBuddyList {
     SinglyLinkedList    list;
     Int8                order;
     Size                remaining;
@@ -17,7 +20,7 @@ typedef struct {
 #define BUDDY_FRAME_ALLOCATOR_MAX_ORDER             12
 #define BUDDY_FRAME_ALLOCATOR_BUDDY_LIST_NUM        (BUDDY_FRAME_ALLOCATOR_MAX_ORDER + 1)
 
-typedef struct {
+typedef struct BuddyFrameAllocator {
     FrameAllocator allocator;
     FrameBuddyList lists[BUDDY_FRAME_ALLOCATOR_BUDDY_LIST_NUM];
 } BuddyFrameAllocator;

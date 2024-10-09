@@ -6,6 +6,7 @@
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<fs/inode.h>
+#include<fs/superblock.h>
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>

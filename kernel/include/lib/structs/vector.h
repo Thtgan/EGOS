@@ -1,9 +1,11 @@
 #if !defined(__LIB_STRUCTS_VECTOR_H)
 #define __LIB_STRUCTS_VECTOR_H
 
+typedef struct Vector Vector;
+
 #include<kit/types.h>
 
-typedef struct {
+typedef struct Vector {
     Size size;
     Size capacity;
     Object* storage;

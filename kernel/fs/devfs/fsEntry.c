@@ -6,8 +6,8 @@
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/devfs.h>
 #include<fs/fsEntry.h>
-#include<fs/fsStructs.h>
 #include<fs/fsutil.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>

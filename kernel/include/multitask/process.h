@@ -1,6 +1,17 @@
 #if !defined(__MULTITASK_PROCESS_H)
 #define __MULTITASK_PROCESS_H
 
+typedef enum {
+    PROCESS_STATUS_UNKNOWN, //Default status for all brand-new created process(After memset 0), shouldn't be used for new status
+    PROCESS_STATUS_RUNNING,
+    PROCESS_STATUS_READY,
+    PROCESS_STATUS_WAITING,
+    PROCESS_STATUS_DYING,
+    PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
+} ProcessStatus;
+
+typedef struct Process Process;
+
 #include<fs/fs.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
@@ -14,21 +25,12 @@
 #define PROCESS_MAXIMUM_PROCESS_NUM (1u << 16)
 #define PROCESS_KERNEL_STACK_SIZE   (4 * PAGE_SIZE)
 
-typedef enum {
-    PROCESS_STATUS_UNKNOWN, //Default status for all brand-new created process(After memset 0), shouldn't be used for new status
-    PROCESS_STATUS_RUNNING,
-    PROCESS_STATUS_READY,
-    PROCESS_STATUS_WAITING,
-    PROCESS_STATUS_DYING,
-    PROCESS_STATUS_NUM      //Num of status, NEVER use this as real process status
-} ProcessStatus;
-
 #define PROCESS_TICK                        10
 #define PROCESS_MAIN_PROCESS_RESERVE_PID    0
 #define PROCESS_INVALID_PID                 -1
 #define PROCESS_MAX_OPENED_FILE_NUM         (PAGE_SIZE / sizeof(File*))
 
-typedef struct {
+typedef struct Process {
     Uint16 pid;
     Uint16 ppid;
     char name[32];

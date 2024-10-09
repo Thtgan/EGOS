@@ -2,7 +2,6 @@
 
 #include<devices/char/charDevice.h>
 #include<devices/device.h>
-#include<fs/fsStructs.h>
 #include<print.h>
 #include<kit/bit.h>
 #include<kit/types.h>

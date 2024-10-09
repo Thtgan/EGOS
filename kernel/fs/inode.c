@@ -3,6 +3,7 @@
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>

@@ -1,6 +1,9 @@
 #if !defined(__DEVICES_BLOCK_BLOCKDEVICE_H)
 #define __DEVICES_BLOCK_BLOCKDEVICE_H
 
+typedef struct BlockDeviceInitArgs BlockDeviceInitArgs;
+typedef struct BlockDevice BlockDevice;
+
 #include<devices/device.h>
 #include<devices/block/blockBuffer.h>
 #include<kit/oop.h>

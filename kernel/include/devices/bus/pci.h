@@ -1,6 +1,12 @@
 #if !defined(__DEVICES_BUS_PCI_H)
 #define __DEVICES_BUS_PCI_H
 
+typedef struct PCIcommonHeader PCIcommonHeader;
+typedef struct PCIHeaderType0 PCIHeaderType0;
+typedef struct PCIHeaderType1 PCIHeaderType1;
+typedef struct PCIHeaderType2 PCIHeaderType2;
+typedef struct PCIdevice PCIdevice;
+
 #include<debug.h>
 #include<kit/bit.h>
 #include<kit/macro.h>

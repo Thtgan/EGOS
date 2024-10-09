@@ -1,13 +1,111 @@
 #if !defined(__FS_FSENTRY_H)
 #define __FS_FSENTRY_H
 
+typedef enum {
+    FS_ENTRY_TYPE_DUMMY,
+    FS_ENTRY_TYPE_FILE,
+    FS_ENTRY_TYPE_DIRECTORY,
+    FS_ENTRY_TYPE_DEVICE
+} fsEntryType;
+
+typedef struct fsEntryIdentifier fsEntryIdentifier;
+typedef struct fsEntryDirOperations fsEntryDirOperations;
+typedef struct fsEntryDesc fsEntryDesc;
+typedef struct fsEntry fsEntry;
+typedef struct fsEntryDescInitArgs fsEntryDescInitArgs;
+typedef struct fsEntryOperations fsEntryOperations;
+
+typedef fsEntry Directory;
+typedef fsEntry File;
+
 #include<cstring.h>
-#include<fs/fsStructs.h>
+#include<devices/device.h>
+#include<fs/inode.h>
+#include<fs/superblock.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<structs/string.h>
 #include<structs/hashTable.h>
+
+//Indicates the unique position of a fs entry
+typedef struct fsEntryIdentifier {
+    String      name;
+    String      parentPath;
+    fsEntryType type;
+} fsEntryIdentifier;
+
+typedef struct fsEntryDirOperations {
+    //Pointer points to current entry
+    Result  (*readEntry)(Directory* directory, fsEntryDesc* childDesc, Size* entrySizePtr);
+
+    Result  (*addEntry)(Directory* directory, fsEntryDesc* childToAdd);
+
+    //Pointer points to entry to remove
+    Result  (*removeEntry)(Directory* directory, fsEntryIdentifier* childToRemove);
+
+    //Pointer points to entry to update
+    Result  (*updateEntry)(Directory* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild);
+} fsEntryDirOperations;
+
+//Gives full description of a fs entry
+typedef struct fsEntryDesc {
+    fsEntryIdentifier   identifier; //One descriptor, one identifier
+
+    union {
+        Range           dataRange;  //Position and size on device (In byte)
+        DeviceID        device;
+    };
+    
+#define FS_ENTRY_INVALID_POSITION       -1
+#define FS_ENTRY_INVALID_SIZE           -1
+    Flags16             flags;
+#define FS_ENTRY_DESC_FLAGS_READ_ONLY   FLAG8(0)
+#define FS_ENTRY_DESC_FLAGS_HIDDEN      FLAG8(1)
+#define FS_ENTRY_DESC_FLAGS_MOUNTED     FLAG8(2)
+
+    Uint64              createTime;
+    Uint64              lastAccessTime;
+    Uint64              lastModifyTime;
+
+    Uint32              descReferCnt;
+    HashChainNode       descNode;
+} fsEntryDesc;
+
+typedef struct fsEntryDescInitArgs {
+    ConstCstring    name;
+    ConstCstring    parentPath;
+    fsEntryType     type;
+    bool            isDevice;
+    union {
+        Range       dataRange;
+        DeviceID    device;
+    };
+    Flags16         flags;
+    Uint64          createTime;
+    Uint64          lastAccessTime;
+    Uint64          lastModifyTime;
+} fsEntryDescInitArgs;
+
+//Real fs entry for process
+typedef struct fsEntry {    //TODO: Add RW lock
+    fsEntryDesc*            desc;   //Meaning multiple fs entries can share single descriptor
+    Index64                 pointer;
+    iNode*                  iNode;
+    fsEntryOperations*      operations;
+    fsEntryDirOperations*   dirOperations;
+    SinglyLinkedList        mounted;
+} fsEntry;
+
+typedef struct fsEntryOperations {
+    Index64 (*seek)(fsEntry* entry, Index64 seekTo);
+
+    Result  (*read)(fsEntry* entry, void* buffer, Size n);
+
+    Result  (*write)(fsEntry* entry, const void* buffer, Size n);
+
+    Result  (*resize)(fsEntry* entry, Size newSizeInByte);
+} fsEntryOperations;
 
 Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, fsEntryType type);
 

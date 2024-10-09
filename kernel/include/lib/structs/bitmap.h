@@ -1,12 +1,14 @@
 #if !defined(__LIB_STRUCTS_BITMAP_H)
 #define __LIB_STRUCTS_BITMAP_H
 
+typedef struct Bitmap Bitmap;
+
 #include<kit/types.h>
 
 /**
  * @brief A structure refer to a set of bit
  */
-typedef struct {
+typedef struct Bitmap {
     Size bitNum;        //Total bits contained in map
     Size bitSetNum;     //Num of bits set to 1
     Uint8* bitPtr;

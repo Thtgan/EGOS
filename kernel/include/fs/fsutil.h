@@ -1,7 +1,8 @@
 #if !defined(__FS_FSUTIL_H)
 #define __FS_FSUTIL_H
 
-#include<fs/fsStructs.h>
+#include<fs/fsEntry.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 
 #define FSUTIL_FILE_SEEK_BEGIN      0

@@ -1,15 +1,18 @@
 #if !defined(__LIB_STRUCTS_QUEUE_H)
 #define __LIB_STRUCTS_QUEUE_H
 
-#include<structs/singlyLinkedList.h>
-#include<kit/types.h>
+typedef struct Queue Queue;
 
-typedef struct {
-    SinglyLinkedList q;
-    SinglyLinkedListNode* qTail;
-} Queue;
+#include<structs/singlyLinkedList.h>
 
 typedef SinglyLinkedListNode QueueNode;
+
+#include<kit/types.h>
+
+typedef struct Queue {
+    SinglyLinkedList q;
+    QueueNode* qTail;
+} Queue;
 
 /**
  * @brief Initialize queue

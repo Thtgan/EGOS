@@ -1,6 +1,9 @@
 #if !defined(__SYSTEM_MEMORYMAP_H)
 #define __SYSTEM_MEMORYMAP_H
 
+typedef struct MemoryMapEntry MemoryMapEntry;
+typedef struct MemoryMap MemoryMap;
+
 #include<kit/types.h>
 
 #define MEMORY_MAP_ENTRY_TYPE_RAM                   1
@@ -9,7 +12,7 @@
 #define MEMORY_MAP_ENTRY_TYPE_ACPI_NVS              4
 #define MEMORY_MAP_ENTRY_TYPE_BAD                   5
 
-typedef struct {
+typedef struct MemoryMapEntry {
     Uint64 base;
     Uint64 length;
     Uint32 type;
@@ -18,7 +21,7 @@ typedef struct {
 
 #define MEMORY_MAP_ENTRY_NUM 16
 
-typedef struct {
+typedef struct MemoryMap {
     Uint32 entryNum;
     MemoryMapEntry memoryMapEntries[MEMORY_MAP_ENTRY_NUM];
 } MemoryMap;

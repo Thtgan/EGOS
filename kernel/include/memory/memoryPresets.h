@@ -1,11 +1,6 @@
 #if !defined(__MEMORY_MEMORYPRESETS_H)
 #define __MEMORY_MEMORYPRESETS_H
 
-#include<kit/types.h>
-#include<system/pageTable.h>
-#include<multitask/context.h>
-#include<interrupt/IDT.h>
-
 typedef enum MemoryDefaultPresetType {
     MEMORY_DEFAULT_PRESETS_TYPE_UNKNOWN,
     MEMORY_DEFAULT_PRESETS_TYPE_KERNEL,
@@ -17,6 +12,15 @@ typedef enum MemoryDefaultPresetType {
     MEMORY_DEFAULT_PRESETS_TYPE_NUM
 } __attribute__ ((packed)) MemoryDefaultPresetType;
 
+typedef struct MemoryPresetOperations MemoryPresetOperations;
+typedef struct MemoryPreset MemoryPreset;
+
+#include<kit/types.h>
+#include<system/pageTable.h>
+#include<multitask/context.h>
+#include<interrupt/IDT.h>
+
+//TODO: Include extendedPageTable causes error somehow
 typedef struct ExtraPageTableEntry ExtraPageTableEntry;
 typedef struct ExtendedPageTable ExtendedPageTable;
 

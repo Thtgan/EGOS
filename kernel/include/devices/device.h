@@ -1,15 +1,20 @@
 #if !defined(__DEVICES_DEVICE_H)
 #define __DEVICES_DEVICE_H
 
-#include<kit/bit.h>
-#include<kit/oop.h>
+typedef struct Device Device;
+typedef struct DeviceInitArgs DeviceInitArgs;
+typedef struct DeviceOperations DeviceOperations;
+
 #include<kit/types.h>
-#include<structs/RBtree.h>
-#include<structs/singlyLinkedList.h>
 
 typedef Uint32 DeviceID;
 typedef Uint32 MajorDeviceID;
 typedef Uint32 MinorDeviceID;
+
+#include<kit/bit.h>
+#include<kit/oop.h>
+#include<structs/RBtree.h>
+#include<structs/singlyLinkedList.h>
 
 #define DEVICE_ID_MAJOR_SHIFT   20
 #define DEVICE_NAME_MAX_LENGTH  31
@@ -27,10 +32,7 @@ Result device_releaseMajor(MajorDeviceID major);
 
 MinorDeviceID device_allocMinor(MajorDeviceID major);
 
-STRUCT_PRE_DEFINE(Device);
-STRUCT_PRE_DEFINE(DeviceOperations);
-
-STRUCT_PRIVATE_DEFINE(Device) {
+typedef struct Device {
     DeviceID                    id;
     char                        name[DEVICE_NAME_MAX_LENGTH + 1];
     Device*                     parent;
@@ -49,7 +51,7 @@ STRUCT_PRIVATE_DEFINE(Device) {
     DeviceOperations*           operations;
 
     Object                      specificInfo;
-};
+} Device;
 
 static inline bool device_isBlockDevice(Device* device) {
     return device->granularity != 0;
@@ -78,13 +80,13 @@ MajorDeviceID device_iterateMajor(MajorDeviceID current);
 
 Device* device_iterateMinor(MajorDeviceID major, MinorDeviceID current);
 
-STRUCT_PRIVATE_DEFINE(DeviceOperations) {
+typedef struct DeviceOperations {
     Result (*read)(Device* device, Index64 index, void* buffer, Size n);
 
     Result (*write)(Device* device, Index64 index, const void* buffer, Size n);
 
     Result (*flush)(Device* device);
-};
+} DeviceOperations;
 
 static inline Result device_rawRead(Device* device, Index64 index, void* buffer, Size n) {
     return device->operations->read(device, index, buffer, n);

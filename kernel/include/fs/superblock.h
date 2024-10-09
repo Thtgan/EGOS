@@ -1,12 +1,67 @@
 #if !defined(__FS_SUPERBLOCK_H)
 #define __FS_SUPERBLOCK_H
 
+typedef struct SuperBlock SuperBlock;
+typedef struct SuperBlockOperations SuperBlockOperations;
+typedef struct SuperBlockInitArgs SuperBlockInitArgs;
+typedef struct DirMountList DirMountList;
+typedef struct Mount Mount;
+
 #include<devices/block/blockDevice.h>
-#include<fs/fsStructs.h>
+#include<fs/fsEntry.h>
 #include<fs/inode.h>
-#include<kit/oop.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
+#include<structs/string.h>
+
+typedef struct SuperBlock {
+    BlockDevice*            blockDevice;
+    SuperBlockOperations*   operations;
+
+    fsEntryDesc*            rootDirDesc;
+    void*                   specificInfo;
+    HashTable               openedInode;
+    HashTable               mounted;
+    HashTable               fsEntryDescs;
+} SuperBlock;
+
+typedef struct SuperBlockOperations {
+    Result  (*openInode)(SuperBlock* superBlock, iNode* iNodePtr, fsEntryDesc* desc);
+    Result  (*closeInode)(SuperBlock* superBlock, iNode* iNode);
+
+    Result  (*openfsEntry)(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);
+    Result  (*closefsEntry)(SuperBlock* superBlock, fsEntry* entry);
+
+    Result  (*mount)(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
+    Result  (*unmount)(SuperBlock* superBlock, fsEntryIdentifier* identifier);
+} SuperBlockOperations;
+
+typedef struct SuperBlockInitArgs {
+    BlockDevice*            blockDevice;
+    SuperBlockOperations*   operations;
+    fsEntryDesc*            rootDirDesc;
+    void*                   specificInfo;
+    Size                    openedInodeBucket;
+    SinglyLinkedList*       openedInodeChains;
+    Size                    mountedBucket;
+    SinglyLinkedList*       mountedChains;
+    Size                    fsEntryDescBucket;
+    SinglyLinkedList*       fsEntryDescChains;
+} SuperBlockInitArgs;
+
+//Contains all mounted descriptors in a directory
+typedef struct DirMountList {
+    HashChainNode   node;
+    LinkedList      list;
+} DirMountList;
+
+//Stands for a mount instance in directory
+typedef struct Mount {
+    String          name;
+    LinkedListNode  node;
+    SuperBlock*     superblock;
+    fsEntryDesc*    targetDesc;
+} Mount;
 
 static inline Result superBlock_rawOpenInode(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
     return superBlock->operations->openInode(superBlock, iNode, desc);

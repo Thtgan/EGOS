@@ -1,13 +1,17 @@
 #if !defined(__MULTITASK_CONTEXT_H)
 #define __MULTITASK_CONTEXT_H
 
+typedef struct Context Context;
+typedef struct Registers Registers;
+
 #include<devices/terminal/terminalSwitch.h>
 #include<kit/macro.h>
 #include<kit/types.h>
 
+//TODO: Include extendedPageTable causes error somehow
 typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 
-typedef struct {
+typedef struct Context {
     ExtendedPageTableRoot* extendedTable;   //Page table placed here to ensure stack safety
     Uint64 rip;
     Uint64 rsp;
@@ -15,7 +19,7 @@ typedef struct {
 
 void context_switch(Context* from, Context* to);
 
-typedef struct {
+typedef struct Registers {
     Uint64 r15;
     Uint64 r14;
     Uint64 r13;

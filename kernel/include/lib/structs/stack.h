@@ -1,9 +1,11 @@
 #if !defined(__LIB_STRUCTS_STACK_H)
 #define __LIB_STRUCTS_STACK_H
 
+typedef struct Stack Stack;
+
 #include<kit/types.h>
 
-typedef struct {
+typedef struct Stack {
     Object* stack;
     Size maxSize, size;
 } Stack;

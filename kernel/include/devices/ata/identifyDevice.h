@@ -1,9 +1,12 @@
 #if !defined(__DEVICES_ATA_IDENTIFYDEVICE_H)
 #define __DEVICES_ATA_IDENTIFYDEVICE_H
 
+typedef struct ATAdeviceIdentify ATAdeviceIdentify;
+typedef struct ATAPIpacketDeviceIdentify ATAPIpacketDeviceIdentify;
+
 #include<kit/types.h>
 
-typedef struct {
+typedef struct ATAdeviceIdentify {
     struct {
         Uint8 reserved                  : 1;
         Uint8 retired1                  : 1;
@@ -277,9 +280,9 @@ typedef struct {
         Uint8 signature;
         Uint8 checksum;
     } integrity;                                        //Word 255
-} __attribute__((packed)) DeviceIdentifyData;
+} __attribute__((packed)) ATAdeviceIdentify;
 
-typedef struct {
+typedef struct ATAPIpacketDeviceIdentify {
     struct {
         Uint8 commandPacketLength   : 2;
 #define PACKET_DEVICE_IDENTIFY_DATA_GENERAL_CONFIGURATION_COMMAND_PACKET_LENGTH_12_BYTE 0b00
@@ -494,6 +497,6 @@ typedef struct {
         Uint8 signature;
         Uint8 checksum;
     } integrity;                                        //Word 255
-} __attribute__((packed)) PacketDeviceIdentifyData;
+} __attribute__((packed)) ATAPIpacketDeviceIdentify;
 
 #endif // __DEVICES_ATA_IDENTIFYDEVICE_H

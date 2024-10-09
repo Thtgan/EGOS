@@ -1,6 +1,10 @@
 #if !defined(__MEMORY_FRAMEMETADATA_H)
 #define __MEMORY_FRAMEMETADATA_H
 
+typedef struct FrameMetadataUnit FrameMetadataUnit;
+typedef struct FrameMetadataHeader FrameMetadataHeader;
+typedef struct FrameMetadata FrameMetadata;
+
 #include<debug.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
@@ -9,7 +13,7 @@
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
 
-typedef struct {
+typedef struct FrameMetadataUnit {
     Flags8 flags;
 #define FRAME_METADATA_UNIT_FLAGS_ALLOCATED  FLAG16(0)
 #define FRAME_METADATA_UNIT_FLAGS_PAGE_TABLE FLAG16(1)
@@ -25,7 +29,7 @@ void frameMetadataUnit_markChunk(FrameMetadataUnit* unit, Size n);
 
 Uint32 frameMetadataUnit_unmarkChunk(FrameMetadataUnit* unit);
 
-typedef struct {
+typedef struct FrameMetadataHeader {
     void* frameBase;
     Size frameNum;
     LinkedListNode node;
@@ -35,7 +39,7 @@ Result frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size
 
 FrameMetadataUnit* frameMetadataHeader_getMetadataUnit(FrameMetadataHeader* header, void* p);
 
-typedef struct {
+typedef struct FrameMetadata {
     LinkedList headerList;
     Size frameNum;
     FrameMetadataHeader* lastAccessed;

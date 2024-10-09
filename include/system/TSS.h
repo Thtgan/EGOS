@@ -1,9 +1,11 @@
 #if !defined(__SYSTEM_TSS_H)
 #define __SYSTEM_TSS_H
 
+typedef struct TSS TSS;
+
 #include<kit/types.h>
 
-typedef struct {
+typedef struct TSS {
     Uint32 reserved1;
     Uint64 rsp[3];
     Uint64 reserved2;

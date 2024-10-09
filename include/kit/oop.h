@@ -1,6 +1,8 @@
 #if !defined(__KIT_OOP_H)
 #define __KIT_OOP_H
 
+//TODO: Delete this header
+
 #include<kit/macro.h>
 
 #define STRUCT_PRIVATE_DEFINE(__STRUCT_NAME) struct MACRO_CONCENTRATE2(__, __STRUCT_NAME)

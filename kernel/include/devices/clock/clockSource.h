@@ -1,22 +1,22 @@
 #if !defined(__DEVICES_CLOCK_CLOCKSOURCE_H)
 #define __DEVICES_CLOCK_CLOCKSOURCE_H
 
-#include<kit/bit.h>
-#include<kit/oop.h>
-#include<kit/types.h>
-#include<multitask/spinlock.h>
-#include<time/time.h>
-
-typedef enum {
+typedef enum ClockSourceType {
     CLOCK_SOURCE_TYPE_CMOS,
     CLOCK_SOURCE_TYPE_I8254,    //TODO: Add support for HPET
     CLOCK_SOURCE_TYPE_CPU,
     CLOCK_SOURCE_TYPE_NUM
 } ClockSourceType;
 
-STRUCT_PRE_DEFINE(ClockSource);
+typedef struct ClockSource ClockSource;
 
-STRUCT_PRIVATE_DEFINE(ClockSource) {
+#include<kit/bit.h>
+#include<kit/oop.h>
+#include<kit/types.h>
+#include<multitask/spinlock.h>
+#include<time/time.h>
+
+typedef struct ClockSource {
     ClockSourceType type;
     Uint64          tick;
     Uint64          hz;
@@ -31,7 +31,7 @@ STRUCT_PRIVATE_DEFINE(ClockSource) {
     Result          (*updateTick)(ClockSource* this);
     Result          (*start)(ClockSource* this);
     Result          (*stop)(ClockSource* this);
-};
+} ClockSource;
 
 #define CLOCK_SOURCE_HZ_TO_TICK_CONVERT_MULTIPLER(__HZ)                         (((Uint64)TIME_UNIT_SECOND << 32) / (__HZ))
 #define CLOCK_SOURCE_CONVERT_TICK_TO_TIME(__CLOCK_SOURCE, __TICK, __UNIT)       (((__TICK) * ((__CLOCK_SOURCE)->tickConvertMultiplier / (__UNIT))) >> 32)

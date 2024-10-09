@@ -1,7 +1,6 @@
 #include<fs/fsSyscall.h>
 
 #include<fs/fsEntry.h>
-#include<fs/fsStructs.h>
 #include<fs/fsutil.h>
 #include<kit/types.h>
 #include<memory/memory.h>

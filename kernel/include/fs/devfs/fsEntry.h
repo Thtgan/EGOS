@@ -1,7 +1,7 @@
 #if !defined(__FS_DEVFS_FSENTRY_H)
 #define __FS_DEVFS_FSENTRY_H
 
-#include<fs/fsStructs.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 
 Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);

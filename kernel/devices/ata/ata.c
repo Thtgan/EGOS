@@ -227,10 +227,10 @@ static Result __ata_initDevice(ATAchannel* channel, Uint8 deviceSelect, ATAdevic
     void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
 
     if (__atapi_identifyDevice(channel, buffer) == RESULT_SUCCESS) {
-        PacketDeviceIdentifyData* data = (PacketDeviceIdentifyData*)buffer;
+        ATAPIpacketDeviceIdentify* data = (ATAPIpacketDeviceIdentify*)buffer;
         device->sectorNum = -1;
     } else if (__ata_identifyDevice(channel, buffer) == RESULT_SUCCESS) {
-        DeviceIdentifyData* data = (DeviceIdentifyData*)buffer;
+        ATAdeviceIdentify* data = (ATAdeviceIdentify*)buffer;
         device->sectorNum = data->commandSetSupport.lba48Supported ? data->maxUserLBAfor48bitAddress : data->addressableSectorNum;
     } else {
         memory_free(buffer);

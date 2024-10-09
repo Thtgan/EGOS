@@ -1,23 +1,24 @@
 #if !defined(__LIB_STRUCTS_RBTREE_H)
 #define __LIB_STRUCTS_RBTREE_H
 
-#include<kit/types.h>
-
-typedef struct _RBtreeNode RBtreeNode;
-
-typedef enum {
+typedef enum RBtreeColor {
     RB_TREE_COLOR_RED,
     RB_TREE_COLOR_BLACK
 } RBtreeColor;
 
-struct _RBtreeNode {
+typedef struct RBtreeNode RBtreeNode;
+typedef struct RBtree RBtree;
+
+#include<kit/types.h>
+
+typedef struct RBtreeNode {
     RBtreeColor color;
     RBtreeNode* parent;
     RBtreeNode* left;
     RBtreeNode* right;
-};
+} RBtreeNode;
 
-typedef struct {
+typedef struct RBtree {
     RBtreeNode* root;
     int (*cmpFunc)(RBtreeNode* node1, RBtreeNode* node2);
     int (*searchFunc)(RBtreeNode* node, Object val);

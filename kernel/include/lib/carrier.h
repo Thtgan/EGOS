@@ -1,6 +1,10 @@
 #if !defined(__LIB_CARRIER_H)
 #define __LIB_CARRIER_H
 
+#if !defined(__ASSEMBLER__)
+typedef struct CarrierMovMetadata CarrierMovMetadata;
+#endif
+
 #include<kit/macro.h>
 
 #define CARRIER_MOV_METADATA_MAGIC   0xCA3A

@@ -3,7 +3,6 @@
 #include<cstring.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
-#include<fs/fsStructs.h>
 #include<fs/fsutil.h>
 #include<kit/types.h>
 #include<kit/util.h>

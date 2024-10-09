@@ -6,7 +6,6 @@
 #include<devices/char/charDevice.h>
 #include<fs/fsutil.h>
 #include<fs/fs.h>
-#include<fs/fsStructs.h>
 #include<kernel.h>
 #include<kit/bit.h>
 #include<kit/oop.h>

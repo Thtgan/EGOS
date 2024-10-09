@@ -2,7 +2,6 @@
 #define __DEVICES_ATA_PIO_H
 
 #include<kit/types.h>
-
 #include<devices/ata/ata.h>
 
 Result ata_pio_readData(ATAdevice* device, ATAcommand* command, void* buffer);

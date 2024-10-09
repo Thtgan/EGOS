@@ -1,13 +1,13 @@
 #if !defined(__MULTITASK_SCHEDULE_H)
 #define __MULTITASK_SCHEDULE_H
 
+typedef struct Scheduler Scheduler;
+
 #include<kit/types.h>
 #include<kit/oop.h>
 #include<multitask/process.h>
 
-STRUCT_PRE_DEFINE(Scheduler);
-
-STRUCT_PRIVATE_DEFINE(Scheduler) {
+typedef struct Scheduler {
     Result (*start)(Scheduler* this, Process* initProcess);
     bool started;
 
@@ -21,7 +21,7 @@ STRUCT_PRIVATE_DEFINE(Scheduler) {
     Result (*wakeProcess)(Scheduler* this, Process* process);
 
     Process* currentProcess;
-};
+} Scheduler;
 
 /**
  * @brief Initialize the schedule

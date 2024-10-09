@@ -1,7 +1,9 @@
 #if !defined(__FS_DEVFS_INODE_H)
 #define __FS_DEVFS_INODE_H
 
-#include<fs/fsStructs.h>
+#include<fs/fsEntry.h>
+#include<fs/inode.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 
 Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc);

@@ -1,9 +1,6 @@
 #if !defined(__FS_FAT32_CLUSTER_H)
 #define __FS_FAT32_CLUSTER_H
 
-#include<fs/fat32/fat32.h>
-#include<kit/types.h>
-
 typedef enum {
     FAT32_CLUSTER_TYPE_FREE,
     FAT32_CLUSTER_TYPE_ALLOCATERD,
@@ -12,6 +9,9 @@ typedef enum {
     FAT32_CLUSTER_TYPE_EOF,
     FAT32_CLUSTER_TYPE_NOT_CLUSTER
 } FAT32ClusterType;
+
+#include<fs/fat32/fat32.h>
+#include<kit/types.h>
 
 #define FAT32_CLSUTER_END_OF_CHAIN 0x0FFFFFFF
 

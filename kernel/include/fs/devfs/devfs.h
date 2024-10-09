@@ -1,6 +1,8 @@
 #if !defined(__FS_DEVFS_DEVFS_H)
 #define __FS_DEVFS_DEVFS_H
 
+typedef struct DEVFSspecificInfo DEVFSspecificInfo;
+
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/devfs/blockChain.h>
@@ -8,7 +10,7 @@
 
 #define DEVFS_BLOCKDEVICE_BLOCK_NUM 64
 
-typedef struct {
+typedef struct DEVFSspecificInfo {
     DevFSblockChains chains;
 } DEVFSspecificInfo;
 

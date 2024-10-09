@@ -1,6 +1,9 @@
 #if !defined(__DEVICES_CHAR_CHARDEVICE_H)
 #define __DEVICES_CHAR_CHARDEVICE_H
 
+typedef struct CharDeviceInitArgs CharDeviceInitArgs;
+typedef struct CharDevice CharDevice;
+
 #include<devices/device.h>
 #include<kit/oop.h>
 #include<kit/types.h>

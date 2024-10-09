@@ -1,20 +1,14 @@
 #if !defined(__LIB_STRUCTS_SINGLYLINKEDLIST_H)
 #define __LIB_STRUCTS_SINGLYLINKEDLIST_H
 
+typedef struct SinglyLinkedListNode SinglyLinkedListNode;
+typedef struct SinglyLinkedListNode SinglyLinkedList;
+
 #include<kit/types.h>
 
-struct __SinglyLinkedListNode {
-    struct __SinglyLinkedListNode* next;
-};
-
-/**
- * @brief Node of the singly linked list
- */
-typedef struct __SinglyLinkedListNode SinglyLinkedListNode;
-/**
- * @brief Header of the singly linked list, which is actually a singly linked list node
- */
-typedef struct __SinglyLinkedListNode SinglyLinkedList;
+typedef struct SinglyLinkedListNode {
+    struct SinglyLinkedListNode* next;
+} SinglyLinkedListNode;
 
 /**
  * @brief Initialize a singly linked list

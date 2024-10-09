@@ -1,25 +1,27 @@
 #if !defined(__MEMORY_ALLOCATOR_H)
 #define __MEMORY_ALLOCATOR_H
 
+typedef struct FrameAllocator FrameAllocator;
+typedef struct FrameAllocatorOperations FrameAllocatorOperations;
+typedef struct HeapAllocator HeapAllocator;
+typedef struct AllocatorOperations AllocatorOperations;
+
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/oop.h>
 #include<system/memoryLayout.h>
 
-STRUCT_PRE_DEFINE(FrameAllocator);
-STRUCT_PRE_DEFINE(HeapAllocator);
+typedef struct FrameAllocator {
+    Size total;
+    Size remaining;
+    FrameAllocatorOperations* operations;
+} FrameAllocator;
 
-typedef struct {
+typedef struct FrameAllocatorOperations {
     void* (*allocateFrame)(FrameAllocator* allocator, Size n);
     void (*freeFrame)(FrameAllocator* allocator, void* p, Size n);
     Result (*addFrames)(FrameAllocator* allocator, void* p, Size n);
 } FrameAllocatorOperations;
-
-STRUCT_PRIVATE_DEFINE(FrameAllocator) {
-    Size total;
-    Size remaining;
-    FrameAllocatorOperations* operations;
-};
 
 static inline void* frameAllocator_allocateFrame(FrameAllocator* allocator, Size n) {
     return allocator->operations->allocateFrame(allocator, n);
@@ -35,18 +37,18 @@ static inline Result frameAllocator_addFrames(FrameAllocator* allocator, void* p
 
 void frameAllocator_initStruct(FrameAllocator* allocator, FrameAllocatorOperations* opeartions);
 
-typedef struct {
-    void* (*allocate)(HeapAllocator* allocator, Size n);
-    void (*free)(HeapAllocator* allocator, void* ptr);
-} AllocatorOperations;
-
-STRUCT_PRIVATE_DEFINE(HeapAllocator) {
+typedef struct HeapAllocator {
     Size total; //TODO: Setup operations for amount control
     Size remaining;
     AllocatorOperations* operations;
     FrameAllocator* frameAllocator;
     Uint8 presetID;
-};
+} HeapAllocator;
+
+typedef struct AllocatorOperations {
+    void* (*allocate)(HeapAllocator* allocator, Size n);
+    void (*free)(HeapAllocator* allocator, void* ptr);
+} AllocatorOperations;
 
 static inline void* heapAllocator_convertAddressV2P(void* v) {
     return (void*)CLEAR_VAL((Uintptr)v, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN);

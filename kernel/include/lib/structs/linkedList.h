@@ -1,17 +1,15 @@
 #if !defined(__LIB_STRUCTS_LINKEDLIST_H)
 #define __LIB_STRUCTS_LINKEDLIST_H
 
+typedef struct LinkedListNode LinkedListNode;
+typedef struct LinkedListNode LinkedList;
+
 #include<kit/types.h>
 
-struct __LinkedListNode {
-    struct __LinkedListNode* next;
-    struct __LinkedListNode* prev;
-};
-
-//Node of the double linked list
-typedef struct __LinkedListNode LinkedListNode;
-//Header of the double linked list, which is actually a double linked list node
-typedef struct __LinkedListNode LinkedList;
+typedef struct LinkedListNode {
+    struct LinkedListNode* next;
+    struct LinkedListNode* prev;
+} LinkedListNode;
 
 /**
  * @brief Initialize a double linked list

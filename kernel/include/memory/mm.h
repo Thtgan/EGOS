@@ -1,6 +1,8 @@
 #if !defined(__MEMORY_MM_H)
 #define __MEMORY_MM_H
 
+typedef struct MemoryManager MemoryManager;
+
 #include<kit/types.h>
 #include<memory/allocator.h>
 #include<memory/extendedPageTable.h>
@@ -8,7 +10,7 @@
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
-typedef struct {
+typedef struct MemoryManager {
     bool initialized;
     MemoryMap mMap;
     FrameMetadata frameMetadata;

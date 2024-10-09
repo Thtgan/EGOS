@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<error.h>
+#include<fs/fsEntry.h>
 #include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<memory/extendedPageTable.h>

@@ -1,6 +1,10 @@
 #if !defined(__INTERRUPT_IDT_H)
 #define __INTERRUPT_IDT_H
 
+typedef struct IDTentry IDTentry;
+typedef struct IDTdesc IDTdesc;
+typedef struct HandlerStackFrame HandlerStackFrame;
+
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
@@ -23,7 +27,7 @@
  * @brief Entry to describe a interrupt handler
  */
 
-typedef struct {
+typedef struct IDTentry {
     Uint16 isr0_15;
     Uint16 codeSector;
     Uint8 reserved1;
@@ -33,7 +37,7 @@ typedef struct {
     Uint32 reserved2;
 } __attribute__((packed)) IDTentry;
 
-typedef struct {
+typedef struct IDTdesc {
     Uint16 size;
     Uintptr tablePtr;
 } __attribute__((packed)) IDTdesc;
@@ -41,7 +45,7 @@ typedef struct {
 /**
  * @brief Before enter the interrupt handler, CPU will push these registers into stack
  */
-typedef struct {
+typedef struct HandlerStackFrame {
     Uint64 errorCode;
     Uint64 rip;
     Uint64 cs;          //Padded to doubleword

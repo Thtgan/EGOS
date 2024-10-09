@@ -1,7 +1,16 @@
 #if !defined(__USERMODE_ELF_H)
 #define __USERMODE_ELF_H
 
+typedef struct ELFidentification ELFidentification;
+typedef struct ELF64Header ELF64Header;
+typedef struct ELF64SectionHeader ELF64SectionHeader;
+typedef struct ELF64SymbolTableEntry ELF64SymbolTableEntry;
+typedef struct ELF64REL ELF64REL;
+typedef struct ELF64RELA ELF64RELA;
+typedef struct ELF64ProgramHeader ELF64ProgramHeader;
+
 #include<devices/terminal/terminalSwitch.h>
+#include<fs/fsEntry.h>
 #include<fs/fsutil.h>
 #include<kit/types.h>
 
@@ -19,7 +28,7 @@
 #define ELF_IDENTIFICATION_OSABI_HPUX       1
 #define ELF_IDENTIFICATION_OSABI_STANDALONE 255
 
-typedef struct {
+typedef struct ELFidentification {
     Uint32 magic;
     Uint8 class;
     Uint8 endian;
@@ -50,7 +59,7 @@ typedef struct {
 #define ELF64_HEADER_MACHINE_AARCH64        0xB7
 #define ELF64_HEADER_MACHINE_RISCV          0xF3
 
-typedef struct {
+typedef struct ELF64Header {
     ELFidentification identification;
     Uint16 type;
     Uint16 machine;
@@ -98,7 +107,7 @@ typedef struct {
 #define ELF_SECTION_HEADER_FLAGS_MASKOS         0x0F000000
 #define ELF_SECTION_HEADER_FLAGS_MASKPROC       0xF0000000
 
-typedef struct {
+typedef struct ELF64SectionHeader {
     Uint32 name;
     Uint32 type;
     Uint64 flags;
@@ -129,7 +138,7 @@ typedef struct {
 #define ELF64_SYMBOL_TABLE_ENTRY_BINDING_LOPROC 13
 #define ELF64_SYMBOL_TABLE_ENTRY_BINDING_HIPROC 15
 
-typedef struct {
+typedef struct ELF64SymbolTableEntry {
     Uint32 name;
     Uint8 type    : 4;
     Uint8 binding : 4;
@@ -139,13 +148,13 @@ typedef struct {
     Uint64 objectSize;
 } __attribute__((packed)) ELF64SymbolTableEntry;
 
-typedef struct {
+typedef struct ELF64REL {
     Uint64 offset;
     Uint32 type;
     Uint32 symbolTableIndex;
 } __attribute__((packed)) ELF64REL;
 
-typedef struct {
+typedef struct ELF64RELA {
     Uint64 offset;
     Uint32 type;
     Uint32 symbolTableIndex;
@@ -170,7 +179,7 @@ typedef struct {
 #define ELF64_PROGRAM_HEADER_FLAGS_MAKEOS   0x00FF0000
 #define ELF64_PROGRAM_HEADER_FLAGS_MAKEPROC 0xFF000000
 
-typedef struct {
+typedef struct ELF64ProgramHeader {
     Uint32 type;
     Uint32 flags;
     Uint64 offset;

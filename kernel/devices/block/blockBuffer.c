@@ -11,7 +11,7 @@
 #include<structs/hashTable.h>
 #include<system/pageTable.h>
 
-static void __blockBuffer_initBlock(Block* block, void* data, Index64 blockIndex);
+static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64 blockIndex);
 
 Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
@@ -23,13 +23,13 @@ Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size bloc
     blockBuffer->blockData          = paging_convertAddressP2V(pBlockData);
     linkedList_initStruct(&blockBuffer->LRU);
 
-    Block* blocks = memory_allocate(sizeof(Block) * blockNum);
+    BlockBufferBlock* blocks = memory_allocate(sizeof(BlockBufferBlock) * blockNum);
     if (blocks == NULL) {
         return RESULT_FAIL;
     }
 
     for (int i = 0; i < blockNum; ++i) {
-        Block* block = blocks + i;
+        BlockBufferBlock* block = blocks + i;
         __blockBuffer_initBlock(block, blockBuffer->blockData + (i << bytePerBlockShift), INVALID_INDEX);
 
         linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
@@ -50,7 +50,7 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
     Uintptr minOldBlockPtr = -1;
     LinkedListNode* current = linkedListNode_getNext(&blockBuffer->LRU);
     for (int i = 0; i < blockBuffer->blockNum; ++i) {
-        minOldBlockPtr = algorithms_umin64(minOldBlockPtr, (Uintptr)HOST_POINTER(current, Block, LRUnode));
+        minOldBlockPtr = algorithms_umin64(minOldBlockPtr, (Uintptr)HOST_POINTER(current, BlockBufferBlock, LRUnode));
         current = linkedListNode_getNext(current);
     }
 
@@ -62,7 +62,7 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
 }
 
 Result blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
-    Block* newBlocks = memory_allocate(sizeof(Block) * newBlockNum);
+    BlockBufferBlock* newBlocks = memory_allocate(sizeof(BlockBufferBlock) * newBlockNum);
     if (newBlocks == NULL) {
         return RESULT_FAIL;
     }
@@ -71,9 +71,9 @@ Result blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
     Uintptr minOldBlockPtr = -1;
     Size maxBlockNum = algorithms_umax64(blockBuffer->blockNum, newBlockNum);
     for (int i = 0; i < maxBlockNum; ++i) {
-        Block* oldBlock = NULL, * newBlock = NULL;
+        BlockBufferBlock* oldBlock = NULL, * newBlock = NULL;
         if (i < blockBuffer->blockNum) {
-            oldBlock = HOST_POINTER(linkedListNode_getNext(&blockBuffer->LRU), Block, LRUnode);
+            oldBlock = HOST_POINTER(linkedListNode_getNext(&blockBuffer->LRU), BlockBufferBlock, LRUnode);
         }
 
         if (i < newBlockNum) {
@@ -102,13 +102,13 @@ Result blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
     return RESULT_SUCCESS;
 }
 
-Block* blockBuffer_search(BlockBuffer* blockBuffer, Index64 blockIndex) {
+BlockBufferBlock* blockBuffer_search(BlockBuffer* blockBuffer, Index64 blockIndex) {
     HashChainNode* found = hashTable_find(&blockBuffer->hashTable, blockIndex);
     if (found == NULL) {
         return NULL;
     }
 
-    Block* block = HOST_POINTER(found, Block, hashChainNode);
+    BlockBufferBlock* block = HOST_POINTER(found, BlockBufferBlock, hashChainNode);
     linkedListNode_delete(&block->LRUnode);
     linkedListNode_initStruct(&block->LRUnode);
     linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
@@ -116,14 +116,14 @@ Block* blockBuffer_search(BlockBuffer* blockBuffer, Index64 blockIndex) {
     return block;
 }
 
-Block* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) {   //If blockIndex is INVALID_INDEX, it pops the tail of the LRU list
+BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) {   //If blockIndex is INVALID_INDEX, it pops the tail of the LRU list
     HashChainNode* found = hashTable_find(&blockBuffer->hashTable, blockIndex);
 
-    Block* block;
+    BlockBufferBlock* block;
     if (found == NULL) {
-        block = HOST_POINTER(linkedListNode_getPrev(&blockBuffer->LRU), Block, LRUnode);
+        block = HOST_POINTER(linkedListNode_getPrev(&blockBuffer->LRU), BlockBufferBlock, LRUnode);
     } else {
-        block = HOST_POINTER(found, Block, hashChainNode);
+        block = HOST_POINTER(found, BlockBufferBlock, hashChainNode);
     }
 
     if (block->blockIndex != INVALID_INDEX && hashTable_delete(&blockBuffer->hashTable, block->blockIndex) != &block->hashChainNode) {
@@ -141,7 +141,7 @@ Block* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) {   //If bl
     return block;
 }
 
-Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, Block* block) {
+Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block) {
     block->blockIndex = blockIndex;
     if (blockIndex != INVALID_INDEX && hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode) == RESULT_FAIL) {
         return RESULT_FAIL;
@@ -155,7 +155,7 @@ Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, Block* blo
     return RESULT_SUCCESS;
 }
 
-static void __blockBuffer_initBlock(Block* block, void* data, Index64 blockIndex) {
+static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64 blockIndex) {
     block->data         = data;
     block->blockIndex   = blockIndex;
     linkedListNode_initStruct(&block->LRUnode);

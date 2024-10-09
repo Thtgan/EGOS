@@ -1,10 +1,11 @@
 #if !defined(__LIB_STRUCTS_KDTREE_H)
 #define __LIB_STRUCTS_KDTREE_H
 
-#include<kit/types.h>
-
 typedef struct KDtreeNode KDtreeNode;
 typedef struct KDtree KDtree;
+
+#include<kit/types.h>
+
 typedef int (*KDtreeCompareFunc)(Object o1, Object o2, int offset, int round);
 typedef Uint64 (*KDtreeDistanceFunc)(Object o1, Object o2);
 

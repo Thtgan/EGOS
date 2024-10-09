@@ -2,7 +2,6 @@
 
 #include<debug.h>
 #include<fs/fsutil.h>
-#include<fs/fsStructs.h>
 #include<fs/fsSyscall.h>
 #include<kit/bit.h>
 #include<kit/types.h>

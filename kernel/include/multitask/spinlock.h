@@ -1,9 +1,11 @@
 #if !defined(__MULTITASK_SPINLOCK_H)
 #define __MULTITASK_SPINLOCK_H
 
+typedef struct Spinlock Spinlock;
+
 #include<kit/types.h>
 
-typedef struct {
+typedef struct Spinlock {
     volatile Uint8 counter;
 } Spinlock;
 

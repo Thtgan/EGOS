@@ -1,11 +1,13 @@
 #if !defined(__LIB_REALMODE_H)
 #define __LIB_REALMODE_H
 
+typedef struct RealmodeRegs RealmodeRegs;
+
 #include<carrier.h>
 #include<kit/types.h>
 #include<multitask/context.h>
 
-typedef struct {
+typedef struct RealmodeRegs {
     union {
         struct {
             Uint32 eax;

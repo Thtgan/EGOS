@@ -1,11 +1,13 @@
 #if !defined(__LIB_STRUCTS_HEAP_H)
 #define __LIB_STRUCTS_HEAP_H
 
+typedef struct Heap Heap;
+
 #include<kit/types.h>
 
 typedef Int64 (*CompareFunc)(Object o1, Object o2);
 
-typedef struct {
+typedef struct Heap {
     Object*     objectArray;
     Size        capacity;
     Size        size;

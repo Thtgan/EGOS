@@ -1,6 +1,18 @@
 #if !defined(__DEVICES_ATA_ATA_H)
 #define __DEVICES_ATA_ATA_H
 
+typedef enum ATAdeviceType {
+    ATA_DEVICE_TYPE_UNKNOWN,
+    ATA_DEVICE_TYPE_PATA,
+    ATA_DEVICE_TYPE_PATA_API,
+    ATA_DEVICE_TYPE_SATA,
+    ATA_DEVICE_TYPE_SATA_API
+} ATAdeviceType;
+
+typedef struct ATAdevice ATAdevice;
+typedef struct ATAcommand ATAcommand;
+
+#include<devices/ata/channel.h>
 #include<devices/ata/identifyDevice.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
@@ -52,17 +64,7 @@
 #define ATA_COMMAND_READ_SECTORS                            0x20
 #define ATA_COMMAND_WRITE_SECTORS                           0x30
 
-typedef enum {
-    ATA_DEVICE_TYPE_UNKNOWN,
-    ATA_DEVICE_TYPE_PATA,
-    ATA_DEVICE_TYPE_PATA_API,
-    ATA_DEVICE_TYPE_SATA,
-    ATA_DEVICE_TYPE_SATA_API
-} ATAdeviceType;
-
-STRUCT_PRE_DEFINE(ATAchannel);
-
-typedef struct {
+typedef struct ATAdevice {
     char name[8];
     ATAdeviceType type;
     Uint8 deviceNumber;
@@ -70,13 +72,7 @@ typedef struct {
     Size sectorNum;
 } ATAdevice;
 
-STRUCT_PRIVATE_DEFINE(ATAchannel) {
-    Uint16 portBase;
-    ATAdevice* devices[2];
-    Uint8 deviceSelect;
-};
-
-typedef struct {
+typedef struct ATAcommand {
     Uint8 command;
     Uint8 device;
 
@@ -96,7 +92,5 @@ Flags8 ata_waitTillClear(Uint16 channelPortBase, Flags8 waitFlags);
 Flags8 ata_waitTillSet(Uint16 channelPortBase, Flags8 waitFlags);
 
 Result ata_waitForData(Uint16 channelPortBase);
-
-Result ata_channel_reset(ATAchannel* channel);
 
 #endif // __DEVICES_ATA_ATA_H

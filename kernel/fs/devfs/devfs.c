@@ -3,7 +3,7 @@
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
-#include<fs/fsStructs.h>
+#include<fs/superblock.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/fsEntry.h>
 #include<fs/devfs/inode.h>

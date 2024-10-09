@@ -1,6 +1,8 @@
 #if !defined(__DEVICES_TERMINAL_TERMINAL_H)
 #define __DEVICES_TERMINAL_TERMINAL_H
 
+typedef struct Terminal Terminal;
+
 #include<devices/display/display.h>
 #include<devices/terminal/inputBuffer.h>
 #include<kit/types.h>
@@ -52,7 +54,7 @@
  * If cursor move forward, and it reaches window's end, window moves forward, if it reaches buffer's end, buffer moves forward too.
  */
 
-typedef struct {
+typedef struct Terminal {
     Index16 loopRowBegin;                           //Which row in buffer does loop begin
     DisplayContext* displayContext;
     Size bufferSize, bufferRowSize;                 //Size of buffer (in row)

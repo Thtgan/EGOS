@@ -1,12 +1,15 @@
 #include<fs/devfs/inode.h>
 
-#include<devices/device.h>
+#include<devices/block/blockDevice.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/fsEntry.h>
-#include<fs/fsStructs.h>
+#include<fs/inode.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<structs/hashTable.h>
+#include<structs/singlyLinkedList.h>
 
 typedef struct {
     Index8  firstBlock;

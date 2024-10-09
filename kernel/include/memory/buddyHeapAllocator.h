@@ -1,13 +1,16 @@
 #if !defined(__MEMORY_BUDDYHEAPALLOCATOR_H)
 #define __MEMORY_BUDDYHEAPALLOCATOR_H
 
+typedef struct BuddyHeapAllocatorBuddyList BuddyHeapAllocatorBuddyList;
+typedef struct BuddyHeapAllocator BuddyHeapAllocator;
+
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/allocator.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 
-typedef struct {
+typedef struct BuddyHeapAllocatorBuddyList {
     SinglyLinkedList    list;
     Uint8               order;
     Size                remaining;
@@ -19,7 +22,7 @@ typedef struct {
 #define BUDDY_HEAP_ALLOCATOR_MAX_ORDER              (PAGE_SIZE_SHIFT - BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH_SHIFT - 1)
 #define BUDDY_HEAP_ALLOCATOR_BUDDY_LIST_LIST_NUM    (BUDDY_HEAP_ALLOCATOR_MAX_ORDER + 1)
 
-typedef struct {
+typedef struct BuddyHeapAllocator {
     HeapAllocator allocator;
     BuddyHeapAllocatorBuddyList buddyLists[BUDDY_HEAP_ALLOCATOR_BUDDY_LIST_LIST_NUM];
 } BuddyHeapAllocator;

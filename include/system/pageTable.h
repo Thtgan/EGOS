@@ -1,6 +1,9 @@
 #if !defined(__SYSTEM_PAGETABLE_H)
 #define __SYSTEM_PAGETABLE_H
 
+typedef enum PagingLevel PagingLevel;
+typedef struct PagingTable PagingTable;
+
 #include<kit/bit.h>
 #include<kit/types.h>
 
@@ -25,7 +28,7 @@
 #define PAGE_SIZE_SHIFT                                     12  //4KB page
 #define PAGE_SIZE                                           (1 << PAGE_SIZE_SHIFT)
 
-typedef enum {
+typedef enum PagingLevel {
     PAGING_LEVEL_PAGE,
     PAGING_LEVEL_PAGE_TABLE,
     PAGING_LEVEL_PAGE_DIRECTORY,
@@ -60,7 +63,7 @@ typedef Uint32                                              PagingEntry;
 
 #define PAGING_TABLE_SIZE                                   (PAGE_SIZE / sizeof(PagingEntry))
 
-typedef struct {
+typedef struct PagingTable {
     PagingEntry tableEntries[PAGING_TABLE_SIZE];
 } PagingTable;
 

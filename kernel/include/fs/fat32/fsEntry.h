@@ -1,8 +1,8 @@
 #if !defined(__FS_FAT32_FSENTRY_H)
 #define __FS_FAT32_FSENTRY_H
 
-#include<fs/fs.h>
 #include<fs/fsEntry.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 
 #define FAT32_FS_ENTRY_DIRECTORY_ENTRY_SIZE 32

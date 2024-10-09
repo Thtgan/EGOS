@@ -1,12 +1,26 @@
 #if !defined(__FS_FS_H)
 #define __FS_FS_H
 
+typedef enum {
+    FS_TYPE_FAT32,
+    FS_TYPE_DEVFS,
+    FS_TYPE_NUM,
+    FS_TYPE_UNKNOWN
+} FStype;
+
+typedef struct FS FS;
+
 #include<devices/block/blockDevice.h>
-#include<fs/fsStructs.h>
 #include<fs/inode.h>
 #include<fs/superblock.h>
 #include<kit/oop.h>
 #include<kit/types.h>
+
+typedef struct FS {
+    SuperBlock*     superBlock;
+    ConstCstring    name;
+    FStype          type;
+} FS;
 
 #define FS_PATH_SEPERATOR '/'
 

@@ -1,15 +1,15 @@
 #if !defined(__DEVICES_TERMINAL_TERMINALSWITCH_H)
 #define __DEVICES_TERMINAL_TERMINALSWITCH_H
 
-#include<devices/display/display.h>
-#include<devices/terminal/terminal.h>
-#include<kit/types.h>
-
 typedef enum {
     TERMINAL_LEVEL_OUTPUT,
     TERMINAL_LEVEL_DEBUG,
     TERMINAL_LEVEL_NUM
 } TerminalLevel;
+
+#include<devices/display/display.h>
+#include<devices/terminal/terminal.h>
+#include<kit/types.h>
 
 /**
  * @brief Initialize the terminal's switch

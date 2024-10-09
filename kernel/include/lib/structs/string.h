@@ -1,9 +1,11 @@
 #if !defined(__LIB_STRUCTS_STRING_H)
 #define __LIB_STRUCTS_STRING_H
 
+typedef struct String String;
+
 #include<kit/types.h>
 
-typedef struct {
+typedef struct String {
     Cstring data;
     Size capacity, length;
     Uint32 magic;
