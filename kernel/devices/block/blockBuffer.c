@@ -17,7 +17,7 @@ Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size bloc
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
     void* pBlockData = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT));
     if (pBlockData == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     blockBuffer->blockData          = paging_convertAddressP2V(pBlockData);
@@ -25,7 +25,7 @@ Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size bloc
 
     BlockBufferBlock* blocks = memory_allocate(sizeof(BlockBufferBlock) * blockNum);
     if (blocks == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     for (int i = 0; i < blockNum; ++i) {
@@ -37,7 +37,7 @@ Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size bloc
 
     SinglyLinkedList* chains = memory_allocate(sizeof(SinglyLinkedList) * chainNum);
     if (chains == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     hashTable_initStruct(&blockBuffer->hashTable, chainNum, chains, hashTable_defaultHashFunc);
@@ -64,7 +64,7 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
 Result blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
     BlockBufferBlock* newBlocks = memory_allocate(sizeof(BlockBufferBlock) * newBlockNum);
     if (newBlocks == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     LinkedListNode* current = linkedListNode_getNext(&blockBuffer->LRU);
@@ -143,8 +143,8 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
 
 Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block) {
     block->blockIndex = blockIndex;
-    if (blockIndex != INVALID_INDEX && hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (blockIndex != INVALID_INDEX && hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);

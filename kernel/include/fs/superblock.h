@@ -8,6 +8,7 @@ typedef struct DirMountList DirMountList;
 typedef struct Mount Mount;
 
 #include<devices/block/blockDevice.h>
+#include<fs/fcntl.h>
 #include<fs/fsEntry.h>
 #include<fs/inode.h>
 #include<kit/types.h>
@@ -29,8 +30,10 @@ typedef struct SuperBlockOperations {
     Result  (*openInode)(SuperBlock* superBlock, iNode* iNodePtr, fsEntryDesc* desc);
     Result  (*closeInode)(SuperBlock* superBlock, iNode* iNode);
 
-    Result  (*openfsEntry)(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);
+    Result  (*openfsEntry)(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
     Result  (*closefsEntry)(SuperBlock* superBlock, fsEntry* entry);
+
+    Result  (*create)(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args);
 
     Result  (*mount)(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
     Result  (*unmount)(SuperBlock* superBlock, fsEntryIdentifier* identifier);
@@ -71,12 +74,16 @@ static inline Result superBlock_rawCloseInode(SuperBlock* superBlock, iNode* iNo
     return superBlock->operations->closeInode(superBlock, iNode);
 }
 
-static inline Result superBlock_rawOpenfsEntry(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
-    return superBlock->operations->openfsEntry(superBlock, entry, desc);
+static inline Result superBlock_rawOpenfsEntry(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
+    return superBlock->operations->openfsEntry(superBlock, entry, desc, flags);
 }
 
 static inline Result superBlock_rawClosefsEntry(SuperBlock* superBlock, fsEntry* entry) {
     return superBlock->operations->closefsEntry(superBlock, entry);
+}
+
+static inline Result superBlock_rawCreate(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args) {
+    return superBlock->operations->create(superBlock, descOut, args);
 }
 
 static inline Result superBlock_rawMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
@@ -89,14 +96,11 @@ static inline Result superBlock_rawUnmount(SuperBlock* superBlock, fsEntryIdenti
 
 void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args);
 
-Result superBlock_readfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc* descOut);
-
-//TODO: Rework this
-fsEntryDesc* superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut);
+Result superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** finalSuperBlockOut, fsEntryDesc** descOut);
 
 Result superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryDesc);
 
-Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut);
+Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut, FCNTLopenFlags flags);
 
 Result superBlock_closefsEntry(fsEntry* entry);
 
@@ -107,5 +111,9 @@ void mount_clearStruct(Mount* mount);
 Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
 
 Result superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier);
+
+DirMountList* superBlock_getDirMountList(SuperBlock* superBlock, ConstCstring directoryPath);
+
+Result superBlock_stepSearchMount(SuperBlock* superBlock, String* searchPath, Index64* searchPathSplitRet, SuperBlock** newSuperBlockRet, fsEntryDesc** mountedToDescRet);
 
 #endif // __FS_SUPERBLOCK_H

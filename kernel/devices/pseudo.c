@@ -37,12 +37,12 @@ static CharDevice _pseudo_stdoutDevice;
 Result pseudoDevice_init() {
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     MinorDeviceID minor = device_allocMinor(major);
     if (minor == DEVICE_INVALID_ID) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     CharDeviceInitArgs args = (CharDeviceInitArgs) {
@@ -58,13 +58,13 @@ Result pseudoDevice_init() {
         },
     };
 
-    if (charDevice_initStruct(&_pseudo_nullDevice, &args) == RESULT_FAIL || device_registerDevice(&_pseudo_nullDevice.device) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (charDevice_initStruct(&_pseudo_nullDevice, &args) != RESULT_SUCCESS || device_registerDevice(&_pseudo_nullDevice.device) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     minor = device_allocMinor(major);
     if (minor == DEVICE_INVALID_ID) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     args = (CharDeviceInitArgs) {
@@ -80,8 +80,8 @@ Result pseudoDevice_init() {
         },
     };
 
-    if (charDevice_initStruct(&_pseudo_stdoutDevice, &args) == RESULT_FAIL || device_registerDevice(&_pseudo_stdoutDevice.device) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (charDevice_initStruct(&_pseudo_stdoutDevice, &args) != RESULT_SUCCESS || device_registerDevice(&_pseudo_stdoutDevice.device) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;

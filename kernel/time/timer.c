@@ -31,7 +31,7 @@ void timer_initStruct(Timer* timer, Int64 time, TimeUnit unit) {
 
 Result timer_start(Timer* timer) {
     if (TEST_FLAGS(timer->flags, TIMER_FLAGS_PRESENT)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     timer->until    = rawClockSourceReadTick(_timer_vlockSource) + timer->tick;
@@ -49,7 +49,7 @@ Result timer_start(Timer* timer) {
                                                                                                                                                                                                                                                                                                                                                         
 Result timer_stop(Timer* timer) {
     if (TEST_FLAGS_FAIL(timer->flags, TIMER_FLAGS_PRESENT)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_PRESENT);

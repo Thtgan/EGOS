@@ -13,15 +13,15 @@
 
 Result readELF64Header(FileSystemEntry* file, ELF64Header* header) {
     if (rawFileSeek(file, 0) == INVALID_INDEX) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
-    if (rawFileRead(file, header, sizeof(ELF64Header)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (rawFileRead(file, header, sizeof(ELF64Header)) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     if (header->identification.magic != ELF_IDENTIFICATION_MAGIC) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -51,19 +51,19 @@ void printELF64Header(ELF64Header* header) {
 
 Result readELF64ProgramHeader(FileSystemEntry* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
     if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (index >= elfHeader->programHeaderEntryNum) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (rawFileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader)) == INVALID_INDEX) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
-    if (rawFileRead(file, programHeader, sizeof(ELF64ProgramHeader)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (rawFileRead(file, programHeader, sizeof(ELF64ProgramHeader)) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -83,11 +83,11 @@ void printELF64ProgramHeader(ELF64ProgramHeader* header) {
 
 Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     if (programHeader->segmentSizeInMemory < programHeader->segmentSizeInFile) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (programHeader->segmentSizeInMemory == 0) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -96,7 +96,7 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
 Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader) {
     memset((void*)(Uintptr)programHeader->pAddr, 0, (Size)programHeader->segmentSizeInMemory);
     if (rawFileSeek(file, (Size)programHeader->offset) == INVALID_INDEX) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return rawFileRead(file, (void*)(Uintptr)programHeader->pAddr, (Size)programHeader->segmentSizeInFile);
@@ -104,18 +104,18 @@ Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader
 
 void* loadKernel(Volume* v, ConstCstring kernelPath, MemoryMap* mMap) {
     FileSystemEntry kernelFile;
-    if (rawFileSystemEntryOpen(v, kernelPath, &kernelFile, FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_FAIL) {
+    if (rawFileSystemEntryOpen(v, kernelPath, &kernelFile, FILE_SYSTEM_ENTRY_TYPE_FILE) == RESULT_ERROR) {
         return NULL;
     }
 
     ELF64Header header;
-    if (readELF64Header(&kernelFile, &header) == RESULT_FAIL) {
+    if (readELF64Header(&kernelFile, &header) == RESULT_ERROR) {
         return NULL;
     }
 
     ELF64ProgramHeader programHeader;
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (readELF64ProgramHeader(&kernelFile, &header, &programHeader, i) == RESULT_FAIL) {
+        if (readELF64ProgramHeader(&kernelFile, &header, &programHeader, i) == RESULT_ERROR) {
             return NULL;
         }
 
@@ -123,7 +123,7 @@ void* loadKernel(Volume* v, ConstCstring kernelPath, MemoryMap* mMap) {
             continue;
         }
 
-        if (checkELF64ProgramHeader(&programHeader) == RESULT_FAIL) {
+        if (checkELF64ProgramHeader(&programHeader) == RESULT_ERROR) {
             return NULL;
         }
 
@@ -145,20 +145,20 @@ void* loadKernel(Volume* v, ConstCstring kernelPath, MemoryMap* mMap) {
         Uint32 l1 = (Uint32)entry->base, r1 = (Uint32)entry->base + (Uint32)entry->length;
 
         if (l1 < l2) {
-            if (E820SplitEntry(mMap, entry, l2 - l1, &entry) == RESULT_FAIL) {
+            if (E820SplitEntry(mMap, entry, l2 - l1, &entry) == RESULT_ERROR) {
                 return NULL;
             }
         }
 
         if (r2 < r1) {
-            if (E820SplitEntry(mMap, entry, r2 - l2, NULL) == RESULT_FAIL) {
+            if (E820SplitEntry(mMap, entry, r2 - l2, NULL) == RESULT_ERROR) {
                 return NULL;
             }
         }
 
         entry->type = MEMORY_MAP_ENTRY_TYPE_RESERVED;
 
-        if (loadELF64Program(&kernelFile, &programHeader) == RESULT_FAIL) {
+        if (loadELF64Program(&kernelFile, &programHeader) == RESULT_ERROR) {
             return NULL;
         }
     }

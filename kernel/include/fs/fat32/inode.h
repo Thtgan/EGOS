@@ -6,7 +6,7 @@
 #include<fs/inode.h>
 #include<fs/superblock.h>
 
-Result FAT32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc);
+Result fat32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc);
 
 Result fat32_iNode_close(SuperBlock* superBlock, iNode* iNode);
 

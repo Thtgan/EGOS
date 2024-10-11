@@ -76,7 +76,7 @@ static inline Index32 rawFileSeek(FileSystemEntry* file, Size seekTo) {
 
 static inline Result rawFileRead(FileSystemEntry* file, void* buffer, Size n) {
     if (file->type != FILE_SYSTEM_ENTRY_TYPE_FILE || file->fileOperations->read == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     return file->fileOperations->read(file, buffer, n);
 }
@@ -90,14 +90,14 @@ static inline Index32 rawDirectoryLookupEntry(FileSystemEntry* directory, ConstC
 
 static inline Result rawFileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type) {
     if (v == NULL || v->fileSystem == NULL || path == NULL || entry == NULL || type == FILE_SYSTEM_ENTRY_TYPE_DUMMY) {
-        return RESULT_FAIL; 
+        return RESULT_ERROR; 
     }
     return ((FileSystem*)v->fileSystem)->fileSystemOperations->fileSystemEntryOpen(v, path, entry, type);
 }
 
 static inline Result rawFileSystemEntryClose(FileSystemEntry* entry) {
     if (entry == NULL || entry->volume == NULL || entry->volume->fileSystem == NULL) {
-        return RESULT_FAIL; 
+        return RESULT_ERROR; 
     }
     ((FileSystem*)entry->volume->fileSystem)->fileSystemOperations->fileSystemEntryClose(entry);
 }

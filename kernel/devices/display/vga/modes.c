@@ -300,8 +300,8 @@ Result vgaMode_init() {
         }
         
         VGApalette* palette = vgaDAC_getPalette(mode->paletteType);
-        if (vgaColorConverter_initStruct(&_vgaMode_converters[i], &mode->registers, palette) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (vgaColorConverter_initStruct(&_vgaMode_converters[i], &mode->registers, palette) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         mode->converter = &_vgaMode_converters[i];
@@ -347,12 +347,12 @@ Result vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
         vga_callRealmodeInt10(&inRegs, NULL);
     } else {
         if (mode == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         VGApalette* palette = vgaDAC_getPalette(mode->paletteType);
         if (palette == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         vgaDAC_writePalette(palette);

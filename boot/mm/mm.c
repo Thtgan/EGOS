@@ -26,16 +26,16 @@ static SinglyLinkedListNode* __firstFitSearch(Size size, Size align);
 Result initMemoryManager(MemoryMap* mMap) {
     MemoryMapEntry* entry = findE820Entry(mMap, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, true);
     if (entry == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
-    if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN - entry->base, &entry) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN - entry->base, &entry) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
     entry->type = MEMORY_MAP_ENTRY_TYPE_RESERVED;
 
-    if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, &entry) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (E820SplitEntry(mMap, entry, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, &entry) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     entry->type = MEMORY_MAP_ENTRY_TYPE_RAM;

@@ -1,9 +1,11 @@
 #include<fs/superblock.h>
 
 #include<cstring.h>
+#include<fs/fcntl.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<fs/fsutil.h>
+#include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
@@ -21,216 +23,90 @@ void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args) {
     hashTable_initStruct(&superBlock->fsEntryDescs, args->fsEntryDescBucket, args->fsEntryDescChains, hashTable_defaultHashFunc);
 }
 
-static Result __superBlock_doReadfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc* descOut, String* fullPath, fsEntryIdentifier* tmpIdentifier);
-
-Result superBlock_readfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc* descOut) {
-    String fullPath;
-    fsEntryIdentifier tmpIdentifier;
-
-    Result ret = __superBlock_doReadfsEntryDesc(superBlock, identifier, descOut, &fullPath, &tmpIdentifier);
-
-    if (ret == RESULT_FAIL) {
-        string_clearStruct(&fullPath);
-    }
-
-    return ret;
-}
-
-static Result __superBlock_doReadfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc* descOut, String* fullPath, fsEntryIdentifier* tmpIdentifier) {
+Result superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** finalSuperBlockOut, fsEntryDesc** descOut) {
+    fsEntryDesc* desc = NULL;
+    SuperBlock* finalSuperBlock = NULL;
+    Result ret = RESULT_SUCCESS;
     if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
-        memory_memcpy(descOut, &superBlock->rootDirDesc, sizeof(fsEntryDesc));
-        return RESULT_SUCCESS;
-    }
-
-    fsEntry currentDirectory;
-    fsEntryDesc currentEntryDesc, nextEntryDesc;
-    memory_memcpy(&currentEntryDesc, superBlock->rootDirDesc, sizeof(fsEntryDesc));
-
-    if (string_append(fullPath, &identifier->parentPath, FS_PATH_SEPERATOR) == RESULT_FAIL || string_concat(fullPath, fullPath, &identifier->name) == RESULT_FAIL) {
-        return RESULT_FAIL;
-    }
-    ConstCstring cFullPath = fullPath->data, name = cFullPath;
-
-    while (true) {
-        if (*name != FS_PATH_SEPERATOR) {
-            return RESULT_FAIL;
-        }
-        ++name;
-
-        ConstCstring next = name;
-        while (*next != FS_PATH_SEPERATOR && *next != '\0') {
-            ++next;
-        }
-        
-        if (
-            string_initStructN(&tmpIdentifier->name, name, ARRAY_POINTER_TO_INDEX(name, next)) == RESULT_FAIL ||
-            string_initStructN(&tmpIdentifier->parentPath, cFullPath, ARRAY_POINTER_TO_INDEX(cFullPath, name) - 1) == RESULT_FAIL
-        ) {
-            return RESULT_FAIL;
-        }
-        tmpIdentifier->type = *next == '\0' ? identifier->type : FS_ENTRY_TYPE_DIRECTORY;
-
-        if (superBlock_rawOpenfsEntry(superBlock, &currentDirectory, &currentEntryDesc) == RESULT_FAIL) {
-            return RESULT_FAIL;
-        }
-
-        if (fsutil_lookupEntryDesc(&currentDirectory, tmpIdentifier, &nextEntryDesc, NULL) != RESULT_SUCCESS) {
-            return RESULT_FAIL;
-        }
-
-        fsEntryIdentifier_clearStruct(tmpIdentifier);
-        if (superBlock->operations->closefsEntry(superBlock, &currentDirectory) == RESULT_FAIL) {
-            return RESULT_FAIL;
-        }
-
-        if (*next == '\0') {
-            memory_memcpy(descOut, &nextEntryDesc, sizeof(fsEntryDesc));
-            break;
-        }
-        
-        name = next;
-        memory_memcpy(&currentEntryDesc, &nextEntryDesc, sizeof(fsEntryDesc));
-    }
-
-    return RESULT_SUCCESS;
-}
-
-//TODO: Rework this
-fsEntryDesc* superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut) {
-    if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
-        ++superBlock->rootDirDesc->descReferCnt;
-        if (superBlockOut != NULL) {
-            *superBlockOut = superBlock;
-        }
-        return superBlock->rootDirDesc;
-    }
-
-    SuperBlock* currentSuperBlock = superBlock;
-    fsEntryIdentifier finalIdentifier;
-    fsEntryIdentifier_initStructSep(&finalIdentifier, identifier->parentPath.data, identifier->name.data, identifier->type);
-    String fullPath, parentPath;
-    if (string_append(&fullPath, &identifier->parentPath, FS_PATH_SEPERATOR) == RESULT_FAIL || string_concat(&fullPath, &fullPath, &identifier->name) == RESULT_FAIL) {
-        if (superBlockOut != NULL) {
-            *superBlockOut = superBlock;
-        }
-        return NULL;
-    }
-    string_initStruct(&parentPath, "");
-
-    while (true) {
-        Object pathKey = cstring_strhash(parentPath.data);
-        HashChainNode* found = hashTable_find(&currentSuperBlock->mounted, pathKey);
-        if (found != NULL) {
-            DirMountList* list = HOST_POINTER(found, DirMountList, node);
-            for (LinkedListNode* node = list->list.next; node != &list->list; node = node->next) {
-                Mount* mount = HOST_POINTER(node, Mount, node);
-                if (cstring_strncmp(mount->name.data, fullPath.data + parentPath.length + 1, mount->name.length) == 0) {
-                    fsEntryDesc* desc = mount->targetDesc;
-
-                    string_slice(&fullPath, &fullPath, parentPath.length + 1 + mount->name.length, -1);
-
-                    string_clearStruct(&parentPath);
-                    if (desc != mount->superblock->rootDirDesc) {
-                        string_append(&parentPath, &desc->identifier.parentPath, FS_PATH_SEPERATOR);
-                        string_concat(&parentPath, &parentPath, &desc->identifier.name);
-                    }
-                    string_concat(&fullPath, &parentPath, &fullPath);
-
-                    currentSuperBlock = mount->superblock;
-                    fsEntryIdentifier_clearStruct(&finalIdentifier);
-                    fsEntryIdentifier_initStruct(&finalIdentifier, fullPath.data, identifier->type);
-                }
-            }
-        }
-
-        char* nextSeperator = cstring_strchr(fullPath.data + parentPath.length + 1, FS_PATH_SEPERATOR);
-        if (nextSeperator == NULL) {
-            break;
-        }
-
-        string_slice(&parentPath, &fullPath, 0, ARRAY_POINTER_TO_INDEX(fullPath.data, nextSeperator));
-    }
-
-    string_clearStruct(&parentPath);
-    string_clearStruct(&fullPath);
-    
-    Object key = cstring_strhash(finalIdentifier.parentPath.data) + cstring_strhash(finalIdentifier.name.data);
-    HashChainNode* found = hashTable_find(&currentSuperBlock->fsEntryDescs, key);
-
-    fsEntryDesc* ret = NULL;
-    if (found == NULL) {
-        ret = memory_allocate(sizeof(fsEntryDesc));
-        if (ret == NULL) {
-            if (superBlockOut != NULL) {
-                *superBlockOut = NULL;
-            }
-
-            fsEntryIdentifier_clearStruct(&finalIdentifier);
-            return NULL;
-        }
-
-        if (superBlock_readfsEntryDesc(currentSuperBlock, &finalIdentifier, ret) == RESULT_FAIL) {
-            memory_free(ret);
-            if (superBlockOut != NULL) {
-                *superBlockOut = NULL;
-            }
-            fsEntryIdentifier_clearStruct(&finalIdentifier);
-            return NULL;
-        }
-
-        hashTable_insert(&currentSuperBlock->fsEntryDescs, key, &ret->descNode);
+        desc = superBlock->rootDirDesc;
+        finalSuperBlock = superBlock;
     } else {
-        ret = HOST_POINTER(found, fsEntryDesc, descNode);
+        fsEntryIdentifier finalIdentifier;
+        if (fsutil_loacateRealIdentifier(superBlock, identifier, &finalSuperBlock, &finalIdentifier) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+
+        Object key = cstring_strhash(finalIdentifier.parentPath.data) + cstring_strhash(finalIdentifier.name.data);
+        HashChainNode* found = hashTable_find(&finalSuperBlock->fsEntryDescs, key);
+
+        if (found == NULL) {
+            desc = memory_allocate(sizeof(fsEntryDesc));
+            if (desc == NULL) {
+                return RESULT_ERROR;
+            }
+
+            Result seekRes;
+            if ((seekRes = fsutil_seekLocalFSentryDesc(finalSuperBlock, &finalIdentifier, &desc)) == RESULT_ERROR) {
+                memory_free(desc);
+                return RESULT_ERROR;
+            }
+
+            fsEntryIdentifier_clearStruct(&finalIdentifier);
+            hashTable_insert(&superBlock->fsEntryDescs, key, &desc->descNode);
+
+            if (seekRes == RESULT_FAIL) {
+                ret = RESULT_FAIL;
+            }
+        } else {
+            desc = HOST_POINTER(found, fsEntryDesc, descNode);
+        }
     }
 
-    ++ret->descReferCnt;
+    ++desc->descReferCnt;
+    *descOut = desc;
+    *finalSuperBlockOut = finalSuperBlock;
 
-    if (superBlockOut != NULL) {
-        *superBlockOut = currentSuperBlock;
-    }
-
-    fsEntryIdentifier_clearStruct(&finalIdentifier);
     return ret;
 }
 
 Result superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryDesc) {
-    bool local = !(entryDesc == superBlock->rootDirDesc || TEST_FLAGS(entryDesc->flags, FS_ENTRY_DESC_FLAGS_MOUNTED));
+    if (entryDesc == superBlock->rootDirDesc) {
+        return RESULT_SUCCESS;
+    }
 
-    Object key;
-    if (local) {
-        fsEntryIdentifier* identifier = &entryDesc->identifier;
-        key = cstring_strhash(identifier->parentPath.data) + cstring_strhash(identifier->parentPath.data);
-        HashChainNode* found = hashTable_find(&superBlock->fsEntryDescs, key);
-        if (found == NULL || HOST_POINTER(found, fsEntryDesc, descNode) != entryDesc) {
-            return RESULT_FAIL;
-        }
+    fsEntryIdentifier* identifier = &entryDesc->identifier;
+    Object key = cstring_strhash(identifier->parentPath.data) + cstring_strhash(identifier->parentPath.data);
+    HashChainNode* found = hashTable_find(&superBlock->fsEntryDescs, key);
+
+    if (found == NULL || HOST_POINTER(found, fsEntryDesc, descNode) != entryDesc) {
+        return RESULT_ERROR;
     }
 
     if (--entryDesc->descReferCnt > 0) {
         return RESULT_SUCCESS;
     }
 
-    if (local) {
-        if (hashTable_delete(&superBlock->fsEntryDescs, key) == NULL) {
-            return RESULT_FAIL;
-        }
-
-        memory_free(entryDesc);
+    if (hashTable_delete(&superBlock->fsEntryDescs, key) == NULL) {
+        return RESULT_ERROR;
     }
+
+    fsEntryDesc_clearStruct(entryDesc);
+    memory_free(entryDesc);
 
     return RESULT_SUCCESS;
 }
 
-Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut) {
-    SuperBlock* finalSuperBlock;
-    fsEntryDesc* desc = superBlock_getfsEntryDesc(superBlock, identifier, &finalSuperBlock);
-    if (desc == NULL) {
-        return RESULT_FAIL;
+Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut, FCNTLopenFlags flags) {
+    SuperBlock* finalSuperBlock = NULL;
+    fsEntryDesc* desc = NULL;
+    Result getRes;
+    if ((getRes = superBlock_getfsEntryDesc(superBlock, identifier, &finalSuperBlock, &desc)) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
-    Result ret = superBlock_rawOpenfsEntry(finalSuperBlock, entryOut, desc);
-    if (ret == RESULT_FAIL) {
-        superBlock_releasefsEntryDesc(superBlock, desc);  //TODO: What if release failed?
+    Result ret = superBlock_rawOpenfsEntry(finalSuperBlock, entryOut, desc, flags);
+    if (ret != RESULT_SUCCESS) {
+        superBlock_releasefsEntryDesc(finalSuperBlock, desc);  //TODO: What if release failed?
     }
 
     return ret;
@@ -239,42 +115,42 @@ Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identif
 Result superBlock_closefsEntry(fsEntry* entry) {
     SuperBlock* superBlock = entry->iNode->superBlock;
     fsEntryIdentifier* identifier = &entry->desc->identifier;
+    SuperBlock* finalSuperBlock = superBlock;
     if (identifier->type != FS_ENTRY_TYPE_DIRECTORY) { //TODO: Move directory update to somewhere else
         fsEntryIdentifier parentDirIdentifier;
-        if (fsEntryIdentifier_getParent(identifier, &parentDirIdentifier) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (fsEntryIdentifier_getParent(identifier, &parentDirIdentifier) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
-        SuperBlock* finalSuperBlock;
-        fsEntryDesc* parentEntryDesc = superBlock_getfsEntryDesc(superBlock, &parentDirIdentifier, &finalSuperBlock);
-        if (parentEntryDesc == NULL) {
-            return RESULT_FAIL;
+        fsEntryDesc* parentEntryDesc;
+        if (superBlock_getfsEntryDesc(superBlock, &parentDirIdentifier, &finalSuperBlock, &parentEntryDesc) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         fsEntryIdentifier_clearStruct(&parentDirIdentifier);
 
         fsEntry parentEntry;
-        if (superBlock_rawOpenfsEntry(finalSuperBlock, &parentEntry, parentEntryDesc) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (superBlock_rawOpenfsEntry(finalSuperBlock, &parentEntry, parentEntryDesc, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
-        if (fsEntry_rawDirUpdateEntry(&parentEntry, identifier, entry->desc) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (fsEntry_rawDirUpdateEntry(&parentEntry, identifier, entry->desc) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
-        if (superBlock_rawClosefsEntry(finalSuperBlock, &parentEntry) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (superBlock_rawClosefsEntry(finalSuperBlock, &parentEntry) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         superBlock_releasefsEntryDesc(finalSuperBlock, parentEntryDesc);
     }
 
-    return superBlock_rawClosefsEntry(superBlock, entry);
+    return superBlock_rawClosefsEntry(finalSuperBlock, entry);
 }
 
 Result mount_initStruct(Mount* mount, ConstCstring name, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
-    if (string_initStruct(&mount->name, name) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (string_initStruct(&mount->name, name) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     mount->superblock = targetSuperBlock;
@@ -292,8 +168,8 @@ void mount_clearStruct(Mount* mount) {
 
 Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) { //TODO: Bad memory management
     Mount* mount = memory_allocate(sizeof(Mount));
-    if (mount == NULL || mount_initStruct(mount, identifier->name.data, targetSuperBlock, targetDesc) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (mount == NULL || mount_initStruct(mount, identifier->name.data, targetSuperBlock, targetDesc) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     Object pathKey = cstring_strhash(identifier->parentPath.data);
@@ -301,14 +177,14 @@ Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identi
     if (found == NULL) {
         DirMountList* list = memory_allocate(sizeof(DirMountList));
         if (list == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         linkedList_initStruct(&list->list);
         hashChainNode_initStruct(&list->node);
 
-        if (hashTable_insert(&superBlock->mounted, pathKey, &list->node) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (hashTable_insert(&superBlock->mounted, pathKey, &list->node) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
         found = &list->node;
     }
@@ -323,7 +199,7 @@ Result superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* iden
     Object pathKey = cstring_strhash(identifier->parentPath.data);
     HashChainNode* found = hashTable_find(&superBlock->mounted, pathKey);
     if (found == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     DirMountList* list = HOST_POINTER(found, DirMountList, node);
@@ -345,4 +221,48 @@ Result superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* iden
     }
 
     return RESULT_SUCCESS;
+}
+
+DirMountList* superBlock_getDirMountList(SuperBlock* superBlock, ConstCstring directoryPath) {
+    Object pathKey = cstring_strhash(directoryPath);
+    HashChainNode* found = hashTable_find(&superBlock->mounted, pathKey);
+    return found == NULL ? NULL : HOST_POINTER(found, DirMountList, node);
+}
+
+Result superBlock_stepSearchMount(SuperBlock* superBlock, String* searchPath, Index64* searchPathSplitRet, SuperBlock** newSuperBlockRet, fsEntryDesc** mountedToDescRet) {
+    String subSearchPath;
+    if (string_initStruct(&subSearchPath, "") != RESULT_SUCCESS) {
+        return RESULT_ERROR;
+    }
+
+    Result ret = RESULT_SUCCESS;
+    while (true) {
+        DirMountList* dirMountList = superBlock_getDirMountList(superBlock, subSearchPath.data);
+        char* nextSeperator = cstring_strchr(searchPath->data + subSearchPath.length + 1, FS_PATH_SEPERATOR);
+        if (dirMountList != NULL) {
+            for (LinkedListNode* node = dirMountList->list.next; node != &dirMountList->list; node = node->next) {
+                Mount* mount = HOST_POINTER(node, Mount, node);
+                if (cstring_strncmp(mount->name.data, searchPath->data + subSearchPath.length + 1, mount->name.length) != 0) {
+                    continue;
+                }
+
+                *searchPathSplitRet = ARRAY_POINTER_TO_INDEX(searchPath->data, nextSeperator);
+                *newSuperBlockRet = mount->superblock;
+                *mountedToDescRet = mount->targetDesc;
+
+                ret = RESULT_CONTINUE;
+                break;
+            }
+
+            break;
+        } else {
+            if (nextSeperator == NULL) {
+                break;
+            }
+
+            string_slice(&subSearchPath, searchPath, 0, ARRAY_POINTER_TO_INDEX(searchPath->data, nextSeperator));
+        }
+    }
+
+    return ret;
 }

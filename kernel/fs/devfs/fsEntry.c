@@ -5,15 +5,17 @@
 #include<devices/block/blockDevice.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/devfs.h>
+#include<fs/fcntl.h>
 #include<fs/fsEntry.h>
 #include<fs/fsutil.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<time/time.h>
 
 //TODO: Extremely rough code, need rework
-typedef struct {
+typedef struct __DevFSdirectoryEntry {
 #define DEVFS_DIRECTORY_ENTRY_NAME_LIMIT    31
     char    name[DEVFS_DIRECTORY_ENTRY_NAME_LIMIT + 1];
     union {
@@ -60,22 +62,40 @@ static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* dir
 
 static void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* descOut, __DevFSdirectoryEntry* dirEntryOut);
 
-Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
-    if (fsEntry_genericOpen(superBlock, entry, desc) == RESULT_FAIL) {
-        return RESULT_FAIL;
+Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
+    if (fsEntry_genericOpen(superBlock, entry, desc, flags) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     entry->operations = &_devfs_fsEntryOperations;
     if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
         Device* device = device_getDevice(desc->device);
         if (device == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
     } else {
         if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
             entry->dirOperations = &_devfs_fsEntryDirOperations;
         }
     }
+
+    return RESULT_SUCCESS;
+}
+
+Result devfs_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args) {
+    DevFSblockChains* chains = &((DEVFSspecificInfo*)superBlock->specificInfo)->chains;
+    Uint64 newBlock = devfs_blockChain_allocChain(chains, 1);
+    if (newBlock == INVALID_INDEX) {
+        return RESULT_FAIL;
+    }
+
+    Device* device = &superBlock->blockDevice->device;
+    args->dataRange = RANGE(newBlock * POWER_2(device->granularity), POWER_2(device->granularity));
+    Timestamp timestamp;
+    time_getTimestamp(&timestamp);
+    args->createTime = args->lastAccessTime = args->lastModifyTime = timestamp.second;
+
+    fsEntryDesc_initStruct(descOut, args);
 
     return RESULT_SUCCESS;
 }
@@ -103,8 +123,8 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
     fsEntryDesc_initStruct(superBlock->rootDirDesc, &args);
 
     Directory rootDir;
-    if (fsutil_openfsEntry(superBlock, "/", FS_ENTRY_TYPE_DIRECTORY, &rootDir) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsutil_openfsEntry(superBlock, "/", FS_ENTRY_TYPE_DIRECTORY, &rootDir, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     __DevFSdirectoryEntry endDummy = {
@@ -115,8 +135,8 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
     memory_memset(endDummy.name, 0, DEVFS_DIRECTORY_ENTRY_NAME_LIMIT + 1);
 
     fsEntry_rawSeek(&rootDir, 0);
-    if (fsEntry_rawWrite(&rootDir, &endDummy, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntry_rawWrite(&rootDir, &endDummy, sizeof(__DevFSdirectoryEntry)) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -124,8 +144,8 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
 
 Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
     Directory rootDir;
-    if (fsutil_openfsEntry(superBlock, "/", FS_ENTRY_TYPE_DIRECTORY, &rootDir) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsutil_openfsEntry(superBlock, "/", FS_ENTRY_TYPE_DIRECTORY, &rootDir, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     __DevFSdirectoryEntry deviceEntry;
@@ -135,8 +155,8 @@ Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
             __devfs_fsEntry_deviceToDirectoryEntry(device, &deviceEntry);
             __devfs_fsentry_directoryEntryToFSentryDesc(&rootDir.desc->identifier, &deviceEntry, &desc);
             fsEntry_rawSeek(&rootDir, 0);
-            if (fsEntry_rawDirAddEntry(&rootDir, &desc) == RESULT_FAIL) {
-                return RESULT_FAIL;
+            if (fsEntry_rawDirAddEntry(&rootDir, &desc) != RESULT_SUCCESS) {
+                return RESULT_ERROR;
             }
         }
     }
@@ -156,7 +176,7 @@ static void __devfs_fsEntry_deviceToDirectoryEntry(Device* device, __DevFSdirect
 
 static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* directory, __DevFSdirectoryEntry* dirEntry, fsEntryDesc* descOut) {
     if (dirEntry->magic != __DEVFS_DIRECTORY_ENTRY_MAGIC) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     fsEntryDescInitArgs args;
@@ -221,8 +241,8 @@ static void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* desc, __Dev
 static Result __devfs_fsEntry_readEntry(fsEntry* directory, fsEntryDesc* childDesc, Size* entrySizePtr) {
     __DevFSdirectoryEntry dirEntry;
 
-    if (fsEntry_rawRead(directory, &dirEntry, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL || __devfs_fsentry_directoryEntryToFSentryDesc(&directory->desc->identifier, &dirEntry, childDesc) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntry_rawRead(directory, &dirEntry, sizeof(__DevFSdirectoryEntry)) != RESULT_SUCCESS || __devfs_fsentry_directoryEntryToFSentryDesc(&directory->desc->identifier, &dirEntry, childDesc) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     *entrySizePtr = sizeof(__DevFSdirectoryEntry);
@@ -232,19 +252,19 @@ static Result __devfs_fsEntry_readEntry(fsEntry* directory, fsEntryDesc* childDe
 static Result __devfs_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToAdd) {
     Size followedDataSize = directory->desc->dataRange.length - directory->pointer;
     void* followedData = memory_allocate(followedDataSize);
-    if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     __DevFSdirectoryEntry newEntry;
     __devfs_fsEntry_fsEntryDescToDirectoryEntry(childToAdd, &newEntry);
-    if (fsEntry_rawWrite(directory, &newEntry, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntry_rawWrite(directory, &newEntry, sizeof(__DevFSdirectoryEntry)) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     fsEntry_rawSeek(directory, directory->pointer + sizeof(__DevFSdirectoryEntry));
-    if (fsEntry_rawWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntry_rawWrite(directory, followedData, followedDataSize) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     memory_free(followedData);
@@ -253,8 +273,8 @@ static Result __devfs_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToA
 }
 
 static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier* childToRemove) {
-    if (fsutil_lookupEntryDesc(directory, childToRemove, NULL, NULL) != RESULT_SUCCESS) {
-        return RESULT_FAIL;
+    if (fsutil_lookupEntryDesc(directory, childToRemove->name.data, childToRemove->type, NULL, NULL) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     Index64 oldPointer = directory->pointer;
@@ -262,13 +282,13 @@ static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
 
     Size followedDataSize = directory->desc->dataRange.length - directory->pointer;
     void* followedData = memory_allocate(followedDataSize);
-    if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (followedData == NULL || fsEntry_rawRead(directory, followedData, followedDataSize) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     fsEntry_rawSeek(directory, oldPointer);
-    if (fsEntry_rawWrite(directory, followedData, followedDataSize) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntry_rawWrite(directory, followedData, followedDataSize) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     memory_free(followedData);
@@ -277,14 +297,14 @@ static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
 }
 
 static Result __devfs_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild) {
-    if (fsutil_lookupEntryDesc(directory, oldChild, NULL, NULL) != RESULT_SUCCESS) {
-        return RESULT_FAIL;
+    if (fsutil_lookupEntryDesc(directory, oldChild->name.data, oldChild->type, NULL, NULL) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     __DevFSdirectoryEntry updatedEntry;
     __devfs_fsEntry_fsEntryDescToDirectoryEntry(newChild, &updatedEntry);
-    if (fsEntry_rawWrite(directory, &updatedEntry, sizeof(__DevFSdirectoryEntry)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntry_rawWrite(directory, &updatedEntry, sizeof(__DevFSdirectoryEntry)) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     fsEntry_rawSeek(directory, directory->pointer + sizeof(__DevFSdirectoryEntry));

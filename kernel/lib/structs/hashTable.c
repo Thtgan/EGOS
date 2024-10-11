@@ -28,7 +28,7 @@ Result hashTable_insert(HashTable* table, Object key, HashChainNode* newNode) {
         HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
     }
 

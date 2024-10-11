@@ -12,16 +12,16 @@
 static Result __testA20() {
     Uint16* ptr1 = (Uint16*)__A20_TEST_ADDR1, * ptr2 = (Uint16*)__A20_TEST_ADDR2;
     if (*ptr1 != *ptr2) {
-        return RESULT_SUCCESS;
+        return RESULT_FAIL;
     }
 
     *ptr2 = 0x55AA;
     if (*ptr1 == 0xAA55) {
-        return RESULT_SUCCESS;
+        return RESULT_FAIL;
     }
     *ptr1 = 0xAA55;
 
-    return RESULT_FAIL;
+    return RESULT_SUCCESS;
 }
 
 #define __A20_WAIT1()  while(TEST_FLAGS(inb(KEYBOARD_CONTROLLER_READ_STATUS), KEYBOARD_CONTROLLER_ISA_STATUS_INPUT_BUFFER_FULL))
@@ -56,5 +56,5 @@ Result initA20() {
         return RESULT_SUCCESS;
     }
     
-    return RESULT_FAIL;
+    return RESULT_ERROR;
 }

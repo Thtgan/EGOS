@@ -15,7 +15,7 @@ Result CPUclock_initClockSource(ClockSource* clockSource) {
     ClockSourceType calibrateClockSourceType = CLOCK_SOURCE_TYPE_I8254;
     ClockSource* calibrateClockSource = clockSource_getSource(calibrateClockSourceType);
     if (TEST_FLAGS_FAIL(calibrateClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     //TODO: Add support for HPET

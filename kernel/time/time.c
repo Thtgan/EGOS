@@ -124,7 +124,7 @@ Result time_init() {
 
     ClockSource* CMOSclockSource = clockSource_getSource(CLOCK_SOURCE_TYPE_CMOS), * mainClockSource, * beatClockSource;
     if (TEST_FLAGS_FAIL(CMOSclockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     _clock.time                 = (Timestamp) {
@@ -139,12 +139,12 @@ Result time_init() {
 
     mainClockSource = clockSource_getSource(_clock.mainClockSource);
     if (TEST_FLAGS_FAIL(mainClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT | CLOCK_SOURCE_FLAGS_AUTO_UPDATE) || mainClockSource->readTick == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     beatClockSource = clockSource_getSource(_clock.beatClockSource);
     if (TEST_FLAGS_FAIL(beatClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT) || mainClockSource->readTick == NULL || beatClockSource->updateTick == NULL || beatClockSource->start == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     bool interruptEnabled = idt_disableInterrupt();
@@ -157,8 +157,8 @@ Result time_init() {
 
     timer_init(beatClockSource);
 
-    if (rawClockSourceStart(beatClockSource) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (rawClockSourceStart(beatClockSource) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;

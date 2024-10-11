@@ -17,6 +17,7 @@ static SuperBlockOperations __devfs_superBlockOperations = {
     .closeInode     = devfs_iNode_close,
     .openfsEntry    = devfs_fsEntry_open,
     .closefsEntry   = fsEntry_genericClose,
+    .create         = devfs_fsEntry_create,
     .mount          = NULL,
     .unmount        = NULL
 };
@@ -40,12 +41,12 @@ Result devfs_checkType(BlockDevice* blockDevice) {
 Result devfs_open(FS* fs, BlockDevice* blockDevice) {
     Device* device = &blockDevice->device;
     if (_devfs_opened || device->capacity != DEVFS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     void* batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);    //TODO: Bad memory management
     if (batchAllocated == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
@@ -72,12 +73,12 @@ Result devfs_open(FS* fs, BlockDevice* blockDevice) {
     };
 
     superBlock_initStruct(superBlock, &args);
-    if (devfs_fsEntry_buildRootDir(superBlock) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (devfs_fsEntry_buildRootDir(superBlock) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
-    if (devfs_fsEntry_initRootDir(superBlock) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (devfs_fsEntry_initRootDir(superBlock) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     fs->superBlock = superBlock;

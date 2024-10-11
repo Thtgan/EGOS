@@ -96,7 +96,7 @@ static void __buddyHeapAllocatorBuddyList_addBlock(BuddyHeapAllocatorBuddyList* 
 static void* __buddyHeapAllocatorBuddyList_recursivelyGetBlock(BuddyHeapAllocator* allocator, BuddyHeapAllocatorBuddyList* list) {
     if (list->remaining == 0) {
         if (list->order == BUDDY_HEAP_ALLOCATOR_MAX_ORDER) {
-            if (__buddyHeapAllocator_takePages(allocator, __BUDDY_HEAP_ALLOCATOR_TAKE_PAGES_BATCH) == RESULT_FAIL) {
+            if (__buddyHeapAllocator_takePages(allocator, __BUDDY_HEAP_ALLOCATOR_TAKE_PAGES_BATCH) != RESULT_SUCCESS) {
                 return NULL;
             }
         } else {
@@ -190,12 +190,12 @@ static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allo
 static Result __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
     void* page = frameAllocator_allocateFrame(allocator->allocator.frameAllocator, n);
     if (page == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     void* v = heapAllocator_convertAddressP2V(page);
-    if (extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID)) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     __buddyHeapAllocatorBuddyList_recycleMemory(allocator, v, PAGE_SIZE);
@@ -207,7 +207,7 @@ static Result __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size
 }
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page) {
-    if (extendedPageTableRoot_erase(mm->extendedTable, page, 1) == RESULT_FAIL) {
+    if (extendedPageTableRoot_erase(mm->extendedTable, page, 1) != RESULT_SUCCESS) {
         return;
     }
     frameAllocator_freeFrame(allocator->allocator.frameAllocator, heapAllocator_convertAddressV2P(page), 1);
@@ -234,8 +234,8 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
         }
 
         base = heapAllocator_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
-        if (extendedPageTableRoot_draw(mm->extendedTable, base, page, n,  extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID)) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (extendedPageTableRoot_draw(mm->extendedTable, base, page, n,  extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID)) != RESULT_SUCCESS) {
+            return NULL;
         }
     } else {
         Int8 order = -1;
@@ -297,7 +297,7 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     memory_memset(header, 0, sizeof(__BuddyHeader)); //TODO: When free the COW area not handled by page fault
 
     if (size > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) {
-        if (extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE)) == RESULT_FAIL) {
+        if (extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE)) != RESULT_SUCCESS) {
             return;
         }
 

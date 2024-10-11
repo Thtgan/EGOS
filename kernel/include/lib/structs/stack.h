@@ -42,7 +42,7 @@ static inline bool stack_isEmpty(Stack* stack) {
  */
 static inline Result stack_push(Stack* stack, Object obj) {
     if (stack->size == stack->maxSize) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     stack->stack[stack->size++] = obj;
@@ -58,7 +58,7 @@ static inline Result stack_push(Stack* stack, Object obj) {
  */
 static inline Result stack_top(Stack* stack, Object* retPtr) {
     if (stack->size == 0) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     *retPtr = stack->stack[stack->size - 1];
@@ -74,7 +74,7 @@ static inline Result stack_top(Stack* stack, Object* retPtr) {
  */
 static inline Result stack_pop(Stack* stack) {
     if (stack_isEmpty(stack)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     stack->stack[--stack->size] = OBJECT_NULL;

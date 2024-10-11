@@ -211,7 +211,7 @@ static void __buddyFrameAllocator_freeFrame(FrameAllocator* allocator, void* p, 
 
 static Result __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n) {
     if ((Uintptr)p % PAGE_SIZE != 0) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     BuddyFrameAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyFrameAllocator, allocator);

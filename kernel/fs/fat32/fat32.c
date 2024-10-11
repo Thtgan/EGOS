@@ -25,14 +25,14 @@ Result fat32_init() {
 Result fat32_checkType(BlockDevice* blockDevice) {
     Device* device = &blockDevice->device;
     void* BPBbuffer = memory_allocate(POWER_2(device->granularity));
-    if (BPBbuffer == NULL || blockDevice_readBlocks(blockDevice, 0, BPBbuffer, 1) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (BPBbuffer == NULL || blockDevice_readBlocks(blockDevice, 0, BPBbuffer, 1) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     FAT32BPB* BPB = (FAT32BPB*)BPBbuffer;
     Uint32 clusterNum = (device->capacity - BPB->reservedSectorNum - BPB->FATnum * BPB->sectorPerFAT) / BPB->sectorPerCluster - BPB->rootDirectoryClusterIndex;
     if (!(BPB->bytePerSector == POWER_2(device->granularity) && BPB->signature == __FS_FAT32_BPB_SIGNATURE && memory_memcmp(BPB->systemIdentifier, "FAT32   ", 8) == 0 && clusterNum > __FS_FAT32_MINIMUM_CLUSTER_NUM)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     memory_free(BPBbuffer);
@@ -47,12 +47,12 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* device, void* batchAllocated);
 
 Result fat32_open(FS* fs, BlockDevice* blockDevice) {
     void* batchAllocated = memory_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
-    if (batchAllocated == NULL || __fat32_doOpen(fs, blockDevice, batchAllocated) == RESULT_FAIL) {
+    if (batchAllocated == NULL || __fat32_doOpen(fs, blockDevice, batchAllocated) != RESULT_SUCCESS) {
         if (batchAllocated != NULL) {
             memory_free(batchAllocated);
         }
 
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     return RESULT_SUCCESS;
@@ -60,10 +60,11 @@ Result fat32_open(FS* fs, BlockDevice* blockDevice) {
 
 static ConstCstring __fat32_name = "FAT32";
 static SuperBlockOperations __fat32_superBlockOperations = {
-    .openInode      = FAT32_iNode_open,
+    .openInode      = fat32_iNode_open,
     .closeInode     = fat32_iNode_close,
     .openfsEntry    = fat32_fsEntry_open,
     .closefsEntry   = fsEntry_genericClose,
+    .create         = fat32_fsEntry_create,
     .mount          = superBlock_genericMount,
     .unmount        = superBlock_genericUnmount
 };
@@ -81,8 +82,8 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAlloca
 
     Device* device = &blockDevice->device;
     void* buffer = memory_allocate(POWER_2(device->granularity));
-    if (buffer == NULL || blockDevice_readBlocks(blockDevice, 0, buffer, 1) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (buffer == NULL || blockDevice_readBlocks(blockDevice, 0, buffer, 1) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     memory_memcpy(BPB, buffer, sizeof(FAT32BPB));
@@ -90,7 +91,7 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAlloca
     memory_free(buffer);
 
     if (POWER_2(device->granularity) != BPB->bytePerSector) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     info->FATrange                      = RANGE_N(BPB->FATnum, BPB->reservedSectorNum, BPB->sectorPerFAT);
@@ -107,12 +108,12 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAlloca
     Size FATsizeInByte                  = BPB->sectorPerFAT * POWER_2(device->granularity);
     void* pFAT = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
     if (pFAT == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Index32* FAT                        = paging_convertAddressP2V(pFAT);
-    if (blockDevice_readBlocks(blockDevice, info->FATrange.begin, FAT, info->FATrange.length) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (blockDevice_readBlocks(blockDevice, info->FATrange.begin, FAT, info->FATrange.length) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     info->FAT                           = FAT;
@@ -148,8 +149,8 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAlloca
         .flags      = EMPTY_FLAGS,
     };
 
-    if (fsEntryDesc_initStruct(desc, &args1) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntryDesc_initStruct(desc, &args1) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     SuperBlockInitArgs args2 = {
@@ -187,8 +188,8 @@ Result fat32_close(FS* fs) {
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     Device* superBlockDevice = &superBlockBlockDevice->device;
     for (int i = 0; i < info->FATrange.n; ++i) {    //TODO: FAT is only saved here, maybe we can make it save at anytime
-        if (blockDevice_writeBlocks(superBlockBlockDevice, info->FATrange.begin + i * info->FATrange.length, info->FAT, info->FATrange.length) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_writeBlocks(superBlockBlockDevice, info->FATrange.begin + i * info->FATrange.length, info->FAT, info->FATrange.length) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
     }
     blockDevice_flush(superBlockBlockDevice);

@@ -18,7 +18,7 @@ Result iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
 }
 
 Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
-    return hashTable_delete(table, (Object)blockIndex) != NULL;
+    return hashTable_delete(table, (Object)blockIndex) != NULL ? RESULT_SUCCESS : RESULT_FAIL;
 }
 
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
@@ -27,11 +27,11 @@ iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
     iNode* ret = iNode_openFromOpened(&superBlock->openedInode, key);
     if (ret == NULL) {
         ret = memory_allocate(sizeof(iNode));
-        if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) == RESULT_FAIL) {
+        if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) != RESULT_SUCCESS) {
             return NULL;
         }
 
-        if (iNode_addToOpened(&superBlock->openedInode, ret, key) == RESULT_FAIL) {
+        if (iNode_addToOpened(&superBlock->openedInode, ret, key) != RESULT_SUCCESS) {
             memory_free(ret);
             return NULL;
         }
@@ -48,11 +48,11 @@ Result iNode_close(iNode* iNode, fsEntryDesc* desc) {
     Index64 key = desc->identifier.type == FS_ENTRY_TYPE_DEVICE ? desc->device + superBlockBlockDevice->device.capacity : desc->dataRange.begin >> superBlockBlockDevice->device.granularity;
     if (--iNode->openCnt == 0) {
         if (iNode_removeFromOpened(&superBlock->openedInode, key) == RESULT_FAIL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
         
-        if (superBlock_rawCloseInode(superBlock, iNode) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (superBlock_rawCloseInode(superBlock, iNode) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
         memory_free(iNode);
     }

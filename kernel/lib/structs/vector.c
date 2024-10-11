@@ -29,7 +29,7 @@ void vector_clear(Vector* vector) {
 Result vector_resize(Vector* vector, Size newCapacity) {
     Object* newStorage = memory_allocate(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     vector->capacity = newCapacity;
@@ -43,7 +43,7 @@ Result vector_resize(Vector* vector, Size newCapacity) {
 
 Result vector_get(Vector* vector, Index64 index, Object* retPtr) {
     if (index >= vector->size) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     *retPtr = vector->storage[index];
@@ -52,7 +52,7 @@ Result vector_get(Vector* vector, Index64 index, Object* retPtr) {
 
 Result vector_set(Vector* vector, Index64 index, Object item) {
     if (index >= vector->size) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     vector->storage[index] = item;
@@ -61,7 +61,7 @@ Result vector_set(Vector* vector, Index64 index, Object item) {
 
 Result vector_erease(Vector* vector, Index64 index) {
     if (index >= vector->size) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     memory_memmove(vector->storage + index, vector->storage + index + 1, (vector->capacity - index - 1) * sizeof(Object));
@@ -70,7 +70,7 @@ Result vector_erease(Vector* vector, Index64 index) {
 
 Result vector_back(Vector* vector, Object* retPtr) {
     if (vector_isEmpty(vector)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     *retPtr = vector->storage[vector->size - 1];
@@ -78,8 +78,8 @@ Result vector_back(Vector* vector, Object* retPtr) {
 }
 
 Result vector_push(Vector* vector, Object item) {
-    if (vector->size == vector->capacity && vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (vector->size == vector->capacity && vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     vector->storage[vector->size++] = item;
@@ -88,7 +88,7 @@ Result vector_push(Vector* vector, Object item) {
 
 Result vector_pop(Vector* vector) {
     if (vector_isEmpty(vector)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     vector->storage[vector->size--] = OBJECT_NULL;

@@ -11,8 +11,8 @@ static DisplayContext _display_currentContext;
 static bool _display_modeInitialized[DISPLAY_MODE_NUM] = { false };
 
 Result display_init() {
-    if (display_initMode(DISPLAY_MODE_DEFAULT) == RESULT_FAIL || display_switchMode(DISPLAY_MODE_DEFAULT) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (display_initMode(DISPLAY_MODE_DEFAULT) != RESULT_SUCCESS || display_switchMode(DISPLAY_MODE_DEFAULT) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -24,14 +24,14 @@ DisplayContext* display_getCurrentContext() {
 
 Result display_initMode(DisplayMode mode) {
     if (mode >= DISPLAY_MODE_NUM) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (_display_modeInitialized[mode]) {
         return RESULT_SUCCESS;
     }
 
-    Result ret = RESULT_FAIL;
+    Result ret = RESULT_ERROR;
     switch (mode) {
         case DISPLAY_MODE_DEFAULT: {
             ret = RESULT_SUCCESS;
@@ -42,7 +42,7 @@ Result display_initMode(DisplayMode mode) {
             break;
         }
         default: {
-            ret = RESULT_FAIL;
+            ret = RESULT_ERROR;
             break;
         }
     }
@@ -56,7 +56,7 @@ Result display_initMode(DisplayMode mode) {
 
 Result display_switchMode(DisplayMode mode) {
     if (mode >= DISPLAY_MODE_NUM || !_display_modeInitialized[mode]) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     switch (mode) {
@@ -69,7 +69,7 @@ Result display_switchMode(DisplayMode mode) {
             break;
         }
         default: {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
     }
     return RESULT_SUCCESS;

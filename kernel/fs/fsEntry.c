@@ -18,13 +18,13 @@
 Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, fsEntryType type) {
     ConstCstring sep = cstring_strrchr(path, FS_PATH_SEPERATOR);
     if (sep == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     if (
-        string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep)) == RESULT_FAIL ||
-        string_initStruct(&identifier->name, sep + 1) == RESULT_FAIL
+        string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep)) != RESULT_SUCCESS ||
+        string_initStruct(&identifier->name, sep + 1) != RESULT_SUCCESS
     ) {
-        return RESULT_FAIL; //TODO: Memory release if failed here
+        return RESULT_ERROR; //TODO: Memory release if failed here
     }
 
     identifier->type = type;
@@ -34,10 +34,10 @@ Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring 
 
 Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, fsEntryType type) {
     if (
-        string_initStruct(&identifier->parentPath, parentPath) == RESULT_FAIL ||
-        string_initStruct(&identifier->name, name) == RESULT_FAIL
+        string_initStruct(&identifier->parentPath, parentPath) != RESULT_SUCCESS ||
+        string_initStruct(&identifier->name, name) != RESULT_SUCCESS
     ) {
-        return RESULT_FAIL; //TODO: Memory release if failed here
+        return RESULT_ERROR; //TODO: Memory release if failed here
     }
 
     identifier->type = type;
@@ -48,6 +48,17 @@ Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstri
 void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier) {
     string_clearStruct(&identifier->parentPath);
     string_clearStruct(&identifier->name);
+    identifier->type = FS_ENTRY_TYPE_DUMMY;
+}
+
+Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
+    if (string_copy(&des->name, &src->name) != RESULT_SUCCESS || string_copy(&des->parentPath, &src->parentPath) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
+    }
+    
+    des->type = src->type;
+
+    return RESULT_SUCCESS;
 }
 
 Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
@@ -56,12 +67,12 @@ Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentif
 
 Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
     if (args->name == NULL || args->parentPath == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     fsEntryIdentifier* identifier = &desc->identifier;
-    if (fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     if (args->isDevice) {
@@ -85,12 +96,13 @@ void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
     memory_memset(desc, 0, sizeof(fsEntryDesc));
 }
 
-Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc) {
-    entry->desc     = desc;
-    entry->pointer  = 0;
-    entry->iNode    = iNode_open(superBlock, desc);
+Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
+    entry->desc         = desc;
+    entry->openFlags    = flags;
+    entry->pointer      = 0;
+    entry->iNode        = iNode_open(superBlock, desc);
     if (entry->iNode == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -99,8 +111,8 @@ Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* 
 Result fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
     fsEntryDesc* desc = entry->desc;
 
-    if (iNode_close(entry->iNode, desc) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (iNode_close(entry->iNode, desc) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     memory_memset(entry, 0, sizeof(fsEntry));
@@ -133,7 +145,7 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
     if (blockBuffer == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, targetDevice->granularity), offsetInBlock = entry->pointer % POWER_2(targetDevice->granularity);
@@ -142,12 +154,12 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     if (offsetInBlock != 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         Size byteReadN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
@@ -161,8 +173,8 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
         Result res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
-            if (blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_FAIL) {
-                return RESULT_FAIL;
+            if (blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_ERROR) {
+                return RESULT_ERROR;
             }
 
             Size byteReadN = range.length * POWER_2(targetDevice->granularity);
@@ -170,19 +182,19 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
             remainByteNum -= byteReadN;
         }
 
-        if (res == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (res != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
     }
 
     if (remainByteNum > 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         memory_memcpy(buffer, blockBuffer, remainByteNum);
@@ -212,33 +224,33 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 
     void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
     if (blockBuffer == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, targetDevice->granularity), offsetInBlock = entry->pointer % POWER_2(targetDevice->granularity);
     Size blockSize = POWER_2(targetDevice->granularity), remainByteNum = n;
     if (entry->pointer + n > entry->desc->dataRange.length) {
-        if (fsEntry_rawResize(entry, entry->pointer + n) == RESULT_FAIL) {  //TODO: May be remove this?
-            return RESULT_FAIL;
+        if (fsEntry_rawResize(entry, entry->pointer + n) != RESULT_SUCCESS) {  //TODO: May be remove this?
+            return RESULT_ERROR;
         }
     }
 
     Range range;
     if (offsetInBlock != 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         Size byteWriteN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(blockBuffer + offsetInBlock, buffer, byteWriteN);
 
-        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         buffer += byteWriteN;
@@ -249,8 +261,8 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
         Result res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
-            if (blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_FAIL) {
-                return RESULT_FAIL;
+            if (blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length) != RESULT_SUCCESS) {
+                return RESULT_ERROR;
             }
 
             Size byteWriteN = range.length * POWER_2(targetDevice->granularity);
@@ -258,25 +270,25 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
             remainByteNum -= byteWriteN;
         }
 
-        if (res == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (res == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
     }
 
     if (remainByteNum > 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         memory_memcpy(blockBuffer, buffer, remainByteNum);
 
-        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         remainByteNum = 0;
@@ -288,8 +300,8 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 }
 
 Result fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
-    if (iNode_rawResize(entry->iNode, newSizeInByte) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (iNode_rawResize(entry->iNode, newSizeInByte) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     entry->desc->dataRange.length = newSizeInByte;

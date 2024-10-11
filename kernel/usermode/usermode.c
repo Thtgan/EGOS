@@ -1,6 +1,7 @@
 #include<usermode/usermode.h>
 
 #include<error.h>
+#include<fs/fcntl.h>
 #include<fs/fsutil.h>
 #include<fs/inode.h>
 #include<kit/types.h>
@@ -43,9 +44,9 @@ Result usermode_init() {
     return RESULT_SUCCESS;
 }
 
-int usermode_exsecute(ConstCstring path) {  //TODO: Unstable code
+int usermode_execute(ConstCstring path) {  //TODO: Unstable code
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, path, FS_ENTRY_TYPE_FILE, &entry) == RESULT_FAIL) {
+    if (fsutil_openfsEntry(rootFS->superBlock, path, FS_ENTRY_TYPE_FILE, &entry, FCNTL_OPEN_READ_ONLY) != RESULT_SUCCESS) {
         return -1;
     }
 
@@ -98,13 +99,13 @@ void __usermode_syscallHandlerExit(int ret) {
 static int __usermode_doExecute(ConstCstring path, File* file) {
     Uint64 old = readRegister_RSP_64();
     ELF64Header header;
-    if (elf_readELF64Header(file, &header) == RESULT_FAIL) {
+    if (elf_readELF64Header(file, &header) != RESULT_SUCCESS) {
         return -1;
     }
 
     ELF64ProgramHeader programHeader;
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (elf_readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
+        if (elf_readELF64ProgramHeader(file, &header, &programHeader, i) != RESULT_SUCCESS) {
             return -1;
         }
 
@@ -112,12 +113,12 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
             continue;
         }
 
-        if (elf_checkELF64ProgramHeader(&programHeader) == RESULT_FAIL) {
+        if (elf_checkELF64ProgramHeader(&programHeader) != RESULT_SUCCESS) {
             ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
             return -1;
         }
 
-        if (elf_loadELF64Program(file, &programHeader) == RESULT_FAIL) {
+        if (elf_loadELF64Program(file, &programHeader) != RESULT_SUCCESS) {
             return -1;
         }
     }
@@ -131,7 +132,7 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         }
 
         void* pAddr = memory_allocateFrame(1);
-        if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) == RESULT_FAIL) {
+        if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) != RESULT_SUCCESS) {
             return -1;
         }
     }
@@ -152,7 +153,7 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     REGISTERS_RESTORE();    //Restore context
 
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
-        if (elf_readELF64ProgramHeader(file, &header, &programHeader, i) == RESULT_FAIL) {
+        if (elf_readELF64ProgramHeader(file, &header, &programHeader, i) != RESULT_SUCCESS) {
             return -1;
         }
 
@@ -160,14 +161,14 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
             continue;
         }
 
-        if (elf_unloadELF64Program(&programHeader) == RESULT_FAIL) {
+        if (elf_unloadELF64Program(&programHeader) != RESULT_SUCCESS) {
             return -1;
         }
     }
 
     for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
         void* pAddr = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1) == RESULT_FAIL) {
+        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1) != RESULT_SUCCESS) {
             return -1;
         }
 

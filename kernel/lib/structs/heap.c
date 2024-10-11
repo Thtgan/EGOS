@@ -12,7 +12,7 @@ void heap_initStruct(Heap* heap, Object* objectArray, Size n, CompareFunc compar
 
 Result heap_push(Heap* heap, Object object) {
     if (heap->size == heap->capacity) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Object* objectArray = heap->objectArray;
@@ -26,7 +26,7 @@ Result heap_push(Heap* heap, Object object) {
 
 Result heap_top(Heap* heap, Object* object) {
     if (heap->size == 0 || object == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     *object = heap->objectArray[1];
@@ -36,7 +36,7 @@ Result heap_top(Heap* heap, Object* object) {
 
 Result heap_pop(Heap* heap) {
     if (heap->size == 0) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Object* objectArray = heap->objectArray;

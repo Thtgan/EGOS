@@ -31,12 +31,12 @@ Result openFileSystem(Volume* v) {
     if (type != FILE_SYSTEM_TYPE_UNKNOWN) {
         FileSystem* fileSystem = bMalloc(sizeof(FileSystem));
         if (fileSystem == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
-        if (_openFuncs[type](v, fileSystem) == RESULT_FAIL) {
+        if (_openFuncs[type](v, fileSystem) == RESULT_ERROR) {
             bFree(fileSystem, sizeof(FileSystem));
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         } else {
             v->fileSystem = fileSystem;
         }

@@ -41,26 +41,26 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         Result handlerRes = extendedPageTableRoot_pageFaultHandler(mm->extendedTable, level, extendedPageTable, index, v, handlerStackFrame, registers);
         if (handlerRes == RESULT_SUCCESS) {
             return;
-        } else if (handlerRes == RESULT_FAIL) {
+        } else if (handlerRes != RESULT_SUCCESS) {
             print_printf(TERMINAL_LEVEL_DEBUG, "Page handler failed at level %u\n", level);
             break;
         }
     }
 
-    print_printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
-    print_printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
-    print_printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
-    print_printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
-    debug_dump_registers(registers);
-    debug_dump_stack((void*)registers->rbp, INFINITE);
+    // print_printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
+    // print_printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
+    // print_printf(TERMINAL_LEVEL_DEBUG, "ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
+    // print_printf(TERMINAL_LEVEL_DEBUG, "EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
+    // debug_dump_registers(registers);
+    // debug_dump_stack((void*)registers->rbp, INFINITE);
     debug_blowup("Page fault: %#018llX access not allowed. Error code: %#X, RIP: %#llX", (Uint64)v, handlerStackFrame->errorCode, handlerStackFrame->rip); //Not allowed since malloc is implemented
 }
 
 static ExtendedPageTableRoot _extendedPageTableRoot;
 
 Result paging_init() {
-    if (extraPageTableContext_initStruct(&mm->extraPageTableContext) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (extraPageTableContext_initStruct(&mm->extraPageTableContext) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     _extendedPageTableRoot.context = &mm->extraPageTableContext;
@@ -71,9 +71,9 @@ Result paging_init() {
             (void*)MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE,
             DIVIDE_ROUND_UP(algorithms_umin64(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, (Uintptr)PHYSICAL_KERNEL_RANGE_END), PAGE_SIZE) - 1, //TODO: Maybe PHYSICAL_KERNEL_RANGE_END - PHYSICAL_KERNEL_RANGE_BEGIN?
             extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
-        ) == RESULT_FAIL
+        ) != RESULT_SUCCESS
     ) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (
@@ -82,9 +82,9 @@ Result paging_init() {
             (void*)MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
             algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_END - MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
             extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE))
-        ) == RESULT_FAIL
+        ) != RESULT_SUCCESS
     ) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     PAGING_SWITCH_TO_TABLE(&_extendedPageTableRoot);

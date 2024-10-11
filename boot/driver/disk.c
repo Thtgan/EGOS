@@ -15,7 +15,7 @@ typedef struct {
 
 Result readDiskParams(int drive, DiskParams* params) {
     if (params == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     params->paramSize = sizeof(DiskParams);
@@ -31,7 +31,7 @@ Result readDiskParams(int drive, DiskParams* params) {
     intn(0x13, &regs, &regs);
 
     if (TEST_FLAGS(regs.eflags, EFLAGS_CF)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     return RESULT_SUCCESS;
@@ -56,7 +56,7 @@ Result rawDiskReadSectors(int drive, void* buffer, Index64 begin, Size n) {
     intn(0x13, &regs, &regs);
 
     if (TEST_FLAGS(regs.eflags, EFLAGS_CF)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -81,7 +81,7 @@ Result rawDiskWriteSectors(int drive, const void* buffer, Index64 begin, Size n)
     intn(0x13, &regs, &regs);
 
     if (TEST_FLAGS(regs.eflags, EFLAGS_CF)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;

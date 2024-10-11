@@ -17,7 +17,7 @@ typedef struct iNode {
     Uint32                  openCnt;
     iNodeOperations*        operations;
     HashChainNode           openedNode;
-    SinglyLinkedListNode    mountNode;
+    SinglyLinkedListNode    mountNode;  //TODO: Is this necessary?
 
     union {
         Object              specificInfo;

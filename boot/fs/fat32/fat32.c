@@ -97,7 +97,7 @@ static Result __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* B
 Result FAT32checkFileSystem(Volume* v) {
     void* BPBbuffer = bMalloc(v->bytePerSector);
     if (BPBbuffer == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     Result ret = __doFAT32checkFileSystem(v, BPBbuffer);
@@ -111,12 +111,12 @@ static ConstCstring _name = "FAT32";
 Result FAT32openFileSystem(Volume* v, FileSystem* fileSystem) {
     void* BPBbuffer = bMalloc(v->bytePerSector);
     if (BPBbuffer == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     void* context = bMalloc(sizeof(__FAT32Context));
-    Result ret = RESULT_FAIL;
-    if (context == NULL || (ret = __doFAT32openFileSystem(v, fileSystem, BPBbuffer, context)) == RESULT_FAIL) {
+    Result ret = RESULT_ERROR;
+    if (context == NULL || (ret = __doFAT32openFileSystem(v, fileSystem, BPBbuffer, context)) == RESULT_ERROR) {
         if (context != NULL) {
             bFree(context, sizeof(__FAT32Context));
         }
@@ -130,8 +130,8 @@ Result FAT32openFileSystem(Volume* v, FileSystem* fileSystem) {
 #define __FAT32_MINIMUM_CLUSTER_NUM 65525
 
 static Result __doFAT32checkFileSystem(Volume* v, void* BPBbuffer) {
-    if (rawVolumeReadSectors(v, BPBbuffer, 0, 1) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (rawVolumeReadSectors(v, BPBbuffer, 0, 1) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     __FAT32BPB* BPB = (__FAT32BPB*)BPBbuffer;
@@ -142,7 +142,7 @@ static Result __doFAT32checkFileSystem(Volume* v, void* BPBbuffer) {
         return RESULT_SUCCESS;
     }
 
-    return RESULT_FAIL;
+    return RESULT_ERROR;
 }
 
 //================================================================================================================================
@@ -271,7 +271,7 @@ static Result __FAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluste
 
     void* clusterBuffer = bMalloc(clusterSize);
     if (clusterBuffer == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Result ret = __doFAT32ReadThroughClusters(v, buffer, cluster, offsetInCluster, n, clusterBuffer);
@@ -288,8 +288,8 @@ static Result __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 clus
     Index32 currentCluster = cluster, currentOffset = offsetInCluster;
 
     while (remain > 0) {
-        if (rawVolumeReadSectors(v, clusterBuffer, context->dataRange.begin + currentCluster * context->sectorPerCluster, context->sectorPerCluster) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (rawVolumeReadSectors(v, clusterBuffer, context->dataRange.begin + currentCluster * context->sectorPerCluster, context->sectorPerCluster) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
         Size bytesToRead = clusterSize - currentOffset;
@@ -305,7 +305,7 @@ static Result __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 clus
         currentOffset = 0;
         Index32 nextCluster = __FAT32GetNextCluster(v, currentCluster);
         if (remain > 0 && __FAT32GetClusterType(context, nextCluster) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
         currentCluster = nextCluster;
     }
@@ -319,7 +319,7 @@ static Result __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 clus
 
 static Result __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type) {
     if (((FileSystem*)v->fileSystem)->type != FILE_SYSTEM_TYPE_FAT32) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     while (*path == '/') {
@@ -339,7 +339,7 @@ static Result __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSyste
 
     __FAT32DirectoryHandle* handle = bMalloc(sizeof(__FAT32DirectoryHandle));
     if (handle == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     handle->dataSectorBegin = context->rootDirectoryRange.begin;
     currentDirectory.handle                 = handle;
@@ -354,8 +354,8 @@ static Result __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSyste
 
         bool isTarget = (*path++ == '\0');
 
-        if (__FAT32DirectoryLookupEntry(&currentDirectory, buffer, isTarget ? type : FILE_SYSTEM_ENTRY_TYPE_DIRECTOY, &nextEntry, NULL) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (__FAT32DirectoryLookupEntry(&currentDirectory, buffer, isTarget ? type : FILE_SYSTEM_ENTRY_TYPE_DIRECTOY, &nextEntry, NULL) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
         if (isTarget) {
@@ -402,7 +402,7 @@ static Result __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n) {
     while (currentOffset >= clusterSize) {
         currentCluster = __FAT32GetNextCluster(file->volume, currentCluster);
         if (__FAT32GetClusterType(context, currentCluster) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
         currentOffset -= clusterSize;
     }
@@ -430,8 +430,8 @@ Result __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name
     Size entrySizeInDevice;
 
     for (int i = 0;; ++i) {
-        if (__FAT32ReadDirectoryEntry(directory->volume, currentCluster, currentOffset, &currentEntry, &entrySizeInDevice) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (__FAT32ReadDirectoryEntry(directory->volume, currentCluster, currentOffset, &currentEntry, &entrySizeInDevice) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
         if (strcmp(currentEntry.name, name) == 0 && currentEntry.type == type) {
@@ -448,7 +448,7 @@ Result __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name
         while (currentOffset >= clusterSize) {
             currentCluster = __FAT32GetNextCluster(directory->volume, currentCluster);
             if (__FAT32GetClusterType(context, currentCluster) != FAT32_CLUSTER_TYPE_ALLOCATERD) {
-                return RESULT_FAIL;
+                return RESULT_ERROR;
             }
             currentOffset -= clusterSize;
         }
@@ -469,8 +469,8 @@ Result __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name
 
 static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offsetInCluster, FileSystemEntry* entry, Size* entrySizeInDevice) {
     Uint8 dummyBuffer[32];
-    if (__FAT32ReadThroughClusters(v, dummyBuffer, cluster, offsetInCluster, 32) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (__FAT32ReadThroughClusters(v, dummyBuffer, cluster, offsetInCluster, 32) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     __FAT32Context* context = ((FileSystem*)v->fileSystem)->context;
@@ -488,7 +488,7 @@ static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offs
         __FAT32LongNameEntry* longNameEntry = (__FAT32LongNameEntry*)(dummyBuffer);
 
         if (TEST_FLAGS_FAIL(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG)) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         longNameOrder = (Uint8)VAL_XOR(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG);
@@ -496,12 +496,12 @@ static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offs
 
     Size entrySize = longNameOrder * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
     void* entryBuffer = bMalloc(entrySize);
-    if (entryBuffer == NULL || __FAT32ReadThroughClusters(v, entryBuffer, cluster, offsetInCluster, entrySize) == RESULT_FAIL) {
+    if (entryBuffer == NULL || __FAT32ReadThroughClusters(v, entryBuffer, cluster, offsetInCluster, entrySize) == RESULT_ERROR) {
         if (entryBuffer) {
             bFree(entryBuffer, entrySize);
         }
 
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Result ret = __FAT32ConvertDirectoryEntry(v, entry, entryBuffer, longNameOrder);
@@ -547,14 +547,14 @@ static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, vo
             }
 
             if (nameLength == __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH && notEnd) {
-                return RESULT_FAIL;
+                return RESULT_ERROR;
             }
         }
     }
 
     Cstring name = bMalloc(nameLength + 1);
     if (name == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     __FAT32Context* context = ((FileSystem*)v->fileSystem)->context;
@@ -585,7 +585,7 @@ static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, vo
             __FAT32FileHandle* handle = bMalloc(sizeof(__FAT32FileHandle));
             if (handle == NULL) {
                 bFree(name, nameLength + 1);
-                return RESULT_FAIL;
+                return RESULT_ERROR;
             }
             handle->dataSectorBegin     = (((Uint32)directoryEntry->clusterBeginHigh << 16) | directoryEntry->clusterBeginLow) * context->sectorPerCluster + context->dataRange.begin;
             handle->size                = directoryEntry->size;
@@ -598,7 +598,7 @@ static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, vo
             __FAT32DirectoryHandle* handle = bMalloc(sizeof(__FAT32DirectoryHandle));
             if (handle == NULL) {
                 bFree(name, nameLength + 1);
-                return RESULT_FAIL;
+                return RESULT_ERROR;
             }
             handle->dataSectorBegin     = (((Uint32)directoryEntry->clusterBeginHigh << 16) | directoryEntry->clusterBeginLow) * context->sectorPerCluster + context->dataRange.begin;
             entry->handle                   = handle;
@@ -614,8 +614,8 @@ static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, vo
 //================================================================================================================================
 
 static Result __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* BPBbuffer, __FAT32Context* context) {
-    if (rawVolumeReadSectors(v, BPBbuffer, 0, 1) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (rawVolumeReadSectors(v, BPBbuffer, 0, 1) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     __FAT32BPB* BPB = (__FAT32BPB*)BPBbuffer;

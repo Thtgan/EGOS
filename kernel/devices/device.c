@@ -26,8 +26,8 @@ int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 
 Result device_init() {
     RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
-    if (pseudoDevice_init() == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (pseudoDevice_init() != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -65,12 +65,12 @@ MajorDeviceID device_allocMajor() {
 Result device_releaseMajor(MajorDeviceID major) {
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     if (node->deviceNum > 0 || RBtree_delete(&_device_majorDeviceTree, (Object)major) != found) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     memory_free(node);
@@ -136,7 +136,7 @@ Result device_registerDevice(Device* device) {
     MajorDeviceID major = DEVICE_MAJOR_FROM_ID(device->id);
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
@@ -154,7 +154,7 @@ Result device_unregisterDevice(DeviceID id) {
 
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);

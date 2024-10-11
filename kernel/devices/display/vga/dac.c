@@ -151,24 +151,24 @@ Result vgaPalette_initApproximate(VGApalette* palette) {
 
     int i, j;
     for (i = palette->colorNum >> 1, j = i - 1; i < palette->colorNum, j >= 0; ++i, --j) {
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[i]) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[i]) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
 
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[j]) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[j]) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
     }
 
     for (; i < palette->colorNum; ++i) {
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[i]) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[i]) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
     }
 
     for (; j >= 0; --j) {
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[j]) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[j]) == RESULT_ERROR) {
+            return RESULT_ERROR;
         }
     }
 
@@ -177,7 +177,7 @@ Result vgaPalette_initApproximate(VGApalette* palette) {
 
 VGAcolor vgaPalette_approximateColor(VGApalette* palette, RGBA color) {
     Object key = __vgaPalette_rgbaToKey(color), closestKey = OBJECT_NULL;
-    if (KDtree_nearestNeighbour(&palette->colorApproximate, key, &closestKey) == RESULT_FAIL) {
+    if (KDtree_nearestNeighbour(&palette->colorApproximate, key, &closestKey) != RESULT_SUCCESS) {
         return 0;
     }
 
@@ -201,7 +201,7 @@ Result vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareReg
 
         KDtreeNode* existingKey = KDtree_search(&palette->colorApproximate, dacKey);
         if (existingKey == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         converter->convertData[i] = __vgaPalette_keyToVGAcolor(existingKey->key);
@@ -224,8 +224,8 @@ VGAcolor vgaColorConverter_convert(VGAcolorConverter* converter, VGAcolor color)
 
 Result vgaPalettes_init() {
     for (int i = 0; i < VGA_PALETTE_TYPE_NUM; ++i) {
-        if (vgaPalette_initApproximate(_vgaPalettes[i]) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (vgaPalette_initApproximate(_vgaPalettes[i]) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
     }
 
@@ -296,7 +296,7 @@ Result __vgaPalette_registerKey(VGApalette* palette, Object key) {
 
     KDtreeNode* node = memory_allocate(sizeof(KDtreeNode));
     if (node == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     KDtreeNode_initStruct(node, key);

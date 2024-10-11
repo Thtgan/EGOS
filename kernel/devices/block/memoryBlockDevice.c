@@ -25,17 +25,17 @@ static DeviceOperations _memoryBlockDevice_deviceOperations = (DeviceOperations)
 Result memoryBlockDevice_initStruct(BlockDevice* device, void* region, Size size, ConstCstring name) {
     if (region == NULL) {
         ERROR_CODE_SET(ERROR_CODE_OBJECT_ARGUMENT, ERROR_CODE_STATUS_IS_NULL);
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     MinorDeviceID minor = device_allocMinor(major);
     if (minor == DEVICE_INVALID_ID) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Size blockNum = DIVIDE_ROUND_DOWN(size, BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);

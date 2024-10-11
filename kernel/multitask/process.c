@@ -1,6 +1,7 @@
 #include<multitask/process.h>
 
 #include<debug.h>
+#include<fs/fcntl.h>
 #include<fs/fsutil.h>
 #include<fs/fsSyscall.h>
 #include<kit/bit.h>
@@ -56,7 +57,7 @@ Process* process_init() {
     bitmap_initStruct(&_process_pidBitmap, PROCESS_MAXIMUM_PROCESS_NUM, &_process_pidBitmap);
     bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
 
-    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/stdout", FS_ENTRY_TYPE_DEVICE, &_process_stdoutFile) == RESULT_FAIL) {
+    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/stdout", FS_ENTRY_TYPE_DEVICE, &_process_stdoutFile, FCNTL_OPEN_WRITE_ONLY) != RESULT_SUCCESS) {
         return NULL;
     }
 

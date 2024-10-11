@@ -27,6 +27,7 @@ static void printLOGO();
 #include<system/memoryLayout.h>
 #include<memory/paging.h>
 #include<interrupt/IDT.h>
+#include<fs/fcntl.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsutil.h>
 #include<fs/fsEntry.h>
@@ -57,7 +58,7 @@ void kernelMain(SystemInfo* info) {
         debug_blowup("Boot magic not match");
     }
 
-    if (init_initKernel() == RESULT_FAIL) {
+    if (init_initKernel() != RESULT_SUCCESS) {
         debug_blowup("Initialization failed");
     }
 
@@ -144,7 +145,7 @@ void kernelMain(SystemInfo* info) {
         process_exit();
     }
 
-    int ret = usermode_exsecute("/bin/test");
+    int ret = usermode_execute("/bin/test");
     print_printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
     memory_free(arr1);
@@ -153,7 +154,7 @@ void kernelMain(SystemInfo* info) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess()->name);
 
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
+    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry, FCNTL_OPEN_READ_WRITE) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
         fsutil_fileWrite(&entry, "1145141919810", 14);
     }
 
@@ -179,7 +180,7 @@ void kernelMain(SystemInfo* info) {
 static void printLOGO() {
     char buffer[1024];
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, "/LOGO.txt", FS_ENTRY_TYPE_FILE, &entry) == RESULT_SUCCESS) {
+    if (fsutil_openfsEntry(rootFS->superBlock, "/LOGO.txt", FS_ENTRY_TYPE_FILE, &entry, FCNTL_OPEN_READ_ONLY) == RESULT_SUCCESS) {
         fsutil_fileSeek(&entry, 0, FSUTIL_FILE_SEEK_END);
         Size fileSize = fsutil_fileGetPointer(&entry);
         fsutil_fileSeek(&entry, 0, FSUTIL_FILE_SEEK_BEGIN);

@@ -16,6 +16,6 @@ Result usermode_init();
  * @param path Path to ELF program file, starts from root directory
  * @return int return value of user program, -1 if error happens
  */
-int usermode_exsecute(ConstCstring path);
+int usermode_execute(ConstCstring path);
 
 #endif // __USERMODE_USERMODE_H

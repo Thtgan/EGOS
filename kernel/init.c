@@ -66,7 +66,7 @@ Result init_initKernel() {
             print_printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
         }
 
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     print_printf(TERMINAL_LEVEL_DEBUG, "All Initializations passed\n");

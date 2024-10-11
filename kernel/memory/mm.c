@@ -27,7 +27,7 @@ MemoryManager* mm;
 
 Result mm_init() {
     if (_memoryManager.initialized) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     mm = &_memoryManager;
@@ -37,28 +37,28 @@ Result mm_init() {
 
     frameMetadata_initStruct(&mm->frameMetadata);
     FrameMetadataHeader* header = frameMetadata_addFrames(&mm->frameMetadata, (void*)(mm->accessibleBegin * PAGE_SIZE), mm->accessibleEnd - mm->accessibleBegin);
-    if (header == NULL || buddyFrameAllocator_initStruct(&_buddyFrameAllocator) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (header == NULL || buddyFrameAllocator_initStruct(&_buddyFrameAllocator) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
     mm->frameAllocator = &_buddyFrameAllocator.allocator;
 
-    if (frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
-    if (paging_init() == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (paging_init() != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
-    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
     heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
 
     presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
     heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
 

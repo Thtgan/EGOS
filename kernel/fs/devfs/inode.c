@@ -27,7 +27,7 @@ static iNodeOperations _devfs_iNodeOperations = {
 Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
     __DEVFSiNodeInfo* iNodeInfo = memory_allocate(sizeof(__DEVFSiNodeInfo));
     if (iNodeInfo == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
@@ -35,7 +35,7 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
     if (desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
         Device* device = device_getDevice(desc->device);
         if (device == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         iNode->sizeInBlock      = INFINITE;
@@ -68,7 +68,7 @@ static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
 
     Index32 vBlockEnd = iNode->sizeInBlock;
     if (*vBlockIndex + *n > vBlockEnd) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     __DEVFSiNodeInfo* iNodeInfo = (__DEVFSiNodeInfo*)iNode->specificInfo;
@@ -76,13 +76,13 @@ static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
     Index64 offsetInCluster = *vBlockIndex;
     Index32 current = iNodeInfo->firstBlock;
     if (current == INVALID_INDEX) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     DevFSblockChains* blockChains = (DevFSblockChains*)iNode->superBlock->specificInfo;
     current = devfs_blockChain_get(blockChains, current, offsetInCluster);
     if (current == INVALID_INDEX) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Size remain = *n;
@@ -101,7 +101,7 @@ static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
 
             Index32 next = blockChains->nextBlocks[current];
             if (next == INVALID_INDEX) {
-                return RESULT_FAIL;
+                return RESULT_ERROR;
             }
             current = next;
 
@@ -125,7 +125,7 @@ static Result __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
     if (newSizeInBlock < oldSizeInBlock) {
         Index32 tail = devfs_blockChain_get(blockChains, iNodeInfo->firstBlock, newSizeInBlock - 1);
         if (tail == INVALID_INDEX) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         Index32 cut = devfs_blockChain_cutChain(blockChains, tail);
@@ -135,7 +135,7 @@ static Result __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
         Index32 tail = devfs_blockChain_get(blockChains, iNodeInfo->firstBlock, iNode->sizeInBlock - 1);
 
         if (tail == INVALID_INDEX || freeBlockChain == INVALID_INDEX) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         devfs_blockChain_insertChain(blockChains, tail, freeBlockChain);

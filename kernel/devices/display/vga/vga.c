@@ -54,18 +54,18 @@ static DisplayOperations _vga_operations = {
 };
 
 Result vga_init() {
-    if (realmode_registerFuncs(&vgaRealmodeFuncs_begin, (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin, &vgaRealmodeFuncs_carryList, _vgaRealmodeFuncs_funcList, __VGA_REALMODE_FUNC_NUM, _vgaRealmodeFuncs_funcIndex) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (realmode_registerFuncs(&vgaRealmodeFuncs_begin, (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin, &vgaRealmodeFuncs_carryList, _vgaRealmodeFuncs_funcList, __VGA_REALMODE_FUNC_NUM, _vgaRealmodeFuncs_funcIndex) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
-    if (vgaPalettes_init() == RESULT_FAIL || vgaMode_init() == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (vgaPalettes_init() != RESULT_SUCCESS || vgaMode_init() != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     int currentLegacyMode = vgaMode_getCurrentLegacyMode();
     VGAmodeHeader* mode = vgaMode_searchModeFromLegacy(currentLegacyMode);
     if (mode == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     _vga_currentMode = mode;
@@ -90,8 +90,8 @@ void vga_dumpDisplayContext(DisplayContext* context) {
 }
 
 Result vga_switchMode(VGAmodeHeader* mode, bool legacy) {
-    if (vgaMode_switch(mode, legacy) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (vgaMode_switch(mode, legacy) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     _vga_currentMode = mode;

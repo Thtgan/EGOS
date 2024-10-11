@@ -10,13 +10,13 @@ static Result __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, Dis
 
 Volume* scanVolume(int drive) {
     DiskParams params;
-    if (readDiskParams(drive, &params) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (readDiskParams(drive, &params) == RESULT_ERROR) {
+        return NULL;
     }
 
     Volume* ret = bMalloc(sizeof(Volume));
 
-    if (ret == NULL || __doScanVolume(drive, 0, params.sectorNum, &params, NULL, ret) == RESULT_FAIL) {
+    if (ret == NULL || __doScanVolume(drive, 0, params.sectorNum, &params, NULL, ret) == RESULT_ERROR) {
         if (ret != NULL) {
             bFree(ret, sizeof(Volume));
         }
@@ -29,7 +29,7 @@ Volume* scanVolume(int drive) {
 
 Result rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n) {
     if (v == NULL || n > v->sectorNum) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return rawDiskReadSectors(v->drive, buffer, v->sectorBegin + begin, n);
@@ -37,7 +37,7 @@ Result rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n) {
 
 Result rawVolumeWriteSectors(Volume* v, const void* buffer, Index64 begin, Size n) {
     if (v == NULL || n > v->sectorNum) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     return rawDiskWriteSectors(v->drive, buffer, v->sectorBegin + begin, n);
@@ -71,8 +71,8 @@ static Result __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, Dis
     }
 
     void* buffer = bMalloc(params->bytePerSector);
-    if (buffer == NULL || rawDiskReadSectors(drive, buffer, sectorBegin, 1) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (buffer == NULL || rawDiskReadSectors(drive, buffer, sectorBegin, 1) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     if (*(Uint16*)(buffer + 0x1FE) == 0xAA55) {
@@ -86,12 +86,12 @@ static Result __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, Dis
             }
 
             Volume* subVolume = bMalloc(sizeof(Volume));
-            if (subVolume == NULL || __doScanVolume(drive, entry->sectorBegin, entry->sectorNum, params, ret, subVolume) == RESULT_FAIL) {
+            if (subVolume == NULL || __doScanVolume(drive, entry->sectorBegin, entry->sectorNum, params, ret, subVolume) == RESULT_ERROR) {
                 if (subVolume != NULL) {
                     bFree(subVolume, sizeof(Volume));
                 }
 
-                return RESULT_FAIL;
+                return RESULT_ERROR;
             }
             
             if (entry->driveArttribute == 0x80) {
@@ -105,8 +105,8 @@ static Result __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, Dis
 
     ret->flags          = flags;
 
-    if (openFileSystem(ret) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (openFileSystem(ret) == RESULT_ERROR) {
+        return RESULT_ERROR;
     }
 
     if (parent != NULL) {

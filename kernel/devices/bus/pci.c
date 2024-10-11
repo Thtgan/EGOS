@@ -51,7 +51,7 @@ static void __pci_probeBus(Uint8 bus) {
 
 static void __pci_probeDevice(Uint8 bus, Uint8 device) {
     Uint8 function = 0;
-    if (__pci_probeFunction(bus, device, function) == RESULT_FAIL) {
+    if (__pci_probeFunction(bus, device, function) != RESULT_SUCCESS) {
         return;
     }
 
@@ -62,7 +62,7 @@ static void __pci_probeDevice(Uint8 bus, Uint8 device) {
     }
 
     for (function = 1; function < PCI_MAX_FUNCTION_NUM; ++function) {
-        if (__pci_probeFunction(bus, device, function) == RESULT_FAIL) {
+        if (__pci_probeFunction(bus, device, function) != RESULT_SUCCESS) {
             break;
         }
     }
@@ -72,18 +72,18 @@ static Result __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
     Uint32 baseAddr = pci_buildAddr(bus, device, function, 0);
 
     PCIdevice tmpDevice;
-    if (__pci_readDevice(baseAddr, &tmpDevice) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (__pci_readDevice(baseAddr, &tmpDevice) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     PCIdevice* pciDevice = memory_allocate(sizeof(PCIdevice));
     if (pciDevice == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     memory_memcpy(pciDevice, &tmpDevice, sizeof(PCIdevice));
-    if (__pci_addDevice(pciDevice) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (__pci_addDevice(pciDevice) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     if (pciDevice->class == PCI_COMMON_HEADER_CLASS_CODE_BRIDGE && pciDevice->subClass == PCI_COMMON_HEADER_SUB_CALSS_PCI2PCI_BRIDGE) {
@@ -105,7 +105,7 @@ PCIdevice* pci_getDevice(Index32 index) {
 static Result __pci_readDevice(Uint32 baseAddr, PCIdevice* device) {
     Uint16 vendorID = PCI_HEADER_READ(baseAddr, PCIcommonHeader, vendorID);
     if (vendorID == PCI_COMMON_HEADER_INVALID_VENDOR_ID) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     device->baseAddr    = baseAddr;

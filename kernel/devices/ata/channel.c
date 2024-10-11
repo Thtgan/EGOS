@@ -12,14 +12,14 @@ Result ata_channel_reset(ATAchannel* channel) {
     ATA_DELAY_400NS(portBase);
 
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (channel->deviceSelect < 2) {
         ata_channel_selectDevice(channel, channel->deviceSelect);
 
         if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
     }
 

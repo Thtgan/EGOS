@@ -1,6 +1,7 @@
 #if !defined(__FS_FSUTIL_H)
 #define __FS_FSUTIL_H
 
+#include<fs/fcntl.h>
 #include<fs/fsEntry.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
@@ -47,10 +48,14 @@ Result fsutil_fileRead(File* file, void* buffer, Size n);
  */
 Result fsutil_fileWrite(File* file, const void* buffer, Size n);
 
-Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntryType type, fsEntry* entryOut);
+Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntryType type, fsEntry* entryOut, FCNTLopenFlags flags);
 
 Result fsutil_closefsEntry(fsEntry* entry);
 
-Result fsutil_lookupEntryDesc(Directory* directory, fsEntryIdentifier* identifier, fsEntryDesc* descOut, Size* entrySizeOut);
+Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, fsEntryType type, fsEntryDesc* descOut, Size* entrySizeOut);
+
+Result fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut);
+
+Result fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut);
 
 #endif // __FS_FSUTIL_H

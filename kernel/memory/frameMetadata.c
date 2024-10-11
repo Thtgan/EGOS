@@ -32,7 +32,7 @@ Uint32 frameMetadataUnit_unmarkChunk(FrameMetadataUnit* unit) {
 Result frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size n) {
     Size metadataPageNum = __FRAME_METADATA_PAGE_N(n);
     if (metadataPageNum >= n) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     linkedListNode_initStruct(&header->node);
@@ -68,7 +68,7 @@ FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* p, S
         }
     }
 
-    if (frameMetadataHeader_initStruct(newHeader, p, n) == RESULT_FAIL) {
+    if (frameMetadataHeader_initStruct(newHeader, p, n) != RESULT_SUCCESS) {
         return NULL;
     }
 

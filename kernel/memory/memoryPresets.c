@@ -87,8 +87,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
 Result memoryPreset_registerDefaultPresets(ExtraPageTableContext* context) {
     for (MemoryDefaultPresetType i = MEMORY_DEFAULT_PRESETS_TYPE_KERNEL; i < MEMORY_DEFAULT_PRESETS_TYPE_NUM; ++i) {
         MemoryPreset* preset = &__memoryPresets_defaultPresets[i];
-        if (extraPageTableContext_registerPreset(&mm->extraPageTableContext, preset) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (extraPageTableContext_registerPreset(&mm->extraPageTableContext, preset) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
 
         context->presetType2id[i] = preset->id;
@@ -113,7 +113,7 @@ static Result __memoryPresetsOperations_deepCopyEntry(PagingLevel level, Extende
 
     void* newExtendedTableFrames = extendedPageTable_allocateFrame();   //TODO: Allocate frames at low address for possible realmode switch back requirement
     if (newExtendedTableFrames == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = paging_convertAddressP2V(newExtendedTableFrames);
@@ -122,8 +122,8 @@ static Result __memoryPresetsOperations_deepCopyEntry(PagingLevel level, Extende
             continue;
         }
 
-        if (extendedPageTableRoot_copyEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (extendedPageTableRoot_copyEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
     }
 
@@ -148,7 +148,7 @@ static Result __memoryPresetsOperations_cowCopyEntry(PagingLevel level, Extended
     } else {
         void* newExtendedTableFrames = extendedPageTable_allocateFrame();
         if (newExtendedTableFrames == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = paging_convertAddressP2V(newExtendedTableFrames);
@@ -157,8 +157,8 @@ static Result __memoryPresetsOperations_cowCopyEntry(PagingLevel level, Extended
                 continue;
             }
 
-            if (__memoryPresetsOperations_cowCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i) == RESULT_FAIL) {
-                return RESULT_FAIL;
+            if (__memoryPresetsOperations_cowCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i) != RESULT_SUCCESS) {
+                return RESULT_ERROR;
             }
         }
 
@@ -170,7 +170,7 @@ static Result __memoryPresetsOperations_cowCopyEntry(PagingLevel level, Extended
 }
 
 static Result __memoryPresetsOperations_dummyFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
-    return RESULT_FAIL;
+    return RESULT_ERROR;
 }
 
 static Result __memoryPresetsOperations_cowFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
@@ -178,7 +178,7 @@ static Result __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Exten
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
     if (TEST_FLAGS_FAIL(handlerStackFrame->errorCode, PAGING_PAGE_FAULT_ERROR_CODE_FLAG_WR) || TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW) || !PAGING_IS_LEAF(level, *entry)) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *entry));
@@ -216,8 +216,8 @@ static Result __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, Exte
             continue;
         }
 
-        if (extendedPageTableRoot_releaseEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), subExtendedTable, i) == RESULT_FAIL) {
-            return RESULT_FAIL;
+        if (extendedPageTableRoot_releaseEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), subExtendedTable, i) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
         }
     }
 
@@ -248,8 +248,8 @@ static Result __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Exten
                 continue;
             }
 
-            if (__memoryPresetsOperations_cowReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i) == RESULT_FAIL) {
-                return RESULT_FAIL;
+            if (__memoryPresetsOperations_cowReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i) != RESULT_SUCCESS) {
+                return RESULT_ERROR;
             }
         }
         extendedPageTable_freeFrame(paging_convertAddressV2P(subExtendedTable));

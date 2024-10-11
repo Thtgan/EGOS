@@ -94,8 +94,8 @@ Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
 }
 
 Result __simpleScheduler_start(Scheduler* this, Process* initProcess) {
-    this->started = true;
     __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), initProcess, PROCESS_STATUS_RUNNING);
+    this->started = true;
 }
 
 void __simpleScheduler_tick(Scheduler* this) {
@@ -121,7 +121,7 @@ void __simpleScheduler_yield(Scheduler* this) {
 
 Result __simpleScheduler_addProcess(Scheduler* this, Process* process) {
     if (!this->started) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_READY);
     return RESULT_SUCCESS;
@@ -129,7 +129,7 @@ Result __simpleScheduler_addProcess(Scheduler* this, Process* process) {
 
 Result __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
     if (!this->started) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (process == scheduler_getCurrentProcess(this)) {
@@ -143,7 +143,7 @@ Result __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
 
 Result __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
     if (!this->started) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (process == scheduler_getCurrentProcess(this)) {
@@ -158,7 +158,7 @@ Result __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
 
 Result __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
     if (!this->started) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_READY);
@@ -189,7 +189,7 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
         return;
     }
 
-    if (process->status != PROCESS_STATUS_UNKNOWN && __simpleScheduler_removeProcessFromQueue(scheduler, process) == RESULT_FAIL) {
+    if (process->status != PROCESS_STATUS_UNKNOWN && __simpleScheduler_removeProcessFromQueue(scheduler, process) != RESULT_SUCCESS) {
         debug_blowup("Remove process from queue failed\n");
     }
 
@@ -240,5 +240,5 @@ static Result __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* schedu
 
     spinlock_unlock(&scheduler->queueLock);
 
-    return RESULT_FAIL;
+    return RESULT_ERROR;
 }

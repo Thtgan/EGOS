@@ -28,7 +28,7 @@ Result initE820(MemoryMap* mMap) {
         intn(0x15, &regs, &regs);
 
         if (TEST_FLAGS(regs.eflags, EFLAGS_CF)) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
     } while(regs.ebx != 0 && ++cnt < MEMORY_MAP_ENTRY_NUM);
 
@@ -64,7 +64,7 @@ Result E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, 
             *newEntry = NULL;
         }
 
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Uint32 originalBase = entry->base, originalLength = entry->length;
@@ -96,7 +96,7 @@ Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     MemoryMapEntry* nextEntry = entry + 1;
     if (index == mMap->entryNum - 1 || entry->type != nextEntry->type || entry->base + entry->length != nextEntry->base) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     Uint32 base1 = (Uint32)entry->base, length1 = (Uint32)entry->length, base2 = (Uint32)nextEntry->base, length2 = (Uint32)nextEntry->length;

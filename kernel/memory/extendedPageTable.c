@@ -32,8 +32,8 @@ Result extraPageTableContext_initStruct(ExtraPageTableContext* context) {
     memory_memset(context->presets, 0, sizeof(context->presets));
     memory_memset(context->presetType2id, 0, sizeof(context->presetType2id));
 
-    if (memoryPreset_registerDefaultPresets(context) == RESULT_FAIL) {
-        return RESULT_FAIL;
+    if (memoryPreset_registerDefaultPresets(context) != RESULT_SUCCESS) {
+        return RESULT_ERROR;
     }
 
     return RESULT_SUCCESS;
@@ -41,7 +41,7 @@ Result extraPageTableContext_initStruct(ExtraPageTableContext* context) {
 
 Result extraPageTableContext_registerPreset(ExtraPageTableContext* context, MemoryPreset* preset) {
     if (context->presetCnt == EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM - 1) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
     
     context->presets[context->presetCnt] = preset;
@@ -55,7 +55,7 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
     ExtendedPageTableRoot* ret = memory_allocate(sizeof(ExtendedPageTableRoot));
     void* frames = extendedPageTable_allocateFrame();
     if (frames == NULL) {
-        return RESULT_FAIL;
+        return NULL;
     }
 
     ret->context = source->context;
@@ -67,7 +67,7 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
             continue;
         }
 
-        if (extendedPageTableRoot_copyEntry(ret, PAGING_LEVEL_PML4, source->extendedTable, ret->extendedTable, i) == RESULT_FAIL) {
+        if (extendedPageTableRoot_copyEntry(ret, PAGING_LEVEL_PML4, source->extendedTable, ret->extendedTable, i) != RESULT_SUCCESS) {
             return NULL;
         }
     }
@@ -76,7 +76,7 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
 }
 
 void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
-    if (extendedPageTableRoot_erase(table, 0, 1ull << 52) == RESULT_FAIL) {
+    if (extendedPageTableRoot_erase(table, 0, 1ull << 52) != RESULT_SUCCESS) {
         return;
     }
     
@@ -90,13 +90,13 @@ void* __extendedPageTableRoot_getEntryMapTo(PagingEntry entry, PagingLevel level
 
 Result extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset) {
     if (extraPageTableContext_getPreset(root->context, preset->id) != preset) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     if (root->extendedTable == NULL) {
         void* frames = extendedPageTable_allocateFrame();
         if (frames == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
         root->extendedTable = paging_convertAddressP2V(frames);
         root->pPageTable = paging_convertAddressV2P(&root->extendedTable->table);
@@ -119,7 +119,7 @@ Result __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel l
 
         void* mapTo = __extendedPageTableRoot_getEntryMapTo(*entry, level, currentP);
         if (mapTo == NULL) {
-            return RESULT_FAIL;
+            return RESULT_ERROR;
         }
 
         *entry = BUILD_ENTRY_PAGING_TABLE(mapTo, preset->blankEntry);
@@ -127,8 +127,8 @@ Result __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel l
         MemoryPreset* realPreset = preset, * mixedPreset = extraPageTableContext_getDefaultPreset(root->context, MEMORY_DEFAULT_PRESETS_TYPE_MIXED);
         if (level > PAGING_LEVEL_PAGE_TABLE) {
             ExtendedPageTable* nextExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-            if (__extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset) == RESULT_FAIL) {
-                return RESULT_FAIL;
+            if (__extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset) != RESULT_SUCCESS) {
+                return RESULT_ERROR;
             }
 
             Uint16 entryNum = 0;    //TODO: Rework these logic
@@ -163,7 +163,7 @@ Result __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel l
         remainingN -= subSubN;
     }
 
-    return remainingN == 0 ? RESULT_SUCCESS : RESULT_FAIL;
+    return remainingN == 0 ? RESULT_SUCCESS : RESULT_ERROR;
 }
 
 void* __extendedPageTableRoot_getEntryMapTo(PagingEntry entry, PagingLevel level, Uintptr currentP) {
@@ -201,14 +201,14 @@ Result __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel 
             }
 
             if (IS_ALIGNED(currentV, span) && subSubN == spanN) {
-                if (extendedPageTableRoot_releaseEntry(root, level, currentTable, i) == RESULT_FAIL) {
-                    return RESULT_FAIL;
+                if (extendedPageTableRoot_releaseEntry(root, level, currentTable, i) != RESULT_SUCCESS) {
+                    return RESULT_ERROR;
                 }
             } else {
                 DEBUG_ASSERT_SILENT(level > PAGING_LEVEL_PAGE);
                 ExtendedPageTable* nextExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-                if (__extendedPageTableRoot_doErase(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, subSubN) == RESULT_FAIL) {
-                    return RESULT_FAIL;
+                if (__extendedPageTableRoot_doErase(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, subSubN) != RESULT_SUCCESS) {
+                    return RESULT_ERROR;
                 }
 
                 Uint16 entryNum = 0;    //TODO: Rework these logic
@@ -230,8 +230,8 @@ Result __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel 
                 }
 
                 if (entryNum == 0) {
-                    if (extendedPageTableRoot_releaseEntry(root, level, currentTable, i) == RESULT_FAIL) {
-                        return RESULT_FAIL;
+                    if (extendedPageTableRoot_releaseEntry(root, level, currentTable, i) != RESULT_SUCCESS) {
+                        return RESULT_ERROR;
                     }
                 } else if (!isMixed && lastPresetID != extraEntry->presetID) {
                     extraEntry->presetID = lastPresetID;
@@ -246,7 +246,7 @@ Result __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel 
         remainingN -= subSubN;
     }
 
-    return remainingN == 0 ? RESULT_SUCCESS : RESULT_FAIL;
+    return remainingN == 0 ? RESULT_SUCCESS : RESULT_ERROR;
 }
 
 MemoryPreset* extendedPageTableRoot_peek(ExtendedPageTableRoot* root, void* v) {

@@ -7,6 +7,8 @@
 
 #define FAT32_FS_ENTRY_DIRECTORY_ENTRY_SIZE 32
 
-Result fat32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);
+Result fat32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
+
+Result fat32_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args);
 
 #endif // __FS_FAT32_FSENTRY_H

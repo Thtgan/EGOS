@@ -72,7 +72,7 @@ Result KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet) 
     __KDtree_doNearestNeighbour(tree, tree->root, key, &closestNode, &minDistance2, 0);
 
     if (closestNode == NULL) {
-        return RESULT_FAIL;
+        return RESULT_ERROR;
     }
 
     *closestKeyRet = closestNode->key;

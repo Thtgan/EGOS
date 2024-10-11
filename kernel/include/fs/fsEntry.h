@@ -20,6 +20,7 @@ typedef fsEntry File;
 
 #include<cstring.h>
 #include<devices/device.h>
+#include<fs/fcntl.h>
 #include<fs/inode.h>
 #include<fs/superblock.h>
 #include<kit/bit.h>
@@ -90,11 +91,11 @@ typedef struct fsEntryDescInitArgs {
 //Real fs entry for process
 typedef struct fsEntry {    //TODO: Add RW lock
     fsEntryDesc*            desc;   //Meaning multiple fs entries can share single descriptor
+    FCNTLopenFlags          openFlags;  //These flags control the IO detail of the entry
     Index64                 pointer;
     iNode*                  iNode;
     fsEntryOperations*      operations;
     fsEntryDirOperations*   dirOperations;
-    SinglyLinkedList        mounted;
 } fsEntry;
 
 typedef struct fsEntryOperations {
@@ -113,6 +114,8 @@ Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstri
 
 void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier);
 
+Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src);
+
 Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut);
 
 Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args);
@@ -124,10 +127,16 @@ static inline Index64 fsEntry_rawSeek(fsEntry* entry, Size seekTo) {
 } 
 
 static inline Result fsEntry_rawRead(fsEntry* entry, void* buffer, Size n) {
+    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(entry->openFlags) == FCNTL_OPEN_WRITE_ONLY) {
+        return RESULT_FAIL;
+    }
     return entry->operations->read(entry, buffer, n);
 } 
 
 static inline Result fsEntry_rawWrite(fsEntry* entry, const void* buffer, Size n) {
+    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(entry->openFlags) == FCNTL_OPEN_READ_ONLY) {
+        return RESULT_FAIL;
+    }
     return entry->operations->write(entry, buffer, n);
 }
 
@@ -151,7 +160,7 @@ static inline Result fsEntry_rawDirUpdateEntry(fsEntry* directory, fsEntryIdenti
     return directory->dirOperations->updateEntry(directory, oldEntry, newEntry);
 }
 
-Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc);
+Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
 
 Result fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry);
 

@@ -1,5 +1,6 @@
 #include<fs/fsSyscall.h>
 
+#include<fs/fcntl.h>
 #include<fs/fsEntry.h>
 #include<fs/fsutil.h>
 #include<kit/types.h>
@@ -11,7 +12,7 @@ static int __syscall_read(int fileDescriptor, void* buffer, Size n);
 
 static int __syscall_write(int fileDescriptor, const void* buffer, Size n);
 
-static int __syscall_open(ConstCstring filename, Flags8 flags);
+static int __syscall_open(ConstCstring filename, FCNTLopenFlags flags);
 
 static int __syscall_close(int fileDescriptor);
 
@@ -26,7 +27,7 @@ Result fsSyscall_init() {
 
 static int __syscall_read(int fileDescriptor, void* buffer, Size n) {
     File* file = process_getFileFromSlot(scheduler_getCurrentProcess(), fileDescriptor);
-    if (file == NULL || fsutil_fileRead(file, buffer, n) == RESULT_FAIL) {
+    if (file == NULL || fsutil_fileRead(file, buffer, n) != RESULT_SUCCESS) {
         return -1;
     }
 
@@ -35,21 +36,21 @@ static int __syscall_read(int fileDescriptor, void* buffer, Size n) {
 
 static int __syscall_write(int fileDescriptor, const void* buffer, Size n) {
     File* file = process_getFileFromSlot(scheduler_getCurrentProcess(), fileDescriptor);
-    if (file == NULL || fsutil_fileWrite(file, buffer, n) == RESULT_FAIL) {
+    if (file == NULL || fsutil_fileWrite(file, buffer, n) != RESULT_SUCCESS) {
         return -1;
     }
 
     return 0;
 }
 
-static int __syscall_open(ConstCstring filename, Flags8 flags) {
+static int __syscall_open(ConstCstring filename, FCNTLopenFlags flags) {
     File* file = memory_allocate(sizeof(File));
     if (file == NULL) {
         return -1;
     }
 
     int ret = process_allocateFileSlot(scheduler_getCurrentProcess(), file);
-    if (ret == -1 || (fsutil_openfsEntry(rootFS->superBlock, filename, FS_ENTRY_TYPE_FILE, file) == RESULT_FAIL && fsutil_openfsEntry(rootFS->superBlock, filename, FS_ENTRY_TYPE_DEVICE, file) == RESULT_FAIL)) {
+    if (ret == -1 || (fsutil_openfsEntry(rootFS->superBlock, filename, FS_ENTRY_TYPE_FILE, file, flags) != RESULT_SUCCESS && fsutil_openfsEntry(rootFS->superBlock, filename, FS_ENTRY_TYPE_DEVICE, file, flags) != RESULT_SUCCESS)) {
         memory_free(file);
         return -1;
     }
@@ -63,7 +64,7 @@ static int __syscall_close(int fileDescriptor) {
         return -1;
     }
 
-    if (fsutil_closefsEntry(file) == RESULT_FAIL) {
+    if (fsutil_closefsEntry(file) != RESULT_SUCCESS) {
         return -1;
     }
 

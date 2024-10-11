@@ -56,18 +56,22 @@ static void __syscall_syscallHandler() {
     );
 
     register void* handler asm(MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_4_ALT)) = _syscallHandlers[registers->rax];
+    if (handler == NULL) {
+        registers->rax = (Uint64)-1;
+    } else {
+        asm volatile(
+            "mov %6, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_5) ";"
+            "mov %7, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_6) ";"
+            "call *%1;"
+            "mov %%rax, %0;"
+            : "=m"(registers->rax)
+            : "r"(handler),
+            "D"(registers->REGISTER_ARGUMENTS_1), "S"(registers->REGISTER_ARGUMENTS_2),
+            "d"(registers->REGISTER_ARGUMENTS_3), "c"(registers->REGISTER_ARGUMENTS_4_ALT),
+            "m"(registers->REGISTER_ARGUMENTS_5), "m"(registers->REGISTER_ARGUMENTS_6)
+        );
+    }
 
-    asm volatile(
-        "mov %6, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_5) ";"
-        "mov %7, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_6) ";"
-        "call *%1;"
-        "mov %%rax, %0;"
-        : "=m"(registers->rax)
-        : "r"(handler),
-        "D"(registers->REGISTER_ARGUMENTS_1), "S"(registers->REGISTER_ARGUMENTS_2),
-        "d"(registers->REGISTER_ARGUMENTS_3), "c"(registers->REGISTER_ARGUMENTS_4_ALT),
-        "m"(registers->REGISTER_ARGUMENTS_5), "m"(registers->REGISTER_ARGUMENTS_6)
-    );
 
     REGISTERS_RESTORE();
 
