@@ -46,13 +46,13 @@ Result usermode_init() {
 
 int usermode_execute(ConstCstring path) {  //TODO: Unstable code
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, path, FS_ENTRY_TYPE_FILE, &entry, FCNTL_OPEN_READ_ONLY) != RESULT_SUCCESS) {
+    if (fs_fileOpen(&entry, path, FCNTL_OPEN_READ_ONLY) != RESULT_SUCCESS) {
         return -1;
     }
 
     int ret = __usermode_doExecute(path, &entry);
 
-    fsutil_closefsEntry(&entry);
+    fs_fileClose(&entry);
 
     return ret;
 }

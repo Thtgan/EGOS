@@ -21,7 +21,7 @@ Index8 devfs_blockChain_get(DevFSblockChains* blockChains, Index8 chainFirst, In
     for (int i = 0; i < index; ++i) {
         ret = blockChains->nextBlocks[i];
         
-        if (ret == INVALID_INDEX) {
+        if (ret == (Index8)INVALID_INDEX) {
             return INVALID_INDEX;
         }
     }
@@ -34,7 +34,7 @@ Size devfs_blockChain_getChainLength(DevFSblockChains* blockChains, Index8 chain
 
     Index8 current = chainFirst;
     while (true) {
-        if (current == INVALID_INDEX) {
+        if (current == (Index8)INVALID_INDEX) {
             break;
         }
 
@@ -48,7 +48,7 @@ Size devfs_blockChain_getChainLength(DevFSblockChains* blockChains, Index8 chain
 Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length) {
     Index8 current = blockChains->firstFreeBlock, last = INVALID_INDEX;
     for (int i = 0; i < length; ++i) {
-        if (current == INVALID_INDEX) {
+        if (current == (Index8)INVALID_INDEX) {
             return INVALID_INDEX;
         }
 
@@ -59,13 +59,12 @@ Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length) {
     Index8 ret = blockChains->firstFreeBlock;
     blockChains->firstFreeBlock = current;
     blockChains->nextBlocks[last] = INVALID_INDEX;
-
     return ret;
 }
 
 void devfs_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst) {
     Index8 current = chainFirst, last = INVALID_INDEX;
-    while (current != INVALID_INDEX) {
+    while (current != (Index8)INVALID_INDEX) {
         last = current;
         current = blockChains->nextBlocks[current];
     }

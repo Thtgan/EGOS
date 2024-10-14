@@ -37,7 +37,8 @@ Result fat32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
     iNodeInfo->firstCluster     = DIVIDE_ROUND_DOWN(DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlockDevice->granularity) - info->dataBlockRange.begin, BPB->sectorPerCluster);
 
     iNode->signature            = INODE_SIGNATURE;
-    iNode->sizeInBlock          = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, superBlockDevice->granularity) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, superBlockDevice->granularity);
+    Index32 sizeInBlock = fat32_getClusterChainLength(info, iNodeInfo->firstCluster) * BPB->sectorPerCluster;
+    iNode->sizeInBlock          = sizeInBlock;
     iNode->superBlock           = superBlock;
     iNode->openCnt              = 1;
     iNode->operations           = &_fat32_iNodeOperations;

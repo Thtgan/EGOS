@@ -33,8 +33,18 @@ typedef fsEntry File;
 typedef struct fsEntryIdentifier {
     String      name;
     String      parentPath;
-    fsEntryType type;
+    bool        isDirectory;
 } fsEntryIdentifier;
+
+Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory);
+
+Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory);
+
+void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier);
+
+Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src);
+
+Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut);
 
 typedef struct fsEntryDirOperations {
     //Pointer points to current entry
@@ -52,6 +62,7 @@ typedef struct fsEntryDirOperations {
 //Gives full description of a fs entry
 typedef struct fsEntryDesc {
     fsEntryIdentifier   identifier; //One descriptor, one identifier
+    fsEntryType         type;
 
     union {
         Range           dataRange;  //Position and size on device (In byte)
@@ -77,7 +88,6 @@ typedef struct fsEntryDescInitArgs {
     ConstCstring    name;
     ConstCstring    parentPath;
     fsEntryType     type;
-    bool            isDevice;
     union {
         Range       dataRange;
         DeviceID    device;
@@ -87,6 +97,10 @@ typedef struct fsEntryDescInitArgs {
     Uint64          lastAccessTime;
     Uint64          lastModifyTime;
 } fsEntryDescInitArgs;
+
+Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args);
+
+void fsEntryDesc_clearStruct(fsEntryDesc* desc);
 
 //Real fs entry for process
 typedef struct fsEntry {    //TODO: Add RW lock
@@ -108,35 +122,15 @@ typedef struct fsEntryOperations {
     Result  (*resize)(fsEntry* entry, Size newSizeInByte);
 } fsEntryOperations;
 
-Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, fsEntryType type);
-
-Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, fsEntryType type);
-
-void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier);
-
-Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src);
-
-Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut);
-
-Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args);
-
-void fsEntryDesc_clearStruct(fsEntryDesc* desc);
-
 static inline Index64 fsEntry_rawSeek(fsEntry* entry, Size seekTo) {
     return entry->operations->seek(entry, seekTo);
 } 
 
 static inline Result fsEntry_rawRead(fsEntry* entry, void* buffer, Size n) {
-    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(entry->openFlags) == FCNTL_OPEN_WRITE_ONLY) {
-        return RESULT_FAIL;
-    }
     return entry->operations->read(entry, buffer, n);
 } 
 
 static inline Result fsEntry_rawWrite(fsEntry* entry, const void* buffer, Size n) {
-    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(entry->openFlags) == FCNTL_OPEN_READ_ONLY) {
-        return RESULT_FAIL;
-    }
     return entry->operations->write(entry, buffer, n);
 }
 

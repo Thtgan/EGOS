@@ -6,6 +6,7 @@ typedef struct FAT32info FAT32info;
 
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
+#include<fs/superblock.h>
 #include<kit/types.h>
 
 typedef struct FAT32BPB {
@@ -57,5 +58,7 @@ Result fat32_checkType(BlockDevice* blockDevice);
 Result fat32_open(FS* fs, BlockDevice* blockDevice);
 
 Result fat32_close(FS* fs);
+
+Result fat32_superBlock_flush(SuperBlock* superBlock);
 
 #endif // __FS_FAT32_FAT32_H

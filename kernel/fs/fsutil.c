@@ -3,6 +3,7 @@
 #include<cstring.h>
 #include<error.h>
 #include<fs/fcntl.h>
+#include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
@@ -10,15 +11,15 @@
 #include<memory/memory.h>
 #include<time/time.h>
 
-Result fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
+Index64 fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
     Index64 base = file->pointer;
     switch (begin) {
-        case FSUTIL_FILE_SEEK_BEGIN:
+        case FS_FILE_SEEK_BEGIN:
             base = 0;
             break;
-        case FSUTIL_FILE_SEEK_CURRENT:
+        case FS_FILE_SEEK_CURRENT:
             break;
-        case FSUTIL_FILE_SEEK_END:
+        case FS_FILE_SEEK_END:
             base = file->desc->dataRange.length;
             break;
         default:
@@ -28,14 +29,14 @@ Result fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
 
     if ((Int64)base < 0 || base > file->desc->dataRange.length) {
         ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
-        return RESULT_ERROR;
+        return INVALID_INDEX;
     }
 
     if (fsEntry_rawSeek(file, base) == INVALID_INDEX) {
-        return RESULT_ERROR;
+        return INVALID_INDEX;
     }
 
-    return RESULT_SUCCESS;
+    return file->pointer;
 }
 
 Index64 fsutil_fileGetPointer(File* file) {
@@ -43,34 +44,50 @@ Index64 fsutil_fileGetPointer(File* file) {
 }
 
 Result fsutil_fileRead(File* file, void* buffer, Size n) {
+    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->openFlags) == FCNTL_OPEN_WRITE_ONLY) {
+        return RESULT_FAIL;
+    }
+
     if (fsEntry_rawRead(file, buffer, n) != RESULT_SUCCESS || fsEntry_rawSeek(file, file->pointer + n) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
 
-    Timestamp timestamp;
-    time_getTimestamp(&timestamp);
+    if (TEST_FLAGS_FAIL(file->openFlags, FCNTL_OPEN_NOATIME)) {
+        Timestamp timestamp;
+        time_getTimestamp(&timestamp);
 
-    file->desc->lastAccessTime = timestamp.second;
+        file->desc->lastAccessTime = timestamp.second;
+    }
 
     return RESULT_SUCCESS;
 }    
 
 Result fsutil_fileWrite(File* file, const void* buffer, Size n) {
-    if (fsEntry_rawWrite(file, buffer, n) != RESULT_SUCCESS || fsEntry_rawSeek(file, file->pointer + n) == INVALID_INDEX) {
+    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->openFlags) == FCNTL_OPEN_READ_ONLY) {
+        return RESULT_FAIL;
+    }
+
+    if (TEST_FLAGS(file->openFlags, FCNTL_OPEN_APPEND)) {
+        fsutil_fileSeek(file, 0, FS_FILE_SEEK_END);
+    }
+
+    if (fsEntry_rawWrite(file, buffer, n) != RESULT_SUCCESS || fsutil_fileSeek(file, n, FS_FILE_SEEK_CURRENT) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
 
-    Timestamp timestamp;
-    time_getTimestamp(&timestamp);
+    if (TEST_FLAGS_FAIL(file->openFlags, FCNTL_OPEN_NOATIME)) {
+        Timestamp timestamp;
+        time_getTimestamp(&timestamp);
 
-    file->desc->lastAccessTime = file->desc->lastModifyTime = timestamp.second;
+        file->desc->lastAccessTime = timestamp.second;
+    }
 
     return RESULT_SUCCESS;
 }
 
-Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntryType type, fsEntry* entryOut, FCNTLopenFlags flags) {
+Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags) {
     fsEntryIdentifier identifier;
-    if (fsEntryIdentifier_initStruct(&identifier, path, type) != RESULT_SUCCESS) {
+    if (fsEntryIdentifier_initStruct(&identifier, path, TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY)) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -83,7 +100,7 @@ Result fsutil_closefsEntry(fsEntry* entry) {
     return superBlock_closefsEntry(entry);
 }
 
-Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, fsEntryType type, fsEntryDesc* descOut, Size* entrySizeOut) {
+Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut) {
     fsEntryDesc tmpDesc;
     Size entrySize;
     Result res = RESULT_ERROR;
@@ -93,7 +110,7 @@ Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, fsEntryTy
             return RESULT_FAIL;
         }
 
-        if (cstring_strcmp(name, tmpDesc.identifier.name.data) == 0 && type == tmpDesc.identifier.type) {
+        if (cstring_strcmp(name, tmpDesc.identifier.name.data) == 0 && isDirectory == tmpDesc.identifier.isDirectory) {
             if (descOut != NULL) {
                 memory_memcpy(descOut, &tmpDesc, sizeof(fsEntryDesc));
             }
@@ -144,7 +161,7 @@ Result fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* i
     if (res == RESULT_ERROR) {
         return RESULT_ERROR;
     } else {
-        fsEntryIdentifier_initStruct(identifierOut, fullPath.data, identifier->type);
+        fsEntryIdentifier_initStruct(identifierOut, fullPath.data, identifier->isDirectory);
         *superBlockOut = currentSuperBlock;
     }
     string_clearStruct(&fullPath);
@@ -186,14 +203,14 @@ Result fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* id
         ) {
             return RESULT_ERROR;
         }
-        tmpIdentifier.type = *next == '\0' ? identifier->type : FS_ENTRY_TYPE_DIRECTORY;
+        tmpIdentifier.isDirectory = *next == '\0' ? identifier->isDirectory : true;
 
-        if (superBlock_rawOpenfsEntry(superBlock, &currentDirectory, &currentEntryDesc, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+        if (superBlock_rawOpenfsEntry(superBlock, &currentDirectory, &currentEntryDesc, FCNTL_OPEN_FILE_DEFAULT_FLAGS) != RESULT_SUCCESS) {
             return RESULT_ERROR;
         }
 
         Result lookupRes;
-        if ((lookupRes = fsutil_lookupEntryDesc(&currentDirectory, tmpIdentifier.name.data, tmpIdentifier.type, &nextEntryDesc, NULL)) == RESULT_ERROR) {
+        if ((lookupRes = fsutil_lookupEntryDesc(&currentDirectory, tmpIdentifier.name.data, tmpIdentifier.isDirectory, &nextEntryDesc, NULL)) == RESULT_ERROR) {
             return RESULT_ERROR;
         }
 

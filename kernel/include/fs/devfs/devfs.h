@@ -22,4 +22,6 @@ Result devfs_open(FS* fs, BlockDevice* blockDevice);
 
 Result devfs_close(FS* fs);
 
+Result devfs_superBlock_flush(SuperBlock* superBlock);
+
 #endif // __FS_DEVFS_DEVFS_H

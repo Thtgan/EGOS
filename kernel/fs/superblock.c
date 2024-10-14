@@ -46,25 +46,26 @@ Result superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* iden
             }
 
             Result seekRes;
-            if ((seekRes = fsutil_seekLocalFSentryDesc(finalSuperBlock, &finalIdentifier, &desc)) == RESULT_ERROR) {
+            if ((seekRes = fsutil_seekLocalFSentryDesc(finalSuperBlock, &finalIdentifier, &desc)) == RESULT_SUCCESS) {
+                hashTable_insert(&superBlock->fsEntryDescs, key, &desc->descNode);
+            } else {
                 memory_free(desc);
-                return RESULT_ERROR;
-            }
-
-            fsEntryIdentifier_clearStruct(&finalIdentifier);
-            hashTable_insert(&superBlock->fsEntryDescs, key, &desc->descNode);
-
-            if (seekRes == RESULT_FAIL) {
-                ret = RESULT_FAIL;
+                desc = NULL;
+                finalSuperBlock = NULL;
+                ret = seekRes;
             }
         } else {
             desc = HOST_POINTER(found, fsEntryDesc, descNode);
         }
+
+        fsEntryIdentifier_clearStruct(&finalIdentifier);
     }
 
-    ++desc->descReferCnt;
-    *descOut = desc;
-    *finalSuperBlockOut = finalSuperBlock;
+    if (ret == RESULT_SUCCESS) {
+        ++desc->descReferCnt;
+        *descOut = desc;
+        *finalSuperBlockOut = finalSuperBlock;
+    }
 
     return ret;
 }
@@ -100,13 +101,65 @@ Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identif
     SuperBlock* finalSuperBlock = NULL;
     fsEntryDesc* desc = NULL;
     Result getRes;
-    if ((getRes = superBlock_getfsEntryDesc(superBlock, identifier, &finalSuperBlock, &desc)) != RESULT_SUCCESS) {
+    if ((getRes = superBlock_getfsEntryDesc(superBlock, identifier, &finalSuperBlock, &desc)) == RESULT_ERROR) {
         return RESULT_ERROR;
+    }
+
+    if (TEST_FLAGS(flags, FCNTL_OPEN_EXCL) && TEST_FLAGS_FAIL(flags, FCNTL_OPEN_CREAT)) {
+        return RESULT_FAIL;
+    }
+
+    if (getRes == RESULT_FAIL) { //Not exist
+        if (TEST_FLAGS_FAIL(flags, FCNTL_OPEN_CREAT)) {
+            return RESULT_FAIL;
+        }
+
+        fsEntryIdentifier directoryIdentifier;
+        if (fsEntryIdentifier_getParent(identifier, &directoryIdentifier) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+
+        Directory directory;
+        if (superBlock_openfsEntry(superBlock, &directoryIdentifier, &directory, FCNTL_OPEN_FILE_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+
+        fsEntryDesc newDesc;
+        if (superBlock_rawCreate(superBlock, &newDesc, identifier->name.data, identifier->parentPath.data, FS_ENTRY_TYPE_FILE, DEVICE_INVALID_ID, EMPTY_FLAGS) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+
+        if (fsEntry_rawDirAddEntry(&directory, &newDesc) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+
+        fsEntryDesc_clearStruct(&newDesc);
+        if (superBlock_closefsEntry(&directory) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+
+        if (superBlock_rawFlush(superBlock) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+        
+        if (superBlock_getfsEntryDesc(superBlock, identifier, &finalSuperBlock, &desc) != RESULT_SUCCESS) {
+            return RESULT_ERROR;
+        }
+    } else {
+        if (TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY) && desc->type != FS_ENTRY_TYPE_DIRECTORY) {
+            return RESULT_FAIL;
+        }
+
+        if (TEST_FLAGS(flags, FCNTL_OPEN_EXCL)) {
+            return RESULT_FAIL;
+        }
     }
 
     Result ret = superBlock_rawOpenfsEntry(finalSuperBlock, entryOut, desc, flags);
     if (ret != RESULT_SUCCESS) {
         superBlock_releasefsEntryDesc(finalSuperBlock, desc);  //TODO: What if release failed?
+    } else if (TEST_FLAGS(flags, FCNTL_OPEN_TRUNC)) {
+        ret = fsEntry_genericResize(entryOut, 0);
     }
 
     return ret;
@@ -116,7 +169,7 @@ Result superBlock_closefsEntry(fsEntry* entry) {
     SuperBlock* superBlock = entry->iNode->superBlock;
     fsEntryIdentifier* identifier = &entry->desc->identifier;
     SuperBlock* finalSuperBlock = superBlock;
-    if (identifier->type != FS_ENTRY_TYPE_DIRECTORY) { //TODO: Move directory update to somewhere else
+    if (!identifier->isDirectory) { //TODO: Move directory update to somewhere else
         fsEntryIdentifier parentDirIdentifier;
         if (fsEntryIdentifier_getParent(identifier, &parentDirIdentifier) != RESULT_SUCCESS) {
             return RESULT_ERROR;
@@ -130,7 +183,7 @@ Result superBlock_closefsEntry(fsEntry* entry) {
         fsEntryIdentifier_clearStruct(&parentDirIdentifier);
 
         fsEntry parentEntry;
-        if (superBlock_rawOpenfsEntry(finalSuperBlock, &parentEntry, parentEntryDesc, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+        if (superBlock_rawOpenfsEntry(finalSuperBlock, &parentEntry, parentEntryDesc, FCNTL_OPEN_FILE_DEFAULT_FLAGS) != RESULT_SUCCESS) {
             return RESULT_ERROR;
         }
 

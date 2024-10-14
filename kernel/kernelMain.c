@@ -87,6 +87,14 @@ void kernelMain(SystemInfo* info) {
 
     printLOGO();
 
+    File file;
+    fs_fileOpen(&file, "/a.txt", FCNTL_OPEN_READ_WRITE | FCNTL_OPEN_CREAT);
+    fs_fileSeek(&file, FS_FILE_SEEK_BEGIN, 0);
+    for (int i = 0; i < 64; ++i) {
+        fs_fileWrite(&file, "TEST", 4);
+    }
+    fs_fileClose(&file);
+
     Uint32 pciDeviceNum = pci_getDeviceNum();
     print_printf(TERMINAL_LEVEL_OUTPUT, "%u PCI devices found\n", pciDeviceNum);
     if (pciDeviceNum != 0) {
@@ -154,8 +162,8 @@ void kernelMain(SystemInfo* info) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess()->name);
 
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/null", FS_ENTRY_TYPE_DEVICE, &entry, FCNTL_OPEN_READ_WRITE) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
-        fsutil_fileWrite(&entry, "1145141919810", 14);
+    if (fs_fileOpen(&entry, "/dev/null", FCNTL_OPEN_READ_WRITE) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
+        fs_fileWrite(&entry, "1145141919810", 14);
     }
 
     Timer timer1, timer2;
@@ -180,12 +188,12 @@ void kernelMain(SystemInfo* info) {
 static void printLOGO() {
     char buffer[1024];
     fsEntry entry;
-    if (fsutil_openfsEntry(rootFS->superBlock, "/LOGO.txt", FS_ENTRY_TYPE_FILE, &entry, FCNTL_OPEN_READ_ONLY) == RESULT_SUCCESS) {
-        fsutil_fileSeek(&entry, 0, FSUTIL_FILE_SEEK_END);
-        Size fileSize = fsutil_fileGetPointer(&entry);
-        fsutil_fileSeek(&entry, 0, FSUTIL_FILE_SEEK_BEGIN);
+    if (fs_fileOpen(&entry, "/LOGO.txt", FCNTL_OPEN_READ_ONLY) == RESULT_SUCCESS) {
+        fs_fileSeek(&entry, 0, FS_FILE_SEEK_END);
+        Size fileSize = fsutil_fileGetPointer(&entry);  //TODO: Dont use fsutil
+        fs_fileSeek(&entry, 0, FS_FILE_SEEK_BEGIN);
 
-        if (fsutil_fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
+        if (fs_fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
             buffer[fileSize] = '\0';
             print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
@@ -196,7 +204,7 @@ static void printLOGO() {
         print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastModifyTime);
 
         BlockDevice* device = entry.iNode->superBlock->blockDevice;
-        fsutil_closefsEntry(&entry);
+        fs_fileClose(&entry);
         blockDevice_flush(device);
     }
 }

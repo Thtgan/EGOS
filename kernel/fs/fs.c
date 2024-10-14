@@ -7,7 +7,7 @@
 #include<fs/devfs/devfs.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsEntry.h>
-#include<fs/fsSyscall.h>
+#include<fs/fsutil.h>
 #include<kernel.h>
 #include<kit/util.h>
 #include<memory/paging.h>
@@ -102,4 +102,24 @@ Result fs_open(FS* fs, BlockDevice* device) {
 
 Result fs_close(FS* fs) {
     return _supports[fs->type].close(fs);
+}
+
+Result fs_fileRead(File* file, void* buffer, Size n) {
+    return fsutil_fileRead(file, buffer, n);
+}
+
+Result fs_fileWrite(File* file, const void* buffer, Size n) {
+    return fsutil_fileWrite(file, buffer, n);
+}
+
+Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
+    return fsutil_fileSeek(file, offset, begin);
+}
+
+Result fs_fileOpen(File* file, ConstCstring filename, FCNTLopenFlags flags) {
+    return fsutil_openfsEntry(rootFS->superBlock, filename, file, flags);
+}
+
+Result fs_fileClose(File* file) {
+    return fsutil_closefsEntry(file);
 }

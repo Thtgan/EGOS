@@ -18,6 +18,7 @@ static SuperBlockOperations __devfs_superBlockOperations = {
     .openfsEntry    = devfs_fsEntry_open,
     .closefsEntry   = fsEntry_genericClose,
     .create         = devfs_fsEntry_create,
+    .flush          = devfs_superBlock_flush,
     .mount          = NULL,
     .unmount        = NULL
 };
@@ -93,5 +94,9 @@ Result devfs_open(FS* fs, BlockDevice* blockDevice) {
 Result devfs_close(FS* fs) {
     _devfs_opened = false;
 
+    return RESULT_SUCCESS;
+}
+
+Result devfs_superBlock_flush(SuperBlock* superBlock) {
     return RESULT_SUCCESS;
 }

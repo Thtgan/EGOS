@@ -3,8 +3,8 @@
 #include<algorithms.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<error.h>
+#include<fs/fs.h>
 #include<fs/fsEntry.h>
-#include<fs/fsutil.h>
 #include<kit/bit.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
@@ -14,11 +14,11 @@
 #include<system/pageTable.h>
 
 Result elf_readELF64Header(File* file, ELF64Header* header) {
-    if (fsutil_fileSeek(file, 0, FSUTIL_FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fs_fileSeek(file, 0, FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
 
-    if (fsutil_fileRead(file, header, sizeof(ELF64Header)) != RESULT_SUCCESS) {
+    if (fs_fileRead(file, header, sizeof(ELF64Header)) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -63,11 +63,11 @@ Result elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64Progr
         return RESULT_ERROR;
     }
 
-    if (fsutil_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FSUTIL_FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fs_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
 
-    if (fsutil_fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) != RESULT_SUCCESS) {
+    if (fs_fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -112,7 +112,7 @@ Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         memoryRemain = programHeader->segmentSizeInMemory;
 
     ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess()->context.extendedTable;
-    if (fsutil_fileSeek(file, fileBegin, FSUTIL_FILE_SEEK_BEGIN) == INVALID_INDEX) {
+    if (fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
 
@@ -131,7 +131,7 @@ Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
         Size readN = algorithms_min64(readRemain, to - from);
         if (readN > 0) {
-            if (fsutil_fileRead(file, (void*)from, readN) != RESULT_SUCCESS) {
+            if (fs_fileRead(file, (void*)from, readN) != RESULT_SUCCESS) {
                 return RESULT_ERROR;
             }
             readRemain -= readN;

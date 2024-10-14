@@ -87,7 +87,7 @@ Result fat32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     }
 
     entry->operations = &_fat32_fsEntryOperations;
-    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
+    if (entry->desc->type == FS_ENTRY_TYPE_DIRECTORY) {
         entry->dirOperations = &_fat32_fsEntryDirOperations;
         
         Size directoryDataSize = 0, entrySize;
@@ -113,7 +113,7 @@ Result fat32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     return RESULT_SUCCESS;
 }
 
-Result fat32_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args) {
+Result fat32_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags) {
     FAT32info* info = (FAT32info*)superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
 
@@ -123,12 +123,25 @@ Result fat32_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntr
     }
 
     Device* device = &superBlock->blockDevice->device;
-    args->dataRange = RANGE(newCluster * BPB->sectorPerCluster * POWER_2(device->granularity), BPB->sectorPerCluster * POWER_2(device->granularity));
     Timestamp timestamp;
     time_getTimestamp(&timestamp);
-    args->createTime = args->lastAccessTime = args->lastModifyTime = timestamp.second;
+    fsEntryDescInitArgs args = {
+        .name           = name,
+        .parentPath     = parentPath,
+        .type           = type,
+        .flags          = flags,
+        .createTime     = timestamp.second,
+        .lastAccessTime = timestamp.second,
+        .lastModifyTime = timestamp.second
+    };
 
-    fsEntryDesc_initStruct(descOut, args);
+    if (type == FS_ENTRY_TYPE_DEVICE) {
+        args.device     = deviceID;
+    } else {
+        args.dataRange  = RANGE((newCluster * BPB->sectorPerCluster + info->dataBlockRange.begin) * POWER_2(device->granularity), 0);
+    }
+
+    fsEntryDesc_initStruct(descOut, &args);
 
     return RESULT_SUCCESS;
 }
@@ -176,7 +189,6 @@ static Result __fat32_fsEntry_doReadEntry(fsEntry* directory, fsEntryDesc* child
                 .name       = "",
                 .parentPath = directoryPath->data,
                 .type       = FS_ENTRY_TYPE_DUMMY,
-                .isDevice   = false,
                 .dataRange  = RANGE(FS_ENTRY_INVALID_POSITION, FS_ENTRY_INVALID_SIZE),
                 .flags      = EMPTY_FLAGS
             };
@@ -246,14 +258,14 @@ static Result __fat32_fsEntry_doReadEntry(fsEntry* directory, fsEntryDesc* child
                 }
             }
         }
-        nameBuffer[nameLength]      = '\0';
+        nameBuffer[nameLength]  = '\0';
 
-        SuperBlock* superBlock      = directory->iNode->superBlock;
-        FAT32info* info             = (FAT32info*)superBlock->specificInfo;
-        FAT32BPB* BPB               = info->BPB;
+        SuperBlock* superBlock  = directory->iNode->superBlock;
+        FAT32info* info         = (FAT32info*)superBlock->specificInfo;
+        FAT32BPB* BPB           = info->BPB;
 
-        Index32 clusterBegin        = ((Uint32)directoryEntry->clusterBeginHigh << 16) | directoryEntry->clusterBeginLow;
-        fsEntryType type    = TEST_FLAGS(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
+        Index32 clusterBegin    = ((Uint32)directoryEntry->clusterBeginHigh << 16) | directoryEntry->clusterBeginLow;
+        fsEntryType type        = TEST_FLAGS(directoryEntry->attribute, __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
 
         Uint64 createTime, lastAccessTime, lastModifyTime;
         RealTime realTime;
@@ -278,7 +290,6 @@ static Result __fat32_fsEntry_doReadEntry(fsEntry* directory, fsEntryDesc* child
             .name           = nameBuffer,
             .parentPath     = directoryPath->data,
             .type           = type,
-            .isDevice       = false,
             .dataRange      = RANGE(
                 (clusterBegin * BPB->sectorPerCluster + info->dataBlockRange.begin) << superBlockDevice->granularity,
                 type == FS_ENTRY_TYPE_FILE ? directoryEntry->size : ((fat32_getClusterChainLength(info, clusterBegin) * BPB->sectorPerCluster) << superBlockDevice->granularity)
@@ -333,7 +344,7 @@ static Result __fat32_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToA
 
 static Result __fat32_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier* childToRemove) {
     Size oldDirectoryEntrySize;
-    if (fsutil_lookupEntryDesc(directory, childToRemove->name.data, childToRemove->type, NULL, &oldDirectoryEntrySize) != RESULT_SUCCESS) {
+    if (fsutil_lookupEntryDesc(directory, childToRemove->name.data, childToRemove->isDirectory, NULL, &oldDirectoryEntrySize) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -358,7 +369,7 @@ static Result __fat32_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
 
 static Result __fat32_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild) {
     Size oldDirectoryEntrySize;
-    if (fsutil_lookupEntryDesc(directory, oldChild->name.data, oldChild->type, NULL, &oldDirectoryEntrySize) != RESULT_SUCCESS) {
+    if (fsutil_lookupEntryDesc(directory, oldChild->name.data, oldChild->isDirectory, NULL, &oldDirectoryEntrySize) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -444,7 +455,7 @@ static Result __fat32_fsEntry_descToDirectoryEntry(FAT32info* info, fsEntryDesc*
 
     SET_FLAG_BACK(
         directoryEntry->attribute, 
-        desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY ? __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_ARCHIVE
+        desc->type == FS_ENTRY_TYPE_DIRECTORY ? __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_ARCHIVE
     );
 
     directoryEntry->reserved            = 0;

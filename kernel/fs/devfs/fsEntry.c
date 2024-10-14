@@ -68,13 +68,13 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     }
 
     entry->operations = &_devfs_fsEntryOperations;
-    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+    if (entry->desc->type == FS_ENTRY_TYPE_DEVICE) {
         Device* device = device_getDevice(desc->device);
         if (device == NULL) {
             return RESULT_ERROR;
         }
     } else {
-        if (entry->desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY) {
+        if (entry->desc->type == FS_ENTRY_TYPE_DIRECTORY) {
             entry->dirOperations = &_devfs_fsEntryDirOperations;
         }
     }
@@ -82,7 +82,7 @@ Result devfs_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* d
     return RESULT_SUCCESS;
 }
 
-Result devfs_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args) {
+Result devfs_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags) {
     DevFSblockChains* chains = &((DEVFSspecificInfo*)superBlock->specificInfo)->chains;
     Uint64 newBlock = devfs_blockChain_allocChain(chains, 1);
     if (newBlock == INVALID_INDEX) {
@@ -90,12 +90,25 @@ Result devfs_fsEntry_create(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntr
     }
 
     Device* device = &superBlock->blockDevice->device;
-    args->dataRange = RANGE(newBlock * POWER_2(device->granularity), POWER_2(device->granularity));
     Timestamp timestamp;
     time_getTimestamp(&timestamp);
-    args->createTime = args->lastAccessTime = args->lastModifyTime = timestamp.second;
+    fsEntryDescInitArgs args = {
+        .name           = name,
+        .parentPath     = parentPath,
+        .type           = type,
+        .flags          = flags,
+        .createTime     = timestamp.second,
+        .lastAccessTime = timestamp.second,
+        .lastModifyTime = timestamp.second
+    };
 
-    fsEntryDesc_initStruct(descOut, args);
+    if (type == FS_ENTRY_TYPE_DEVICE) {
+        args.device     = deviceID;
+    } else {
+        args.dataRange  = RANGE(newBlock * POWER_2(device->granularity), 0);
+    }
+
+    fsEntryDesc_initStruct(descOut, &args);
 
     return RESULT_SUCCESS;
 }
@@ -112,7 +125,6 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
         .name = "",
         .parentPath = "",
         .type = FS_ENTRY_TYPE_DIRECTORY,
-        .isDevice = false,
         .dataRange = RANGE(rootDirBegin * POWER_2(device->granularity), sizeof(__DevFSdirectoryEntry)),
         .flags = EMPTY_FLAGS,
         .createTime = 0,
@@ -122,8 +134,8 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
 
     fsEntryDesc_initStruct(superBlock->rootDirDesc, &args);
 
-    Directory rootDir;
-    if (fsutil_openfsEntry(superBlock, "/", FS_ENTRY_TYPE_DIRECTORY, &rootDir, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+    Directory rootDir;  //Not closing to keep iNode in buffer
+    if (fsutil_openfsEntry(superBlock, "/", &rootDir, FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -144,7 +156,7 @@ Result devfs_fsEntry_buildRootDir(SuperBlock* superBlock) {
 
 Result devfs_fsEntry_initRootDir(SuperBlock* superBlock) {
     Directory rootDir;
-    if (fsutil_openfsEntry(superBlock, "/", FS_ENTRY_TYPE_DIRECTORY, &rootDir, FCNTL_OPEN_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+    if (fsutil_openfsEntry(superBlock, "/", &rootDir, FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -185,7 +197,6 @@ static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* dir
             .name = "",
             .parentPath = "",
             .type = FS_ENTRY_TYPE_DUMMY,
-            .isDevice = false,
             .dataRange = RANGE(FS_ENTRY_INVALID_POSITION, FS_ENTRY_INVALID_SIZE),
             .flags = EMPTY_FLAGS,
             .createTime = 0,
@@ -197,7 +208,6 @@ static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* dir
             .name = dirEntry->name,
             .parentPath = directory->parentPath.data,
             .type = FS_ENTRY_TYPE_DEVICE,
-            .isDevice = true,
             .device = dirEntry->device,
             .flags = EMPTY_FLAGS,
             .createTime = 0,
@@ -209,7 +219,6 @@ static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* dir
             .name = dirEntry->name,
             .parentPath = directory->parentPath.data,
             .type = TEST_FLAGS(dirEntry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE,
-            .isDevice = false,
             .dataRange = dirEntry->dataRange,
             .flags = EMPTY_FLAGS,
             .createTime = 0,
@@ -224,15 +233,15 @@ static Result __devfs_fsentry_directoryEntryToFSentryDesc(fsEntryIdentifier* dir
 static void __devfs_fsEntry_fsEntryDescToDirectoryEntry(fsEntryDesc* desc, __DevFSdirectoryEntry* dirEntryOut) {
     cstring_strcpy(dirEntryOut->name, desc->identifier.name.data);
 
-    if (desc->identifier.type == FS_ENTRY_TYPE_DUMMY) {
+    if (desc->type == FS_ENTRY_TYPE_DUMMY) {
         dirEntryOut->dataRange = RANGE(FS_ENTRY_INVALID_POSITION, FS_ENTRY_INVALID_SIZE);
         dirEntryOut->attribute = __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DUMMY;
-    } else if (desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+    } else if (desc->type == FS_ENTRY_TYPE_DEVICE) {
         dirEntryOut->device = desc->device;
         dirEntryOut->attribute = __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE;
     } else {
         dirEntryOut->dataRange = desc->dataRange;
-        dirEntryOut->attribute = desc->identifier.type == FS_ENTRY_TYPE_DIRECTORY ? __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE;
+        dirEntryOut->attribute = desc->type == FS_ENTRY_TYPE_DIRECTORY ? __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY : __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE;
     }
     
     dirEntryOut->magic = __DEVFS_DIRECTORY_ENTRY_MAGIC;
@@ -273,7 +282,7 @@ static Result __devfs_fsEntry_addEntry(fsEntry* directory, fsEntryDesc* childToA
 }
 
 static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier* childToRemove) {
-    if (fsutil_lookupEntryDesc(directory, childToRemove->name.data, childToRemove->type, NULL, NULL) != RESULT_SUCCESS) {
+    if (fsutil_lookupEntryDesc(directory, childToRemove->name.data, childToRemove->isDirectory, NULL, NULL) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
@@ -297,7 +306,7 @@ static Result __devfs_fsEntry_removeEntry(fsEntry* directory, fsEntryIdentifier*
 }
 
 static Result __devfs_fsEntry_updateEntry(fsEntry* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild) {
-    if (fsutil_lookupEntryDesc(directory, oldChild->name.data, oldChild->type, NULL, NULL) != RESULT_SUCCESS) {
+    if (fsutil_lookupEntryDesc(directory, oldChild->name.data, oldChild->isDirectory, NULL, NULL) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 

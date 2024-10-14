@@ -33,7 +33,8 @@ typedef struct SuperBlockOperations {
     Result  (*openfsEntry)(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
     Result  (*closefsEntry)(SuperBlock* superBlock, fsEntry* entry);
 
-    Result  (*create)(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args);
+    Result  (*create)(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags);
+    Result  (*flush)(SuperBlock* superBlock);
 
     Result  (*mount)(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
     Result  (*unmount)(SuperBlock* superBlock, fsEntryIdentifier* identifier);
@@ -82,8 +83,8 @@ static inline Result superBlock_rawClosefsEntry(SuperBlock* superBlock, fsEntry*
     return superBlock->operations->closefsEntry(superBlock, entry);
 }
 
-static inline Result superBlock_rawCreate(SuperBlock* superBlock, fsEntryDesc* descOut, fsEntryDescInitArgs* args) {
-    return superBlock->operations->create(superBlock, descOut, args);
+static inline Result superBlock_rawCreate(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags) {
+    return superBlock->operations->create(superBlock, descOut, name, parentPath, type, deviceID, flags);
 }
 
 static inline Result superBlock_rawMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
@@ -92,6 +93,10 @@ static inline Result superBlock_rawMount(SuperBlock* superBlock, fsEntryIdentifi
 
 static inline Result superBlock_rawUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier) {
     return superBlock->operations->unmount(superBlock, identifier);
+}
+
+static inline Result superBlock_rawFlush(SuperBlock* superBlock) {
+    return superBlock->operations->flush(superBlock);
 }
 
 void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args);

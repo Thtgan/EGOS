@@ -55,4 +55,20 @@ Result fs_open(FS* fs, BlockDevice* device);
  */
 Result fs_close(FS* fs);
 
+//Non-FS codes should use these functions
+
+Result fs_fileRead(File* file, void* buffer, Size n);
+
+Result fs_fileWrite(File* file, const void* buffer, Size n);
+
+#define FS_FILE_SEEK_BEGIN      0
+#define FS_FILE_SEEK_CURRENT    1
+#define FS_FILE_SEEK_END        2
+
+Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin);
+
+Result fs_fileOpen(File* file, ConstCstring filename, FCNTLopenFlags flags);
+
+Result fs_fileClose(File* file);
+
 #endif // __FS_FS_H

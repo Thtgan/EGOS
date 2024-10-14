@@ -57,7 +57,7 @@ Process* process_init() {
     bitmap_initStruct(&_process_pidBitmap, PROCESS_MAXIMUM_PROCESS_NUM, &_process_pidBitmap);
     bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
 
-    if (fsutil_openfsEntry(rootFS->superBlock, "/dev/stdout", FS_ENTRY_TYPE_DEVICE, &_process_stdoutFile, FCNTL_OPEN_WRITE_ONLY) != RESULT_SUCCESS) {
+    if (fs_fileOpen(&_process_stdoutFile, "/dev/stdout", FCNTL_OPEN_WRITE_ONLY) != RESULT_SUCCESS) {
         return NULL;
     }
 
@@ -131,7 +131,7 @@ void process_release(Process* process) {
     //TODO: Check these codes again
     for (int i = 1; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
         if (process->fileSlots[i] != NULL) {
-            fsutil_closefsEntry(process->fileSlots[i]);
+            fs_fileClose(process->fileSlots[i]);
         }
     }
     Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);

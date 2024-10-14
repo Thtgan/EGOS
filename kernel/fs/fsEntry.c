@@ -15,24 +15,33 @@
 #include<structs/string.h>
 #include<system/pageTable.h>
 
-Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, fsEntryType type) {
-    ConstCstring sep = cstring_strrchr(path, FS_PATH_SEPERATOR);
-    if (sep == NULL) {
-        return RESULT_ERROR;
-    }
-    if (
-        string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep)) != RESULT_SUCCESS ||
-        string_initStruct(&identifier->name, sep + 1) != RESULT_SUCCESS
-    ) {
-        return RESULT_ERROR; //TODO: Memory release if failed here
+Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory) {
+    if (*path == '\0') {
+        if (
+            string_initStruct(&identifier->parentPath, "") != RESULT_SUCCESS ||
+            string_initStruct(&identifier->name, "") != RESULT_SUCCESS
+        ) {
+            return RESULT_ERROR; //TODO: Memory release if failed here
+        }
+    } else {
+        ConstCstring sep = cstring_strrchr(path, FS_PATH_SEPERATOR);
+        if (sep == NULL) {
+            return RESULT_ERROR;
+        }
+        if (
+            string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep)) != RESULT_SUCCESS ||
+            string_initStruct(&identifier->name, sep + 1) != RESULT_SUCCESS
+        ) {
+            return RESULT_ERROR; //TODO: Memory release if failed here
+        }
     }
 
-    identifier->type = type;
+    identifier->isDirectory = isDirectory;
 
     return RESULT_SUCCESS;
 }
 
-Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, fsEntryType type) {
+Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory) {
     if (
         string_initStruct(&identifier->parentPath, parentPath) != RESULT_SUCCESS ||
         string_initStruct(&identifier->name, name) != RESULT_SUCCESS
@@ -40,7 +49,7 @@ Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstri
         return RESULT_ERROR; //TODO: Memory release if failed here
     }
 
-    identifier->type = type;
+    identifier->isDirectory = isDirectory;
 
     return RESULT_SUCCESS;
 }
@@ -48,7 +57,7 @@ Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstri
 void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier) {
     string_clearStruct(&identifier->parentPath);
     string_clearStruct(&identifier->name);
-    identifier->type = FS_ENTRY_TYPE_DUMMY;
+    identifier->isDirectory = false;
 }
 
 Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
@@ -56,13 +65,13 @@ Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
         return RESULT_ERROR;
     }
     
-    des->type = src->type;
+    des->isDirectory = src->isDirectory;
 
     return RESULT_SUCCESS;
 }
 
 Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
-    return fsEntryIdentifier_initStruct(parentIdentifierOut, identifier->parentPath.data, FS_ENTRY_TYPE_DIRECTORY);
+    return fsEntryIdentifier_initStruct(parentIdentifierOut, identifier->parentPath.data, true);
 }
 
 Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
@@ -71,11 +80,12 @@ Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
     }
 
     fsEntryIdentifier* identifier = &desc->identifier;
-    if (fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type) != RESULT_SUCCESS) {
+    if (fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type == FS_ENTRY_TYPE_DIRECTORY) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
-    if (args->isDevice) {
+    desc->type              = args->type;
+    if (desc->type == FS_ENTRY_TYPE_DEVICE) {
         desc->device        = args->device;
     } else {
         desc->dataRange     = args->dataRange;
@@ -129,13 +139,13 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
 }
 
 Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
-    fsEntryType type = entry->desc->identifier.type;
+    fsEntryType type = entry->desc->type;
     iNode* iNode = entry->iNode;
 
     BlockDevice* targetBlockDevice = iNode->superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
 
-    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+    if (entry->desc->type == FS_ENTRY_TYPE_DEVICE) {
         targetDevice = iNode->device;
     }
 
@@ -208,13 +218,13 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 }
 
 Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
-    fsEntryType type = entry->desc->identifier.type;
+    fsEntryType type = entry->desc->type;
     iNode* iNode = entry->iNode;
 
     BlockDevice* targetBlockDevice = iNode->superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
 
-    if (entry->desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+    if (entry->desc->type == FS_ENTRY_TYPE_DEVICE) {
         targetDevice = iNode->device;
     }
 

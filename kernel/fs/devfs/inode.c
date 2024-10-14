@@ -2,6 +2,7 @@
 
 #include<devices/block/blockDevice.h>
 #include<fs/devfs/blockChain.h>
+#include<fs/devfs/devfs.h>
 #include<fs/devfs/fsEntry.h>
 #include<fs/inode.h>
 #include<fs/superblock.h>
@@ -32,7 +33,7 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
 
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     Size granularity = superBlockBlockDevice->device.granularity;
-    if (desc->identifier.type == FS_ENTRY_TYPE_DEVICE) {
+    if (desc->type == FS_ENTRY_TYPE_DEVICE) {
         Device* device = device_getDevice(desc->device);
         if (device == NULL) {
             return RESULT_ERROR;
@@ -41,8 +42,10 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
         iNode->sizeInBlock      = INFINITE;
         iNode->device           = device;
     } else {
-        iNode->sizeInBlock      = DIVIDE_ROUND_UP_SHIFT(desc->dataRange.begin + desc->dataRange.length, granularity) - DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);
+        DevFSblockChains* chains = &((DEVFSspecificInfo*)superBlock->specificInfo)->chains;
         iNodeInfo->firstBlock   = DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);
+        Uint64 sizeInBlock = devfs_blockChain_getChainLength(chains, iNodeInfo->firstBlock);
+        iNode->sizeInBlock      = sizeInBlock;
         iNode->specificInfo     = (Object)iNodeInfo;
     }
 

@@ -13,15 +13,12 @@ typedef Flags32 FCNTLopenFlags;
 #define FCNTL_OPEN_WRITE_ONLY                   0x00000001
 #define FCNTL_OPEN_READ_WRITE                   0x00000002
 #define FCNTL_OPEN_EXTRACL_ACCESS_MODE(__FLAGS) TRIM_VAL_SIMPLE(__FLAGS, 32, 3) //Known as ACCMODE
-//TODO: Not implemented
 #define FCNTL_OPEN_CREAT                        FLAG32(8)   //Create if file not exist
-//TODO: Not implemented
+//TODO: EXCL works on block device without CREAT
 #define FCNTL_OPEN_EXCL                         FLAG32(9)   //Ensure that this call creates the file
 //TODO: Not implemented
 #define FCNTL_OPEN_NOCTTY                       FLAG32(10)  //If file is terminal device, process haver no control on it
-//TODO: Not implemented
 #define FCNTL_OPEN_TRUNC                        FLAG32(12)  //Truncate to length 0 if is file and allow writing
-//TODO: Not implemented
 #define FCNTL_OPEN_APPEND                       FLAG32(13)  //Data only apeend to end, ignoring seek
 //TODO: Not implemented
 #define FCNTL_OPEN_NONBLOCK                     FLAG32(14)  //Open file in nonblocking mode if possible
@@ -35,11 +32,9 @@ typedef Flags32 FCNTLopenFlags;
 #define FCNTL_OPEN_DIRECT                       FLAG32(18)  //Try to minimize cache effects of the I/O to and from file
 //TODO: Not implemented
 #define FCNTL_OPEN_LARGEFILE                    FLAG32(20)  //WHen file size cannot be represented in 32 bit
-//TODO: Not implemented
 #define FCNTL_OPEN_DIRECTORY                    FLAG32(21)  //Fail if path is not a file
 //TODO: Not implemented
 #define FCNTL_OPEN_NOFOLLOW                     FLAG32(22)  //Fail if basename of path is symbolic link
-//TODO: Not implemented
 #define FCNTL_OPEN_NOATIME                      FLAG32(24)  //Do not update the file last access time
 //TODO: Not implemented
 #define FCNTL_OPEN_CLOEXEC                      FLAG32(25)  //Close file when exec(syscalls) returns, and test return value
@@ -52,6 +47,7 @@ typedef Flags32 FCNTLopenFlags;
 //TODO: Not implemented
 #define FCNTL_OPEN_TMPFILE                      FLAG32(29)  //Create an unnamed temporary regular file (pathname for directory)
 
-#define FCNTL_OPEN_DEFAULT_FLAGS                FCNTL_OPEN_READ_WRITE
+#define FCNTL_OPEN_FILE_DEFAULT_FLAGS           FCNTL_OPEN_READ_WRITE
+#define FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS      FCNTL_OPEN_READ_WRITE | FCNTL_OPEN_DIRECTORY
 
 #endif // __FCNTL_H
