@@ -6,6 +6,7 @@ typedef enum {
     SYSCALL_WRITE,
     SYSCALL_OPEN,
     SYSCALL_CLOSE,
+    SYSCALL_STAT,
     SYSCALL_EXIT,
     SYSCALL_TEST,
     SYSCALL_NUM

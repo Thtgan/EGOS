@@ -50,6 +50,7 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
     }
 
     iNode->signature        = INODE_SIGNATURE;
+    iNode->iNodeID          = iNode_generateID(desc);
     iNode->superBlock       = superBlock;
     iNode->openCnt          = 1;
     iNode->operations       = &_devfs_iNodeOperations;

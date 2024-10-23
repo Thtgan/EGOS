@@ -90,6 +90,7 @@ Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
     } else {
         desc->dataRange     = args->dataRange;
     }
+    desc->mode              = 0777; //TODO: Mode system stub
     desc->flags             = args->flags;
     desc->createTime        = args->createTime;
     desc->lastAccessTime    = args->lastAccessTime;
@@ -119,9 +120,7 @@ Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* 
 }
 
 Result fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
-    fsEntryDesc* desc = entry->desc;
-
-    if (iNode_close(entry->iNode, desc) != RESULT_SUCCESS) {
+    if (iNode_close(entry->iNode) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 

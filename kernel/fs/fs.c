@@ -116,10 +116,50 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
     return fsutil_fileSeek(file, offset, begin);
 }
 
-Result fs_fileOpen(File* file, ConstCstring filename, FCNTLopenFlags flags) {
-    return fsutil_openfsEntry(rootFS->superBlock, filename, file, flags);
+Result fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags) {
+    return fsutil_openfsEntry(rootFS->superBlock, filepath, file, flags);
 }
 
 Result fs_fileClose(File* file) {
     return fsutil_closefsEntry(file);
+}
+
+Result fs_fileStat(File* file, FS_fileStat* stat) {
+    fsEntryDesc* desc = file->desc;
+    iNode* iNode = file->iNode;
+    SuperBlock* superBlock = iNode->superBlock;
+    
+    memory_memset(stat, 0, sizeof(FS_fileStat));
+    stat->deviceID = iNode->device->id;
+    stat->iNodeID = iNode->iNodeID;
+    stat->nLink = 1;    //TODO: nLink not implemented actually
+    Uint32 mode = desc->mode;
+    switch (desc->type) {
+    case FS_ENTRY_TYPE_FILE:
+        FS_FILE_STAT_MODE_SET_TYPE(mode, FS_FILE_STAT_MODE_TYPE_REGULAR_FILE);
+        break;
+    case FS_ENTRY_TYPE_DIRECTORY:
+        FS_FILE_STAT_MODE_SET_TYPE(mode, FS_FILE_STAT_MODE_TYPE_DIRECTORY);
+        break;
+    case FS_ENTRY_TYPE_DEVICE:
+        FS_FILE_STAT_MODE_SET_TYPE(mode, FS_FILE_STAT_MODE_TYPE_BLOCK_DEVICE);
+        break;
+    default:
+        FS_FILE_STAT_MODE_SET_TYPE(mode, 0);
+        break;
+    }
+    stat->mode = mode;
+    stat->uid = 0;  //TODO: User not implemented
+    stat->gid = 0;
+    if (desc->type == FS_ENTRY_TYPE_DEVICE) {
+        stat->rDevice = iNode->device->id;
+    }
+    stat->size = desc->dataRange.length;
+    stat->blockSize = POWER_2(superBlock->blockDevice->device.granularity);
+    stat->blocks = iNode->sizeInBlock;
+    stat->accessTime.second = desc->lastAccessTime;
+    stat->modifyTime.second = desc->lastModifyTime;
+    stat->createTime.second = desc->createTime;
+
+    return RESULT_SUCCESS;
 }

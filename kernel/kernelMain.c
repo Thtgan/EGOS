@@ -153,7 +153,7 @@ void kernelMain(SystemInfo* info) {
         process_exit();
     }
 
-    int ret = usermode_execute("/bin/test");
+    int ret = usermode_execute("/bin/test");    //FIXME: It may stucks
     print_printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
 
     memory_free(arr1);
@@ -188,20 +188,20 @@ void kernelMain(SystemInfo* info) {
 static void printLOGO() {
     char buffer[1024];
     fsEntry entry;
+    FS_fileStat stat;
     if (fs_fileOpen(&entry, "/LOGO.txt", FCNTL_OPEN_READ_ONLY) == RESULT_SUCCESS) {
         fs_fileSeek(&entry, 0, FS_FILE_SEEK_END);
-        Size fileSize = fsutil_fileGetPointer(&entry);  //TODO: Dont use fsutil
+        fs_fileStat(&entry, &stat);
         fs_fileSeek(&entry, 0, FS_FILE_SEEK_BEGIN);
 
-        if (fs_fileRead(&entry, buffer, fileSize) == RESULT_SUCCESS) {
-            buffer[fileSize] = '\0';
+        if (fs_fileRead(&entry, buffer, stat.size) == RESULT_SUCCESS) {
+            buffer[stat.size] = '\0';
             print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
         }
 
-        fsEntryDesc* desc = entry.desc;
-        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->createTime);
-        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastAccessTime);
-        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", desc->lastModifyTime);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.createTime.second);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.accessTime.second);
+        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.modifyTime.second);
 
         BlockDevice* device = entry.iNode->superBlock->blockDevice;
         fs_fileClose(&entry);

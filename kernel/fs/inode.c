@@ -8,6 +8,10 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 
+ID iNode_generateID(fsEntryDesc* desc) {
+    return desc->type == FS_ENTRY_TYPE_DEVICE ? (FLAG64(63) | desc->device) : desc->dataRange.begin;
+}
+
 iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
     HashChainNode* found = hashTable_find(table, (Object)blockIndex);
     return found == NULL ? NULL : HOST_POINTER(found, iNode, openedNode);
@@ -23,7 +27,7 @@ Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
 
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
-    Index64 key = desc->type == FS_ENTRY_TYPE_DEVICE ? desc->device + superBlockBlockDevice->device.capacity : desc->dataRange.begin >> superBlockBlockDevice->device.granularity;
+    Index64 key = iNode_generateID(desc);
     iNode* ret = iNode_openFromOpened(&superBlock->openedInode, key);
     if (ret == NULL) {
         ret = memory_allocate(sizeof(iNode));
@@ -42,12 +46,11 @@ iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
     return ret;
 }
 
-Result iNode_close(iNode* iNode, fsEntryDesc* desc) {
+Result iNode_close(iNode* iNode) {
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
-    Index64 key = desc->type == FS_ENTRY_TYPE_DEVICE ? desc->device + superBlockBlockDevice->device.capacity : desc->dataRange.begin >> superBlockBlockDevice->device.granularity;
     if (--iNode->openCnt == 0) {
-        if (iNode_removeFromOpened(&superBlock->openedInode, key) == RESULT_FAIL) {
+        if (iNode_removeFromOpened(&superBlock->openedInode, iNode->iNodeID) == RESULT_FAIL) {
             return RESULT_ERROR;
         }
         

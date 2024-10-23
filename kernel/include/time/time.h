@@ -27,8 +27,8 @@ typedef struct RealTime {
 } RealTime;
 
 typedef struct Timestamp {
-    Int64   second;
-    Uint32  nanosecond;
+    long   second;
+    long   nanosecond;
 } Timestamp;
 
 void time_convertRealTimeToTimestamp(RealTime* realTime, Timestamp* timestamp);

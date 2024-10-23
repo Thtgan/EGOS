@@ -17,11 +17,14 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags);
 
 static int __fsSyscall_close(int fileDescriptor);
 
+static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat);
+
 Result fsSyscall_init() {
     syscall_registerHandler(SYSCALL_READ, __fsSyscall_read);
     syscall_registerHandler(SYSCALL_WRITE, __fsSyscall_write);
     syscall_registerHandler(SYSCALL_OPEN, __fsSyscall_open);
     syscall_registerHandler(SYSCALL_CLOSE, __fsSyscall_close);
+    syscall_registerHandler(SYSCALL_STAT, __fsSyscall_stat);
 
     return RESULT_SUCCESS;
 }
@@ -71,6 +74,23 @@ static int __fsSyscall_close(int fileDescriptor) {
 
     process_releaseFileSlot(scheduler_getCurrentProcess(), fileDescriptor);
     memory_free(file);
+
+    return 0;
+}
+
+static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat) {
+    File file;
+    if (fs_fileOpen(&file, filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS) != RESULT_SUCCESS) {
+        return -1;
+    }
+
+    if (fs_fileStat(&file, stat) != RESULT_SUCCESS) {
+        return -1;
+    }
+
+    if (fs_fileClose(&file) != RESULT_SUCCESS) {
+        return -1;
+    }
 
     return 0;
 }

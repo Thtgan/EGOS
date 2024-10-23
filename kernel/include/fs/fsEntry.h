@@ -63,6 +63,7 @@ typedef struct fsEntryDirOperations {
 typedef struct fsEntryDesc {
     fsEntryIdentifier   identifier; //One descriptor, one identifier
     fsEntryType         type;
+    Uint16              mode;
 
     union {
         Range           dataRange;  //Position and size on device (In byte)
