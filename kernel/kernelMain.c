@@ -87,13 +87,13 @@ void kernelMain(SystemInfo* info) {
 
     printLOGO();
 
-    File file;
-    fs_fileOpen(&file, "/a.txt", FCNTL_OPEN_READ_WRITE | FCNTL_OPEN_CREAT);
-    fs_fileSeek(&file, FS_FILE_SEEK_BEGIN, 0);
-    for (int i = 0; i < 64; ++i) {
-        fs_fileWrite(&file, "TEST", 4);
-    }
-    fs_fileClose(&file);
+    // File file;
+    // fs_fileOpen(&file, "/a.txt", FCNTL_OPEN_READ_WRITE | FCNTL_OPEN_CREAT);
+    // fs_fileSeek(&file, FS_FILE_SEEK_BEGIN, 0);
+    // for (int i = 0; i < 64; ++i) {
+    //     fs_fileWrite(&file, "TEST", 4);
+    // }
+    // fs_fileClose(&file);
 
     Uint32 pciDeviceNum = pci_getDeviceNum();
     print_printf(TERMINAL_LEVEL_OUTPUT, "%u PCI devices found\n", pciDeviceNum);

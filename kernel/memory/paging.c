@@ -89,7 +89,7 @@ Result paging_init() {
 
     PAGING_SWITCH_TO_TABLE(&_extendedPageTableRoot);
 
-    idt_registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
+    idt_registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
 
     Uint32 eax, edx;
     rdmsr(MSR_ADDR_EFER, &edx, &eax);

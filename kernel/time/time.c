@@ -148,7 +148,7 @@ Result time_init() {
     }
 
     bool interruptEnabled = idt_disableInterrupt();
-    idt_registerISR(0x20, __time_timerHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    idt_registerISR(0x20, __time_timerHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
     idt_setInterrupt(interruptEnabled);
 
     _clock.lastMainTick         = rawClockSourceReadTick(mainClockSource);

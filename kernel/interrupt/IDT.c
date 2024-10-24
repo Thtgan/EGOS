@@ -29,7 +29,7 @@ extern void (*stubs[256])();
  * @param isr 
  * @param attributes 
  */
-static void __idt_setEntry(Uint8 vector, void* isr, Uint8 attributes);
+static void __idt_setEntry(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes);
 
 ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
     cli();
@@ -49,7 +49,7 @@ Result idt_init() {
 
     for (int vec = 0; vec < 256; ++vec) {
         handlers[vec] = __defaultInterruptHandler;
-        __idt_setEntry(vec, stubs[vec], IDT_FLAGS_PRESENT | (vec < 0x20 ? IDT_FLAGS_TYPE_TRAP_GATE32 : IDT_FLAGS_TYPE_INTERRUPT_GATE32));
+        __idt_setEntry(vec, stubs[vec], 0, IDT_FLAGS_PRESENT | (vec < 0x20 ? IDT_FLAGS_TYPE_TRAP_GATE32 : IDT_FLAGS_TYPE_INTERRUPT_GATE32));
     }
 
     pic_remap(IDT_REMAP_BASE_1, IDT_REMAP_BASE_2); //Remap PIC interrupt 0x00-0x0F to 0x20-0x2F, avoiding collision with intel reserved exceptions
@@ -66,7 +66,7 @@ Result idt_init() {
     return RESULT_SUCCESS;
 }
 
-void idt_registerISR(Uint8 vector, void* isr, Uint8 attributes) {
+void idt_registerISR(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes) {
     Uint8 mask1, mask2;
     pic_getMask(&mask1, &mask2);
 
@@ -80,15 +80,15 @@ void idt_registerISR(Uint8 vector, void* isr, Uint8 attributes) {
 
     pic_setMask(mask1, mask2);
 
-    __idt_setEntry(vector, stubs[vector], attributes);
+    __idt_setEntry(vector, stubs[vector], ist, attributes);
     handlers[vector] = isr;
 }
 
-static void __idt_setEntry(Uint8 vector, void* isr, Uint8 attributes) {
+static void __idt_setEntry(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes) {
     idt_idtEntryTable[vector] = (IDTentry) {
         EXTRACT_VAL((Uint64)isr, 64, 0, 16),
         SEGMENT_KERNEL_CODE,
-        0,
+        TRIM_VAL_SIMPLE(ist, 8, 3),
         attributes,
         EXTRACT_VAL((Uint64)isr, 64, 16, 32),
         EXTRACT_VAL((Uint64)isr, 64, 32, 64),

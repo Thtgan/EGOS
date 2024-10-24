@@ -30,7 +30,7 @@ typedef struct HandlerStackFrame HandlerStackFrame;
 typedef struct IDTentry {
     Uint16 isr0_15;
     Uint16 codeSector;
-    Uint8 reserved1;
+    Uint8 ist;
     Uint8 attributes;
     Uint16 isr16_31;
     Uint32 isr32_63;
@@ -68,7 +68,7 @@ Result idt_init();
  * @param isr The interrupt service routine to bind
  * @param attributes arrtibutes
  */
-void idt_registerISR(Uint8 vector, void* isr, Uint8 attributes);
+void idt_registerISR(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes);
 
 /**
  * @brief Disable the interrupt, and return if the interrupt is enabled before

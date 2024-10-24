@@ -171,7 +171,7 @@ Result keyboard_init() {
         _keyboard_pressed[i] = false;
     }
     _keyboard_capslock = false;
-    idt_registerISR(0x21, __keyboard_interruptHandler, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
+    idt_registerISR(0x21, __keyboard_interruptHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
 
     return RESULT_SUCCESS;
 }
