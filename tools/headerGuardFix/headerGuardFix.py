@@ -44,6 +44,9 @@ def main():
     args = parser.parse_args()
     
     base = args.base
+    if base.endswith('/'):
+        base = base[:-1]
+    
     verbose = args.verbose
     
     for root, _, files in os.walk(base, topdown=False):
