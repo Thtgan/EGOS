@@ -29,6 +29,8 @@ void initSemaphore(Semaphore* sema, int count) {
 
 void semaphore_down(Semaphore* sema) {
     asm volatile(
+        "pushq %%rbp;"
+        "movq %%rsp, %%rbp;"
         "lock;"
         "decl %0;"
         "jns 1f;"
@@ -40,6 +42,7 @@ void semaphore_down(Semaphore* sema) {
         "popq %%rdx;"
         "popq %%rax;"
         "1:"
+        "popq %%rbp;"
         : "=m"(sema->counter)
         : "D"(sema)
         : "memory"
@@ -48,6 +51,8 @@ void semaphore_down(Semaphore* sema) {
 
 void semaphore_up(Semaphore* sema) {
     asm volatile(
+        "pushq %%rbp;"
+        "movq %%rsp, %%rbp;"
         "lock;"
         "incl %0;"
         "jg 1f;"
@@ -59,6 +64,7 @@ void semaphore_up(Semaphore* sema) {
         "popq %%rdx;"
         "popq %%rax;"
         "1:"
+        "popq %%rbp;"
         : "=m"(sema->counter)
         : "D"(sema)
         : "memory"
@@ -69,7 +75,10 @@ __attribute__((regparm(1)))
 void __semaphore_down_handler(Semaphore* sema) {
     spinlock_lock(&sema->queueLock);
 
-    QueueNode* node = &scheduler_getCurrentProcess()->semaWaitQueueNode;
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    Process* process = scheduler_getCurrentProcess(scheduler);
+
+    QueueNode* node = &process->semaWaitQueueNode;
     queueNode_initStruct(node);
 
     bool loop = true;
@@ -78,7 +87,7 @@ void __semaphore_down_handler(Semaphore* sema) {
         queue_push(&sema->waitQueue, node);
 
         spinlock_unlock(&sema->queueLock);
-        scheduler_blockProcess(scheduler_getCurrentProcess());
+        scheduler_blockProcess(scheduler, process);
         spinlock_lock(&sema->queueLock);
 
         asm volatile(
@@ -103,10 +112,11 @@ void __semaphore_up_handler(Semaphore* sema) {
         queue_pop(&sema->waitQueue);
 
         queueNode_initStruct(&p->semaWaitQueueNode);
-        scheduler_wakeProcess(p);
+        Scheduler* scheduler = schedule_getCurrentScheduler();
+        scheduler_wakeProcess(scheduler, p);
 
         spinlock_unlock(&sema->queueLock);
-        scheduler_yield();
+        scheduler_tryYield(scheduler);
         spinlock_lock(&sema->queueLock);
     }
 

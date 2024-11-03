@@ -41,6 +41,9 @@ static void printLOGO();
 #include<devices/display/vga/vga.h>
 #include<devices/display/vga/memory.h>
 
+#include<multitask/criticalToken.h>
+#include<multitask/simpleSchedule.h>
+
 static void __timerFunc1(Timer* timer) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
 }
@@ -122,12 +125,15 @@ void kernelMain(SystemInfo* info) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
     if (process_fork("Forked") != NULL) {
-        print_printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", scheduler_getCurrentProcess()->name);
+        Scheduler* scheduler = schedule_getCurrentScheduler();
+        print_printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
     } else {
-        print_printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", scheduler_getCurrentProcess()->name);
+        Scheduler* scheduler = schedule_getCurrentScheduler();
+        print_printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
     }
 
-    if (cstring_strcmp(scheduler_getCurrentProcess()->name, "Init") == 0) {
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    if (cstring_strcmp(scheduler_getCurrentProcess(scheduler)->name, "Init") == 0) {
         arr1[0] = 3;
         semaphore_up(&sema1);
         semaphore_down(&sema2);
@@ -159,7 +165,7 @@ void kernelMain(SystemInfo* info) {
     memory_free(arr1);
     memory_free(arr2);
 
-    print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess()->name);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess(scheduler)->name);
 
     fsEntry entry;
     if (fs_fileOpen(&entry, "/dev/null", FCNTL_OPEN_READ_WRITE) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it

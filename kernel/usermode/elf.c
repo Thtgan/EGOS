@@ -111,7 +111,8 @@ Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         readRemain = programHeader->segmentSizeInFile,
         memoryRemain = programHeader->segmentSizeInMemory;
 
-    ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess()->context.extendedTable;
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
     if (fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
@@ -156,7 +157,8 @@ Result elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     Size memoryRemain = programHeader->segmentSizeInMemory;
 
-    ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess()->context.extendedTable;
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
     Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {

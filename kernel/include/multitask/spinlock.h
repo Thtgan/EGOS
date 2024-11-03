@@ -17,22 +17,22 @@ typedef struct Spinlock {
  * 
  * @param lock Spinlock to lock
  */
+
 static inline void spinlock_lock(Spinlock* lock) {
+    register Uint8 locked = 0;
     asm volatile(
         "1:"
-        "lock;"
-        "decb %0;"
-        "js 2f;"
-        "jmp 3f;"
+        "mov %0, %%eax;"
         "2:"
+        "lock;"
+        "cmpxchgb %1, %0;"
+        "jz 3f;"
         "pause;"
-        "cmpb $0, %0;"
-        "jle 2b;"
-        "jmp 1b;"
+        "jmp 2b;"
         "3:"
-        : "=m" (lock->counter)
+        : "=m" (lock->counter), "=r" (locked)
         :
-        : "memory"
+        : "memory", "eax"
     );
 }
 

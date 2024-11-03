@@ -30,7 +30,8 @@ Result fsSyscall_init() {
 }
 
 static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
-    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(), fileDescriptor);
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
     if (file == NULL || fs_fileRead(file, buffer, n) != RESULT_SUCCESS) {
         return -1;
     }
@@ -39,7 +40,8 @@ static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
 }
 
 static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
-    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(), fileDescriptor);
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
     if (file == NULL || fs_fileWrite(file, buffer, n) != RESULT_SUCCESS) {
         return -1;
     }
@@ -53,7 +55,8 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
         return -1;
     }
 
-    int ret = process_allocateFileSlot(scheduler_getCurrentProcess(), file);
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    int ret = process_allocateFileSlot(scheduler_getCurrentProcess(scheduler), file);
     if (ret == -1 || fs_fileOpen(file, filename, flags) != RESULT_SUCCESS) {
         memory_free(file);
         return -1;
@@ -63,7 +66,9 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
 }
 
 static int __fsSyscall_close(int fileDescriptor) {
-    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(), fileDescriptor);
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    Process* process = scheduler_getCurrentProcess(scheduler);
+    File* file = process_getFileFromSlot(process, fileDescriptor);
     if (file == NULL) {
         return -1;
     }
@@ -72,7 +77,7 @@ static int __fsSyscall_close(int fileDescriptor) {
         return -1;
     }
 
-    process_releaseFileSlot(scheduler_getCurrentProcess(), fileDescriptor);
+    process_releaseFileSlot(process, fileDescriptor);
     memory_free(file);
 
     return 0;

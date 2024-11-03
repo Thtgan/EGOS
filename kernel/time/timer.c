@@ -40,7 +40,7 @@ Result timer_start(Timer* timer) {
     
     if (TEST_FLAGS(timer->flags, TIMER_FLAGS_SYNCHRONIZE)) {
         while (TEST_FLAGS(timer->flags, TIMER_FLAGS_PRESENT)) { //TODO: Lock?
-            scheduler_yield();
+            scheduler_tryYield(schedule_getCurrentScheduler());
         }
     }
 

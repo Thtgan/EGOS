@@ -17,8 +17,9 @@
 void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
 __attribute__((aligned(PAGE_SIZE)))
-static IDTentry idt_idtEntryTable[256];
-static IDTdesc idt_idtDesc;
+static IDTentry _idt_idtEntryTable[256];
+static IDTdesc _idt_idtDesc;
+static int _idt_enterCount;
 
 extern void (*stubs[256])();
 
@@ -44,8 +45,8 @@ ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
 }
 
 Result idt_init() {
-    idt_idtDesc.size = (Uint16)sizeof(idt_idtEntryTable) - 1;  //Initialize the IDT desc
-    idt_idtDesc.tablePtr = (Uintptr)idt_idtEntryTable;
+    _idt_idtDesc.size = (Uint16)sizeof(_idt_idtEntryTable) - 1;  //Initialize the IDT desc
+    _idt_idtDesc.tablePtr = (Uintptr)_idt_idtEntryTable;
 
     for (int vec = 0; vec < 256; ++vec) {
         handlers[vec] = __defaultInterruptHandler;
@@ -61,7 +62,9 @@ Result idt_init() {
     //Mask1's bit 2 MUST be CLEARED otherwise the slave PIC's interrupt WONT be rised
     //Bloody lesson, I have struggled for why IRQ 14 and 15 cannot be rised for a whole day!
 
-    asm volatile ("lidt %0" : : "m" (idt_idtDesc));
+    _idt_enterCount = 0;
+
+    asm volatile ("lidt %0" : : "m" (_idt_idtDesc));
 
     return RESULT_SUCCESS;
 }
@@ -85,7 +88,7 @@ void idt_registerISR(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes) {
 }
 
 static void __idt_setEntry(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes) {
-    idt_idtEntryTable[vector] = (IDTentry) {
+    _idt_idtEntryTable[vector] = (IDTentry) {
         EXTRACT_VAL((Uint64)isr, 64, 0, 16),
         SEGMENT_KERNEL_CODE,
         TRIM_VAL_SIMPLE(ist, 8, 3),
@@ -114,4 +117,16 @@ void idt_setInterrupt(bool enable) {
     } else {
         cli();
     }
+}
+
+void idt_enterISR() {
+    ++_idt_enterCount;
+}
+
+void idt_leaveISR() {
+    --_idt_enterCount;
+}
+
+bool idt_isInISR() {
+    return _idt_enterCount > 0;
 }

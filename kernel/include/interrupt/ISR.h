@@ -15,9 +15,11 @@
 /**
  * @brief End of interrupt, tell PIC ready to receive more interrupts, MUST be called after each interrupt handler
  */
-static inline void EOI() {
+static inline void EOI(int irq) {
+    if (irq >= 8) {
+        outb(PIC_COMMAND_2, PIC_OCW2_EOI_REQUEST);
+    }
     outb(PIC_COMMAND_1, PIC_OCW2_EOI_REQUEST);
-    outb(PIC_COMMAND_2, PIC_OCW2_EOI_REQUEST);
 }
 
 #endif // __INTERRUPT_ISR_H

@@ -1,5 +1,5 @@
-#if !defined(__FCNTL_H)
-#define __FCNTL_H
+#if !defined(__FS_FCNTL_H)
+#define __FS_FCNTL_H
 
 //FCNTL = File Control
 
@@ -50,4 +50,4 @@ typedef Flags32 FCNTLopenFlags;
 #define FCNTL_OPEN_FILE_DEFAULT_FLAGS           FCNTL_OPEN_READ_WRITE
 #define FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS      FCNTL_OPEN_READ_WRITE | FCNTL_OPEN_DIRECTORY
 
-#endif // __FCNTL_H
+#endif // __FS_FCNTL_H

@@ -499,4 +499,8 @@ static inline Uint64 rdtsc(void) {
 	return ((Uint64)edx << 32) | eax;
 }
 
+static inline void barrier() {
+    asm volatile("" : : : "memory");
+}
+
 #endif // __REAL_SIMPLEASMLINES_H

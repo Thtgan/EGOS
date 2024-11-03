@@ -9,8 +9,8 @@
 #define ERROR_CODE_GET_OBJECT(__ERROR_CODE)     (EXTRACT_VAL(__ERROR_CODE, 32, 16, 32))
 #define ERROR_CODE_GET_STATUS(__ERROR_CODE)     (EXTRACT_VAL(__ERROR_CODE, 32, 0, 16))
 
-#define ERROR_CODE_SET(__OBJECT, __STATUS)      scheduler_getCurrentProcess()->errorCode = ERROR_CODE_BUILD(__OBJECT, __STATUS)
-#define ERROR_CODE_GET()                        scheduler_getCurrentProcess()->errorCode
+#define ERROR_CODE_SET(__OBJECT, __STATUS)      scheduler_getCurrentProcess(schedule_getCurrentScheduler())->errorCode = ERROR_CODE_BUILD(__OBJECT, __STATUS)
+#define ERROR_CODE_GET()                        scheduler_getCurrentProcess(schedule_getCurrentScheduler())->errorCode
 
 #define ERROR_CODE_OBJECT_EXECUTION             0x0000
 #define ERROR_CODE_OBJECT_MEMORY                0x0001

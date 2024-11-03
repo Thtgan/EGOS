@@ -91,4 +91,10 @@ bool idt_enableInterrupt();
  */
 void idt_setInterrupt(bool enable);
 
+void idt_enterISR();
+
+void idt_leaveISR();
+
+bool idt_isInISR();
+
 #endif // __INTERRUPT_IDT_H

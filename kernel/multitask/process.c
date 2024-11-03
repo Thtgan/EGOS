@@ -81,7 +81,10 @@ void process_switch(Process* from, Process* to) {
 extern void* __fork_return;
 
 Process* process_fork(ConstCstring name) {
-    Uint32 oldPID = scheduler_getCurrentProcess()->pid, newPID = __process_allocatePID();
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    Process* process = scheduler_getCurrentProcess(scheduler);
+
+    Uint32 oldPID = process->pid, newPID = __process_allocatePID();
 
     if (newPID == PROCESS_INVALID_PID) {
         return NULL;
@@ -91,9 +94,8 @@ Process* process_fork(ConstCstring name) {
 
     Process* newProcess = __process_create(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
     newProcess->ppid = oldPID;
-    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(scheduler_getCurrentProcess()->context.extendedTable);
-
-    Uintptr currentStackTop = scheduler_getCurrentProcess()->kernelStackTop;
+    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(process->context.extendedTable);
+    Uintptr currentStackTop = process->kernelStackTop;
 
     REGISTERS_SAVE();
     memory_memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
@@ -102,18 +104,20 @@ Process* process_fork(ConstCstring name) {
     newProcess->context.rip = (Uint64)&__fork_return;
     newProcess->context.rsp = newProcess->kernelStackTop - (currentStackTop - readRegister_RSP_64());
 
-    scheduler_addProcess(newProcess);
+    scheduler_addProcess(scheduler, newProcess);
 
     asm volatile("__fork_return:");
     //New process starts from here
 
     REGISTERS_RESTORE();
 
-    return scheduler_getCurrentProcess()->pid == oldPID ? newProcess : NULL;
+    return scheduler_getCurrentProcess(scheduler)->pid == oldPID ? newProcess : NULL;
 }
 
 void process_exit() {
-    scheduler_terminateProcess(scheduler_getCurrentProcess());
+    Scheduler* scheduler = schedule_getCurrentScheduler();
+    Process* process = scheduler_getCurrentProcess(scheduler);
+    scheduler_terminateProcess(scheduler, process);
 
     debug_blowup("Func process_exit is trying to return\n");
 }

@@ -13,7 +13,7 @@ static Scheduler* _schedule_currentScheduler = NULL;
 Result schedule_init() {
     _schedule_currentScheduler = simpleScheduler_create();
 
-    scheduler_start(process_init());
+    scheduler_start(_schedule_currentScheduler, process_init());
 
     if (process_fork("Idle") == NULL) {
         __schedule_idle();
@@ -27,11 +27,27 @@ Scheduler* schedule_getCurrentScheduler() {
 }
 
 static void __schedule_idle() {
+    sti();
     while (true) {
-        sti();
         hlt();
+        // scheduler_yield(schedule_getCurrentScheduler());
         //No, no yield here, currently it will make system freezed for input
     }
 
     debug_blowup("Idle is trying to return\n");
+}
+
+void scheduler_tryYield(Scheduler* scheduler) {
+    if (idt_isInISR(false)) {
+        scheduler->isrDelayYield = true;
+    } else {
+        scheduler_yield(scheduler);
+    }
+}
+
+void scheduler_isrDelayYield(Scheduler* scheduler) {
+    if (scheduler->isrDelayYield && !idt_isInISR(false)) {
+        scheduler_yield(scheduler);
+        scheduler->isrDelayYield = false;
+    }
 }
