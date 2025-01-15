@@ -1,5 +1,5 @@
-#if !defined(__MULTITASK_SEMAPHORE_H)
-#define __MULTITASK_SEMAPHORE_H
+#if !defined(__MULTITASK_LOCKS_SEMAPHORE_H)
+#define __MULTITASK_LOCKS_SEMAPHORE_H
 
 typedef struct Semaphore Semaphore;
 
@@ -34,4 +34,4 @@ void semaphore_down(Semaphore* sema);
  */
 void semaphore_up(Semaphore* sema);
 
-#endif // __MULTITASK_SEMAPHORE_H
+#endif // __MULTITASK_LOCKS_SEMAPHORE_H

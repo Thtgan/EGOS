@@ -1,5 +1,5 @@
-#if !defined(__MULTITASK_SPINLOCK_H)
-#define __MULTITASK_SPINLOCK_H
+#if !defined(__MULTITASK_LOCKS_SPINLOCK_H)
+#define __MULTITASK_LOCKS_SPINLOCK_H
 
 typedef struct Spinlock Spinlock;
 
@@ -69,4 +69,4 @@ static inline void spinlock_unlock(Spinlock* lock) {
     );
 }
 
-#endif // __MULTITASK_SPINLOCK_H
+#endif // __MULTITASK_LOCKS_SPINLOCK_H

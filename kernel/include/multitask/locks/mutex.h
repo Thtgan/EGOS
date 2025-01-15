@@ -1,5 +1,5 @@
-#if !defined(__MULTITASK_MUTEX_H)
-#define __MULTITASK_MUTEX_H
+#if !defined(__MULTITASK_LOCKS_MUTEX_H)
+#define __MULTITASK_LOCKS_MUTEX_H
 
 typedef struct Mutex Mutex;
 
