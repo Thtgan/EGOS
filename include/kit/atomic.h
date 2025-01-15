@@ -31,7 +31,7 @@
 #define ATOMIC_FETCH_SUB(__PTR, __VAL)  __atomic_fetch_sub(__PTR, __VAL, __ATOMIC_SEQ_CST) 
 #define ATOMIC_FETCH_AND(__PTR, __VAL)  __atomic_fetch_and(__PTR, __VAL, __ATOMIC_SEQ_CST) 
 #define ATOMIC_FETCH_XOR(__PTR, __VAL)  __atomic_fetch_xor(__PTR, __VAL, __ATOMIC_SEQ_CST)
-#define ATOMIC_FETCH__OR(__PTR, __VAL)  __atomic_fetch_or(__PTR, __VAL, __ATOMIC_SEQ_CST)
+#define ATOMIC_FETCH_OR(__PTR, __VAL)  	__atomic_fetch_or(__PTR, __VAL, __ATOMIC_SEQ_CST)
 #define ATOMIC_FETCH_NAND(__PTR, __VAL) __atomic_fetch_nand(__PTR, __VAL, __ATOMIC_SEQ_CST)
 
 #define ATOMIC_FETCH_INC(__PTR)         ATOMIC_FETCH_ADD(__PTR, 1)

@@ -3,6 +3,7 @@
 
 typedef struct Scheduler Scheduler;
 
+#include<kit/atomic.h>
 #include<kit/types.h>
 #include<kit/oop.h>
 #include<multitask/process.h>
@@ -23,6 +24,7 @@ typedef struct Scheduler {
     Process* currentProcess;
 
     bool isrDelayYield;
+    Uint32 criticalCount;
 } Scheduler;
 
 /**
@@ -115,5 +117,16 @@ static inline Process* scheduler_getCurrentProcess(Scheduler* scheduler) {
 void scheduler_tryYield(Scheduler* scheduler);
 
 void scheduler_isrDelayYield(Scheduler* scheduler);
+
+static inline void scheduler_enterCritical(Scheduler* scheduler) {
+    cli();
+    ATOMIC_INC_FETCH(&scheduler->criticalCount);
+}
+
+static inline void scheduler_leaveCritical(Scheduler* scheduler) {
+    if (ATOMIC_DEC_FETCH(&scheduler->criticalCount) == 0) {
+        sti();
+    }
+}
 
 #endif // __MULTITASK_SCHEDULE_H

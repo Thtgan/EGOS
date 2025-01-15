@@ -41,7 +41,6 @@ static void printLOGO();
 #include<devices/display/vga/vga.h>
 #include<devices/display/vga/memory.h>
 
-#include<multitask/criticalToken.h>
 #include<multitask/simpleSchedule.h>
 
 static void __timerFunc1(Timer* timer) {

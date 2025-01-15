@@ -6,6 +6,7 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<multitask/criticalToken.h>
+#include<multitask/mutex.h>
 #include<multitask/process.h>
 #include<structs/queue.h>
 #include<structs/singlyLinkedList.h>
@@ -14,7 +15,8 @@ typedef struct {
     Queue statusQueues[PROCESS_STATUS_NUM];
 
     Scheduler scheduler;
-    CriticalToken criticalToken;
+    // CriticalToken criticalToken;
+    Mutex mutex;
 } __SimpleScheduler;
 
 Result __simpleScheduler_start(Scheduler* this, Process* initProcess);
@@ -90,7 +92,7 @@ Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
         .isrDelayYield = false
     };
 
-    criticalToken_initStruct(&ret->criticalToken);
+    mutex_initStruct(&ret->mutex);
 
     return &ret->scheduler;
 }
@@ -170,8 +172,10 @@ Result __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
     return RESULT_SUCCESS;
 }
 
+// static int _test_cnt = 0;
+
 static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStatus newStatus) {
-    criticalToken_enter(&scheduler->criticalToken, (Object)scheduler);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
 
     Process* current = scheduler->scheduler.currentProcess, * next = __simpleScheduler_getStatusQueueHead(scheduler, PROCESS_STATUS_READY);
 
@@ -181,9 +185,12 @@ static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStat
 
         if (current != next) {
             DEBUG_ASSERT_SILENT(!idt_isInISR());
-            criticalToken_leave(&scheduler->criticalToken, (Object)scheduler);
+            mutex_release(&scheduler->mutex, (Object)scheduler);
+            // if (++_test_cnt == 100) {
+            //     print_printf(TERMINAL_LEVEL_OUTPUT, "TEST\n");
+            // }
             process_switch(current, next);
-            criticalToken_enter(&scheduler->criticalToken, (Object)scheduler);
+            mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
         }
     }
 
@@ -192,7 +199,7 @@ static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStat
         __simpleScheduler_removeProcessFromQueue(scheduler, dyingProcess);
         process_release(dyingProcess);
     }
-    criticalToken_leave(&scheduler->criticalToken, (Object)scheduler);
+    mutex_release(&scheduler->mutex, (Object)scheduler);
 }
 
 static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Process* process, ProcessStatus status) {
@@ -200,7 +207,7 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
         return;
     }
 
-    criticalToken_enter(&scheduler->criticalToken, (Object)scheduler);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
 
     if (process->status != PROCESS_STATUS_UNKNOWN && __simpleScheduler_removeProcessFromQueue(scheduler, process) != RESULT_SUCCESS) {
         debug_blowup("Remove process from queue failed\n");
@@ -215,19 +222,19 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
         scheduler->scheduler.currentProcess = process;
     }
 
-    criticalToken_leave(&scheduler->criticalToken, (Object)scheduler);
+    mutex_release(&scheduler->mutex, (Object)scheduler);
 }
 
 static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* scheduler, ProcessStatus status) {
-    criticalToken_enter(&scheduler->criticalToken, (Object)scheduler);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
     Process* ret = queue_isEmpty(&scheduler->statusQueues[status]) ? NULL : HOST_POINTER(queue_front(&scheduler->statusQueues[status]), Process, statusQueueNode);
-    criticalToken_leave(&scheduler->criticalToken, (Object)scheduler);
+    mutex_release(&scheduler->mutex, (Object)scheduler);
 
     return ret;
 }
 
 static Result __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process) {
-    criticalToken_enter(&scheduler->criticalToken, (Object)scheduler);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
 
     ProcessStatus status = process->status;
 
@@ -250,7 +257,7 @@ static Result __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* schedu
         }
     }
 
-    criticalToken_leave(&scheduler->criticalToken, (Object)scheduler);
+    mutex_release(&scheduler->mutex, (Object)scheduler);
 
     return ret;
 }
