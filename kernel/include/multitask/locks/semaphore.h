@@ -3,7 +3,7 @@
 
 typedef struct Semaphore Semaphore;
 
-#include<multitask/spinlock.h>
+#include<multitask/locks/spinlock.h>
 #include<structs/queue.h>
 
 typedef struct Semaphore {

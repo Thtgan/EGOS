@@ -5,8 +5,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
-#include<multitask/criticalToken.h>
-#include<multitask/mutex.h>
+#include<multitask/locks/mutex.h>
 #include<multitask/process.h>
 #include<structs/queue.h>
 #include<structs/singlyLinkedList.h>
@@ -92,7 +91,7 @@ Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
         .isrDelayYield = false
     };
 
-    mutex_initStruct(&ret->mutex);
+    mutex_initStruct(&ret->mutex, MUTEX_FLAG_CRITICAL);
 
     return &ret->scheduler;
 }
@@ -172,10 +171,8 @@ Result __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
     return RESULT_SUCCESS;
 }
 
-// static int _test_cnt = 0;
-
 static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStatus newStatus) {
-    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler);
 
     Process* current = scheduler->scheduler.currentProcess, * next = __simpleScheduler_getStatusQueueHead(scheduler, PROCESS_STATUS_READY);
 
@@ -186,11 +183,8 @@ static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStat
         if (current != next) {
             DEBUG_ASSERT_SILENT(!idt_isInISR());
             mutex_release(&scheduler->mutex, (Object)scheduler);
-            // if (++_test_cnt == 100) {
-            //     print_printf(TERMINAL_LEVEL_OUTPUT, "TEST\n");
-            // }
             process_switch(current, next);
-            mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
+            mutex_acquire(&scheduler->mutex, (Object)scheduler);
         }
     }
 
@@ -207,7 +201,7 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
         return;
     }
 
-    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler);
 
     if (process->status != PROCESS_STATUS_UNKNOWN && __simpleScheduler_removeProcessFromQueue(scheduler, process) != RESULT_SUCCESS) {
         debug_blowup("Remove process from queue failed\n");
@@ -226,7 +220,7 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
 }
 
 static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* scheduler, ProcessStatus status) {
-    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler);
     Process* ret = queue_isEmpty(&scheduler->statusQueues[status]) ? NULL : HOST_POINTER(queue_front(&scheduler->statusQueues[status]), Process, statusQueueNode);
     mutex_release(&scheduler->mutex, (Object)scheduler);
 
@@ -234,7 +228,7 @@ static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* schedule
 }
 
 static Result __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process) {
-    mutex_acquire(&scheduler->mutex, (Object)scheduler, MUTEX_ACQUIRE_FLAG_CRITICAL);
+    mutex_acquire(&scheduler->mutex, (Object)scheduler);
 
     ProcessStatus status = process->status;
 

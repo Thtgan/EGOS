@@ -1,4 +1,4 @@
-#include<multitask/semaphore.h>
+#include<multitask/locks/semaphore.h>
 
 #include<kit/util.h>
 #include<multitask/process.h>

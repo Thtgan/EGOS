@@ -1,4 +1,4 @@
-#include<multitask/mutex.h>
+#include<multitask/locks/mutex.h>
 
 #include<debug.h>
 #include<kit/atomic.h>
@@ -53,10 +53,11 @@ void mutex_release(Mutex* mutex, Object token) {
 
     if (ATOMIC_DEC_FETCH(&mutex->depth) == 0) {
         ATOMIC_STORE(&mutex->token, OBJECT_NULL);
-        if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
-            Scheduler* currentScheduler = schedule_getCurrentScheduler();
-            DEBUG_ASSERT_SILENT(currentScheduler != NULL && currentScheduler->start);
-            scheduler_leaveCritical(currentScheduler);
-        }
+    }
+
+    if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
+        Scheduler* currentScheduler = schedule_getCurrentScheduler();
+        DEBUG_ASSERT_SILENT(currentScheduler != NULL && currentScheduler->start);
+        scheduler_leaveCritical(currentScheduler);
     }
 }

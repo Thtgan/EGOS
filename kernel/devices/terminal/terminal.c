@@ -7,7 +7,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
-#include<multitask/semaphore.h>
+#include<multitask/locks/semaphore.h>
 #include<real/simpleAsmLines.h>
 #include<cstring.h>
 #include<structs/queue.h>

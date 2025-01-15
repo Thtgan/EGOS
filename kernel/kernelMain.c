@@ -5,7 +5,7 @@
 #include<kit/types.h>
 #include<memory/allocator.h>
 #include<multitask/schedule.h>
-#include<multitask/semaphore.h>
+#include<multitask/locks/semaphore.h>
 #include<print.h>
 #include<real/simpleAsmLines.h>
 #include<cstring.h>

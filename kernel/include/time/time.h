@@ -12,7 +12,7 @@ typedef struct RealTime RealTime;
 typedef struct Timestamp Timestamp;
 
 #include<kit/types.h>
-#include<multitask/spinlock.h>
+#include<multitask/locks/spinlock.h>
 
 typedef struct RealTime {
     Uint16  year;

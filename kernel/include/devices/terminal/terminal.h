@@ -7,7 +7,7 @@ typedef struct Terminal Terminal;
 #include<devices/terminal/inputBuffer.h>
 #include<kit/types.h>
 #include<structs/queue.h>
-#include<multitask/semaphore.h>
+#include<multitask/locks/semaphore.h>
 
 /**
  * Window width

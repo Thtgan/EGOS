@@ -13,7 +13,7 @@ typedef struct ClockSource ClockSource;
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<multitask/spinlock.h>
+#include<multitask/locks/spinlock.h>
 #include<time/time.h>
 
 typedef struct ClockSource {

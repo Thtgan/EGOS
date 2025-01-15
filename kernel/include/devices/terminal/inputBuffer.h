@@ -3,7 +3,7 @@
 
 typedef struct InputBuffer InputBuffer;
 
-#include<multitask/semaphore.h>
+#include<multitask/locks/semaphore.h>
 #include<structs/queue.h>
 
 typedef struct InputBuffer {

@@ -2,7 +2,7 @@
 
 #include<devices/clock/clockSource.h>
 #include<kit/types.h>
-#include<multitask/spinlock.h>
+#include<multitask/locks/spinlock.h>
 #include<real/ports/CMOS.h>
 #include<real/simpleAsmLines.h>
 #include<time/time.h>
