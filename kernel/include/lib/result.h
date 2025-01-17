@@ -18,6 +18,8 @@ typedef struct Error {
     ConstCstring desc;
 } Error;
 
+void result_registerError(ID errorID, ConstCstring desc);
+
 typedef struct Result {
     ID errorID;
     Uintptr rip;
@@ -70,9 +72,7 @@ void result_unhandledError(Result* result);
 } while (0)
 
 #define ERROR_CATCH_DEFAULT_CODES_CRASH             {result_unhandledError(_result);}
-// #define ERROR_CATCH_DEFAULT_CRASH(__RESULT, ...)    ERROR_CATCH(__RESULT, ERROR_CATCH_DEFAULT_CODES_CRASH, __VA_ARGS__)
 #define ERROR_CATCH_DEFAULT_CODES_PASS              {return _result;}
-// #define ERROR_CATCH_DEFAULT_PASS(__RESULT, ...)     ERROR_CATCH(__RESULT, ERROR_CATCH_DEFAULT_CODES_PASS, __VA_ARGS__)
 
 #define ERROR_TRY_CATCH(__EXPRESSION, __DEFAULT_CODES, ...) do {            \
     __EXPRESSION;                                                           \

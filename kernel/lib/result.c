@@ -8,9 +8,40 @@
 static Result _result_defaultResult;
 
 #define __RESULT_MAXIMUM_ERROR_NUM  256
+static int _result_error_num = 0;
 static Error _result_errors[__RESULT_MAXIMUM_ERROR_NUM];
 
+void result_registerError(ID errorID, ConstCstring desc) {
+    DEBUG_ASSERT_SILENT(_result_error_num < __RESULT_MAXIMUM_ERROR_NUM - 1);
+    Error* error = &_result_errors[_result_error_num++];
+    error->desc = desc;
+}
+
 Result* result_getCurrentResult() {
+    result_registerError(
+        ERROR_ID_OK, "OK"
+    );
+
+    result_registerError(
+        ERROR_ID_UNKNOWN, "Unknown"
+    );
+
+    result_registerError(
+        ERROR_ID_UNKNOWN, "Illegal Arguments"
+    );
+
+    result_registerError(
+        ERROR_ID_OUT_OF_MEMORY, "Out Of Memory"
+    );
+
+    result_registerError(
+        ERROR_ID_DATA_ERROR, "Data Error"
+    );
+
+    result_registerError(
+        ERROR_ID_NOT_SUPPORTED_OPERATION, "Not Supported Operation"
+    );
+    
     return &_result_defaultResult;
 }
 
