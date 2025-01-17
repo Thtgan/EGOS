@@ -14,6 +14,7 @@ typedef Uint8 VGAcolor;
 #include<kit/bit.h>
 #include<system/memoryLayout.h>
 #include<realmode.h>
+#include<result.h>
 
 #define VGA_TEXT_MODE_CELL_BUILD_CELL(__CHARACTER, __BACKGROUND_COLOR, __FOREGROUND_COLOR) (Uint8)(__CHARACTER) | VAL_LEFT_SHIFT(TRIM_VAL_SIMPLE((Uint16)__FOREGROUND_COLOR, 8, 4), 8) | VAL_LEFT_SHIFT(TRIM_VAL_SIMPLE((Uint16)__BACKGROUND_COLOR, 8, 4), 12)
 #define VGA_TEXT_MODE_CELL_EXTRACT_FOREGROUND(__CELL)   EXTRACT_VAL(__CELL, 16, 8, 12)
@@ -25,7 +26,7 @@ typedef struct VGAspecificDisplayInfo {
     VGAmodeHeader* mode;
 } VGAspecificDisplayInfo;
 
-OldResult vga_init();
+Result* vga_init();
 
 void vga_callRealmodeInt10(RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
@@ -33,7 +34,7 @@ VGAmodeHeader* vga_getCurrentMode();
 
 void vga_dumpDisplayContext(DisplayContext* context);
 
-OldResult vga_switchMode(VGAmodeHeader* mode, bool legacy);
+void vga_switchMode(VGAmodeHeader* mode, bool legacy);
 
 VGAcolor vga_approximateColor(RGBA color);
 

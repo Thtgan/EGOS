@@ -11,9 +11,10 @@ static char _terminalSwitch_buffers[TERMINAL_LEVEL_NUM][4 * PAGE_SIZE];
 
 Result* terminalSwitch_init() {
     for (int i = 0; i < TERMINAL_LEVEL_NUM; ++i) {
-        if (terminal_initStruct(_terminalSwitch_terminals + i, _terminalSwitch_buffers[i], 4 * PAGE_SIZE) != RESULT_SUCCESS) {
-            ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
-        }
+        ERROR_TRY_CATCH_DIRECT(
+            terminal_initStruct(_terminalSwitch_terminals + i, _terminalSwitch_buffers[i], 4 * PAGE_SIZE),
+            ERROR_CATCH_DEFAULT_CODES_PASS
+        );
     }
 
     terminal_setCurrentTerminal(_terminalSwitch_terminals + TERMINAL_LEVEL_OUTPUT);

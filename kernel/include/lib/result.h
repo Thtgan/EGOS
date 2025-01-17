@@ -14,6 +14,8 @@ typedef struct Result Result;
 #define ERROR_ID_DATA_ERROR                 4
 #define ERROR_ID_NOT_SUPPORTED_OPERATION    5
 #define ERROR_ID_STATE_ERROR                6
+#define ERROR_ID_ALREADY_EXIST              7
+#define ERROR_ID_NOT_FOUND                  8
 
 typedef struct Error {
     ConstCstring desc;

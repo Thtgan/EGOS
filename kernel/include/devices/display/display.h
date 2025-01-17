@@ -51,7 +51,7 @@ DisplayContext* display_getCurrentContext();
 
 Result* display_initMode(DisplayMode mode);
 
-OldResult display_switchMode(DisplayMode mode);
+Result* display_switchMode(DisplayMode mode);
 
 static inline Uint32 display_buildRGBA(Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
     return (Uint32)r | VAL_LEFT_SHIFT((Uint32)g, 8) | VAL_LEFT_SHIFT((Uint32)b, 16) | VAL_LEFT_SHIFT((Uint32)a, 24);

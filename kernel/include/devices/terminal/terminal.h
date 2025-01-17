@@ -8,6 +8,7 @@ typedef struct Terminal Terminal;
 #include<kit/types.h>
 #include<structs/queue.h>
 #include<multitask/locks/semaphore.h>
+#include<result.h>
 
 /**
  * Window width
@@ -85,7 +86,7 @@ typedef struct Terminal {
  * @param height Height of terminal on display
  * @return OldResult OldResult of the operation
  */
-OldResult terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
+Result* terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
 
 void terminal_updateDisplayContext(Terminal* terminal);
 
@@ -122,7 +123,7 @@ void terminal_flushDisplay();
  * @param terminal Terminal
  * @return OldResult OldResult of the operation
  */
-OldResult terminal_scrollUp(Terminal* terminal);
+bool terminal_scrollUp(Terminal* terminal);
 
 /**
  * @brief Scroll down
@@ -130,7 +131,7 @@ OldResult terminal_scrollUp(Terminal* terminal);
  * @param terminal Terminal
  * @return OldResult OldResult of the operation
  */
-OldResult terminal_scrollDown(Terminal* terminal);
+bool terminal_scrollDown(Terminal* terminal);
 
 /**
  * @brief Output string to terminal, support control characters

@@ -12,6 +12,7 @@
 #include<cstring.h>
 #include<structs/queue.h>
 #include<system/memoryLayout.h>
+#include<result.h>
 
 static Terminal* _terminal_currentTerminal = NULL;
 
@@ -74,10 +75,11 @@ static void __terminal_putCharacter(Terminal* terminal, char ch);
  */
 static void __terminal_scrollWindowToRow(Terminal* terminal, Index16 row);
 
-OldResult terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
+Result* terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
     terminal->displayContext = display_getCurrentContext(); //TODO: Only considering text mode now
-    if (terminal->displayContext == NULL || bufferSize < terminal->displayContext->width * terminal->displayContext->width) {
-        return RESULT_ERROR;
+    DEBUG_ASSERT_SILENT(terminal->displayContext != NULL);
+    if (bufferSize < terminal->displayContext->width * terminal->displayContext->width) {
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
     }
 
     terminal->loopRowBegin = 0;
@@ -101,7 +103,7 @@ OldResult terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize)
     initSemaphore(&terminal->inputLock, 1);
     inputBuffer_initStruct(&terminal->inputBuffer);
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void terminal_updateDisplayContext(Terminal* terminal) {
@@ -161,24 +163,22 @@ void terminal_flushDisplay() {
     terminal_switchCursor(_terminal_currentTerminal, _terminal_currentTerminal->cursorEnabled);
 }
 
-OldResult terminal_scrollUp(Terminal* terminal) {
+bool terminal_scrollUp(Terminal* terminal) {
     if (terminal->windowRowBegin == 0) {
-        return RESULT_ERROR;
+        return false;
     }
 
     --terminal->windowRowBegin;
-
-    return RESULT_SUCCESS;
+    return true;
 }
 
-OldResult terminal_scrollDown(Terminal* terminal) {
+bool terminal_scrollDown(Terminal* terminal) {
     if (terminal->windowRowBegin + terminal->displayContext->height == terminal->bufferRowSize) {
-        return RESULT_ERROR;
+        return false;
     }
 
     ++terminal->windowRowBegin;
-
-    return RESULT_SUCCESS;
+    return true;
 }
 
 void terminal_outputString(Terminal* terminal, ConstCstring str) {

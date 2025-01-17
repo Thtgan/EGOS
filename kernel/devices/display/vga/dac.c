@@ -136,9 +136,9 @@ Uint64 __vgaPalette_colorDistance(Object o1, Object o2);
 
 int __vgaPalette_colorGrayScaleCompare(const Object o1, const Object o2);
 
-OldResult __vgaPalette_registerKey(VGApalette* palette, Object key);
+Result* __vgaPalette_registerKey(VGApalette* palette, Object key);
 
-OldResult vgaPalette_initApproximate(VGApalette* palette) {
+Result* vgaPalette_initApproximate(VGApalette* palette) {
     Object grayScaleSortedColor[256];
     for (int i = 0; i < palette->colorNum; ++i) {
         VGAdacColor* dacColor = &palette->colors[i];
@@ -149,37 +149,31 @@ OldResult vgaPalette_initApproximate(VGApalette* palette) {
 
     KDtree_initStruct(&palette->colorApproximate, 3, __vgaPalette_colorCompare, __vgaPalette_colorDistance);
 
+    ERROR_TRY_BEGIN();
     int i, j;
-    for (i = palette->colorNum >> 1, j = i - 1; i < palette->colorNum, j >= 0; ++i, --j) {
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[i]) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
-
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[j]) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+    for (i = palette->colorNum >> 1, j = i - 1; i < palette->colorNum, j >= 0; ++i, --j) {  //Make tree more even
+        ERROR_TRY_CALL_DIRECT(__vgaPalette_registerKey(palette, grayScaleSortedColor[i]));
+        ERROR_TRY_CALL_DIRECT(__vgaPalette_registerKey(palette, grayScaleSortedColor[j]));
     }
 
     for (; i < palette->colorNum; ++i) {
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[i]) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        ERROR_TRY_CALL_DIRECT(__vgaPalette_registerKey(palette, grayScaleSortedColor[i]));
     }
 
     for (; j >= 0; --j) {
-        if (__vgaPalette_registerKey(palette, grayScaleSortedColor[j]) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        ERROR_TRY_CALL_DIRECT(__vgaPalette_registerKey(palette, grayScaleSortedColor[j]));
     }
+    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_PASS);
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 VGAcolor vgaPalette_approximateColor(VGApalette* palette, RGBA color) {
     Object key = __vgaPalette_rgbaToKey(color), closestKey = OBJECT_NULL;
-    if (KDtree_nearestNeighbour(&palette->colorApproximate, key, &closestKey) != RESULT_SUCCESS) {
-        return 0;
-    }
+    ERROR_TRY_CATCH_DIRECT(
+        KDtree_nearestNeighbour(&palette->colorApproximate, key, &closestKey),
+        ERROR_CATCH_DEFAULT_CODES_CRASH
+    );
 
     return __vgaPalette_keyToVGAcolor(closestKey);
 }
@@ -193,7 +187,7 @@ RGBA vgaPalette_vgaColorToRGBA(VGApalette* palette, VGAcolor color) {
     return display_buildRGBA(dacColor->r, dacColor->g, dacColor->b, 0xFF);
 }
 
-OldResult vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareRegisters* registers, VGApalette* palette) {
+Result* vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareRegisters* registers, VGApalette* palette) {
     for (int i = 0; i < 16; ++i) {
         VGAcolor color = registers->attributeControllerRegisters.data[i];    //Internal palette i
         VGAdacColor* dacColor = &palette->colors[color];
@@ -201,13 +195,13 @@ OldResult vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardware
 
         KDtreeNode* existingKey = KDtree_search(&palette->colorApproximate, dacKey);
         if (existingKey == NULL) {
-            return RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_NOT_FOUND);
         }
 
         converter->convertData[i] = __vgaPalette_keyToVGAcolor(existingKey->key);
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 VGAcolor vgaColorConverter_convert(VGAcolorConverter* converter, VGAcolor color) {
@@ -222,14 +216,15 @@ VGAcolor vgaColorConverter_convert(VGAcolorConverter* converter, VGAcolor color)
     return ret;
 }
 
-OldResult vgaPalettes_init() {
+Result* vgaPalettes_init() {
     for (int i = 0; i < VGA_PALETTE_TYPE_NUM; ++i) {
-        if (vgaPalette_initApproximate(_vgaPalettes[i]) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        ERROR_TRY_CATCH_DIRECT(
+            vgaPalette_initApproximate(_vgaPalettes[i]),
+            ERROR_CATCH_DEFAULT_CODES_PASS
+        );
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void vgaDAC_readColors(Index8 begin, VGAdacColor* colors, Size n) {
@@ -289,18 +284,18 @@ int __vgaPalette_colorGrayScaleCompare(const Object o1, const Object o2) {
     return (int)display_rgbToGrayScale(__vgaPalette_keyToRGBA(o1)) - (int)display_rgbToGrayScale(__vgaPalette_keyToRGBA(o2));
 }
 
-OldResult __vgaPalette_registerKey(VGApalette* palette, Object key) {
+Result* __vgaPalette_registerKey(VGApalette* palette, Object key) {
     if (KDtree_search(&palette->colorApproximate, key) != NULL) {
-        return RESULT_CONTINUE;
+        ERROR_RETURN_OK();
     }
 
     KDtreeNode* node = memory_allocate(sizeof(KDtreeNode));
     if (node == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY);
     }
 
     KDtreeNode_initStruct(node, key);
     KDtree_insert(&palette->colorApproximate, node);
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }

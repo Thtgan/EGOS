@@ -112,12 +112,12 @@ OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* o
     return RESULT_SUCCESS;
 }
 
-OldResult realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet) {
+Result* realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet) {
     DEBUG_ASSERT(_realMode_funcNum + funcNum <= __REALMODE_MAX_FUNC_NUM && indexRet != NULL, "");
 
     void* copyTo = __realmode_findHighestMemory(&mm->mMap, 0x10000, DIVIDE_ROUND_UP(codeSize, PAGE_SIZE));
     if (copyTo == NULL || carrier_carry(codeBegin, paging_convertAddressP2V(copyTo), codeSize, carrierList) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);
     }
 
     for (int i = 0; i < funcNum; ++i, ++_realMode_funcNum) {
@@ -125,7 +125,7 @@ OldResult realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetad
         indexRet[i] = _realMode_funcNum;
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void* __realmode_getFunc(Index16 index) {

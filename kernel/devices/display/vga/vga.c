@@ -53,24 +53,33 @@ static DisplayOperations _vga_operations = {
     .switchCursor       = __vga_switchCursor
 };
 
-OldResult vga_init() {
-    if (realmode_registerFuncs(&vgaRealmodeFuncs_begin, (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin, &vgaRealmodeFuncs_carryList, _vgaRealmodeFuncs_funcList, __VGA_REALMODE_FUNC_NUM, _vgaRealmodeFuncs_funcIndex) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+Result* vga_init() {
+    ERROR_TRY_BEGIN();
+    ERROR_TRY_CALL_DIRECT(
+        realmode_registerFuncs(
+            &vgaRealmodeFuncs_begin,
+            (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin,
+            &vgaRealmodeFuncs_carryList,
+            _vgaRealmodeFuncs_funcList,
+            __VGA_REALMODE_FUNC_NUM,
+            _vgaRealmodeFuncs_funcIndex
+        );
+    );
 
-    if (vgaPalettes_init() != RESULT_SUCCESS || vgaMode_init() != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    ERROR_TRY_CALL_DIRECT(vgaPalettes_init());
+    ERROR_TRY_CALL_DIRECT(vgaMode_init());
+
+    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_PASS);
 
     int currentLegacyMode = vgaMode_getCurrentLegacyMode();
     VGAmodeHeader* mode = vgaMode_searchModeFromLegacy(currentLegacyMode);
     if (mode == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_NOT_FOUND)
     }
 
     _vga_currentMode = mode;
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void vga_callRealmodeInt10(RealmodeRegs* inRegs, RealmodeRegs* outRegs) {
@@ -89,10 +98,8 @@ void vga_dumpDisplayContext(DisplayContext* context) {
     context->operations     = &_vga_operations;
 }
 
-OldResult vga_switchMode(VGAmodeHeader* mode, bool legacy) {
-    if (vgaMode_switch(mode, legacy) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+void vga_switchMode(VGAmodeHeader* mode, bool legacy) {
+    vgaMode_switch(mode, legacy);
 
     _vga_currentMode = mode;
 
@@ -103,8 +110,6 @@ OldResult vga_switchMode(VGAmodeHeader* mode, bool legacy) {
         _vga_displaySpecificInfo.cursorPosition.x = _vga_displaySpecificInfo.cursorPosition.y = 0;
     }
     _vga_displaySpecificInfo.mode = mode;
-
-    return RESULT_SUCCESS;
 }
 
 VGAcolor vga_approximateColor(RGBA color) {

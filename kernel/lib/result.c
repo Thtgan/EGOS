@@ -46,6 +46,14 @@ Result* result_init() {
         ERROR_ID_STATE_ERROR, "State Error"
     );
 
+    result_registerError(
+        ERROR_ID_ALREADY_EXIST, "Already Exist"
+    );
+
+    result_registerError(
+        ERROR_ID_NOT_FOUND, "Not Found"
+    );
+
     ERROR_RETURN_OK();
 }
 
