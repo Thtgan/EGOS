@@ -24,13 +24,13 @@ int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key);
 int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
 int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 
-OldResult device_init() {
+Result* device_init() {
     RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
     if (pseudoDevice_init() != RESULT_SUCCESS) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 MajorDeviceID device_allocMajor() {

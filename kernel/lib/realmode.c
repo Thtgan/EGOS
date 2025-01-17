@@ -38,7 +38,7 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n);
 
 void __realmode_setupPageTables(void* pageTableFrames);
 
-OldResult realmode_init() {
+Result* realmode_init() {
     void* realmode_beginPtr = &realmode_begin;
     void* realmode_endPtr = &realmode_end;
     Size codeSize = (Uintptr)&realmode_end - (Uintptr)&realmode_begin;
@@ -77,7 +77,7 @@ OldResult realmode_init() {
 
     void* pageTableFrames = memory_allocateFrame(3);    //TODO: Make sure it allocates fromn lower 4GB
     if ((Uintptr)pageTableFrames + 3 * PAGE_SIZE > 0x100000000) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     __realmode_setupPageTables(pageTableFrames);
@@ -85,12 +85,12 @@ OldResult realmode_init() {
     _realmode_doExecFunc = (void*)realmode_doExec - realmode_beginPtr + copyTo;
 
     if (carrier_carry(realmode_beginPtr, copyTo, codeSize, &realmode_carryList) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     _realMode_funcNum = 0;
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs) {

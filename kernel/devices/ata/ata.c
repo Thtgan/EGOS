@@ -39,13 +39,13 @@ static ATAdevice _ata_devices[4];
 static BlockDevice _ata_blockDevices[4];
 static ATAchannel _ata_channels[2];
 
-OldResult ata_initDevices() {
+Result* ata_initDevices() {
     ATAchannel dummy1;
     ATAdevice dummy2;
 
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     for (int i = 0; i < 2; ++i) {
@@ -92,7 +92,7 @@ OldResult ata_initDevices() {
 
             MajorDeviceID minor = device_allocMinor(major);
             if (minor == DEVICE_INVALID_ID) {
-                return RESULT_ERROR;
+                ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
             }
 
             BlockDeviceInitArgs args = {
@@ -115,7 +115,7 @@ OldResult ata_initDevices() {
         }
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 OldResult ata_sendCommand(ATAchannel* channel, ATAcommand* command) {

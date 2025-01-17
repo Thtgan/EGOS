@@ -15,6 +15,7 @@ typedef struct DisplayContext DisplayContext;
 typedef struct DisplayOperations DisplayOperations;
 
 #include<kit/bit.h>
+#include<result.h>
 
 typedef struct DisplayPosition {
     Uint16 x;   //It's row
@@ -44,11 +45,11 @@ typedef struct DisplayOperations {
     void (*switchCursor)(bool enable);
 } DisplayOperations;
 
-OldResult display_init();
+Result* display_init();
 
 DisplayContext* display_getCurrentContext();
 
-OldResult display_initMode(DisplayMode mode);
+Result* display_initMode(DisplayMode mode);
 
 OldResult display_switchMode(DisplayMode mode);
 

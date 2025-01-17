@@ -4,21 +4,22 @@
 #include<devices/terminal/terminal.h>
 #include<kit/types.h>
 #include<system/pageTable.h>
+#include<result.h>
 
 static Terminal _terminalSwitch_terminals[TERMINAL_LEVEL_NUM];
 static char _terminalSwitch_buffers[TERMINAL_LEVEL_NUM][4 * PAGE_SIZE];
 
-OldResult terminalSwitch_init() {
+Result* terminalSwitch_init() {
     for (int i = 0; i < TERMINAL_LEVEL_NUM; ++i) {
         if (terminal_initStruct(_terminalSwitch_terminals + i, _terminalSwitch_buffers[i], 4 * PAGE_SIZE) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
         }
     }
 
     terminal_setCurrentTerminal(_terminalSwitch_terminals + TERMINAL_LEVEL_OUTPUT);
     terminal_flushDisplay();
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void terminalSwitch_switchDisplayMode(DisplayMode mode) {

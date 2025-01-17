@@ -2,12 +2,8 @@
 #define __INTERRUPT_TSS_H
 
 #include<kit/types.h>
+#include<result.h>
 
-/**
- * @brief Initialize TSS
- * 
- * @return OldResult OldResult of the operation
- */
-OldResult tss_init();
+Result* tss_init();
 
 #endif // __INTERRUPT_TSS_H

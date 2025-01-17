@@ -18,21 +18,23 @@
 #include<realmode.h>
 #include<time/time.h>
 #include<usermode/usermode.h>
+#include<result.h>
 
 typedef struct {
-    OldResult (*func)();
+    Result* (*func)();
     ConstCstring name;
 } __InitFunc;
 
-static OldResult __init_printBootSlogan();
+static Result* __init_printBootSlogan();
 
-static OldResult __init_enableInterrupt();     //TODO: Maybe remove these
+static Result* __init_enableInterrupt();    //TODO: Maybe remove these
 
-static OldResult __init_disableInterrupt();    //TODO: Maybe remove these
+static Result* __init_disableInterrupt();   //TODO: Maybe remove these
 
-static OldResult __init_initVideo();    //TODO: Maybe remove these
+static Result* __init_initVideo();          //TODO: Maybe remove these
 
 static __InitFunc _initFuncs[] = {
+    { result_init               ,   "Result"      },
     { display_init              ,   "Display"     },
     { terminalSwitch_init       ,   "Terminal"    },
     { __init_printBootSlogan    ,   NULL          },  //TODO: May crash after print slogan
@@ -56,38 +58,38 @@ static __InitFunc _initFuncs[] = {
     { NULL, NULL }
 };
 
-OldResult init_initKernel() {
+Result* init_initKernel() {
     for (int i = 0; _initFuncs[i].func != NULL; ++i) {
-        if (_initFuncs[i].func() == RESULT_SUCCESS) {
-            continue;
-        }
-
-        if (_initFuncs[i].name != NULL) {
-            print_printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
-        }
-
-        return RESULT_ERROR;
+        ERROR_TRY_CATCH_DIRECT(
+            _initFuncs[i].func(), 
+            {
+                if (_initFuncs[i].name != NULL) {
+                    print_printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
+                }
+                return ERROR_CATCH_RESULT_NAME;
+            }
+        );
     }
 
     print_printf(TERMINAL_LEVEL_DEBUG, "All Initializations passed\n");
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
-static OldResult __init_printBootSlogan() {
+static Result* __init_printBootSlogan() {
     print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
-static OldResult __init_enableInterrupt() {
+static Result* __init_enableInterrupt() {
     sti();
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
-static OldResult __init_disableInterrupt() {
+static Result* __init_disableInterrupt() {
     cli();
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
-static OldResult __init_initVideo() {
+static Result* __init_initVideo() {
     return display_initMode(DISPLAY_MODE_VGA);
 }

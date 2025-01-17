@@ -4,54 +4,65 @@
 #include<devices/display/vga/default.h>
 #include<devices/display/vga/vga.h>
 #include<kit/types.h>
+#include<result.h>
 
 //TODO: Add support for other video adapter
 
 static DisplayContext _display_currentContext;
 static bool _display_modeInitialized[DISPLAY_MODE_NUM] = { false };
 
-OldResult display_init() {
-    if (display_initMode(DISPLAY_MODE_DEFAULT) != RESULT_SUCCESS || display_switchMode(DISPLAY_MODE_DEFAULT) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
+Result* display_init() {
+    ERROR_TRY_CATCH_DIRECT(
+        display_initMode(DISPLAY_MODE_DEFAULT),
+        ERROR_CATCH_DEFAULT_CODES_PASS
+    );
+    
+    if (display_switchMode(DISPLAY_MODE_DEFAULT) != RESULT_SUCCESS) {
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 DisplayContext* display_getCurrentContext() {
     return &_display_currentContext;
 }
 
-OldResult display_initMode(DisplayMode mode) {
+Result* display_initMode(DisplayMode mode) {
     if (mode >= DISPLAY_MODE_NUM) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     if (_display_modeInitialized[mode]) {
-        return RESULT_SUCCESS;
+        ERROR_RETURN_OK();
     }
 
-    OldResult ret = RESULT_ERROR;
+    // OldResult ret = RESULT_ERROR;
     switch (mode) {
         case DISPLAY_MODE_DEFAULT: {
-            ret = RESULT_SUCCESS;
+            // ret = RESULT_SUCCESS;
             break;
         }
         case DISPLAY_MODE_VGA: {
-            ret = vga_init();
+            // ret = vga_init();
+            if (vga_init() != RESULT_SUCCESS) {
+                ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+            }
             break;
         }
         default: {
-            ret = RESULT_ERROR;
-            break;
+            // ret = RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+            // break;
         }
     }
 
-    if (ret == RESULT_SUCCESS) {
-        _display_modeInitialized[mode] = true;
-    }
-
-    return ret;
+    // if (ret == RESULT_SUCCESS) {
+    //     _display_modeInitialized[mode] = true;
+    // }
+    _display_modeInitialized[mode] = true;
+    ERROR_RETURN_OK();
+    // return ret;
 }
 
 OldResult display_switchMode(DisplayMode mode) {

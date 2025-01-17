@@ -15,6 +15,7 @@
 #include<system/pageTable.h>
 #include<usermode/elf.h>
 #include<usermode/syscall.h>
+#include<result.h>
 
 __attribute__((naked))
 /**
@@ -35,12 +36,12 @@ void __usermode_syscallHandlerExit(int ret);
 
 static int __usermode_doExecute(ConstCstring path, File* file);
 
-OldResult usermode_init() {
+Result* usermode_init() {
     syscall_init();
 
     syscall_registerHandler(SYSCALL_EXIT, __usermode_syscallHandlerExit);
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 int usermode_execute(ConstCstring path) {  //TODO: Unstable code

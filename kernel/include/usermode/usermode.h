@@ -2,13 +2,9 @@
 #define __USERMODE_USERMODE_H
 
 #include<kit/types.h>
+#include<result.h>
 
-/**
- * @brief Initialize user mode
- * 
- * @return OldResult OldResult of the operation
- */
-OldResult usermode_init();
+Result* usermode_init();
 
 /**
  * @brief Execute ELF program at certain path, sets errorcode to indicate error

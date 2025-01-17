@@ -13,12 +13,15 @@ typedef struct Result Result;
 #define ERROR_ID_OUT_OF_MEMORY              3
 #define ERROR_ID_DATA_ERROR                 4
 #define ERROR_ID_NOT_SUPPORTED_OPERATION    5
+#define ERROR_ID_STATE_ERROR                6
 
 typedef struct Error {
     ConstCstring desc;
 } Error;
 
 void result_registerError(ID errorID, ConstCstring desc);
+
+Result* result_init();
 
 typedef struct Result {
     ID errorID;
@@ -60,19 +63,20 @@ void result_unhandledError(Result* result);
     break;                                                              \
 }
 
+#define ERROR_CATCH_RESULT_NAME _result
 #define ERROR_CATCH(__RESULT, __DEFAULT_CODES, ...)  do {           \
-    Result* _result = (__RESULT);                                   \
+    Result* ERROR_CATCH_RESULT_NAME = (__RESULT);                   \
     if (!ERROR_CHECK_ERROR(_result)) {                              \
         break;                                                      \
     }                                                               \
-    switch (_result->errorID) {                                     \
+    switch (ERROR_CATCH_RESULT_NAME->errorID) {                     \
         FOREACH_MACRO_CALL(ERROR_CASE_BUILDER_CALL, , __VA_ARGS__)  \
         default: __DEFAULT_CODES                                    \
     };                                                              \
 } while (0)
 
-#define ERROR_CATCH_DEFAULT_CODES_CRASH             {result_unhandledError(_result);}
-#define ERROR_CATCH_DEFAULT_CODES_PASS              {return _result;}
+#define ERROR_CATCH_DEFAULT_CODES_CRASH             {result_unhandledError(ERROR_CATCH_RESULT_NAME);}
+#define ERROR_CATCH_DEFAULT_CODES_PASS              {return ERROR_CATCH_RESULT_NAME;}
 
 #define ERROR_TRY_CATCH(__EXPRESSION, __DEFAULT_CODES, ...) do {            \
     __EXPRESSION;                                                           \

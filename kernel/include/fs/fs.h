@@ -26,12 +26,7 @@ typedef struct FS {
 
 #define FS_PATH_SEPERATOR '/'
 
-/**
- * @brief Initialize the file system
- * 
- * @return OldResult OldResult of the operation
- */
-OldResult fs_init();
+Result* fs_init();
 
 /**
  * @brief Check type of file system on device

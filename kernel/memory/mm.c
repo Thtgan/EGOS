@@ -26,9 +26,9 @@ static HeapAllocator* heapAllocatorPtrs[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NU
 
 MemoryManager* mm;
 
-OldResult mm_init() {
+Result* mm_init() {
     if (_memoryManager.initialized) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_STATE_ERROR);
     }
 
     mm = &_memoryManager;
@@ -41,7 +41,7 @@ OldResult mm_init() {
     frameMetadata_initStruct(&mm->frameMetadata);
     FrameMetadataHeader* header = frameMetadata_addFrames(&mm->frameMetadata, (void*)(mm->accessibleBegin * PAGE_SIZE), mm->accessibleEnd - mm->accessibleBegin);
     if (header == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY);
     }
     buddyFrameAllocator_initStruct(&_buddyFrameAllocator);
     mm->frameAllocator = &_buddyFrameAllocator.allocator;
@@ -49,7 +49,7 @@ OldResult mm_init() {
     ERROR_TRY_CALL_DIRECT(frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum));
 
     ERROR_TRY_CALL_DIRECT(paging_init());
-    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_CRASH);
+    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_PASS);
 
     Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
     buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
@@ -62,7 +62,7 @@ OldResult mm_init() {
     mm->heapAllocators = heapAllocatorPtrs;
 
     mm->initialized = true;
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 static void __mm_auditE820(MemoryManager* mm) {

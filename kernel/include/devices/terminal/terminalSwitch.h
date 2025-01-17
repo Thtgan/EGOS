@@ -10,13 +10,14 @@ typedef enum {
 #include<devices/display/display.h>
 #include<devices/terminal/terminal.h>
 #include<kit/types.h>
+#include<result.h>
 
 /**
  * @brief Initialize the terminal's switch
  * 
  * @return OldResult OldResult of the operation
  */
-OldResult terminalSwitch_init();
+Result* terminalSwitch_init();
 
 void terminalSwitch_switchDisplayMode(DisplayMode mode);
 

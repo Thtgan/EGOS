@@ -5,6 +5,7 @@
 #include<real/ports/pci.h>
 #include<real/simpleAsmLines.h>
 #include<structs/vector.h>
+#include<result.h>
 
 static void __pci_probe();
 
@@ -20,7 +21,7 @@ static OldResult __pci_readDevice(Uint32 baseAddr, PCIdevice* device);
 
 static OldResult __pci_addDevice(PCIdevice* device);
 
-OldResult pci_init() {
+Result* pci_init() {
     vector_initStruct(&pci_devices);
 
     if (pci_checkExist()) {
@@ -29,7 +30,7 @@ OldResult pci_init() {
         print_printf(TERMINAL_LEVEL_DEBUG, "PCI not supported\n");
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 bool pci_checkExist() {

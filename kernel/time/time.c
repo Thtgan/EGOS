@@ -7,6 +7,7 @@
 #include<kit/types.h>
 #include<multitask/schedule.h>
 #include<time/timer.h>
+#include<result.h>
 
 #define __TIME_DAYS_IN_ERA          146097ll
 #define __TIME_DAYS_IN_4_YEARS      1461ll
@@ -120,12 +121,12 @@ ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower th
     timer_updateTimers();
 }
 
-OldResult time_init() {
+Result* time_init() {
     clockSources_init();
 
     ClockSource* CMOSclockSource = clockSource_getSource(CLOCK_SOURCE_TYPE_CMOS), * mainClockSource, * beatClockSource;
     if (TEST_FLAGS_FAIL(CMOSclockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     _clock.time                 = (Timestamp) {
@@ -140,12 +141,12 @@ OldResult time_init() {
 
     mainClockSource = clockSource_getSource(_clock.mainClockSource);
     if (TEST_FLAGS_FAIL(mainClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT | CLOCK_SOURCE_FLAGS_AUTO_UPDATE) || mainClockSource->readTick == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     beatClockSource = clockSource_getSource(_clock.beatClockSource);
     if (TEST_FLAGS_FAIL(beatClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT) || mainClockSource->readTick == NULL || beatClockSource->updateTick == NULL || beatClockSource->start == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
     bool interruptEnabled = idt_disableInterrupt();
@@ -159,10 +160,10 @@ OldResult time_init() {
     timer_init(beatClockSource);
 
     if (rawClockSourceStart(beatClockSource) == RESULT_ERROR) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
     }
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void time_getTimestamp(Timestamp* timestamp) {

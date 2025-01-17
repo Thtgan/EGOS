@@ -21,8 +21,6 @@ typedef struct MemoryManager {
     Uintptr accessibleBegin, accessibleEnd;
 } MemoryManager;
 
-OldResult mm_init();
-
-bool dbgCheck();
+Result* mm_init();
 
 #endif // __MEMORY_MM_H

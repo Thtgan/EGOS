@@ -5,6 +5,7 @@ typedef struct KeyboardKeyEntry KeyboardKeyEntry;
 
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<result.h>
 
 typedef struct KeyboardKeyEntry {
     Uint8 ascii, alt_ascii;
@@ -114,11 +115,6 @@ typedef struct KeyboardKeyEntry {
 #define CAPSLOCK                                        FLAG16(9)
 #define ENTER                                           FLAG16(10)
 
-/**
- * @brief Initialize the keyboard
- * 
- * @return OldResult OldResult of the operation
- */
-OldResult keyboard_init();
+Result* keyboard_init();
 
 #endif // __DEVICES_KEYBOARD_KEYBOARD_H

@@ -2,12 +2,8 @@
 #define __INIT_H
 
 #include<kit/types.h>
+#include<result.h>
 
-/**
- * @brief Do initialization of kernel
- * 
- * @return OldResult OldResult of the operation
- */
-OldResult init_initKernel();
+Result* init_initKernel();
 
 #endif // __INIT_H

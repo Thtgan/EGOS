@@ -17,7 +17,7 @@ void result_registerError(ID errorID, ConstCstring desc) {
     error->desc = desc;
 }
 
-Result* result_getCurrentResult() {
+Result* result_init() {
     result_registerError(
         ERROR_ID_OK, "OK"
     );
@@ -41,7 +41,15 @@ Result* result_getCurrentResult() {
     result_registerError(
         ERROR_ID_NOT_SUPPORTED_OPERATION, "Not Supported Operation"
     );
-    
+
+    result_registerError(
+        ERROR_ID_STATE_ERROR, "State Error"
+    );
+
+    ERROR_RETURN_OK();
+}
+
+Result* result_getCurrentResult() {
     return &_result_defaultResult;
 }
 
