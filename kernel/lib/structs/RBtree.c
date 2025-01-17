@@ -58,7 +58,7 @@ RBtreeNode* RBtree_search(RBtree* tree, Object val) {
     return NULL;
 }
 
-Result RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
+OldResult RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = NULL;
 
     int cmp;

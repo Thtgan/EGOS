@@ -66,11 +66,11 @@ typedef __builtin_va_list               va_list;
 #define va_arg(__LIST, __TYPE)          __builtin_va_arg(__LIST, __TYPE)
 #define va_copy(__DST, __SRC)	        __builtin_va_copy(__DST, __SRC)
 
-typedef Uint8                           Result;
-#define RESULT_SUCCESS                  ((Result)0)
-#define RESULT_ERROR                    ((Result)1)
-#define RESULT_CONTINUE                 ((Result)2)
-#define RESULT_FAIL                     ((Result)3)
+typedef Uint8                           OldResult;
+#define RESULT_SUCCESS                  ((OldResult)0)
+#define RESULT_ERROR                    ((OldResult)1)
+#define RESULT_CONTINUE                 ((OldResult)2)
+#define RESULT_FAIL                     ((OldResult)3)
 
 typedef Uint8                           Flags8;
 typedef Uint16                          Flags16;

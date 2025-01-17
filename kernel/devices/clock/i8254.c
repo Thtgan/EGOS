@@ -11,13 +11,13 @@
 
 static Uint64 __i8254_readTick(ClockSource* this);
 
-static Result __i8254_updateTick(ClockSource* this);
+static OldResult __i8254_updateTick(ClockSource* this);
 
-static Result __i8254_start(ClockSource* this);
+static OldResult __i8254_start(ClockSource* this);
 
-static Result __i8254_stop(ClockSource* this);
+static OldResult __i8254_stop(ClockSource* this);
 
-Result i8254_initClockSource(ClockSource* clockSource) {
+OldResult i8254_initClockSource(ClockSource* clockSource) {
     *clockSource = (ClockSource) {
         .type                   = CLOCK_SOURCE_TYPE_I8254,
         .tick                   = 0,
@@ -41,14 +41,14 @@ static Uint64 __i8254_readTick(ClockSource* this) {
     return ret;
 }
 
-static Result __i8254_updateTick(ClockSource* this) {
+static OldResult __i8254_updateTick(ClockSource* this) {
     spinlock_lock(&this->lock);
     ++this->tick;
     spinlock_unlock(&this->lock);
     return RESULT_SUCCESS;
 }
 
-static Result __i8254_start(ClockSource* this) {
+static OldResult __i8254_start(ClockSource* this) {
     spinlock_lock(&this->lock);
     outb(PIT_CONTROL, PIT_CONTROL_CHANNEL_SELECT(0) | PIT_CONTROL_BITS_MASK_LOW_HIGH_SEP | PIT_CONTROL_MODE_RATE_GENERATOR);
     Uint16 latch = __I8254_LATCH(this->hz);
@@ -58,7 +58,7 @@ static Result __i8254_start(ClockSource* this) {
     return RESULT_SUCCESS;
 }
 
-static Result __i8254_stop(ClockSource* this) {
+static OldResult __i8254_stop(ClockSource* this) {
     spinlock_lock(&this->lock);
     outb(PIT_CONTROL, PIT_CONTROL_CHANNEL_SELECT(0) | PIT_CONTROL_BITS_MASK_LOW_HIGH_SEP | PIT_CONTROL_MODE_INTERRUPT_ON_TERMINAL_COUNT);
     spinlock_unlock(&this->lock);

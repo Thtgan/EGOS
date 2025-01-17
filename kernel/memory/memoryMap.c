@@ -3,6 +3,7 @@
 #include<kit/bit.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<debug.h>
 
 MemoryMapEntry* memoryMap_searchEntry(MemoryMap* mMap, Range* r, Flags8 flags, Flags8 entryType) {
     Uint64 rBegin = r->begin, rEnd = r->begin + r->length;
@@ -84,14 +85,20 @@ MemoryMapEntry* memoryMap_searchEntry(MemoryMap* mMap, Range* r, Flags8 flags, F
     return NULL;
 }
 
-Result memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry) {
+Result* memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
-    if (index == MEMORY_MAP_ENTRY_NUM - 1 || entry->length <= splitlength) {
+    if (index == MEMORY_MAP_ENTRY_NUM - 1) {
         if (newEntry != NULL) {
             *newEntry = NULL;
         }
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY);
+    }
 
-        return RESULT_ERROR;
+    if (entry->length <= splitlength) {
+        if (newEntry != NULL) {
+            *newEntry = NULL;
+        }
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
     }
 
     Uint32 originalBase = entry->base, originalLength = entry->length;
@@ -111,34 +118,44 @@ Result memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitle
     entry->length = splitlength;
     ++mMap->entryNum;
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
-Result memoryMap_combineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
+Result* memoryMap_combineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     MemoryMapEntry* nextEntry = entry + 1;
-    if (index == mMap->entryNum - 1 || entry->type != nextEntry->type || entry->base + entry->length != nextEntry->base) {
-        return RESULT_ERROR;
+    if (index < mMap->entryNum - 1 && entry->type == nextEntry->type || entry->base + entry->length == nextEntry->base) {
+        ERROR_THROW(ERROR_ID_DATA_ERROR);
     }
 
     entry->length += nextEntry->length;
     memory_memmove(nextEntry, nextEntry + 1, (mMap->entryNum - index - 1) * sizeof(MemoryMapEntry));
     --mMap->entryNum;
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 void memoryMap_tidyup(MemoryMap* mMap) {
-    for (int i = 0; i < mMap->entryNum; ++i) {
-        while (memoryMap_combineNextEntry(mMap, mMap->memoryMapEntries + i) == RESULT_SUCCESS);
+    int i = 0;
+    while (i < mMap->entryNum - 1) {
+        while (true) {
+            Result* res = memoryMap_combineNextEntry(mMap, mMap->memoryMapEntries + i);
+            if (ERROR_CHECK_ERROR(res)) {
+                break;
+            }
+        }
+        ++i;
     }
+
+    ERROR_RESET();
 }
 
-Result memoryMap_splitEntryAndTidyup(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, Uint8 splittedType, MemoryMapEntry** newEntry) {
+Result* memoryMap_splitEntryAndTidyup(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, Uint8 splittedType, MemoryMapEntry** newEntry) {
     MemoryMapEntry* splitted;
-    if (memoryMap_splitEntry(mMap, entry, splitlength, &splitted) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    ERROR_TRY_CATCH_DIRECT(
+        memoryMap_splitEntry(mMap, entry, splitlength, &splitted),
+        ERROR_CATCH_DEFAULT_CODES_PASS
+    );
 
     splitted->type = splittedType;
     if (newEntry != NULL) {
@@ -147,5 +164,5 @@ Result memoryMap_splitEntryAndTidyup(MemoryMap* mMap, MemoryMapEntry* entry, Siz
 
     memoryMap_tidyup(mMap);
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }

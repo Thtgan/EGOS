@@ -21,6 +21,8 @@ void debug_dump_memory(void* data, Size n);
 
 void debug_dump_stack(void* rbp, Size maxDepth);
 
+Uintptr debug_getCurrentRIP();  //TODO: IDK where this should go
+
 #define DEBUG_MARK_PRINT(__FORMAT, ...)                 print_printf(TERMINAL_LEVEL_DEBUG, "[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
 #define DEBUG_ASSERT_SILENT(__EXPRESSION)               do { if (!(__EXPRESSION)) debug_blowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)

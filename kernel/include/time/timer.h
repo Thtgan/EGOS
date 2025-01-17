@@ -27,9 +27,9 @@ void timer_init(ClockSource* timerClockSource);
 
 void timer_initStruct(Timer* timer, Int64 time, TimeUnit unit);
 
-Result timer_start(Timer* timer);
+OldResult timer_start(Timer* timer);
 
-Result timer_stop(Timer* timer);
+OldResult timer_stop(Timer* timer);
 
 void timer_updateTimers();
 

@@ -20,17 +20,18 @@ typedef struct ExtendedPageTable ExtendedPageTable;
 typedef struct ExtraPageTableContext ExtraPageTableContext;
 typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 
-#include<debug.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<kit/bit.h>
 #include<multitask/context.h>
 #include<system/pageTable.h>
+#include<debug.h>
+#include<result.h>
 
 typedef struct MemoryPresetOperations {
-    Result (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
-    Result (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
-    Result (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+    Result* (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+    Result* (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+    Result* (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 } MemoryPresetOperations;
 
 typedef struct MemoryPreset {
@@ -39,7 +40,7 @@ typedef struct MemoryPreset {
     MemoryPresetOperations operations;
 } MemoryPreset;
 
-Result memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
+Result* memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
 
 //TODO: Split between ExtendedPageTable and MemoryPreset still unclear
 
@@ -88,9 +89,9 @@ typedef struct ExtraPageTableContext {
 
 #define EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET(__CONTEXT, __ID)    ((__CONTEXT)->presets[(__ID)])
 
-Result extraPageTableContext_initStruct(ExtraPageTableContext* context);
+Result* extraPageTableContext_initStruct(ExtraPageTableContext* context);
 
-Result extraPageTableContext_registerPreset(ExtraPageTableContext* context, MemoryPreset* preset);
+Result* extraPageTableContext_registerPreset(ExtraPageTableContext* context, MemoryPreset* preset);
 
 static inline MemoryPreset* extraPageTableContext_getPreset(ExtraPageTableContext* context, Index8 id) {
     return context->presetCnt <= id ? NULL : context->presets[id];
@@ -110,25 +111,25 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
 
 void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table);
 
-Result extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset);
+Result* extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset);
 
-Result extendedPageTableRoot_erase(ExtendedPageTableRoot* root, void* v, Size n);
+Result* extendedPageTableRoot_erase(ExtendedPageTableRoot* root, void* v, Size n);
 
 MemoryPreset* extendedPageTableRoot_peek(ExtendedPageTableRoot* root, void* v);
 
 void* extendedPageTableRoot_translate(ExtendedPageTableRoot* root, void* v);
 
-static inline Result extendedPageTableRoot_copyEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
+static inline Result* extendedPageTableRoot_copyEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
     Uint8 presetID = srcExtendedTable->extraTable.tableEntries[index].presetID;
     return EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET(root->context, presetID)->operations.copyPagingEntry(level, srcExtendedTable, desExtendedTable, index);
 }
 
-static inline Result extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static inline Result* extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     Uint8 presetID = extendedTable->extraTable.tableEntries[index].presetID;
     return EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET(root->context, presetID)->operations.releasePagingEntry(level, extendedTable, index);
 }
 
-static inline Result extendedPageTableRoot_pageFaultHandler(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
+static inline Result* extendedPageTableRoot_pageFaultHandler(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
     Uint8 presetID = extendedTable->extraTable.tableEntries[index].presetID;
     return EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET(root->context, presetID)->operations.pageFaultHandler(level, extendedTable, index, v, handlerStackFrame, regs);
 }

@@ -44,7 +44,7 @@ ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
     debug_blowup("DEAD\n");
 }
 
-Result idt_init() {
+OldResult idt_init() {
     _idt_idtDesc.size = (Uint16)sizeof(_idt_idtEntryTable) - 1;  //Initialize the IDT desc
     _idt_idtDesc.tablePtr = (Uintptr)_idt_idtEntryTable;
 

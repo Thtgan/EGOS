@@ -166,7 +166,7 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
     }
 }
 
-Result keyboard_init() {
+OldResult keyboard_init() {
     for (int i = 0; i < 128; ++i) {
         _keyboard_pressed[i] = false;
     }

@@ -16,12 +16,12 @@ typedef struct CharDevice {
     Device                      device;
 } CharDevice;
 
-Result charDevice_initStruct(CharDevice* device, CharDeviceInitArgs* args);
+OldResult charDevice_initStruct(CharDevice* device, CharDeviceInitArgs* args);
 
-Result charDevice_read(CharDevice* device, Index64 index, void* buffer, Size n);
+OldResult charDevice_read(CharDevice* device, Index64 index, void* buffer, Size n);
 
-Result charDevice_write(CharDevice* device, Index64 index, const void* buffer, Size n);
+OldResult charDevice_write(CharDevice* device, Index64 index, const void* buffer, Size n);
 
-Result charDevice_flush(CharDevice* device);
+OldResult charDevice_flush(CharDevice* device);
 
 #endif // __DEVICES_CHAR_CHARDEVICE_H

@@ -120,7 +120,7 @@ ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower th
     timer_updateTimers();
 }
 
-Result time_init() {
+OldResult time_init() {
     clockSources_init();
 
     ClockSource* CMOSclockSource = clockSource_getSource(CLOCK_SOURCE_TYPE_CMOS), * mainClockSource, * beatClockSource;

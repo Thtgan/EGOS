@@ -28,16 +28,16 @@ typedef struct iNode {
 } iNode;
 
 typedef struct iNodeOperations {
-    Result (*translateBlockPos)(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
+    OldResult (*translateBlockPos)(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
 
-    Result (*resize)(iNode* iNode, Size newSizeInByte);
+    OldResult (*resize)(iNode* iNode, Size newSizeInByte);
 } iNodeOperations;
 
-static inline Result iNode_rawTranslateBlockPos(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
+static inline OldResult iNode_rawTranslateBlockPos(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
     return iNode->operations->translateBlockPos(iNode, vBlockIndex, n, pBlockRanges, rangeN);
 }
 
-static inline Result iNode_rawResize(iNode* iNode, Size newSizeInByte) {
+static inline OldResult iNode_rawResize(iNode* iNode, Size newSizeInByte) {
     return iNode->operations->resize(iNode, newSizeInByte);
 }
 
@@ -45,12 +45,12 @@ ID iNode_generateID(fsEntryDesc* desc);
 
 iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex);
 
-Result iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex);
+OldResult iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex);
 
-Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex);
+OldResult iNode_removeFromOpened(HashTable* table, Index64 blockIndex);
 
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc);
 
-Result iNode_close(iNode* iNode);
+OldResult iNode_close(iNode* iNode);
 
 #endif // __FS_INODE_H

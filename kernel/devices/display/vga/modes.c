@@ -292,7 +292,7 @@ static VGAmodeHeader* _vgaMode_modeHeaders[VGA_MODE_TYPE_NUM] = {
 
 static VGAcolorConverter _vgaMode_converters[VGA_MODE_TYPE_NUM];
 
-Result vgaMode_init() {
+OldResult vgaMode_init() {
     for (int i = 0; i < VGA_MODE_TYPE_NUM; ++i) {
         VGAmodeHeader* mode = _vgaMode_modeHeaders[i];
         if (mode->memoryMode == VGA_MEMORY_MODE_LINEAR) {
@@ -337,7 +337,7 @@ int vgaMode_getCurrentLegacyMode() {
     return outRegs.al;
 }
 
-Result vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
+OldResult vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
     if (legacy) {
         RealmodeRegs inRegs;
         memory_memset(&inRegs, 0, sizeof(inRegs));

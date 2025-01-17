@@ -1,0 +1,58 @@
+#include<error.h>
+
+#include<kit/types.h>
+#include<memory/memory.h>
+#include<real/simpleAsmLines.h>
+#include<multitask/schedule.h>
+#include<debug.h>
+#include<print.h>
+
+static ErrorList _error_defaultErrorList;
+#define __ERROR_MAX_ERROR_NUM   512
+static Error _errors[__ERROR_MAX_ERROR_NUM];
+
+void errorRecord_initStruct(ErrorRecord* errorRecord, ID errorID) {
+    errorRecord->errorID = errorID;
+    Uintptr* stackFrame = (Uintptr*)readRegister_RBP_64();
+    errorRecord->rip = *(stackFrame + 1);
+    errorRecord->rsp = (Uintptr)(stackFrame + 2);
+}
+
+Result error_init() {
+    errorList_initStruct(&_error_defaultErrorList);
+    return RESULT_SUCCESS;
+}
+
+void errorList_initStruct(ErrorList* list) {
+    list->size = 0;
+    memory_memset(list->errors, 0, sizeof(list->errors));
+}
+
+void errorList_pushError(ErrorList* list, ErrorRecord* error) {
+    if (list->size == RESULT_STACK_CAPACITY) {
+        debug_blowup("Too much errors!\n");
+    }
+
+    ErrorRecord* des = &list->errors[list->size++];
+    memory_memcpy(des, error, sizeof(ErrorRecord));
+}
+
+ErrorRecord* errorList_getError(ErrorList* list, Index64 index) {
+    return list->size == 0 ? NULL : &list->errors[list->size - 1];
+}
+
+void errorList_clear(ErrorList* list) {
+    list->size = 0;
+}
+
+void errorList_print(ErrorList* list) {
+    for (int i = 0; i < list->size; ++i) {
+        ErrorRecord* error = &list->errors[i];
+        print_printf(TERMINAL_LEVEL_DEBUG, ("RIP-%#018lX RSP-%#018lX: %s\n", error->rip, error->rsp, error->errorID));
+    }
+}
+
+ErrorList* errorList_getCurrentList() {
+    Scheduler* currentScheduler = schedule_getCurrentScheduler();
+    return currentScheduler != NULL && currentScheduler->started ? &scheduler_getCurrentProcess(currentScheduler)->errorList : &_error_defaultErrorList;
+}

@@ -14,7 +14,7 @@
  * @param file File
  * @param offset Offset to the begin
  * @param begin Begin of the seek
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
 Index64 fsutil_fileSeek(File* file, Int64 offset, Uint8 begin);
 
@@ -32,9 +32,9 @@ Index64 fsutil_fileGetPointer(File* file);
  * @param file File
  * @param buffer Buffer to write to
  * @param n Num of byte(s) to read
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result fsutil_fileRead(File* file, void* buffer, Size n);
+OldResult fsutil_fileRead(File* file, void* buffer, Size n);
 
 /**
  * @brief Write to file, sets errorcode to indicate error
@@ -42,18 +42,18 @@ Result fsutil_fileRead(File* file, void* buffer, Size n);
  * @param file File
  * @param buffer Buffer to read from
  * @param n Num of byte(s) to write
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result fsutil_fileWrite(File* file, const void* buffer, Size n);
+OldResult fsutil_fileWrite(File* file, const void* buffer, Size n);
 
-Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags);
+OldResult fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags);
 
-Result fsutil_closefsEntry(fsEntry* entry);
+OldResult fsutil_closefsEntry(fsEntry* entry);
 
-Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut);
+OldResult fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut);
 
-Result fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut);
+OldResult fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut);
 
-Result fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut);
+OldResult fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut);
 
 #endif // __FS_FSUTIL_H

@@ -5,13 +5,14 @@ typedef struct FrameMetadataUnit FrameMetadataUnit;
 typedef struct FrameMetadataHeader FrameMetadataHeader;
 typedef struct FrameMetadata FrameMetadata;
 
-#include<debug.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<multitask/context.h>
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
+#include<debug.h>
+#include<result.h>
 
 typedef struct FrameMetadataUnit {
     Flags8 flags;
@@ -35,7 +36,7 @@ typedef struct FrameMetadataHeader {
     LinkedListNode node;
 } FrameMetadataHeader;
 
-Result frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size n);
+Result* frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size n);
 
 FrameMetadataUnit* frameMetadataHeader_getMetadataUnit(FrameMetadataHeader* header, void* p);
 

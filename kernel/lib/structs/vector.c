@@ -26,7 +26,7 @@ void vector_clear(Vector* vector) {
     memory_memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
 }
 
-Result vector_resize(Vector* vector, Size newCapacity) {
+OldResult vector_resize(Vector* vector, Size newCapacity) {
     Object* newStorage = memory_allocate(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
         return RESULT_ERROR;
@@ -41,7 +41,7 @@ Result vector_resize(Vector* vector, Size newCapacity) {
     return RESULT_SUCCESS;
 }
 
-Result vector_get(Vector* vector, Index64 index, Object* retPtr) {
+OldResult vector_get(Vector* vector, Index64 index, Object* retPtr) {
     if (index >= vector->size) {
         return RESULT_ERROR;
     }
@@ -50,7 +50,7 @@ Result vector_get(Vector* vector, Index64 index, Object* retPtr) {
     return RESULT_SUCCESS;
 }
 
-Result vector_set(Vector* vector, Index64 index, Object item) {
+OldResult vector_set(Vector* vector, Index64 index, Object item) {
     if (index >= vector->size) {
         return RESULT_ERROR;
     }
@@ -59,7 +59,7 @@ Result vector_set(Vector* vector, Index64 index, Object item) {
     return RESULT_SUCCESS;
 }
 
-Result vector_erease(Vector* vector, Index64 index) {
+OldResult vector_erease(Vector* vector, Index64 index) {
     if (index >= vector->size) {
         return RESULT_ERROR;
     }
@@ -68,7 +68,7 @@ Result vector_erease(Vector* vector, Index64 index) {
     return RESULT_SUCCESS;
 }
 
-Result vector_back(Vector* vector, Object* retPtr) {
+OldResult vector_back(Vector* vector, Object* retPtr) {
     if (vector_isEmpty(vector)) {
         return RESULT_ERROR;
     }
@@ -77,7 +77,7 @@ Result vector_back(Vector* vector, Object* retPtr) {
     return RESULT_SUCCESS;
 }
 
-Result vector_push(Vector* vector, Object item) {
+OldResult vector_push(Vector* vector, Object item) {
     if (vector->size == vector->capacity && vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
@@ -86,7 +86,7 @@ Result vector_push(Vector* vector, Object item) {
     return RESULT_SUCCESS;
 }
 
-Result vector_pop(Vector* vector) {
+OldResult vector_pop(Vector* vector) {
     if (vector_isEmpty(vector)) {
         return RESULT_ERROR;
     }

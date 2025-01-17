@@ -3,7 +3,7 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 
-Result carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carryList) {
+OldResult carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carryList) {
     memory_memcpy(carryTo, base, n);
 
     for (int i = 0; carryList[i] != NULL; ++i) {

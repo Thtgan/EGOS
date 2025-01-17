@@ -17,11 +17,11 @@ iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
     return found == NULL ? NULL : HOST_POINTER(found, iNode, openedNode);
 }
 
-Result iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
+OldResult iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
     return hashTable_insert(table, (Object)blockIndex, &iNode->openedNode);
 }
 
-Result iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
+OldResult iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
     return hashTable_delete(table, (Object)blockIndex) != NULL ? RESULT_SUCCESS : RESULT_FAIL;
 }
 
@@ -46,7 +46,7 @@ iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
     return ret;
 }
 
-Result iNode_close(iNode* iNode) {
+OldResult iNode_close(iNode* iNode) {
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     if (--iNode->openCnt == 0) {

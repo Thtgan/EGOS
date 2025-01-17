@@ -20,7 +20,7 @@ typedef enum {
 STRUCT_PRE_DEFINE(FileSystemEntry);
 
 typedef struct {
-    Result  (*fileSystemEntryOpen)(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type);
+    OldResult  (*fileSystemEntryOpen)(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type);
 
     void    (*fileSystemEntryClose)(FileSystemEntry* entry);
 } FileSystemOperations;
@@ -34,16 +34,16 @@ typedef struct {
 
 FileSystemType checkFileSystem(Volume* v);
 
-Result openFileSystem(Volume* v);
+OldResult openFileSystem(Volume* v);
 
 typedef struct {
     Index32 (*seek)(FileSystemEntry* file, Index32 seekTo);
 
-    Result  (*read)(FileSystemEntry* file, void* buffer, Size n);
+    OldResult  (*read)(FileSystemEntry* file, void* buffer, Size n);
 } FileOperations;
 
 typedef struct {
-    Result (*lookupEntry)(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex);
+    OldResult (*lookupEntry)(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex);
 } DirectoryOperations;
 
 #define FILE_SYSTEM_ENTRY_FLAGS_READ_ONLY       FLAG8(0)
@@ -74,7 +74,7 @@ static inline Index32 rawFileSeek(FileSystemEntry* file, Size seekTo) {
     return file->fileOperations->seek(file, seekTo);
 } 
 
-static inline Result rawFileRead(FileSystemEntry* file, void* buffer, Size n) {
+static inline OldResult rawFileRead(FileSystemEntry* file, void* buffer, Size n) {
     if (file->type != FILE_SYSTEM_ENTRY_TYPE_FILE || file->fileOperations->read == NULL) {
         return RESULT_ERROR;
     }
@@ -88,14 +88,14 @@ static inline Index32 rawDirectoryLookupEntry(FileSystemEntry* directory, ConstC
     return directory->directoryOperations->lookupEntry(directory, name, type, entry, entryIndex);
 }
 
-static inline Result rawFileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type) {
+static inline OldResult rawFileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type) {
     if (v == NULL || v->fileSystem == NULL || path == NULL || entry == NULL || type == FILE_SYSTEM_ENTRY_TYPE_DUMMY) {
         return RESULT_ERROR; 
     }
     return ((FileSystem*)v->fileSystem)->fileSystemOperations->fileSystemEntryOpen(v, path, entry, type);
 }
 
-static inline Result rawFileSystemEntryClose(FileSystemEntry* entry) {
+static inline OldResult rawFileSystemEntryClose(FileSystemEntry* entry) {
     if (entry == NULL || entry->volume == NULL || entry->volume->fileSystem == NULL) {
         return RESULT_ERROR; 
     }

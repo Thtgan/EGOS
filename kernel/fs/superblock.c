@@ -23,10 +23,10 @@ void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args) {
     hashTable_initStruct(&superBlock->fsEntryDescs, args->fsEntryDescBucket, args->fsEntryDescChains, hashTable_defaultHashFunc);
 }
 
-Result superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** finalSuperBlockOut, fsEntryDesc** descOut) {
+OldResult superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** finalSuperBlockOut, fsEntryDesc** descOut) {
     fsEntryDesc* desc = NULL;
     SuperBlock* finalSuperBlock = NULL;
-    Result ret = RESULT_SUCCESS;
+    OldResult ret = RESULT_SUCCESS;
     if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
         desc = superBlock->rootDirDesc;
         finalSuperBlock = superBlock;
@@ -45,7 +45,7 @@ Result superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* iden
                 return RESULT_ERROR;
             }
 
-            Result seekRes;
+            OldResult seekRes;
             if ((seekRes = fsutil_seekLocalFSentryDesc(finalSuperBlock, &finalIdentifier, &desc)) == RESULT_SUCCESS) {
                 hashTable_insert(&superBlock->fsEntryDescs, key, &desc->descNode);
             } else {
@@ -70,7 +70,7 @@ Result superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* iden
     return ret;
 }
 
-Result superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryDesc) {
+OldResult superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryDesc) {
     if (entryDesc == superBlock->rootDirDesc) {
         return RESULT_SUCCESS;
     }
@@ -97,10 +97,10 @@ Result superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryD
     return RESULT_SUCCESS;
 }
 
-Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut, FCNTLopenFlags flags) {
+OldResult superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut, FCNTLopenFlags flags) {
     SuperBlock* finalSuperBlock = NULL;
     fsEntryDesc* desc = NULL;
-    Result getRes;
+    OldResult getRes;
     if ((getRes = superBlock_getfsEntryDesc(superBlock, identifier, &finalSuperBlock, &desc)) == RESULT_ERROR) {
         return RESULT_ERROR;
     }
@@ -155,7 +155,7 @@ Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identif
         }
     }
 
-    Result ret = superBlock_rawOpenfsEntry(finalSuperBlock, entryOut, desc, flags);
+    OldResult ret = superBlock_rawOpenfsEntry(finalSuperBlock, entryOut, desc, flags);
     if (ret != RESULT_SUCCESS) {
         superBlock_releasefsEntryDesc(finalSuperBlock, desc);  //TODO: What if release failed?
     } else if (TEST_FLAGS(flags, FCNTL_OPEN_TRUNC)) {
@@ -165,7 +165,7 @@ Result superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identif
     return ret;
 }
 
-Result superBlock_closefsEntry(fsEntry* entry) {
+OldResult superBlock_closefsEntry(fsEntry* entry) {
     SuperBlock* superBlock = entry->iNode->superBlock;
     fsEntryIdentifier* identifier = &entry->desc->identifier;
     SuperBlock* finalSuperBlock = superBlock;
@@ -201,7 +201,7 @@ Result superBlock_closefsEntry(fsEntry* entry) {
     return superBlock_rawClosefsEntry(finalSuperBlock, entry);
 }
 
-Result mount_initStruct(Mount* mount, ConstCstring name, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
+OldResult mount_initStruct(Mount* mount, ConstCstring name, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
     if (string_initStruct(&mount->name, name) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
@@ -219,7 +219,7 @@ void mount_clearStruct(Mount* mount) {
     memory_memset(mount, 0, sizeof(Mount));
 }
 
-Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) { //TODO: Bad memory management
+OldResult superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) { //TODO: Bad memory management
     Mount* mount = memory_allocate(sizeof(Mount));
     if (mount == NULL || mount_initStruct(mount, identifier->name.data, targetSuperBlock, targetDesc) != RESULT_SUCCESS) {
         return RESULT_ERROR;
@@ -248,7 +248,7 @@ Result superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identi
     return RESULT_SUCCESS;
 }
 
-Result superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier) {
+OldResult superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier) {
     Object pathKey = cstring_strhash(identifier->parentPath.data);
     HashChainNode* found = hashTable_find(&superBlock->mounted, pathKey);
     if (found == NULL) {
@@ -282,13 +282,13 @@ DirMountList* superBlock_getDirMountList(SuperBlock* superBlock, ConstCstring di
     return found == NULL ? NULL : HOST_POINTER(found, DirMountList, node);
 }
 
-Result superBlock_stepSearchMount(SuperBlock* superBlock, String* searchPath, Index64* searchPathSplitRet, SuperBlock** newSuperBlockRet, fsEntryDesc** mountedToDescRet) {
+OldResult superBlock_stepSearchMount(SuperBlock* superBlock, String* searchPath, Index64* searchPathSplitRet, SuperBlock** newSuperBlockRet, fsEntryDesc** mountedToDescRet) {
     String subSearchPath;
     if (string_initStruct(&subSearchPath, "") != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
-    Result ret = RESULT_SUCCESS;
+    OldResult ret = RESULT_SUCCESS;
     while (true) {
         DirMountList* dirMountList = superBlock_getDirMountList(superBlock, subSearchPath.data);
         char* nextSeperator = cstring_strchr(searchPath->data + subSearchPath.length + 1, FS_PATH_SEPERATOR);

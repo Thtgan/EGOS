@@ -182,7 +182,7 @@ typedef struct {
     Uint64 align;
 } __attribute__((packed)) ELF64ProgramHeader;
 
-Result readELF64Header(FileSystemEntry* file, ELF64Header* header);
+OldResult readELF64Header(FileSystemEntry* file, ELF64Header* header);
 
 /**
  * @brief Print ELF header for debug 
@@ -199,9 +199,9 @@ void printELF64Header(ELF64Header* header);
  * @param elfHeader ELF header
  * @param programHeader Program header struct
  * @param index Index of program header
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result readELF64ProgramHeader(FileSystemEntry* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
+OldResult readELF64ProgramHeader(FileSystemEntry* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
 
 /**
  * @brief Print ELF program header for debug 
@@ -215,26 +215,26 @@ void printELF64ProgramHeader(ELF64ProgramHeader* header);
  * @brief Check is ELF program header leagel?
  * 
  * @param programHeader ELF program header
- * @return Result True if header is leagal
+ * @return OldResult True if header is leagal
  */
-Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
+OldResult checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Load program corresponded to program header from ELF file, sets errorcode to indicate error
  * 
  * @param file ELF file
  * @param programHeader Program header describes program to load
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader);
+OldResult loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Unload ELF program loaded
  * 
  * @param programHeader Program header describes program loaded
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result unloadELF64Program(ELF64ProgramHeader* programHeader);
+OldResult unloadELF64Program(ELF64ProgramHeader* programHeader);
 
 void* loadKernel(Volume* v, ConstCstring kernelPath, MemoryMap* mMap);
 

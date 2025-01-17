@@ -24,7 +24,7 @@ void KDtree_initStruct(KDtree* tree, int k, KDtreeCompareFunc compare, KDtreeDis
     tree->distance2 = distance2;
 }
 
-Result KDtree_insert(KDtree* tree, KDtreeNode* node) {
+OldResult KDtree_insert(KDtree* tree, KDtreeNode* node) {
     KDtreeNode* newRoot = __KDtree_doInsert(tree, tree->root, node, 0);
     if (newRoot != NULL) {
         tree->root = newRoot;
@@ -66,7 +66,7 @@ KDtreeNode* KDtree_search(KDtree* tree, Object key) {
     return NULL;
 }
 
-Result KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet) {
+OldResult KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet) {
     KDtreeNode* closestNode = NULL;
     Uint64 minDistance2 = (Uint64)-1;
     __KDtree_doNearestNeighbour(tree, tree->root, key, &closestNode, &minDistance2, 0);

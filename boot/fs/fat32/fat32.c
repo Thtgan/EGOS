@@ -90,17 +90,17 @@ typedef struct {
     Uint16  doubleBytes3[2];
 } __attribute__((packed)) __FAT32LongNameEntry;
 
-static Result __doFAT32checkFileSystem(Volume* v, void* BPBbuffer);
+static OldResult __doFAT32checkFileSystem(Volume* v, void* BPBbuffer);
 
-static Result __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* BPBbuffer, __FAT32Context* context);
+static OldResult __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* BPBbuffer, __FAT32Context* context);
 
-Result FAT32checkFileSystem(Volume* v) {
+OldResult FAT32checkFileSystem(Volume* v) {
     void* BPBbuffer = bMalloc(v->bytePerSector);
     if (BPBbuffer == NULL) {
         return RESULT_ERROR;
     }
     
-    Result ret = __doFAT32checkFileSystem(v, BPBbuffer);
+    OldResult ret = __doFAT32checkFileSystem(v, BPBbuffer);
 
     bFree(BPBbuffer, v->bytePerSector);
     return ret;
@@ -108,14 +108,14 @@ Result FAT32checkFileSystem(Volume* v) {
 
 static ConstCstring _name = "FAT32";
 
-Result FAT32openFileSystem(Volume* v, FileSystem* fileSystem) {
+OldResult FAT32openFileSystem(Volume* v, FileSystem* fileSystem) {
     void* BPBbuffer = bMalloc(v->bytePerSector);
     if (BPBbuffer == NULL) {
         return RESULT_ERROR;
     }
 
     void* context = bMalloc(sizeof(__FAT32Context));
-    Result ret = RESULT_ERROR;
+    OldResult ret = RESULT_ERROR;
     if (context == NULL || (ret = __doFAT32openFileSystem(v, fileSystem, BPBbuffer, context)) == RESULT_ERROR) {
         if (context != NULL) {
             bFree(context, sizeof(__FAT32Context));
@@ -129,7 +129,7 @@ Result FAT32openFileSystem(Volume* v, FileSystem* fileSystem) {
 #define __FAT32_BPB_SIGNATURE       0x29
 #define __FAT32_MINIMUM_CLUSTER_NUM 65525
 
-static Result __doFAT32checkFileSystem(Volume* v, void* BPBbuffer) {
+static OldResult __doFAT32checkFileSystem(Volume* v, void* BPBbuffer) {
     if (rawVolumeReadSectors(v, BPBbuffer, 0, 1) == RESULT_ERROR) {
         return RESULT_ERROR;
     }
@@ -160,13 +160,13 @@ static __FAT32ClusterType __FAT32GetClusterType(__FAT32Context* context, Index32
 
 static Index32 __FAT32GetNextCluster(Volume* v, Index32 cluster);
 
-static Result __FAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n);
+static OldResult __FAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n);
 
-static Result __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n, void* clusterBuffer);
+static OldResult __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n, void* clusterBuffer);
 
 //================================================================================================================================
 
-static Result __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type);
+static OldResult __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type);
 
 static void __FAT32FileSystemEntryClose(FileSystemEntry* entry);
 
@@ -179,7 +179,7 @@ static FileSystemOperations _FAT32FileSystemOperations = {
 
 static Index32 __FAT32FileSeek(FileSystemEntry* file, Index32 seekTo);
 
-static Result __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n);
+static OldResult __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n);
 
 static FileOperations _FAT32FileOperations = {
     .seek   = __FAT32FileSeek,
@@ -188,7 +188,7 @@ static FileOperations _FAT32FileOperations = {
 
 //================================================================================================================================
 
-static Result __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex);
+static OldResult __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex);
 
 static DirectoryOperations _FAT32DirectoryOperations = {
     .lookupEntry    = __FAT32DirectoryLookupEntry
@@ -208,9 +208,9 @@ typedef struct {
 
 //================================================================================================================================
 
-static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offsetInCluster, FileSystemEntry* entry, Size* entrySizeInDevice);
+static OldResult __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offsetInCluster, FileSystemEntry* entry, Size* entrySizeInDevice);
 
-static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, void* entryBuffer, Uint8 longNameEntryNum);
+static OldResult __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, void* entryBuffer, Uint8 longNameEntryNum);
 
 //================================================================================================================================
 
@@ -265,7 +265,7 @@ static Index32 __FAT32GetNextCluster(Volume* v, Index32 cluster) {
     return ret;
 }
 
-static Result __FAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n) {
+static OldResult __FAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n) {
     __FAT32Context* context = ((FileSystem*)v->fileSystem)->context;
     Size clusterSize = context->sectorPerCluster * v->bytePerSector;
 
@@ -274,13 +274,13 @@ static Result __FAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluste
         return RESULT_ERROR;
     }
 
-    Result ret = __doFAT32ReadThroughClusters(v, buffer, cluster, offsetInCluster, n, clusterBuffer);
+    OldResult ret = __doFAT32ReadThroughClusters(v, buffer, cluster, offsetInCluster, n, clusterBuffer);
     bFree(clusterBuffer, clusterSize);
 
     return ret;
 }
 
-static Result __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n, void* clusterBuffer) {
+static OldResult __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 cluster, Index32 offsetInCluster, Size n, void* clusterBuffer) {
     __FAT32Context* context = ((FileSystem*)v->fileSystem)->context;
 
     Size remain = n, clusterSize = context->sectorPerCluster * v->bytePerSector;
@@ -317,7 +317,7 @@ static Result __doFAT32ReadThroughClusters(Volume* v, void* buffer, Index32 clus
 
 #define __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH 255
 
-static Result __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type) {
+static OldResult __FAT32FileSystemEntryOpen(Volume* v, ConstCstring path, FileSystemEntry* entry, FileSystemEntryType type) {
     if (((FileSystem*)v->fileSystem)->type != FILE_SYSTEM_TYPE_FAT32) {
         return RESULT_ERROR;
     }
@@ -385,7 +385,7 @@ static Index32 __FAT32FileSeek(FileSystemEntry* file, Index32 seekTo) {
     return handle->pointer = seekTo < handle->size ? seekTo : INVALID_INDEX;
 }
 
-static Result __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n) {
+static OldResult __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n) {
     __FAT32Context* context = file->context;
     Size clusterSize = context->sectorPerCluster * file->volume->bytePerSector;
 
@@ -407,7 +407,7 @@ static Result __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n) {
         currentOffset -= clusterSize;
     }
 
-    Result ret = __FAT32ReadThroughClusters(file->volume, buffer, currentCluster, currentOffset, n);
+    OldResult ret = __FAT32ReadThroughClusters(file->volume, buffer, currentCluster, currentOffset, n);
 
     if (ret == RESULT_SUCCESS) {
         handle->pointer += n;
@@ -418,7 +418,7 @@ static Result __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n) {
 
 //================================================================================================================================
 
-Result __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex) {
+OldResult __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex) {
     __FAT32Context* context = directory->context;
     Size clusterSize = context->sectorPerCluster * directory->volume->bytePerSector;
 
@@ -467,7 +467,7 @@ Result __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name
 
 //================================================================================================================================
 
-static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offsetInCluster, FileSystemEntry* entry, Size* entrySizeInDevice) {
+static OldResult __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offsetInCluster, FileSystemEntry* entry, Size* entrySizeInDevice) {
     Uint8 dummyBuffer[32];
     if (__FAT32ReadThroughClusters(v, dummyBuffer, cluster, offsetInCluster, 32) == RESULT_ERROR) {
         return RESULT_ERROR;
@@ -504,7 +504,7 @@ static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offs
         return RESULT_ERROR;
     }
 
-    Result ret = __FAT32ConvertDirectoryEntry(v, entry, entryBuffer, longNameOrder);
+    OldResult ret = __FAT32ConvertDirectoryEntry(v, entry, entryBuffer, longNameOrder);
 
     bFree(entryBuffer, entrySize);
 
@@ -513,7 +513,7 @@ static Result __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 offs
     return ret;
 }
 
-static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, void* entryBuffer, Uint8 longNameEntryNum) {
+static OldResult __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, void* entryBuffer, Uint8 longNameEntryNum) {
     char nameBuffer[__FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH + 1];
     Uint8 nameLength = 0;
     __FAT32DirectoryEntry* directoryEntry = (__FAT32DirectoryEntry*)(entryBuffer + longNameEntryNum * sizeof(__FAT32LongNameEntry));
@@ -613,7 +613,7 @@ static Result __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry, vo
 
 //================================================================================================================================
 
-static Result __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* BPBbuffer, __FAT32Context* context) {
+static OldResult __doFAT32openFileSystem(Volume* v, FileSystem* fileSystem, void* BPBbuffer, __FAT32Context* context) {
     if (rawVolumeReadSectors(v, BPBbuffer, 0, 1) == RESULT_ERROR) {
         return RESULT_ERROR;
     }

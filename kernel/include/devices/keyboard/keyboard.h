@@ -117,8 +117,8 @@ typedef struct KeyboardKeyEntry {
 /**
  * @brief Initialize the keyboard
  * 
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result keyboard_init();
+OldResult keyboard_init();
 
 #endif // __DEVICES_KEYBOARD_KEYBOARD_H

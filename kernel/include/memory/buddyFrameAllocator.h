@@ -25,6 +25,6 @@ typedef struct BuddyFrameAllocator {
     FrameBuddyList lists[BUDDY_FRAME_ALLOCATOR_BUDDY_LIST_NUM];
 } BuddyFrameAllocator;
 
-Result buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator);
+void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator);
 
 #endif // __MEMORY_BUDDYFRAMEALLOCATOR_H

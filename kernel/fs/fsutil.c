@@ -1,7 +1,6 @@
 #include<fs/fsutil.h>
 
 #include<cstring.h>
-#include<error.h>
 #include<fs/fcntl.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
@@ -28,7 +27,7 @@ Index64 fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
     base += offset;
 
     if ((Int64)base < 0 || base > file->desc->dataRange.length) {
-        ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
+        // ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
         return INVALID_INDEX;
     }
 
@@ -43,7 +42,7 @@ Index64 fsutil_fileGetPointer(File* file) {
     return file->pointer;
 }
 
-Result fsutil_fileRead(File* file, void* buffer, Size n) {
+OldResult fsutil_fileRead(File* file, void* buffer, Size n) {
     if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->openFlags) == FCNTL_OPEN_WRITE_ONLY) {
         return RESULT_FAIL;
     }
@@ -62,7 +61,7 @@ Result fsutil_fileRead(File* file, void* buffer, Size n) {
     return RESULT_SUCCESS;
 }    
 
-Result fsutil_fileWrite(File* file, const void* buffer, Size n) {
+OldResult fsutil_fileWrite(File* file, const void* buffer, Size n) {
     if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->openFlags) == FCNTL_OPEN_READ_ONLY) {
         return RESULT_FAIL;
     }
@@ -85,25 +84,25 @@ Result fsutil_fileWrite(File* file, const void* buffer, Size n) {
     return RESULT_SUCCESS;
 }
 
-Result fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags) {
+OldResult fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags) {
     fsEntryIdentifier identifier;
     if (fsEntryIdentifier_initStruct(&identifier, path, TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY)) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
 
-    Result res = superBlock_openfsEntry(superBlock, &identifier, entryOut, flags);
+    OldResult res = superBlock_openfsEntry(superBlock, &identifier, entryOut, flags);
     fsEntryIdentifier_clearStruct(&identifier);
     return res;
 }
 
-Result fsutil_closefsEntry(fsEntry* entry) {
+OldResult fsutil_closefsEntry(fsEntry* entry) {
     return superBlock_closefsEntry(entry);
 }
 
-Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut) {
+OldResult fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut) {
     fsEntryDesc tmpDesc;
     Size entrySize;
-    Result res = RESULT_ERROR;
+    OldResult res = RESULT_ERROR;
     fsEntry_rawSeek(directory, 0);
     while ((res = fsEntry_rawDirReadEntry(directory, &tmpDesc, &entrySize)) != RESULT_ERROR) {
         if (res == RESULT_SUCCESS) {    //Meaning no more entries
@@ -128,7 +127,7 @@ Result fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDi
     return RESULT_ERROR;
 }
 
-Result fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut) {
+OldResult fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut) {
     if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
         fsEntryIdentifier_copy(identifierOut, identifier);
         return RESULT_SUCCESS;
@@ -142,7 +141,7 @@ Result fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* i
     SuperBlock* currentSuperBlock = superBlock, * nextSuperBlock = NULL;
     Index64 pathSplit = INVALID_INDEX;
     fsEntryDesc* mountedToDesc;
-    Result res;
+    OldResult res;
     while ((res = superBlock_stepSearchMount(currentSuperBlock, &fullPath, &pathSplit, &nextSuperBlock, &mountedToDesc)) == RESULT_CONTINUE) {
         String tmp;
         string_initStruct(&tmp, "");
@@ -169,7 +168,7 @@ Result fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* i
     return RESULT_SUCCESS;
 }
 
-Result fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut) {
+OldResult fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut) {
     if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
         *descOut = superBlock->rootDirDesc;
         return RESULT_SUCCESS;
@@ -209,7 +208,7 @@ Result fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* id
             return RESULT_ERROR;
         }
 
-        Result lookupRes;
+        OldResult lookupRes;
         if ((lookupRes = fsutil_lookupEntryDesc(&currentDirectory, tmpIdentifier.name.data, tmpIdentifier.isDirectory, &nextEntryDesc, NULL)) == RESULT_ERROR) {
             return RESULT_ERROR;
         }

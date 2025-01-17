@@ -29,7 +29,7 @@ void timer_initStruct(Timer* timer, Int64 time, TimeUnit unit) {
     timer->flags    = EMPTY_FLAGS;
 }
 
-Result timer_start(Timer* timer) {
+OldResult timer_start(Timer* timer) {
     if (TEST_FLAGS(timer->flags, TIMER_FLAGS_PRESENT)) {
         return RESULT_ERROR;
     }
@@ -47,7 +47,7 @@ Result timer_start(Timer* timer) {
     return RESULT_SUCCESS;
 }
                                                                                                                                                                                                                                                                                                                                                         
-Result timer_stop(Timer* timer) {
+OldResult timer_stop(Timer* timer) {
     if (TEST_FLAGS_FAIL(timer->flags, TIMER_FLAGS_PRESENT)) {
         return RESULT_ERROR;
     }

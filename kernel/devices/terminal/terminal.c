@@ -74,7 +74,7 @@ static void __terminal_putCharacter(Terminal* terminal, char ch);
  */
 static void __terminal_scrollWindowToRow(Terminal* terminal, Index16 row);
 
-Result terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
+OldResult terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
     terminal->displayContext = display_getCurrentContext(); //TODO: Only considering text mode now
     if (terminal->displayContext == NULL || bufferSize < terminal->displayContext->width * terminal->displayContext->width) {
         return RESULT_ERROR;
@@ -161,7 +161,7 @@ void terminal_flushDisplay() {
     terminal_switchCursor(_terminal_currentTerminal, _terminal_currentTerminal->cursorEnabled);
 }
 
-Result terminal_scrollUp(Terminal* terminal) {
+OldResult terminal_scrollUp(Terminal* terminal) {
     if (terminal->windowRowBegin == 0) {
         return RESULT_ERROR;
     }
@@ -171,7 +171,7 @@ Result terminal_scrollUp(Terminal* terminal) {
     return RESULT_SUCCESS;
 }
 
-Result terminal_scrollDown(Terminal* terminal) {
+OldResult terminal_scrollDown(Terminal* terminal) {
     if (terminal->windowRowBegin + terminal->displayContext->height == terminal->bufferRowSize) {
         return RESULT_ERROR;
     }

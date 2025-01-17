@@ -53,7 +53,7 @@ static DisplayOperations _vga_operations = {
     .switchCursor       = __vga_switchCursor
 };
 
-Result vga_init() {
+OldResult vga_init() {
     if (realmode_registerFuncs(&vgaRealmodeFuncs_begin, (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin, &vgaRealmodeFuncs_carryList, _vgaRealmodeFuncs_funcList, __VGA_REALMODE_FUNC_NUM, _vgaRealmodeFuncs_funcIndex) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
@@ -89,7 +89,7 @@ void vga_dumpDisplayContext(DisplayContext* context) {
     context->operations     = &_vga_operations;
 }
 
-Result vga_switchMode(VGAmodeHeader* mode, bool legacy) {
+OldResult vga_switchMode(VGAmodeHeader* mode, bool legacy) {
     if (vgaMode_switch(mode, legacy) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }

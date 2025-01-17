@@ -38,9 +38,9 @@ static inline bool stack_isEmpty(Stack* stack) {
  * 
  * @param stack Stack
  * @param obj Object to push
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-static inline Result stack_push(Stack* stack, Object obj) {
+static inline OldResult stack_push(Stack* stack, Object obj) {
     if (stack->size == stack->maxSize) {
         return RESULT_ERROR;
     }
@@ -54,9 +54,9 @@ static inline Result stack_push(Stack* stack, Object obj) {
  * 
  * @param stack Stack
  * @param retPtr Pointer to object
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-static inline Result stack_top(Stack* stack, Object* retPtr) {
+static inline OldResult stack_top(Stack* stack, Object* retPtr) {
     if (stack->size == 0) {
         return RESULT_ERROR;
     }
@@ -70,9 +70,9 @@ static inline Result stack_top(Stack* stack, Object* retPtr) {
  * @brief Pop the top object of stack
  * 
  * @param stack Stack
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-static inline Result stack_pop(Stack* stack) {
+static inline OldResult stack_pop(Stack* stack) {
     if (stack_isEmpty(stack)) {
         return RESULT_ERROR;
     }

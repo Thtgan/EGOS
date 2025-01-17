@@ -35,19 +35,19 @@ typedef struct VGApalette {
     KDtree colorApproximate;
 } VGApalette;
 
-Result vgaPalette_initApproximate(VGApalette* palette);
+OldResult vgaPalette_initApproximate(VGApalette* palette);
 
 VGAcolor vgaPalette_approximateColor(VGApalette* palette, RGBA color);
 
 RGBA vgaPalette_vgaColorToRGBA(VGApalette* palette, VGAcolor color);
 
-Result vgaPalettes_init();
+OldResult vgaPalettes_init();
 
 typedef struct VGAcolorConverter {
     VGAcolor convertData[16];
 } VGAcolorConverter;
 
-Result vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareRegisters* registers, VGApalette* palette);
+OldResult vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareRegisters* registers, VGApalette* palette);
 
 VGAcolor vgaColorConverter_convert(VGAcolorConverter* converter, VGAcolor color);
 

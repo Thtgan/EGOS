@@ -1,7 +1,5 @@
 #include<memory/frameMetadata.h>
 
-#include<algorithms.h>
-#include<kernel.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -12,6 +10,9 @@
 #include<multitask/context.h>
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
+#include<algorithms.h>
+#include<kernel.h>
+#include<result.h>
 
 void frameMetadataUnit_markChunk(FrameMetadataUnit* unit, Size n) {
     SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_CHUNK_HEAD);
@@ -29,17 +30,17 @@ Uint32 frameMetadataUnit_unmarkChunk(FrameMetadataUnit* unit) {
 #define __FRAME_METADATA_PAGE_N(__N)    DIVIDE_ROUND_UP((sizeof(FrameMetadataHeader) + sizeof(FrameMetadata) * (__N)), PAGE_SIZE)
 #define __FRAME_METADATA_BASE(__HEADER) ((FrameMetadataUnit*)((void*)(__HEADER) + sizeof(FrameMetadataHeader)))
 
-Result frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size n) {
+Result* frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size n) {
     Size metadataPageNum = __FRAME_METADATA_PAGE_N(n);
     if (metadataPageNum >= n) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
     }
 
     linkedListNode_initStruct(&header->node);
     header->frameBase = p + metadataPageNum * PAGE_SIZE;
     header->frameNum = n - metadataPageNum;
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }
 
 FrameMetadataUnit* frameMetadataHeader_getMetadataUnit(FrameMetadataHeader* header, void* p) {
@@ -68,9 +69,13 @@ FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* p, S
         }
     }
 
-    if (frameMetadataHeader_initStruct(newHeader, p, n) != RESULT_SUCCESS) {
-        return NULL;
-    }
+    ERROR_TRY_CATCH_DIRECT(
+        frameMetadataHeader_initStruct(newHeader, p, n),
+        ERROR_CATCH_DEFAULT_CODES_CRASH,
+        (ERROR_ID_OUT_OF_MEMORY, {
+            return NULL;
+        })
+    );
 
     memory_memset(__FRAME_METADATA_BASE(newHeader), 0, newHeader->frameNum * sizeof(FrameMetadata));
 

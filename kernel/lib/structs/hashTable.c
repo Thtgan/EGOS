@@ -20,7 +20,7 @@ void hashTable_initStruct(HashTable* table, Size bucket, SinglyLinkedList* chain
     }
 }
 
-Result hashTable_insert(HashTable* table, Object key, HashChainNode* newNode) {
+OldResult hashTable_insert(HashTable* table, Object key, HashChainNode* newNode) {
     Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;

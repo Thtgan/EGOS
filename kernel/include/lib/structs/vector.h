@@ -45,9 +45,9 @@ void vector_clear(Vector* vector);
  * 
  * @param vector Vector
  * @param newCapacity New capacity to resize to, if capacity less than curretn size, data at the end will lost
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_resize(Vector* vector, Size newCapacity);
+OldResult vector_resize(Vector* vector, Size newCapacity);
 
 /**
  * @brief Get object in vector
@@ -55,9 +55,9 @@ Result vector_resize(Vector* vector, Size newCapacity);
  * @param vector Vector
  * @param index Index of object in vector
  * @param retPtr Pointer to object
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_get(Vector* vector, Index64 index, Object* retPtr);
+OldResult vector_get(Vector* vector, Index64 index, Object* retPtr);
 
 /**
  * @brief Set object in vector
@@ -65,43 +65,43 @@ Result vector_get(Vector* vector, Index64 index, Object* retPtr);
  * @param vector Vector
  * @param index Index of object in vector
  * @param item Object to set
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_set(Vector* vector, Index64 index, Object item);
+OldResult vector_set(Vector* vector, Index64 index, Object item);
 
 /**
  * @brief Erase object in vector
  * 
  * @param vector Vector
  * @param index Index of object to erase
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_erease(Vector* vector, Index64 index);
+OldResult vector_erease(Vector* vector, Index64 index);
 
 /**
  * @brief Get last object of vector
  * 
  * @param vector Vector
  * @param retPtr Pointer to object
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_back(Vector* vector, Object* retPtr);
+OldResult vector_back(Vector* vector, Object* retPtr);
 
 /**
  * @brief Push object to the end of vector
  * 
  * @param vector Vector
  * @param item Object to push
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_push(Vector* vector, Object item);
+OldResult vector_push(Vector* vector, Object item);
 
 /**
  * @brief Pop object from end of vector
  * 
  * @param vector Vector
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result vector_pop(Vector* vector);
+OldResult vector_pop(Vector* vector);
 
 #endif // __LIB_STRUCTS_VECTOR_H

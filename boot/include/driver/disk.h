@@ -16,10 +16,10 @@ typedef struct {
     Uint32  EDD;
 } __attribute__((packed)) DiskParams;
 
-Result readDiskParams(int drive, DiskParams* params);
+OldResult readDiskParams(int drive, DiskParams* params);
 
-Result rawDiskReadSectors(int drive, void* buffer, Index64 begin, Size n);
+OldResult rawDiskReadSectors(int drive, void* buffer, Index64 begin, Size n);
 
-Result rawDiskWriteSectors(int drive, const void* buffer, Index64 begin, Size n);
+OldResult rawDiskWriteSectors(int drive, const void* buffer, Index64 begin, Size n);
 
 #endif // __DISK_H

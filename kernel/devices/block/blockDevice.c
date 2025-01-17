@@ -11,11 +11,11 @@
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
 
-static Result __blockDevice_doProbePartitions(BlockDevice* device, void* buffer);
+static OldResult __blockDevice_doProbePartitions(BlockDevice* device, void* buffer);
 
-static Result __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n);
-static Result __blockDevice_partition_write(Device* device, Index64 index, const void* buffer, Size n);
-static Result __blockDevice_partition_flush(Device* device);
+static OldResult __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n);
+static OldResult __blockDevice_partition_write(Device* device, Index64 index, const void* buffer, Size n);
+static OldResult __blockDevice_partition_flush(Device* device);
 
 static DeviceOperations _blockDevice_partition_deviceOperations = {
     .read   = __blockDevice_partition_read,
@@ -23,7 +23,7 @@ static DeviceOperations _blockDevice_partition_deviceOperations = {
     .flush  = __blockDevice_partition_flush
 };
 
-Result blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args) {
+OldResult blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args) {
     if (args->deviceInitArgs.granularity == 0) {
         return RESULT_ERROR;
     }
@@ -42,7 +42,7 @@ Result blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* arg
     return RESULT_SUCCESS;
 }
 
-Result blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n) {
+OldResult blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n) {
     Device* device = &blockDevice->device;
     if (device->operations->read == NULL || blockIndex >= device->capacity) {
         return RESULT_ERROR;
@@ -75,7 +75,7 @@ Result blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void
     return device_rawRead(device, blockIndex, buffer, n);
 } 
 
-Result blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const void* buffer, Size n) {
+OldResult blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const void* buffer, Size n) {
     Device* device = &blockDevice->device;
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_READONLY) || device->operations->write == NULL || blockIndex >= device->capacity) {
         return RESULT_ERROR;
@@ -109,7 +109,7 @@ Result blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, con
     return device_rawWrite(device, blockIndex, buffer, n);
 }
 
-Result blockDevice_flush(BlockDevice* blockDevice) {
+OldResult blockDevice_flush(BlockDevice* blockDevice) {
     Device* device = &blockDevice->device;
     if (device->operations->flush == NULL) {
         return RESULT_ERROR;
@@ -140,13 +140,13 @@ Result blockDevice_flush(BlockDevice* blockDevice) {
     return device_rawFlush(device);
 }
 
-Result blockDevice_probePartitions(BlockDevice* blopckDevice) {
+OldResult blockDevice_probePartitions(BlockDevice* blopckDevice) {
     void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
     if (buffer == NULL) {
         return RESULT_ERROR;
     }
 
-    Result ret = __blockDevice_doProbePartitions(blopckDevice, buffer);
+    OldResult ret = __blockDevice_doProbePartitions(blopckDevice, buffer);
 
     memory_free(buffer);
     return ret;
@@ -167,7 +167,7 @@ typedef struct {
 
 BlockDevice* firstBootablePartition;    //TODO: Ugly, figure out a method to know which device we are booting from
 
-static Result __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* buffer) {
+static OldResult __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* buffer) {
     if (blockDevice_readBlocks(blockDevice, 0, buffer, 1) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
@@ -216,7 +216,7 @@ static Result __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* bu
     return RESULT_SUCCESS;
 }
 
-static Result __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n) {
+static OldResult __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n) {
     if (index >= device->capacity) {
         return RESULT_ERROR;
     }
@@ -224,7 +224,7 @@ static Result __blockDevice_partition_read(Device* device, Index64 index, void* 
     return blockDevice_readBlocks(HOST_POINTER(device->parent, BlockDevice, device), (Index64)device->specificInfo + index, buffer, n);
 }
 
-static Result __blockDevice_partition_write(Device* device, Index64 index, const void* buffer, Size n) {
+static OldResult __blockDevice_partition_write(Device* device, Index64 index, const void* buffer, Size n) {
     if (index >= device->capacity) {
         return RESULT_ERROR;
     }
@@ -232,6 +232,6 @@ static Result __blockDevice_partition_write(Device* device, Index64 index, const
     return blockDevice_writeBlocks(HOST_POINTER(device->parent, BlockDevice, device), (Index64)device->specificInfo + index, buffer, n);
 }
 
-static Result __blockDevice_partition_flush(Device* device) {
+static OldResult __blockDevice_partition_flush(Device* device) {
     return blockDevice_flush(HOST_POINTER(device->parent, BlockDevice, device));
 }

@@ -4,7 +4,7 @@
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 
-Result ata_channel_reset(ATAchannel* channel) {
+OldResult ata_channel_reset(ATAchannel* channel) {
     Uint16 portBase = channel->portBase;
     outb(ATA_REGISTER_CONTROL(portBase), ATA_CONTROL_SOFTWARE_RESET | ATA_CONTROL_NO_INTERRUPT);
     ATA_DELAY_400NS(portBase);

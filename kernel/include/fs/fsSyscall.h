@@ -3,7 +3,7 @@
 
 #include<kit/bit.h>
 
-Result fsSyscall_init();
+OldResult fsSyscall_init();
 
 #define FSSYSCALL_STANDARD_OUTPUT_FILE_DESCRIPTOR   0
 

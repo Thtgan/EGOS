@@ -23,7 +23,7 @@ static __MemoryNode* __initMemoryNode(void* base, Size length);
 
 static SinglyLinkedListNode* __firstFitSearch(Size size, Size align);
 
-Result initMemoryManager(MemoryMap* mMap) {
+OldResult initMemoryManager(MemoryMap* mMap) {
     MemoryMapEntry* entry = findE820Entry(mMap, MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, MEMORY_LAYOUT_BOOT_MEMALLOC_END - MEMORY_LAYOUT_BOOT_MEMALLOC_BEGIN, true);
     if (entry == NULL) {
         return RESULT_ERROR;

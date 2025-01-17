@@ -26,12 +26,12 @@ typedef struct KDtree {
 
 void KDtree_initStruct(KDtree* tree, int k, KDtreeCompareFunc compare, KDtreeDistanceFunc distance2);
 
-Result KDtree_insert(KDtree* tree, KDtreeNode* node);
+OldResult KDtree_insert(KDtree* tree, KDtreeNode* node);
 
 KDtreeNode* KDtree_delete(KDtree* tree, Object key);
 
 KDtreeNode* KDtree_search(KDtree* tree, Object key);
 
-Result KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet);
+OldResult KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet);
 
 #endif // __LIB_STRUCTS_KDTREE_H

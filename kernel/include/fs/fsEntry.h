@@ -36,27 +36,27 @@ typedef struct fsEntryIdentifier {
     bool        isDirectory;
 } fsEntryIdentifier;
 
-Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory);
+OldResult fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory);
 
-Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory);
+OldResult fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory);
 
 void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier);
 
-Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src);
+OldResult fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src);
 
-Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut);
+OldResult fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut);
 
 typedef struct fsEntryDirOperations {
     //Pointer points to current entry
-    Result  (*readEntry)(Directory* directory, fsEntryDesc* childDesc, Size* entrySizePtr);
+    OldResult  (*readEntry)(Directory* directory, fsEntryDesc* childDesc, Size* entrySizePtr);
 
-    Result  (*addEntry)(Directory* directory, fsEntryDesc* childToAdd);
+    OldResult  (*addEntry)(Directory* directory, fsEntryDesc* childToAdd);
 
     //Pointer points to entry to remove
-    Result  (*removeEntry)(Directory* directory, fsEntryIdentifier* childToRemove);
+    OldResult  (*removeEntry)(Directory* directory, fsEntryIdentifier* childToRemove);
 
     //Pointer points to entry to update
-    Result  (*updateEntry)(Directory* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild);
+    OldResult  (*updateEntry)(Directory* directory, fsEntryIdentifier* oldChild, fsEntryDesc* newChild);
 } fsEntryDirOperations;
 
 //Gives full description of a fs entry
@@ -99,7 +99,7 @@ typedef struct fsEntryDescInitArgs {
     Uint64          lastModifyTime;
 } fsEntryDescInitArgs;
 
-Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args);
+OldResult fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args);
 
 void fsEntryDesc_clearStruct(fsEntryDesc* desc);
 
@@ -116,55 +116,55 @@ typedef struct fsEntry {    //TODO: Add RW lock
 typedef struct fsEntryOperations {
     Index64 (*seek)(fsEntry* entry, Index64 seekTo);
 
-    Result  (*read)(fsEntry* entry, void* buffer, Size n);
+    OldResult  (*read)(fsEntry* entry, void* buffer, Size n);
 
-    Result  (*write)(fsEntry* entry, const void* buffer, Size n);
+    OldResult  (*write)(fsEntry* entry, const void* buffer, Size n);
 
-    Result  (*resize)(fsEntry* entry, Size newSizeInByte);
+    OldResult  (*resize)(fsEntry* entry, Size newSizeInByte);
 } fsEntryOperations;
 
 static inline Index64 fsEntry_rawSeek(fsEntry* entry, Size seekTo) {
     return entry->operations->seek(entry, seekTo);
 } 
 
-static inline Result fsEntry_rawRead(fsEntry* entry, void* buffer, Size n) {
+static inline OldResult fsEntry_rawRead(fsEntry* entry, void* buffer, Size n) {
     return entry->operations->read(entry, buffer, n);
 } 
 
-static inline Result fsEntry_rawWrite(fsEntry* entry, const void* buffer, Size n) {
+static inline OldResult fsEntry_rawWrite(fsEntry* entry, const void* buffer, Size n) {
     return entry->operations->write(entry, buffer, n);
 }
 
-static inline Result fsEntry_rawResize(fsEntry* entry, Size newSizeInByte) {
+static inline OldResult fsEntry_rawResize(fsEntry* entry, Size newSizeInByte) {
     return entry->operations->resize(entry, newSizeInByte);
 }
 
-static inline Result fsEntry_rawDirReadEntry(fsEntry* directory, fsEntryDesc* entryDesc, Size* entrySizePtr) {
+static inline OldResult fsEntry_rawDirReadEntry(fsEntry* directory, fsEntryDesc* entryDesc, Size* entrySizePtr) {
     return directory->dirOperations->readEntry(directory, entryDesc, entrySizePtr);
 }
 
-static inline Result fsEntry_rawDirAddEntry(fsEntry* directory, fsEntryDesc* entryToAdd) {
+static inline OldResult fsEntry_rawDirAddEntry(fsEntry* directory, fsEntryDesc* entryToAdd) {
     return directory->dirOperations->addEntry(directory, entryToAdd);
 }
 
-static inline Result fsEntry_rawDirRemoveEntry(fsEntry* directory, fsEntryIdentifier* entryToRemove) {
+static inline OldResult fsEntry_rawDirRemoveEntry(fsEntry* directory, fsEntryIdentifier* entryToRemove) {
     return directory->dirOperations->removeEntry(directory, entryToRemove);
 }
 
-static inline Result fsEntry_rawDirUpdateEntry(fsEntry* directory, fsEntryIdentifier* oldEntry, fsEntryDesc* newEntry) {
+static inline OldResult fsEntry_rawDirUpdateEntry(fsEntry* directory, fsEntryIdentifier* oldEntry, fsEntryDesc* newEntry) {
     return directory->dirOperations->updateEntry(directory, oldEntry, newEntry);
 }
 
-Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
+OldResult fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
 
-Result fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry);
+OldResult fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry);
 
 Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo);
 
-Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n);
+OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n);
 
-Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n);
+OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n);
 
-Result fsEntry_genericResize(fsEntry* entry, Size newSizeInByte);
+OldResult fsEntry_genericResize(fsEntry* entry, Size newSizeInByte);
 
 #endif // __FS_FSENTRY_H

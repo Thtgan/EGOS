@@ -12,7 +12,7 @@
 
 #define SMAP 0x534D4150
 
-Result initE820(MemoryMap* mMap) {
+OldResult initE820(MemoryMap* mMap) {
     IntRegisters regs;
     MemoryMapEntry* table = mMap->memoryMapEntries;
     
@@ -57,7 +57,7 @@ MemoryMapEntry* findE820Entry(MemoryMap* mMap, Uint32 base, Uint32 length, bool 
     return NULL;
 }
 
-Result E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry) {
+OldResult E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     if (index == MEMORY_MAP_ENTRY_NUM - 1 || entry->length <= splitlength) {
         if (newEntry != NULL) {
@@ -92,7 +92,7 @@ Result E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, 
     return RESULT_SUCCESS;
 }
 
-Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
+OldResult E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     MemoryMapEntry* nextEntry = entry + 1;
     if (index == mMap->entryNum - 1 || entry->type != nextEntry->type || entry->base + entry->length != nextEntry->base) {

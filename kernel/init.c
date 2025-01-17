@@ -20,17 +20,17 @@
 #include<usermode/usermode.h>
 
 typedef struct {
-    Result (*func)();
+    OldResult (*func)();
     ConstCstring name;
 } __InitFunc;
 
-static Result __init_printBootSlogan();
+static OldResult __init_printBootSlogan();
 
-static Result __init_enableInterrupt();     //TODO: Maybe remove these
+static OldResult __init_enableInterrupt();     //TODO: Maybe remove these
 
-static Result __init_disableInterrupt();    //TODO: Maybe remove these
+static OldResult __init_disableInterrupt();    //TODO: Maybe remove these
 
-static Result __init_initVideo();    //TODO: Maybe remove these
+static OldResult __init_initVideo();    //TODO: Maybe remove these
 
 static __InitFunc _initFuncs[] = {
     { display_init              ,   "Display"     },
@@ -56,7 +56,7 @@ static __InitFunc _initFuncs[] = {
     { NULL, NULL }
 };
 
-Result init_initKernel() {
+OldResult init_initKernel() {
     for (int i = 0; _initFuncs[i].func != NULL; ++i) {
         if (_initFuncs[i].func() == RESULT_SUCCESS) {
             continue;
@@ -73,21 +73,21 @@ Result init_initKernel() {
     return RESULT_SUCCESS;
 }
 
-static Result __init_printBootSlogan() {
+static OldResult __init_printBootSlogan() {
     print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
     return RESULT_SUCCESS;
 }
 
-static Result __init_enableInterrupt() {
+static OldResult __init_enableInterrupt() {
     sti();
     return RESULT_SUCCESS;
 }
 
-static Result __init_disableInterrupt() {
+static OldResult __init_disableInterrupt() {
     cli();
     return RESULT_SUCCESS;
 }
 
-static Result __init_initVideo() {
+static OldResult __init_initVideo() {
     return display_initMode(DISPLAY_MODE_VGA);
 }

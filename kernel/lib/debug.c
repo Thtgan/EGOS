@@ -69,3 +69,8 @@ void debug_dump_stack(void* rbp, Size maxDepth) {
         stackFrame = (Uintptr*)*stackFrame;
     }
 }
+
+Uintptr debug_getCurrentRIP() {
+    Uintptr* stackFrame = (Uintptr*)readRegister_RSP_64();
+    return *(stackFrame);
+}

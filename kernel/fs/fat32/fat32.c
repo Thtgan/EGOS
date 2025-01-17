@@ -15,14 +15,14 @@
 #include<structs/hashTable.h>
 #include<system/pageTable.h>
 
-Result fat32_init() {
+OldResult fat32_init() {
     return RESULT_SUCCESS;
 }
 
 #define __FS_FAT32_BPB_SIGNATURE        0x29
 #define __FS_FAT32_MINIMUM_CLUSTER_NUM  65525
 
-Result fat32_checkType(BlockDevice* blockDevice) {
+OldResult fat32_checkType(BlockDevice* blockDevice) {
     Device* device = &blockDevice->device;
     void* BPBbuffer = memory_allocate(POWER_2(device->granularity));
     if (BPBbuffer == NULL || blockDevice_readBlocks(blockDevice, 0, BPBbuffer, 1) != RESULT_SUCCESS) {
@@ -40,12 +40,12 @@ Result fat32_checkType(BlockDevice* blockDevice) {
     return RESULT_SUCCESS;
 }
 
-static Result __fat32_doOpen(FS* fs, BlockDevice* device, void* batchAllocated);
+static OldResult __fat32_doOpen(FS* fs, BlockDevice* device, void* batchAllocated);
 
 #define __FS_FAT32_SUPERBLOCK_HASH_BUCKET   16
 #define __FS_FAT32_BATCH_ALLOCATE_SIZE      BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (FAT32info, 1), (FAT32BPB, 1), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET))
 
-Result fat32_open(FS* fs, BlockDevice* blockDevice) {
+OldResult fat32_open(FS* fs, BlockDevice* blockDevice) {
     void* batchAllocated = memory_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
     if (batchAllocated == NULL || __fat32_doOpen(fs, blockDevice, batchAllocated) != RESULT_SUCCESS) {
         if (batchAllocated != NULL) {
@@ -70,7 +70,7 @@ static SuperBlockOperations __fat32_superBlockOperations = {
     .unmount        = superBlock_genericUnmount
 };
 
-static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAllocated) {
+static OldResult __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAllocated) {
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
         (SuperBlock, superBlock, 1),
         (fsEntryDesc, desc, 1),
@@ -175,7 +175,7 @@ static Result __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAlloca
     return RESULT_SUCCESS;
 }
 
-Result fat32_close(FS* fs) {
+OldResult fat32_close(FS* fs) {
     SuperBlock* superBlock = fs->superBlock;
     fsEntryDesc_clearStruct(superBlock->rootDirDesc);
     FAT32info* info = fs->superBlock->specificInfo;
@@ -197,7 +197,7 @@ Result fat32_close(FS* fs) {
     return RESULT_SUCCESS;
 }
 
-Result fat32_superBlock_flush(SuperBlock* superBlock) {
+OldResult fat32_superBlock_flush(SuperBlock* superBlock) {
     FAT32info* info = superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;

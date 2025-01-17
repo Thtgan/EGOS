@@ -83,9 +83,9 @@ typedef struct Terminal {
  * @param bufferSize Size of the buffer
  * @param width Width of terminal on display
  * @param height Height of terminal on display
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
+OldResult terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
 
 void terminal_updateDisplayContext(Terminal* terminal);
 
@@ -120,17 +120,17 @@ void terminal_flushDisplay();
  * @brief Scroll up
  * 
  * @param terminal Terminal
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result terminal_scrollUp(Terminal* terminal);
+OldResult terminal_scrollUp(Terminal* terminal);
 
 /**
  * @brief Scroll down
  * 
  * @param terminal Terminal
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result terminal_scrollDown(Terminal* terminal);
+OldResult terminal_scrollDown(Terminal* terminal);
 
 /**
  * @brief Output string to terminal, support control characters

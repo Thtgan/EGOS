@@ -4,7 +4,7 @@
 #include<kit/types.h>
 #include<system/memoryMap.h>
 
-Result initMemoryManager(MemoryMap* mMap);
+OldResult initMemoryManager(MemoryMap* mMap);
 
 void* bMalloc(Size n);
 

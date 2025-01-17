@@ -91,7 +91,7 @@ static inline void vgaGraphicMode_movePixel(VGAgraphicMode* mode, DisplayPositio
     mode->operations->movePixel(mode, des, src, n);
 }
 
-Result vgaMode_init();
+OldResult vgaMode_init();
 
 VGAmodeHeader* vgaMode_getModeHeader(VGAmodeType mode);
 
@@ -99,6 +99,6 @@ VGAmodeHeader* vgaMode_searchModeFromLegacy(int legacyMode);
 
 int vgaMode_getCurrentLegacyMode();
 
-Result vgaMode_switch(VGAmodeHeader* mode, bool legacy);
+OldResult vgaMode_switch(VGAmodeHeader* mode, bool legacy);
 
 #endif // __DEVICES_DISPLAY_VGA_MODES_H

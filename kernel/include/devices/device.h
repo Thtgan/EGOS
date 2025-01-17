@@ -24,11 +24,11 @@ typedef Uint32 MinorDeviceID;
 #define DEVICE_MAJOR_FROM_ID(__ID)          EXTRACT_VAL((__ID), 32, DEVICE_ID_MAJOR_SHIFT, 32)
 #define DEVICE_MINOR_FROM_ID(__ID)          EXTRACT_VAL((__ID), 32, 0, DEVICE_ID_MAJOR_SHIFT)
 
-Result device_init();
+OldResult device_init();
 
 MajorDeviceID device_allocMajor();
 
-Result device_releaseMajor(MajorDeviceID major);
+OldResult device_releaseMajor(MajorDeviceID major);
 
 MinorDeviceID device_allocMinor(MajorDeviceID major);
 
@@ -70,9 +70,9 @@ typedef struct DeviceInitArgs {
 
 void device_initStruct(Device* device, DeviceInitArgs* args);
 
-Result device_registerDevice(Device* device);
+OldResult device_registerDevice(Device* device);
 
-Result device_unregisterDevice(DeviceID id);
+OldResult device_unregisterDevice(DeviceID id);
 
 Device* device_getDevice(DeviceID id);
 
@@ -81,22 +81,22 @@ MajorDeviceID device_iterateMajor(MajorDeviceID current);
 Device* device_iterateMinor(MajorDeviceID major, MinorDeviceID current);
 
 typedef struct DeviceOperations {
-    Result (*read)(Device* device, Index64 index, void* buffer, Size n);
+    OldResult (*read)(Device* device, Index64 index, void* buffer, Size n);
 
-    Result (*write)(Device* device, Index64 index, const void* buffer, Size n);
+    OldResult (*write)(Device* device, Index64 index, const void* buffer, Size n);
 
-    Result (*flush)(Device* device);
+    OldResult (*flush)(Device* device);
 } DeviceOperations;
 
-static inline Result device_rawRead(Device* device, Index64 index, void* buffer, Size n) {
+static inline OldResult device_rawRead(Device* device, Index64 index, void* buffer, Size n) {
     return device->operations->read(device, index, buffer, n);
 }
 
-static inline Result device_rawWrite(Device* device, Index64 index, const void* buffer, Size n) {
+static inline OldResult device_rawWrite(Device* device, Index64 index, const void* buffer, Size n) {
     return device->operations->write(device, index, buffer, n);
 }
 
-static inline Result device_rawFlush(Device* device) {
+static inline OldResult device_rawFlush(Device* device) {
     return device->operations->flush(device);
 }
 

@@ -30,14 +30,14 @@ typedef struct BlockBuffer {
     Size            blockNum;
 } BlockBuffer;
 
-Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size blockSizeShift);
+OldResult blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size blockSizeShift);
 
 void blockBuffer_clearStruct(BlockBuffer* blockBuffer);
 
-Result blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum);
+OldResult blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum);
 
 BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex);
 
-Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block);
+OldResult blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block);
 
 #endif // __DEVICES_BLOCK_BLOCKBUFFER_H

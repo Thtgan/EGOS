@@ -16,16 +16,16 @@ typedef struct {
     Index64 firstCluster;
 } __FAT32iNodeInfo;
 
-static Result __fat32_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
+static OldResult __fat32_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
 
-static Result __fat32_iNode_resize(iNode* iNode, Size newSizeInByte);
+static OldResult __fat32_iNode_resize(iNode* iNode, Size newSizeInByte);
 
 static iNodeOperations _fat32_iNodeOperations = {
     .translateBlockPos  = __fat32_iNode_mapBlockPosition,
     .resize             = __fat32_iNode_resize
 };
 
-Result fat32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
+OldResult fat32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
     __FAT32iNodeInfo* iNodeInfo = memory_allocate(sizeof(__FAT32iNodeInfo));
     if (iNodeInfo == NULL) {
         return RESULT_ERROR;
@@ -50,12 +50,12 @@ Result fat32_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
     return RESULT_SUCCESS;
 }
 
-Result fat32_iNode_close(SuperBlock* superBlock, iNode* iNode) {
+OldResult fat32_iNode_close(SuperBlock* superBlock, iNode* iNode) {
     memory_free((void*)iNode->specificInfo);
     return RESULT_SUCCESS;
 }
 
-static Result __fat32_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
+static OldResult __fat32_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
     if (*n == 0) {
         return RESULT_SUCCESS;
     }
@@ -121,7 +121,7 @@ static Result __fat32_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
     return RESULT_CONTINUE;
 }
 
-static Result __fat32_iNode_resize(iNode* iNode, Size newSizeInByte) {
+static OldResult __fat32_iNode_resize(iNode* iNode, Size newSizeInByte) {
     FAT32info* info = (FAT32info*)iNode->superBlock->specificInfo;
     FAT32BPB* BPB = info->BPB;
     __FAT32iNodeInfo* iNodeInfo = (__FAT32iNodeInfo*)iNode->specificInfo;

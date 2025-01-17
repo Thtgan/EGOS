@@ -14,9 +14,9 @@ typedef enum {
 /**
  * @brief Initialize the terminal's switch
  * 
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result terminalSwitch_init();
+OldResult terminalSwitch_init();
 
 void terminalSwitch_switchDisplayMode(DisplayMode mode);
 

@@ -202,7 +202,7 @@ static inline void pci_write(Uint32 addr, Uint32 value) {
     )                                                                                       \
 )
 
-Result pci_init();
+OldResult pci_init();
 
 bool pci_checkExist();
 

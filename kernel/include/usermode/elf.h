@@ -195,9 +195,9 @@ typedef struct ELF64ProgramHeader {
  * 
  * @param file ELF file
  * @param header Header struct
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result elf_readELF64Header(File* file, ELF64Header* header);
+OldResult elf_readELF64Header(File* file, ELF64Header* header);
 
 /**
  * @brief Print ELF header for debug 
@@ -214,9 +214,9 @@ void elf_printELF64Header(TerminalLevel level, ELF64Header* header);
  * @param elfHeader ELF header
  * @param programHeader Program header struct
  * @param index Index of program header
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
+OldResult elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index);
 
 /**
  * @brief Print ELF program header for debug 
@@ -230,25 +230,25 @@ void elf_printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header
  * @brief Check is ELF program header leagel?
  * 
  * @param programHeader ELF program header
- * @return Result True if header is leagal
+ * @return OldResult True if header is leagal
  */
-Result elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
+OldResult elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Load program corresponded to program header from ELF file, sets errorcode to indicate error
  * 
  * @param file ELF file
  * @param programHeader Program header describes program to load
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
+OldResult elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader);
 
 /**
  * @brief Unload ELF program loaded
  * 
  * @param programHeader Program header describes program loaded
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result elf_unloadELF64Program(ELF64ProgramHeader* programHeader);
+OldResult elf_unloadELF64Program(ELF64ProgramHeader* programHeader);
 
 #endif // __USERMODE_ELF_H

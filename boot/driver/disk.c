@@ -13,7 +13,7 @@ typedef struct {
     Uint64 lba;
 } __attribute__((packed)) __DiskAddressPacket;
 
-Result readDiskParams(int drive, DiskParams* params) {
+OldResult readDiskParams(int drive, DiskParams* params) {
     if (params == NULL) {
         return RESULT_ERROR;
     }
@@ -37,7 +37,7 @@ Result readDiskParams(int drive, DiskParams* params) {
     return RESULT_SUCCESS;
 }
 
-Result rawDiskReadSectors(int drive, void* buffer, Index64 begin, Size n) {
+OldResult rawDiskReadSectors(int drive, void* buffer, Index64 begin, Size n) {
     __DiskAddressPacket dap;
     dap.DAPsize = sizeof(__DiskAddressPacket);
     dap.n       = n;
@@ -62,7 +62,7 @@ Result rawDiskReadSectors(int drive, void* buffer, Index64 begin, Size n) {
     return RESULT_SUCCESS;
 }
 
-Result rawDiskWriteSectors(int drive, const void* buffer, Index64 begin, Size n) {
+OldResult rawDiskWriteSectors(int drive, const void* buffer, Index64 begin, Size n) {
     __DiskAddressPacket dap;
     dap.DAPsize = sizeof(__DiskAddressPacket);
     dap.n       = n;

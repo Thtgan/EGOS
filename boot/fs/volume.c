@@ -6,7 +6,7 @@
 #include<kit/util.h>
 #include<mm/mm.h>
 
-static Result __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, DiskParams* params, Volume* parent, Volume* ret);
+static OldResult __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, DiskParams* params, Volume* parent, Volume* ret);
 
 Volume* scanVolume(int drive) {
     DiskParams params;
@@ -27,7 +27,7 @@ Volume* scanVolume(int drive) {
     return ret;
 }
 
-Result rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n) {
+OldResult rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n) {
     if (v == NULL || n > v->sectorNum) {
         return RESULT_ERROR;
     }
@@ -35,7 +35,7 @@ Result rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n) {
     return rawDiskReadSectors(v->drive, buffer, v->sectorBegin + begin, n);
 }
 
-Result rawVolumeWriteSectors(Volume* v, const void* buffer, Index64 begin, Size n) {
+OldResult rawVolumeWriteSectors(Volume* v, const void* buffer, Index64 begin, Size n) {
     if (v == NULL || n > v->sectorNum) {
         return RESULT_ERROR;
     }
@@ -56,7 +56,7 @@ typedef struct {
     Uint32  sectorNum;
 } __attribute__((packed)) __MBRpartitionEntry;
 
-static Result __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, DiskParams* params, Volume* parent, Volume* ret) {
+static OldResult __doScanVolume(int drive, Index64 sectorBegin, Size sectorNum, DiskParams* params, Volume* parent, Volume* ret) {
     ret->drive          = drive;
     ret->sectorBegin    = sectorBegin;
     ret->sectorNum      = sectorNum;

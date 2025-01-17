@@ -10,7 +10,7 @@
 
 static TSS _tss; //TODO: Capsule this
 
-Result tss_init() {
+OldResult tss_init() {
     memory_memset(&_tss, 0, sizeof(TSS));
     _tss.ist[0] = (Uintptr)paging_convertAddressP2V(memory_allocateFrame(4) + 4 * PAGE_SIZE);
     _tss.ist[1] = (Uintptr)paging_convertAddressP2V(memory_allocateFrame(4) + 4 * PAGE_SIZE);

@@ -11,7 +11,7 @@ Uint64 __CPUclock_readTick(ClockSource* this);
 #define __CPU_CLOCK_CALIBRATE_I8254_HZ      20  //The largest latch i8254's count register can holds, for more accurate calibrate
 #define __CPU_CLOCK_CALIBRATE_TEST_ROUND    5   //The largest latch i8254's count register can holds, for more accurate calibrate
 
-Result CPUclock_initClockSource(ClockSource* clockSource) {
+OldResult CPUclock_initClockSource(ClockSource* clockSource) {
     ClockSourceType calibrateClockSourceType = CLOCK_SOURCE_TYPE_I8254;
     ClockSource* calibrateClockSource = clockSource_getSource(calibrateClockSourceType);
     if (TEST_FLAGS_FAIL(calibrateClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {

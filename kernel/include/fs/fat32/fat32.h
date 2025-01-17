@@ -51,14 +51,14 @@ typedef struct FAT32info {
     Index32     firstFreeCluster;
 } FAT32info;
 
-Result fat32_init();
+OldResult fat32_init();
 
-Result fat32_checkType(BlockDevice* blockDevice);
+OldResult fat32_checkType(BlockDevice* blockDevice);
 
-Result fat32_open(FS* fs, BlockDevice* blockDevice);
+OldResult fat32_open(FS* fs, BlockDevice* blockDevice);
 
-Result fat32_close(FS* fs);
+OldResult fat32_close(FS* fs);
 
-Result fat32_superBlock_flush(SuperBlock* superBlock);
+OldResult fat32_superBlock_flush(SuperBlock* superBlock);
 
 #endif // __FS_FAT32_FAT32_H

@@ -6,8 +6,8 @@
 /**
  * @brief Do initialization of kernel
  * 
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result init_initKernel();
+OldResult init_initKernel();
 
 #endif // __INIT_H

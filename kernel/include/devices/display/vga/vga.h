@@ -25,7 +25,7 @@ typedef struct VGAspecificDisplayInfo {
     VGAmodeHeader* mode;
 } VGAspecificDisplayInfo;
 
-Result vga_init();
+OldResult vga_init();
 
 void vga_callRealmodeInt10(RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
@@ -33,7 +33,7 @@ VGAmodeHeader* vga_getCurrentMode();
 
 void vga_dumpDisplayContext(DisplayContext* context);
 
-Result vga_switchMode(VGAmodeHeader* mode, bool legacy);
+OldResult vga_switchMode(VGAmodeHeader* mode, bool legacy);
 
 VGAcolor vga_approximateColor(RGBA color);
 

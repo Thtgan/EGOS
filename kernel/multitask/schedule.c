@@ -10,7 +10,7 @@ static void __schedule_idle();
 
 static Scheduler* _schedule_currentScheduler = NULL;
 
-Result schedule_init() {
+OldResult schedule_init() {
     _schedule_currentScheduler = simpleScheduler_create();
 
     scheduler_start(_schedule_currentScheduler, process_init());

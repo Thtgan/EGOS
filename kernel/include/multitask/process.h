@@ -47,7 +47,7 @@ typedef struct Process {
     QueueNode statusQueueNode;
     QueueNode semaWaitQueueNode;
 
-    int errorCode;
+    // int errorCode;
 
     File** fileSlots;
 } Process;
@@ -94,7 +94,7 @@ void process_release(Process* process);
  * @param file File pointer
  * @return int Index of slot for file, INVALID_INDEX if slots are full
  */
-int process_allocateFileSlot(Process* process, File* file);
+int process_allocateFileSlot(Process* process, File* file); //TODO: Use Index types
 
 /**
  * @brief Get file from slot

@@ -45,10 +45,10 @@ typedef struct RealmodeRegs {
     Uint16 gs;
 }  __attribute__((packed)) RealmodeRegs; //TODO: Combine this to IntRegisters from intn.h
 
-Result realmode_init();
+OldResult realmode_init();
 
-Result realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
+OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
-Result realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet);
+OldResult realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet);
 
 #endif // __LIB_REALMODE_H

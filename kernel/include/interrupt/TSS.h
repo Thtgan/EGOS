@@ -6,8 +6,8 @@
 /**
  * @brief Initialize TSS
  * 
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result tss_init();
+OldResult tss_init();
 
 #endif // __INTERRUPT_TSS_H

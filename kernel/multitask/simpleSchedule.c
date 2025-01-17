@@ -18,19 +18,19 @@ typedef struct {
     Mutex mutex;
 } __SimpleScheduler;
 
-Result __simpleScheduler_start(Scheduler* this, Process* initProcess);
+OldResult __simpleScheduler_start(Scheduler* this, Process* initProcess);
 
 void __simpleScheduler_tick(Scheduler* this);
 
 void __simpleScheduler_yield(Scheduler* this);
 
-Result __simpleScheduler_addProcess(Scheduler* this, Process* process);
+OldResult __simpleScheduler_addProcess(Scheduler* this, Process* process);
 
-Result __simpleScheduler_terminateProcess(Scheduler* this, Process* process);
+OldResult __simpleScheduler_terminateProcess(Scheduler* this, Process* process);
 
-Result __simpleScheduler_blockProcess(Scheduler* this, Process* process);
+OldResult __simpleScheduler_blockProcess(Scheduler* this, Process* process);
 
-Result __simpleScheduler_wakeProcess(Scheduler* this, Process* process);
+OldResult __simpleScheduler_wakeProcess(Scheduler* this, Process* process);
 
 /**
  * @brief Schedule the process
@@ -63,9 +63,9 @@ static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* schedule
  * 
  * @param scheduler Simple scheduler in use
  * @param process Process to remove
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-static Result __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
+static OldResult __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
 
 Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
     __SimpleScheduler* ret = memory_allocate(sizeof(__SimpleScheduler));
@@ -96,9 +96,9 @@ Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
     return &ret->scheduler;
 }
 
-Result __simpleScheduler_start(Scheduler* this, Process* initProcess) {
-    __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), initProcess, PROCESS_STATUS_RUNNING);
+OldResult __simpleScheduler_start(Scheduler* this, Process* initProcess) {
     this->started = true;
+    __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), initProcess, PROCESS_STATUS_RUNNING);
 }
 
 void __simpleScheduler_tick(Scheduler* this) {
@@ -123,7 +123,7 @@ void __simpleScheduler_yield(Scheduler* this) {
     __simpleScheduler_schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_READY);
 }
 
-Result __simpleScheduler_addProcess(Scheduler* this, Process* process) {
+OldResult __simpleScheduler_addProcess(Scheduler* this, Process* process) {
     if (!this->started) {
         return RESULT_ERROR;
     }
@@ -131,7 +131,7 @@ Result __simpleScheduler_addProcess(Scheduler* this, Process* process) {
     return RESULT_SUCCESS;
 }
 
-Result __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
+OldResult __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
     if (!this->started) {
         return RESULT_ERROR;
     }
@@ -147,7 +147,7 @@ Result __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
     return RESULT_SUCCESS;
 }
 
-Result __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
+OldResult __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
     if (!this->started) {
         return RESULT_ERROR;
     }
@@ -162,7 +162,7 @@ Result __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
     return RESULT_SUCCESS;
 }
 
-Result __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
+OldResult __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
     if (!this->started) {
         return RESULT_ERROR;
     }
@@ -227,7 +227,7 @@ static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* schedule
     return ret;
 }
 
-static Result __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process) {
+static OldResult __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process) {
     mutex_acquire(&scheduler->mutex, (Object)scheduler);
 
     ProcessStatus status = process->status;

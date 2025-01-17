@@ -9,7 +9,7 @@
 
 static Uint64 __CMOS_readTick(ClockSource* this);
 
-Result CMOS_initClockSource(ClockSource* clockSource) {
+OldResult CMOS_initClockSource(ClockSource* clockSource) {
     *clockSource = (ClockSource) {
         .type                   = CLOCK_SOURCE_TYPE_CMOS,
         .tick                   = 0,

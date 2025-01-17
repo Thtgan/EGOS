@@ -6,9 +6,9 @@
 /**
  * @brief Initialize user mode
  * 
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result usermode_init();
+OldResult usermode_init();
 
 /**
  * @brief Execute ELF program at certain path, sets errorcode to indicate error

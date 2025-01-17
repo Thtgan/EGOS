@@ -19,15 +19,16 @@ typedef struct MemoryPreset MemoryPreset;
 #include<system/pageTable.h>
 #include<multitask/context.h>
 #include<interrupt/IDT.h>
+#include<result.h>
 
 //TODO: Include extendedPageTable causes error somehow
 typedef struct ExtraPageTableEntry ExtraPageTableEntry;
 typedef struct ExtendedPageTable ExtendedPageTable;
 
 typedef struct MemoryPresetOperations {
-    Result (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
-    Result (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
-    Result (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+    Result* (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+    Result* (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+    Result* (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 } MemoryPresetOperations;
 
 typedef struct MemoryPreset {
@@ -38,6 +39,6 @@ typedef struct MemoryPreset {
 
 typedef struct ExtraPageTableContext ExtraPageTableContext;
 
-Result memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
+Result* memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
 
 #endif // __MEMORY_MEMORYPRESETS_H

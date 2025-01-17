@@ -3,7 +3,7 @@
 #include<devices/ata/ata.h>
 #include<real/simpleAsmLines.h>
 
-Result ata_pio_readData(ATAdevice* device, ATAcommand* command, void* buffer) {
+OldResult ata_pio_readData(ATAdevice* device, ATAcommand* command, void* buffer) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
@@ -17,7 +17,7 @@ Result ata_pio_readData(ATAdevice* device, ATAcommand* command, void* buffer) {
     return RESULT_SUCCESS;
 }
 
-Result ata_pio_writeData(ATAdevice* device, ATAcommand* command, const void* buffer) {
+OldResult ata_pio_writeData(ATAdevice* device, ATAcommand* command, const void* buffer) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
@@ -31,7 +31,7 @@ Result ata_pio_writeData(ATAdevice* device, ATAcommand* command, const void* buf
     return RESULT_SUCCESS;
 }
 
-Result ata_pio_noData(ATAdevice* device, ATAcommand* command) {
+OldResult ata_pio_noData(ATAdevice* device, ATAcommand* command) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
@@ -45,7 +45,7 @@ Result ata_pio_noData(ATAdevice* device, ATAcommand* command) {
     return RESULT_SUCCESS;
 }
 
-Result ata_pio_readBlocks(Uint16 channelPortBase, Size n, void* buffer) {
+OldResult ata_pio_readBlocks(Uint16 channelPortBase, Size n, void* buffer) {
     while (n--) {
         if (ata_waitForData(channelPortBase) != RESULT_SUCCESS) {
             return RESULT_ERROR;
@@ -59,7 +59,7 @@ Result ata_pio_readBlocks(Uint16 channelPortBase, Size n, void* buffer) {
     return RESULT_SUCCESS;
 }
 
-Result ata_pio_writeBlocks(Uint16 channelPortBase, Size n, const void* buffer) {
+OldResult ata_pio_writeBlocks(Uint16 channelPortBase, Size n, const void* buffer) {
     while (n--) {
         if (ata_waitForData(channelPortBase) != RESULT_SUCCESS) {
             return RESULT_ERROR;

@@ -28,9 +28,9 @@ typedef struct ClockSource {
 
     Uint64          (*readTick)(ClockSource* this);
 #define CLOCK_SOURCE_INVALID_TICK   -1
-    Result          (*updateTick)(ClockSource* this);
-    Result          (*start)(ClockSource* this);
-    Result          (*stop)(ClockSource* this);
+    OldResult          (*updateTick)(ClockSource* this);
+    OldResult          (*start)(ClockSource* this);
+    OldResult          (*stop)(ClockSource* this);
 } ClockSource;
 
 #define CLOCK_SOURCE_HZ_TO_TICK_CONVERT_MULTIPLER(__HZ)                         (((Uint64)TIME_UNIT_SECOND << 32) / (__HZ))
@@ -46,15 +46,15 @@ static inline Uint64 rawClockSourceReadTick(ClockSource* clockSource) {
     return clockSource->readTick(clockSource);
 }
 
-static inline Result rawClockSourceUpdateTick(ClockSource* clockSource) {
+static inline OldResult rawClockSourceUpdateTick(ClockSource* clockSource) {
     return clockSource->updateTick(clockSource);
 }
 
-static inline Result rawClockSourceStart(ClockSource* clockSource) {
+static inline OldResult rawClockSourceStart(ClockSource* clockSource) {
     return clockSource->start(clockSource);
 }
 
-static inline Result rawClockSourceStop(ClockSource* clockSource) {
+static inline OldResult rawClockSourceStop(ClockSource* clockSource) {
     return clockSource->stop(clockSource);
 }
 

@@ -11,7 +11,7 @@
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
-Result readELF64Header(FileSystemEntry* file, ELF64Header* header) {
+OldResult readELF64Header(FileSystemEntry* file, ELF64Header* header) {
     if (rawFileSeek(file, 0) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
@@ -49,7 +49,7 @@ void printELF64Header(ELF64Header* header) {
     printf("NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
 }
 
-Result readELF64ProgramHeader(FileSystemEntry* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
+OldResult readELF64ProgramHeader(FileSystemEntry* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
     if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
         return RESULT_ERROR;
     }
@@ -81,7 +81,7 @@ void printELF64ProgramHeader(ELF64ProgramHeader* header) {
     printf("ALIGN:       %#010X\n", (Uint32)header->align);
 }
 
-Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
+OldResult checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     if (programHeader->segmentSizeInMemory < programHeader->segmentSizeInFile) {
         return RESULT_ERROR;
     }
@@ -93,7 +93,7 @@ Result checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     return RESULT_SUCCESS;
 }
 
-Result loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader) {
+OldResult loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader) {
     memset((void*)(Uintptr)programHeader->pAddr, 0, (Size)programHeader->segmentSizeInMemory);
     if (rawFileSeek(file, (Size)programHeader->offset) == INVALID_INDEX) {
         return RESULT_ERROR;

@@ -3,11 +3,11 @@
 #include<fs/fat32/fat32.h>
 #include<mm/mm.h>
 
-static Result (*_checkers[FILE_SYSTEM_TYPE_NUM])(Volume*) = {
+static OldResult (*_checkers[FILE_SYSTEM_TYPE_NUM])(Volume*) = {
     [FILE_SYSTEM_TYPE_FAT32] = FAT32checkFileSystem
 };
 
-static Result (*_openFuncs[FILE_SYSTEM_TYPE_NUM])(Volume*, FileSystem*) = {
+static OldResult (*_openFuncs[FILE_SYSTEM_TYPE_NUM])(Volume*, FileSystem*) = {
     [FILE_SYSTEM_TYPE_FAT32] = FAT32openFileSystem
 };
 
@@ -20,7 +20,7 @@ FileSystemType checkFileSystem(Volume* v) {
     return FILE_SYSTEM_TYPE_UNKNOWN;
 }
 
-Result openFileSystem(Volume* v) {
+OldResult openFileSystem(Volume* v) {
     if (v->fileSystem != NULL) {
         return RESULT_SUCCESS;
     }

@@ -57,9 +57,9 @@ typedef struct HandlerStackFrame {
 /**
  * @brief Initialize the IDT
  * 
- * @return Result Result of the operation
+ * @return OldResult OldResult of the operation
  */
-Result idt_init();
+OldResult idt_init();
 
 /**
  * @brief Bind a interrupt service routine to the mapping from PIC, and unmask the interrupt to enable it

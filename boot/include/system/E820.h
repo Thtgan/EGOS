@@ -11,13 +11,13 @@
  * 
  * @return num of detected memory area, -1 if error happened
  */
-Result initE820(MemoryMap* mMap);
+OldResult initE820(MemoryMap* mMap);
 
 MemoryMapEntry* findE820Entry(MemoryMap* mMap, Uint32 base, Uint32 length, bool contain);
 
-Result E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry);
+OldResult E820SplitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry);
 
-Result E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry);
+OldResult E820CombineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry);
 
 void E820TidyUp(MemoryMap* mMap);
 

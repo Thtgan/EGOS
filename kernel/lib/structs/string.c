@@ -8,11 +8,11 @@
 
 #define __STRING_CAPACITY_ALIGN 32
 
-Result string_initStruct(String* str, ConstCstring cstr) {
+OldResult string_initStruct(String* str, ConstCstring cstr) {
     return string_initStructN(str, cstr, -1);
 }
 
-Result string_initStructN(String* str, ConstCstring cstr, Size n) {
+OldResult string_initStructN(String* str, ConstCstring cstr, Size n) {
     Size len = algorithms_umin64(n, cstring_strlen(cstr)), capacity = ALIGN_UP(len + 1, __STRING_CAPACITY_ALIGN);
     Cstring data = memory_allocate(capacity);
     if (data == NULL) {
@@ -39,7 +39,7 @@ void string_clearStruct(String* str) {
     memory_free(str->data);
 }
 
-Result string_concat(String* des, String* str1, String* str2) {
+OldResult string_concat(String* des, String* str1, String* str2) {
     if (!(STRING_IS_AVAILABLE(str1) && STRING_IS_AVAILABLE(str2))) {
         return RESULT_ERROR;
     }
@@ -80,7 +80,7 @@ Result string_concat(String* des, String* str1, String* str2) {
     return RESULT_SUCCESS;
 }
 
-Result string_cconcat(String* des, String* str1, Cstring str2) {
+OldResult string_cconcat(String* des, String* str1, Cstring str2) {
     if (!STRING_IS_AVAILABLE(str1)) {
         return RESULT_ERROR;
     }
@@ -115,7 +115,7 @@ Result string_cconcat(String* des, String* str1, Cstring str2) {
     return RESULT_SUCCESS;
 }
 
-Result string_append(String* des, String* str, int ch) {
+OldResult string_append(String* des, String* str, int ch) {
     if (!STRING_IS_AVAILABLE(str)) {
         return RESULT_ERROR;
     }
@@ -149,7 +149,7 @@ Result string_append(String* des, String* str, int ch) {
     return RESULT_SUCCESS;
 }
 
-Result string_slice(String* des, String* src, int from, int to) {
+OldResult string_slice(String* des, String* src, int from, int to) {
     if (!STRING_IS_AVAILABLE(src)) {
         return RESULT_ERROR;
     }
@@ -185,7 +185,7 @@ Result string_slice(String* des, String* src, int from, int to) {
     return RESULT_SUCCESS;
 }
 
-Result string_resize(String* str, Size newCapacity) {
+OldResult string_resize(String* str, Size newCapacity) {
     if (!STRING_IS_AVAILABLE(str) || newCapacity < str->length + 1) {
         return RESULT_ERROR;
     }
@@ -209,7 +209,7 @@ Result string_resize(String* str, Size newCapacity) {
     return RESULT_SUCCESS;
 }
 
-Result string_copy(String* str, String* src) {
+OldResult string_copy(String* str, String* src) {
     if (!STRING_IS_AVAILABLE(src)) {
         return RESULT_ERROR;
     }

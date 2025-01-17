@@ -1,19 +1,20 @@
 #include<memory/buddyFrameAllocator.h>
 
-#include<algorithms.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/allocator.h>
 #include<memory/paging.h>
-#include<print.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
+#include<algorithms.h>
+#include<print.h>
+#include<result.h>
 
 static void* __buddyFrameAllocator_allocateFrame(FrameAllocator* allocator, Size n);
 
 static void __buddyFrameAllocator_freeFrame(FrameAllocator* allocator, void* p, Size n);
 
-static Result __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n);
+static Result* __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n);
 
 static FrameAllocatorOperations _buddyFrameAllocatorOperations = {
     .allocateFrame = __buddyFrameAllocator_allocateFrame,
@@ -38,14 +39,11 @@ static void __buddyFrameList_recyclePages(BuddyFrameAllocator* alloctor, void* p
 #define __FRAME_BUDDY_LIST_MIN_KEEP_NUM        8
 #define __FRAME_BUDDY_LIST_FREE_BEFORE_TIDY_UP 32
 
-Result buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator) {
-
+void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator) {
     frameAllocator_initStruct(&allocator->allocator, &_buddyFrameAllocatorOperations);
     for (int i = 0; i < BUDDY_FRAME_ALLOCATOR_BUDDY_LIST_NUM; ++i) {
         __buddyFrameList_initStruct(&allocator->lists[i], i);
     }
-
-    return RESULT_SUCCESS;
 }
 
 static int __buddyFrameList_compareBlock(const SinglyLinkedListNode* node1, const SinglyLinkedListNode* node2) {
@@ -209,9 +207,9 @@ static void __buddyFrameAllocator_freeFrame(FrameAllocator* allocator, void* p, 
     allocator->remaining += n;
 }
 
-static Result __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n) {
+static Result* __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n) {
     if ((Uintptr)p % PAGE_SIZE != 0) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
     }
     
     BuddyFrameAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyFrameAllocator, allocator);
@@ -220,5 +218,5 @@ static Result __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p
     allocator->total += n;
     allocator->remaining += n;
 
-    return RESULT_SUCCESS;
+    ERROR_RETURN_OK();
 }

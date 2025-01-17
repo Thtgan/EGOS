@@ -12,15 +12,15 @@ static void __pci_probeBus(Uint8 bus);
 
 static void __pci_probeDevice(Uint8 bus, Uint8 device);
 
-static Result __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function);
+static OldResult __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function);
 
 static Vector pci_devices;
 
-static Result __pci_readDevice(Uint32 baseAddr, PCIdevice* device);
+static OldResult __pci_readDevice(Uint32 baseAddr, PCIdevice* device);
 
-static Result __pci_addDevice(PCIdevice* device);
+static OldResult __pci_addDevice(PCIdevice* device);
 
-Result pci_init() {
+OldResult pci_init() {
     vector_initStruct(&pci_devices);
 
     if (pci_checkExist()) {
@@ -68,7 +68,7 @@ static void __pci_probeDevice(Uint8 bus, Uint8 device) {
     }
 }
 
-static Result __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
+static OldResult __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
     Uint32 baseAddr = pci_buildAddr(bus, device, function, 0);
 
     PCIdevice tmpDevice;
@@ -102,7 +102,7 @@ PCIdevice* pci_getDevice(Index32 index) {
     return vector_get(&pci_devices, index, &ret) == RESULT_SUCCESS ? (PCIdevice*)ret : NULL;
 }
 
-static Result __pci_readDevice(Uint32 baseAddr, PCIdevice* device) {
+static OldResult __pci_readDevice(Uint32 baseAddr, PCIdevice* device) {
     Uint16 vendorID = PCI_HEADER_READ(baseAddr, PCIcommonHeader, vendorID);
     if (vendorID == PCI_COMMON_HEADER_INVALID_VENDOR_ID) {
         return RESULT_ERROR;
@@ -117,6 +117,6 @@ static Result __pci_readDevice(Uint32 baseAddr, PCIdevice* device) {
     return RESULT_SUCCESS;
 }
 
-static Result __pci_addDevice(PCIdevice* device) {
+static OldResult __pci_addDevice(PCIdevice* device) {
     return vector_push(&pci_devices, (Object)device);
 }

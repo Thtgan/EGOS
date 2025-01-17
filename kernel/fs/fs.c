@@ -3,7 +3,6 @@
 #include<devices/block/blockDevice.h>
 #include<devices/block/memoryBlockDevice.h>
 #include<devices/terminal/terminalSwitch.h>
-#include<error.h>
 #include<fs/devfs/devfs.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsEntry.h>
@@ -18,10 +17,10 @@ FS* rootFS = NULL, * devFS = NULL;
 BlockDevice devfsBlockDevice;
 
 typedef struct {
-    Result  (*init)();
-    Result  (*checkType)(BlockDevice* device);
-    Result  (*open)(FS* fs, BlockDevice* device);
-    Result  (*close)(FS* fs);
+    OldResult  (*init)();
+    OldResult  (*checkType)(BlockDevice* device);
+    OldResult  (*open)(FS* fs, BlockDevice* device);
+    OldResult  (*close)(FS* fs);
 } __FileSystemSupport;
 
 static __FileSystemSupport _supports[FS_TYPE_NUM] = {
@@ -39,15 +38,15 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
     }
 };
 
-Result fs_init() {
+OldResult fs_init() {
     if (firstBootablePartition == NULL) {
-        ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_NOT_FOUND);
+        // ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_NOT_FOUND);
         return RESULT_ERROR;
     }
 
     FStype type = fs_checkType(firstBootablePartition);
     if (type == FS_TYPE_UNKNOWN) {
-        ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
+        // ERROR_CODE_SET(ERROR_CODE_OBJECT_DEVICE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_ERROR;
     }
 
@@ -95,20 +94,20 @@ FStype fs_checkType(BlockDevice* device) {
     return FS_TYPE_NUM;
 }
 
-Result fs_open(FS* fs, BlockDevice* device) {
+OldResult fs_open(FS* fs, BlockDevice* device) {
     FStype type = fs_checkType(device);
     return _supports[type].open(fs, device);
 }
 
-Result fs_close(FS* fs) {
+OldResult fs_close(FS* fs) {
     return _supports[fs->type].close(fs);
 }
 
-Result fs_fileRead(File* file, void* buffer, Size n) {
+OldResult fs_fileRead(File* file, void* buffer, Size n) {
     return fsutil_fileRead(file, buffer, n);
 }
 
-Result fs_fileWrite(File* file, const void* buffer, Size n) {
+OldResult fs_fileWrite(File* file, const void* buffer, Size n) {
     return fsutil_fileWrite(file, buffer, n);
 }
 
@@ -116,15 +115,15 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
     return fsutil_fileSeek(file, offset, begin);
 }
 
-Result fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags) {
+OldResult fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags) {
     return fsutil_openfsEntry(rootFS->superBlock, filepath, file, flags);
 }
 
-Result fs_fileClose(File* file) {
+OldResult fs_fileClose(File* file) {
     return fsutil_closefsEntry(file);
 }
 
-Result fs_fileStat(File* file, FS_fileStat* stat) {
+OldResult fs_fileStat(File* file, FS_fileStat* stat) {
     fsEntryDesc* desc = file->desc;
     iNode* iNode = file->iNode;
     SuperBlock* superBlock = iNode->superBlock;

@@ -2,7 +2,6 @@
 
 #include<algorithms.h>
 #include<devices/terminal/terminalSwitch.h>
-#include<error.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<kit/bit.h>
@@ -13,7 +12,7 @@
 #include<print.h>
 #include<system/pageTable.h>
 
-Result elf_readELF64Header(File* file, ELF64Header* header) {
+OldResult elf_readELF64Header(File* file, ELF64Header* header) {
     if (fs_fileSeek(file, 0, FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
         return RESULT_ERROR;
     }
@@ -23,7 +22,7 @@ Result elf_readELF64Header(File* file, ELF64Header* header) {
     }
 
     if (header->identification.magic != ELF_IDENTIFICATION_MAGIC) {
-        ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
+        // ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_ERROR;
     }
 
@@ -52,14 +51,14 @@ void elf_printELF64Header(TerminalLevel level, ELF64Header* header) {
     print_printf(level, "NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
 }
 
-Result elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
+OldResult elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
     if (elfHeader->programHeaderEntrySize != sizeof(ELF64ProgramHeader)) {
-        ERROR_CODE_SET(ERROR_CODE_OBJECT_DATA, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
+        // ERROR_CODE_SET(ERROR_CODE_OBJECT_DATA, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
         return RESULT_ERROR;
     }
 
     if (index >= elfHeader->programHeaderEntryNum) {
-        ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
+        // ERROR_CODE_SET(ERROR_CODE_OBJECT_INDEX, ERROR_CODE_STATUS_OUT_OF_BOUND);
         return RESULT_ERROR;
     }
 
@@ -86,7 +85,7 @@ void elf_printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header
     print_printf(level, "ALIGN:       %#018llX\n", header->align);
 }
 
-Result elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
+OldResult elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     if (programHeader->vAddr >= MEMORY_LAYOUT_KERNEL_BEGIN) {
         return RESULT_ERROR;
     }
@@ -102,7 +101,7 @@ Result elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
     return RESULT_SUCCESS;
 }
 
-Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
+OldResult elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     Uintptr
         pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT),
         fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
@@ -125,9 +124,15 @@ Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         void* pAddr = NULL;
         if ((pAddr = extendedPageTableRoot_translate(extendedTable, base)) == NULL) {
             pAddr = memory_allocateFrame(1);
-            if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, base, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) != RESULT_SUCCESS) {    //TODO: Set to USER_CODE when code load complete
+            if (pAddr == NULL) {
                 return RESULT_ERROR;
             }
+
+            //TODO: Set to USER_CODE when code load complete
+            ERROR_TRY_CATCH_DIRECT(
+                extendedPageTableRoot_draw(extendedTable, base, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]),
+                ERROR_CATCH_DEFAULT_CODES_CRASH
+            );
         }
 
         Size readN = algorithms_min64(readRemain, to - from);
@@ -153,7 +158,7 @@ Result elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     return RESULT_SUCCESS;
 }
 
-Result elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
+OldResult elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     Size memoryRemain = programHeader->segmentSizeInMemory;
 
@@ -163,9 +168,15 @@ Result elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* pAddr = extendedPageTableRoot_translate(extendedTable, base);
-        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, base, 1) != RESULT_SUCCESS) {
+        if (pAddr == NULL) {
             return RESULT_ERROR;
         }
+
+        ERROR_TRY_CATCH_DIRECT(
+            extendedPageTableRoot_erase(extendedTable, base, 1),
+            ERROR_CATCH_DEFAULT_CODES_CRASH
+        );
+
         memory_freeFrame(pAddr);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);

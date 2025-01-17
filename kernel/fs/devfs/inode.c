@@ -16,16 +16,16 @@ typedef struct {
     Index8  firstBlock;
 } __DEVFSiNodeInfo;
 
-static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
+static OldResult __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
 
-static Result __devfs_iNode_resize(iNode* iNode, Size newSizeInByte);
+static OldResult __devfs_iNode_resize(iNode* iNode, Size newSizeInByte);
 
 static iNodeOperations _devfs_iNodeOperations = {
     .translateBlockPos  = __devfs_iNode_mapBlockPosition,
     .resize             = __devfs_iNode_resize
 };
 
-Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
+OldResult devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
     __DEVFSiNodeInfo* iNodeInfo = memory_allocate(sizeof(__DEVFSiNodeInfo));
     if (iNodeInfo == NULL) {
         return RESULT_ERROR;
@@ -60,12 +60,12 @@ Result devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc)
     return RESULT_SUCCESS;
 }
 
-Result devfs_iNode_close(SuperBlock* superBlock, iNode* iNode) {
+OldResult devfs_iNode_close(SuperBlock* superBlock, iNode* iNode) {
     memory_free((void*)iNode->specificInfo);
     return RESULT_SUCCESS;
 }
 
-static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
+static OldResult __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
     if (*n == 0) {
         return RESULT_SUCCESS;
     }
@@ -121,7 +121,7 @@ static Result __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex,
     return RESULT_CONTINUE;
 }
 
-static Result __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
+static OldResult __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
     DevFSblockChains* blockChains = (DevFSblockChains*)iNode->superBlock->specificInfo;
     __DEVFSiNodeInfo* iNodeInfo = (__DEVFSiNodeInfo*)iNode->specificInfo;
     Size newSizeInBlock = DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->blockDevice->device.granularity), oldSizeInBlock = iNode->sizeInBlock;

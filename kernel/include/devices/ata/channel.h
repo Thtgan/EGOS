@@ -12,7 +12,7 @@ typedef struct ATAchannel {
     Uint8 deviceSelect;
 } ATAchannel;
 
-Result ata_channel_reset(ATAchannel* channel);
+OldResult ata_channel_reset(ATAchannel* channel);
 
 bool ata_channel_selectDevice(ATAchannel* channel, Uint8 deviceSelect);
 

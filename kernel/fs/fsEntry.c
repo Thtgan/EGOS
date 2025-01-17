@@ -15,7 +15,7 @@
 #include<structs/string.h>
 #include<system/pageTable.h>
 
-Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory) {
+OldResult fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory) {
     if (*path == '\0') {
         if (
             string_initStruct(&identifier->parentPath, "") != RESULT_SUCCESS ||
@@ -41,7 +41,7 @@ Result fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring 
     return RESULT_SUCCESS;
 }
 
-Result fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory) {
+OldResult fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory) {
     if (
         string_initStruct(&identifier->parentPath, parentPath) != RESULT_SUCCESS ||
         string_initStruct(&identifier->name, name) != RESULT_SUCCESS
@@ -60,7 +60,7 @@ void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier) {
     identifier->isDirectory = false;
 }
 
-Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
+OldResult fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
     if (string_copy(&des->name, &src->name) != RESULT_SUCCESS || string_copy(&des->parentPath, &src->parentPath) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
@@ -70,11 +70,11 @@ Result fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
     return RESULT_SUCCESS;
 }
 
-Result fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
+OldResult fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
     return fsEntryIdentifier_initStruct(parentIdentifierOut, identifier->parentPath.data, true);
 }
 
-Result fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
+OldResult fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
     if (args->name == NULL || args->parentPath == NULL) {
         return RESULT_ERROR;
     }
@@ -107,7 +107,7 @@ void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
     memory_memset(desc, 0, sizeof(fsEntryDesc));
 }
 
-Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
+OldResult fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
     entry->desc         = desc;
     entry->openFlags    = flags;
     entry->pointer      = 0;
@@ -119,7 +119,7 @@ Result fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* 
     return RESULT_SUCCESS;
 }
 
-Result fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
+OldResult fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
     if (iNode_close(entry->iNode) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }
@@ -137,7 +137,7 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
     return entry->pointer = seekTo;
 }
 
-Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
+OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     fsEntryType type = entry->desc->type;
     iNode* iNode = entry->iNode;
 
@@ -180,7 +180,7 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     if (remainByteNum >= blockSize) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
-        Result res;
+        OldResult res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
             if (blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_ERROR) {
                 return RESULT_ERROR;
@@ -216,7 +216,7 @@ Result fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     return RESULT_SUCCESS;
 }
 
-Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
+OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     fsEntryType type = entry->desc->type;
     iNode* iNode = entry->iNode;
 
@@ -268,7 +268,7 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 
     if (remainByteNum >= blockSize) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
-        Result res;
+        OldResult res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
             if (blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length) != RESULT_SUCCESS) {
                 return RESULT_ERROR;
@@ -308,7 +308,7 @@ Result fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     return RESULT_SUCCESS;
 }
 
-Result fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
+OldResult fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
     if (iNode_rawResize(entry->iNode, newSizeInByte) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }

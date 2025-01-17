@@ -8,6 +8,6 @@
  * 
  * @return True if A20 line is enabled
  */
-Result initA20();
+OldResult initA20();
 
 #endif // __A20_H

@@ -32,9 +32,9 @@ RECURSIVE_REFER_STRUCT(Volume) {
 
 Volume* scanVolume(int drive);
 
-Result rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n);
+OldResult rawVolumeReadSectors(Volume* v, void* buffer, Index64 begin, Size n);
 
-Result rawVolumeWriteSectors(Volume* v, const void* buffer, Index64 begin, Size n);
+OldResult rawVolumeWriteSectors(Volume* v, const void* buffer, Index64 begin, Size n);
 
 Volume* volumeGetChild(Volume* v, Index8 childIndex);
 

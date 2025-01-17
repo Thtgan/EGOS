@@ -24,7 +24,7 @@ int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key);
 int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
 int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 
-Result device_init() {
+OldResult device_init() {
     RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
     if (pseudoDevice_init() != RESULT_SUCCESS) {
         return RESULT_ERROR;
@@ -62,7 +62,7 @@ MajorDeviceID device_allocMajor() {
     return ret;
 }
 
-Result device_releaseMajor(MajorDeviceID major) {
+OldResult device_releaseMajor(MajorDeviceID major) {
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
         return RESULT_ERROR;
@@ -132,7 +132,7 @@ void device_initStruct(Device* device, DeviceInitArgs* args) {
     device->specificInfo    = args->specificInfo;
 }
 
-Result device_registerDevice(Device* device) {
+OldResult device_registerDevice(Device* device) {
     MajorDeviceID major = DEVICE_MAJOR_FROM_ID(device->id);
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
     if (found == NULL) {
@@ -141,14 +141,14 @@ Result device_registerDevice(Device* device) {
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode_initStruct(&node->minorTree, &device->deviceTreeNode);
-    Result res = RBtree_insert(&node->minorTree, &device->deviceTreeNode);
+    OldResult res = RBtree_insert(&node->minorTree, &device->deviceTreeNode);
     if (res == RESULT_SUCCESS) {
         ++node->deviceNum;
     }
     return res;
 }
 
-Result device_unregisterDevice(DeviceID id) {
+OldResult device_unregisterDevice(DeviceID id) {
     MajorDeviceID major = DEVICE_MAJOR_FROM_ID(id);
     MinorDeviceID minor = DEVICE_MINOR_FROM_ID(id);
 
@@ -158,7 +158,7 @@ Result device_unregisterDevice(DeviceID id) {
     }
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
-    Result res = (RBtree_delete(&node->minorTree, minor) != NULL);
+    OldResult res = (RBtree_delete(&node->minorTree, minor) != NULL);
     if (res == RESULT_SUCCESS) {
         --node->deviceNum;
     }

@@ -18,7 +18,7 @@ void mutex_initStruct(Mutex* mutex, Flags8 flags);
 
 bool mutex_isLocked(Mutex* mutex);
 
-Result mutex_acquire(Mutex* mutex, Object token);
+OldResult mutex_acquire(Mutex* mutex, Object token);
 
 void mutex_release(Mutex* mutex, Object token);
 

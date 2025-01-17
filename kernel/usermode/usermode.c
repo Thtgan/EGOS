@@ -1,6 +1,5 @@
 #include<usermode/usermode.h>
 
-#include<error.h>
 #include<fs/fcntl.h>
 #include<fs/fsutil.h>
 #include<fs/inode.h>
@@ -36,7 +35,7 @@ void __usermode_syscallHandlerExit(int ret);
 
 static int __usermode_doExecute(ConstCstring path, File* file);
 
-Result usermode_init() {
+OldResult usermode_init() {
     syscall_init();
 
     syscall_registerHandler(SYSCALL_EXIT, __usermode_syscallHandlerExit);
@@ -114,7 +113,7 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         }
 
         if (elf_checkELF64ProgramHeader(&programHeader) != RESULT_SUCCESS) {
-            ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
+            // ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
             return -1;
         }
 
@@ -132,9 +131,20 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         }
 
         void* pAddr = memory_allocateFrame(1);
-        if (pAddr == NULL || extendedPageTableRoot_draw(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]) != RESULT_SUCCESS) {
+        if (pAddr == NULL) {
             return -1;
         }
+
+        ERROR_TRY_CATCH_DIRECT(
+            extendedPageTableRoot_draw(
+                extendedTable,
+                (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i,
+                pAddr,
+                1,
+                extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
+            ),
+            ERROR_CATCH_DEFAULT_CODES_CRASH
+        );
     }
 
     pushq(0);   //Reserved for return value
@@ -169,9 +179,13 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
 
     for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
         void* pAddr = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-        if (pAddr == NULL || extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1) != RESULT_SUCCESS) {
+        if (pAddr == NULL) {
             return -1;
         }
+        ERROR_TRY_CATCH_DIRECT(
+            extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1),
+            ERROR_CATCH_DEFAULT_CODES_CRASH
+        );
 
         memory_freeFrame(pAddr);
     }

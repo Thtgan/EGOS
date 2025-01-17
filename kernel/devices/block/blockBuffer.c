@@ -13,7 +13,7 @@
 
 static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64 blockIndex);
 
-Result blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
+OldResult blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
     void* pBlockData = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT));
     if (pBlockData == NULL) {
@@ -61,7 +61,7 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
     memory_memset(blockBuffer, 0, sizeof(BlockBuffer));
 }
 
-Result blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
+OldResult blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
     BlockBufferBlock* newBlocks = memory_allocate(sizeof(BlockBufferBlock) * newBlockNum);
     if (newBlocks == NULL) {
         return RESULT_ERROR;
@@ -141,7 +141,7 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
     return block;
 }
 
-Result blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block) {
+OldResult blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block) {
     block->blockIndex = blockIndex;
     if (blockIndex != INVALID_INDEX && hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode) != RESULT_SUCCESS) {
         return RESULT_ERROR;
