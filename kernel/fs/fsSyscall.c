@@ -19,14 +19,12 @@ static int __fsSyscall_close(int fileDescriptor);
 
 static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat);
 
-Result* fsSyscall_init() {
+void fsSyscall_init() {
     syscall_registerHandler(SYSCALL_READ, __fsSyscall_read);
     syscall_registerHandler(SYSCALL_WRITE, __fsSyscall_write);
     syscall_registerHandler(SYSCALL_OPEN, __fsSyscall_open);
     syscall_registerHandler(SYSCALL_CLOSE, __fsSyscall_close);
     syscall_registerHandler(SYSCALL_STAT, __fsSyscall_stat);
-
-    ERROR_RETURN_OK();
 }
 
 static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {

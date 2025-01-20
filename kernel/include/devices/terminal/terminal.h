@@ -8,7 +8,6 @@ typedef struct Terminal Terminal;
 #include<kit/types.h>
 #include<structs/queue.h>
 #include<multitask/locks/semaphore.h>
-#include<result.h>
 
 /**
  * Window width
@@ -86,7 +85,7 @@ typedef struct Terminal {
  * @param height Height of terminal on display
  * @return OldResult OldResult of the operation
  */
-Result* terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
+void terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
 
 void terminal_updateDisplayContext(Terminal* terminal);
 

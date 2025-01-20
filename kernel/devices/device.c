@@ -8,6 +8,7 @@
 #include<memory/memory.h>
 #include<structs/RBtree.h>
 #include<structs/singlyLinkedList.h>
+#include<error.h>
 
 RBtree _device_majorDeviceTree;
 
@@ -24,13 +25,14 @@ int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key);
 int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
 int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 
-Result* device_init() {
+void device_init() {
     RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
     if (pseudoDevice_init() != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 MajorDeviceID device_allocMajor() {

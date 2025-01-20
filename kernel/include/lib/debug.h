@@ -13,7 +13,7 @@ __attribute__((noreturn))
  * @param format: Format of info
  * @param ...: Values printed by func
  */
-void debug_blowup(const Cstring format, ...);
+void debug_blowup(ConstCstring format, ...);
 
 void debug_dump_registers(Registers* regs);
 

@@ -7,7 +7,6 @@
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
 #include<kernel.h>
-#include<result.h>
 
 #define PAGING_PAGE_FAULT_ERROR_CODE_FLAG_P      FLAG32(0)  //Caused by non-preset(0) or page-level protect violation(1) ?
 #define PAGING_PAGE_FAULT_ERROR_CODE_FLAG_WR     FLAG32(1)  //Caused by read(0) or write(1) ?
@@ -24,7 +23,7 @@
  * 
  * @return OldResult OldResult of the operation
  */
-Result* paging_init();
+void paging_init();
 
 #define PAGING_SWITCH_TO_TABLE(__EXTENDED_TABLE)                    \
 do {                                                                \

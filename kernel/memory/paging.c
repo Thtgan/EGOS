@@ -18,6 +18,7 @@
 #include<real/simpleAsmLines.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
+#include<error.h>
 
 ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page faults for somehow
     void* v = (void*)readRegister_CR2_64();
@@ -38,15 +39,20 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
             continue;
         }
 
-        Result* res = extendedPageTableRoot_pageFaultHandler(mm->extendedTable, level, extendedPageTable, index, v, handlerStackFrame, registers);
-        if (ERROR_CHECK_ERROR(res)) {
+        extendedPageTableRoot_pageFaultHandler(mm->extendedTable, level, extendedPageTable, index, v, handlerStackFrame, registers);
+        bool fixed = true;
+        ERROR_CHECKPOINT({
             print_printf(TERMINAL_LEVEL_DEBUG, "Page handler failed at level %u\n", level);
-            break;
-        } else {
+            fixed = true;
+        });
+
+        if (fixed) {
             return;
         }
+
+        break;
     }
-    ERROR_RESET();
+    ERROR_CLEAR();
 
     print_printf(TERMINAL_LEVEL_DEBUG, "CURRENT STACK: %#018llX\n", readRegister_RSP_64());
     print_printf(TERMINAL_LEVEL_DEBUG, "FRAME: %#018llX\n", handlerStackFrame);
@@ -59,31 +65,27 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
 
 static ExtendedPageTableRoot _extendedPageTableRoot;
 
-Result* paging_init() {
-    ERROR_TRY_BEGIN();
-    ERROR_TRY_CALL_DIRECT(extraPageTableContext_initStruct(&mm->extraPageTableContext));
+void paging_init() {
+    extraPageTableContext_initStruct(&mm->extraPageTableContext);
+    ERROR_GOTO_IF_ERROR(0);
 
     _extendedPageTableRoot.context = &mm->extraPageTableContext;
 
-    ERROR_TRY_CALL_DIRECT(
-        extendedPageTableRoot_draw(
-            &_extendedPageTableRoot,
-            (void*)MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE,
-            DIVIDE_ROUND_UP(algorithms_umin64(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, (Uintptr)PHYSICAL_KERNEL_RANGE_END), PAGE_SIZE) - 1, //TODO: Maybe PHYSICAL_KERNEL_RANGE_END - PHYSICAL_KERNEL_RANGE_BEGIN?
-            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
-        )
+    extendedPageTableRoot_draw(
+        &_extendedPageTableRoot,
+        (void*)MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE,
+        DIVIDE_ROUND_UP(algorithms_umin64(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, (Uintptr)PHYSICAL_KERNEL_RANGE_END), PAGE_SIZE) - 1, //TODO: Maybe PHYSICAL_KERNEL_RANGE_END - PHYSICAL_KERNEL_RANGE_BEGIN?
+        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
     );
+    ERROR_GOTO_IF_ERROR(0);
 
-    ERROR_TRY_CALL_DIRECT(
-        extendedPageTableRoot_draw(
-            &_extendedPageTableRoot,
-            (void*)MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
-            algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_END - MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
-            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE))
-        )
+    extendedPageTableRoot_draw(
+        &_extendedPageTableRoot,
+        (void*)MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
+        algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_END - MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
+        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE))
     );
-
-    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_CRASH);
+    ERROR_GOTO_IF_ERROR(0);
 
     PAGING_SWITCH_TO_TABLE(&_extendedPageTableRoot);
 
@@ -96,5 +98,6 @@ Result* paging_init() {
 
     writeRegister_CR0_64(readRegister_CR0_64() | CR0_WP); //Enable write protect
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

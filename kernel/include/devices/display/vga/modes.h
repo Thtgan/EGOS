@@ -20,7 +20,6 @@ typedef struct VGAgraphicModeOperations VGAgraphicModeOperations;
 #include<devices/display/vga/memory.h>
 #include<devices/display/vga/registers.h>
 #include<devices/display/vga/vga.h>
-#include<result.h>
 
 typedef struct VGAmodeHeader {
     int legacyMode;
@@ -92,7 +91,7 @@ static inline void vgaGraphicMode_movePixel(VGAgraphicMode* mode, DisplayPositio
     mode->operations->movePixel(mode, des, src, n);
 }
 
-Result* vgaMode_init();
+void vgaMode_init();
 
 VGAmodeHeader* vgaMode_getModeHeader(VGAmodeType mode);
 

@@ -15,7 +15,6 @@ typedef Uint32 MinorDeviceID;
 #include<kit/oop.h>
 #include<structs/RBtree.h>
 #include<structs/singlyLinkedList.h>
-#include<result.h>
 
 #define DEVICE_ID_MAJOR_SHIFT   20
 #define DEVICE_NAME_MAX_LENGTH  31
@@ -25,7 +24,7 @@ typedef Uint32 MinorDeviceID;
 #define DEVICE_MAJOR_FROM_ID(__ID)          EXTRACT_VAL((__ID), 32, DEVICE_ID_MAJOR_SHIFT, 32)
 #define DEVICE_MINOR_FROM_ID(__ID)          EXTRACT_VAL((__ID), 32, 0, DEVICE_ID_MAJOR_SHIFT)
 
-Result* device_init();
+void device_init();
 
 MajorDeviceID device_allocMajor();
 

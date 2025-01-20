@@ -4,12 +4,12 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<debug.h>
+#include<error.h>
 
 MemoryMapEntry* memoryMap_searchEntry(MemoryMap* mMap, Range* r, Flags8 flags, Flags8 entryType) {
     Uint64 rBegin = r->begin, rEnd = r->begin + r->length;
 
     Uint8 searchType = EXTRACT_VAL(flags, 8, 0, 2);
-    MemoryMapEntry* ret = NULL;
     if (TEST_FLAGS(flags, MEMORY_MAP_SEARCH_FLAG_TOPDOWN)) {
         for (int i = mMap->entryNum - 1; i >= 0; --i) {
             MemoryMapEntry* entry = &mMap->memoryMapEntries[i];
@@ -82,23 +82,18 @@ MemoryMapEntry* memoryMap_searchEntry(MemoryMap* mMap, Range* r, Flags8 flags, F
         }
     }
 
+    ERROR_THROW_NO_GOTO(ERROR_ID_NOT_FOUND);
     return NULL;
 }
 
-Result* memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, MemoryMapEntry** newEntry) {
+MemoryMapEntry* memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     if (index == MEMORY_MAP_ENTRY_NUM - 1) {
-        if (newEntry != NULL) {
-            *newEntry = NULL;
-        }
-        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY);
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
     }
 
     if (entry->length <= splitlength) {
-        if (newEntry != NULL) {
-            *newEntry = NULL;
-        }
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     Uint32 originalBase = entry->base, originalLength = entry->length;
@@ -111,58 +106,56 @@ Result* memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitl
     nextEntry->type = entry->type;
     nextEntry->extendedAttributes = 0;
 
-    if (newEntry != NULL) {
-        *newEntry = nextEntry;
-    }
-
     entry->length = splitlength;
     ++mMap->entryNum;
 
-    ERROR_RETURN_OK();
+    return nextEntry;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
-Result* memoryMap_combineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
+void memoryMap_combineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry) {
     Index32 index = ARRAY_POINTER_TO_INDEX(mMap->memoryMapEntries, entry);
     MemoryMapEntry* nextEntry = entry + 1;
     if (index < mMap->entryNum - 1 && entry->type == nextEntry->type || entry->base + entry->length == nextEntry->base) {
-        ERROR_THROW(ERROR_ID_DATA_ERROR);
+        ERROR_THROW(ERROR_ID_DATA_ERROR, 0);
     }
 
     entry->length += nextEntry->length;
     memory_memmove(nextEntry, nextEntry + 1, (mMap->entryNum - index - 1) * sizeof(MemoryMapEntry));
     --mMap->entryNum;
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void memoryMap_tidyup(MemoryMap* mMap) {
     int i = 0;
     while (i < mMap->entryNum - 1) {
-        while (true) {
-            Result* res = memoryMap_combineNextEntry(mMap, mMap->memoryMapEntries + i);
-            if (ERROR_CHECK_ERROR(res)) {
-                break;
-            }
+        bool keepCombine = true;
+        while (keepCombine) {
+            memoryMap_combineNextEntry(mMap, mMap->memoryMapEntries + i);
+            ERROR_CHECKPOINT({
+                keepCombine = false;
+                ERROR_CLEAR();
+            });
         }
         ++i;
     }
-
-    ERROR_RESET();
 }
 
-Result* memoryMap_splitEntryAndTidyup(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, Uint8 splittedType, MemoryMapEntry** newEntry) {
-    MemoryMapEntry* splitted;
-    ERROR_TRY_CATCH_DIRECT(
-        memoryMap_splitEntry(mMap, entry, splitlength, &splitted),
-        ERROR_CATCH_DEFAULT_CODES_PASS
-    );
-
-    splitted->type = splittedType;
-    if (newEntry != NULL) {
-        *newEntry = splitted;
+MemoryMapEntry* memoryMap_splitEntryAndTidyup(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength, Uint8 splittedType) {
+    MemoryMapEntry* splitted = memoryMap_splitEntry(mMap, entry, splitlength);
+    if (splitted == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
+    
+    splitted->type = splittedType;
 
     memoryMap_tidyup(mMap);
 
-    ERROR_RETURN_OK();
+    return splitted;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }

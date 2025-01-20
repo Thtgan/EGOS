@@ -9,7 +9,7 @@
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 #include<memory/memory.h>
-#include<print.h>
+#include<error.h>
 
 static ATAdeviceType __ata_getDeviceType(ATAchannel* channel, int deviceSelect);
 
@@ -39,13 +39,13 @@ static ATAdevice _ata_devices[4];
 static BlockDevice _ata_blockDevices[4];
 static ATAchannel _ata_channels[2];
 
-Result* ata_initDevices() {
+void ata_initDevices() {
     ATAchannel dummy1;
     ATAdevice dummy2;
 
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     for (int i = 0; i < 2; ++i) {
@@ -92,7 +92,7 @@ Result* ata_initDevices() {
 
             MajorDeviceID minor = device_allocMinor(major);
             if (minor == DEVICE_INVALID_ID) {
-                ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+                ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
             }
 
             BlockDeviceInitArgs args = {
@@ -115,7 +115,8 @@ Result* ata_initDevices() {
         }
     }
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 OldResult ata_sendCommand(ATAchannel* channel, ATAcommand* command) {
@@ -225,6 +226,9 @@ static OldResult __ata_initDevice(ATAchannel* channel, Uint8 deviceSelect, ATAde
     }
 
     void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
+    if (buffer == NULL) {
+        return RESULT_ERROR;
+    }
 
     if (__atapi_identifyDevice(channel, buffer) == RESULT_SUCCESS) {
         ATAPIpacketDeviceIdentify* data = (ATAPIpacketDeviceIdentify*)buffer;

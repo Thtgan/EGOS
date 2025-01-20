@@ -6,8 +6,8 @@
 #include<memory/memory.h>
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
+#include<error.h>
 #include<print.h>
-#include<result.h>
 
 typedef struct {
     Size    size;
@@ -47,7 +47,7 @@ static void __buddyHeapAllocatorBuddyList_tidyup(BuddyHeapAllocator* allocator, 
 
 static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allocator, void* ptr, Size n);
 
-static Result* __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n);
+static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n);
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page);
 
@@ -71,7 +71,7 @@ static void __buddyHeapAllocatorBuddyList_initStruct(BuddyHeapAllocatorBuddyList
 
 static void* __buddyHeapAllocatorBuddyList_getBlock(BuddyHeapAllocatorBuddyList* list) {
     if (list->remaining == 0) {
-        return NULL;
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
     }
 
     SinglyLinkedListNode* node = (void*)list->list.next;
@@ -80,6 +80,8 @@ static void* __buddyHeapAllocatorBuddyList_getBlock(BuddyHeapAllocatorBuddyList*
     --list->remaining;
 
     return (void*)node;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 static void __buddyHeapAllocatorBuddyList_addBlock(BuddyHeapAllocatorBuddyList* list, void* ptr) {
@@ -95,14 +97,13 @@ static void __buddyHeapAllocatorBuddyList_addBlock(BuddyHeapAllocatorBuddyList* 
 static void* __buddyHeapAllocatorBuddyList_recursivelyGetBlock(BuddyHeapAllocator* allocator, BuddyHeapAllocatorBuddyList* list) {
     if (list->remaining == 0) {
         if (list->order == BUDDY_HEAP_ALLOCATOR_MAX_ORDER) {
-            ERROR_TRY_CATCH_DIRECT(
-                __buddyHeapAllocator_takePages(allocator, __BUDDY_HEAP_ALLOCATOR_TAKE_PAGES_BATCH),
-                ERROR_CATCH_DEFAULT_CODES_PASS
-            );
+            __buddyHeapAllocator_takePages(allocator, __BUDDY_HEAP_ALLOCATOR_TAKE_PAGES_BATCH);
+            ERROR_GOTO_IF_ERROR(0);
         } else {
             void* largeBlock = __buddyHeapAllocatorBuddyList_recursivelyGetBlock(allocator, list + 1);
             if (largeBlock == NULL) {
-                return NULL;
+                ERROR_ASSERT_ANY();
+                ERROR_GOTO(0);
             }
 
             __buddyHeapAllocatorBuddyList_addBlock(list, largeBlock + BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(list->order));
@@ -111,6 +112,8 @@ static void* __buddyHeapAllocatorBuddyList_recursivelyGetBlock(BuddyHeapAllocato
     }
 
     return __buddyHeapAllocatorBuddyList_getBlock(list);
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 static void __buddyHeapAllocatorBuddyList_tidyup(BuddyHeapAllocator* allocator, BuddyHeapAllocatorBuddyList* list) {
@@ -187,35 +190,36 @@ static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allo
     }
 }
 
-static Result* __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
+static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
     void* page = frameAllocator_allocateFrame(allocator->allocator.frameAllocator, n);
     if (page == NULL) {
-        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY);
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     void* v = heapAllocator_convertAddressP2V(page);
-    ERROR_TRY_CATCH_DIRECT(
-        extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID)),
-        ERROR_CATCH_DEFAULT_CODES_PASS
-    );
+    extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID));
+    ERROR_GOTO_IF_ERROR(0);
 
     __buddyHeapAllocatorBuddyList_recycleMemory(allocator, v, PAGE_SIZE);
 
     allocator->allocator.remaining += PAGE_SIZE;
     allocator->allocator.total += PAGE_SIZE;
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page) {
-    ERROR_TRY_CATCH_DIRECT(
-        extendedPageTableRoot_erase(mm->extendedTable, page, 1),
-        ERROR_CATCH_DEFAULT_CODES_CRASH
-    );
+    extendedPageTableRoot_erase(mm->extendedTable, page, 1);
+    ERROR_GOTO_IF_ERROR(0);
     frameAllocator_freeFrame(allocator->allocator.frameAllocator, heapAllocator_convertAddressV2P(page), 1);
 
     allocator->allocator.total -= PAGE_SIZE;
     allocator->allocator.remaining -= PAGE_SIZE;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
@@ -232,29 +236,24 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
 
         void* page = frameAllocator_allocateFrame(allocator->frameAllocator, n);    //Specially allocated
         if (page == NULL) {
-            return NULL;
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
         }
 
         base = heapAllocator_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
-        ERROR_TRY_CATCH_DIRECT(
-            extendedPageTableRoot_draw(mm->extendedTable, base, page, n,  extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID)),
-            ERROR_CATCH_DEFAULT_CODES_CRASH
-        );
+        extendedPageTableRoot_draw(mm->extendedTable, base, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID));
+        ERROR_GOTO_IF_ERROR(0);
     } else {
         Int8 order = -1;
         for (order = 0; order <= BUDDY_HEAP_ALLOCATOR_MAX_ORDER && BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(order) < realSize; ++order);
-
-        if (order > BUDDY_HEAP_ALLOCATOR_MAX_ORDER) {
-            print_printf(TERMINAL_LEVEL_DEBUG, "Buddy Allocator allocating goes wrong!\n");
-            return NULL;
-        }
+        DEBUG_ASSERT_SILENT(order <= BUDDY_HEAP_ALLOCATOR_MAX_ORDER);
 
         realSize =  BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(order);
         base = __buddyHeapAllocatorBuddyList_recursivelyGetBlock(buddyAllocator, &buddyAllocator->buddyLists[order]);
-    }
-
-    if (base == NULL) {
-        return NULL;
+        if (base == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
     }
 
     void* ret = (void*)ALIGN_UP((Uintptr)(base + sizeof(__BuddyHeader)), 16);
@@ -275,11 +274,13 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     allocator->remaining -= n;
 
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
-    if (!VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_END, (Uintptr)ptr, <=, <)) {
-        return;
+    if (!VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_HEAP_BEGIN, MEMORY_LAYOUT_KERNEL_HEAP_END, (Uintptr)ptr, <=, <)) {
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     BuddyHeapAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyHeapAllocator, allocator);
@@ -288,22 +289,19 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     void* base = (void*)header - header->padding;
     __BuddyTail* tail = (__BuddyTail*)(base + header->size - sizeof(__BuddyTail));
     if (header->magic != REGION_HEADER_MAGIC) {
-        print_printf(TERMINAL_LEVEL_DEBUG, "%p: Memory header not match!\n", ptr);
-        return;
+        ERROR_THROW(ERROR_ID_DATA_ERROR, 1);
     }
     
     if (tail->magic != REGION_TAIL_MAGIC) {
-        print_printf(TERMINAL_LEVEL_DEBUG, "WARNING: %p tail magic not match!\n", ptr);
+        ERROR_THROW(ERROR_ID_DATA_ERROR, 2);
     }
 
     Size size = header->size;
     memory_memset(header, 0, sizeof(__BuddyHeader)); //TODO: When free the COW area not handled by page fault
 
     if (size > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) {
-        ERROR_TRY_CATCH_DIRECT(
-            extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE)),
-            ERROR_CATCH_DEFAULT_CODES_CRASH
-        );
+        extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE));
+        ERROR_GOTO_IF_ERROR(0);
 
         frameAllocator_freeFrame(allocator->frameAllocator, heapAllocator_convertAddressV2P(base), DIVIDE_ROUND_UP(size, PAGE_SIZE));
     } else {
@@ -320,4 +318,16 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     }
 
     allocator->remaining += size;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
+
+    ERROR_FINAL_BEGIN(1);
+    print_printf(TERMINAL_LEVEL_DEBUG, "%p: Memory header %p magic not match!\n", ptr, header);
+    ERROR_GOTO(0);
+
+    ERROR_FINAL_BEGIN(2);
+    print_printf(TERMINAL_LEVEL_DEBUG, "%p: Memory tail %p magic not match!\n", ptr, tail);
+    ERROR_GOTO(0);
 }

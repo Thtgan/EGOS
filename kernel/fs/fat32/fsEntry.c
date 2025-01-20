@@ -107,7 +107,7 @@ OldResult fat32_fsEntry_open(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc
             return RESULT_ERROR;
         }
 
-        entry->desc->dataRange.length = directoryDataSize;
+        // entry->desc->dataRange.length = directoryDataSize;   //FIXME: This breaks root descriptor, is this really necessary?
     }
 
     return RESULT_SUCCESS;

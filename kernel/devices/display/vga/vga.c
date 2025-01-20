@@ -9,6 +9,7 @@
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<realmode.h>
+#include<error.h>
 
 static VGAmodeHeader* _vga_currentMode;
 static VGAspecificDisplayInfo _vga_displaySpecificInfo;
@@ -53,33 +54,32 @@ static DisplayOperations _vga_operations = {
     .switchCursor       = __vga_switchCursor
 };
 
-Result* vga_init() {
-    ERROR_TRY_BEGIN();
-    ERROR_TRY_CALL_DIRECT(
-        realmode_registerFuncs(
-            &vgaRealmodeFuncs_begin,
-            (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin,
-            &vgaRealmodeFuncs_carryList,
-            _vgaRealmodeFuncs_funcList,
-            __VGA_REALMODE_FUNC_NUM,
-            _vgaRealmodeFuncs_funcIndex
-        );
+void vga_init() {
+    realmode_registerFuncs(
+        &vgaRealmodeFuncs_begin,
+        (Uintptr)&vgaRealmodeFuncs_end - (Uintptr)&vgaRealmodeFuncs_begin,
+        &vgaRealmodeFuncs_carryList,
+        _vgaRealmodeFuncs_funcList,
+        __VGA_REALMODE_FUNC_NUM,
+        _vgaRealmodeFuncs_funcIndex
     );
 
-    ERROR_TRY_CALL_DIRECT(vgaPalettes_init());
-    ERROR_TRY_CALL_DIRECT(vgaMode_init());
-
-    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_PASS);
+    vgaPalettes_init();
+    ERROR_GOTO_IF_ERROR(0);
+    vgaMode_init();
+    ERROR_GOTO_IF_ERROR(0);
 
     int currentLegacyMode = vgaMode_getCurrentLegacyMode();
     VGAmodeHeader* mode = vgaMode_searchModeFromLegacy(currentLegacyMode);
     if (mode == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND)
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     _vga_currentMode = mode;
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void vga_callRealmodeInt10(RealmodeRegs* inRegs, RealmodeRegs* outRegs) {
@@ -115,7 +115,8 @@ void vga_switchMode(VGAmodeHeader* mode, bool legacy) {
 VGAcolor vga_approximateColor(RGBA color) {
     VGApalette* palette = vgaDAC_getPalette(_vga_currentMode->paletteType);
     if (palette == NULL) {
-        return 0;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     VGAcolor ret = vgaPalette_approximateColor(palette, color);
@@ -124,6 +125,8 @@ VGAcolor vga_approximateColor(RGBA color) {
     }
 
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    return 0;
 }
 
 static void __vga_drawPixel(DisplayPosition* position, RGBA color) {
@@ -153,7 +156,13 @@ static RGBA __vga_readPixel(DisplayPosition* position) {
     }
 
     VGApalette* palette = vgaDAC_getPalette(_vga_currentMode->paletteType);
+    if (palette == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
     return vgaPalette_vgaColorToRGBA(palette, vgaColor);
+    ERROR_FINAL_BEGIN(0);
+    return 0x00000000;
 }
 
 static void __vga_drawLine(DisplayPosition* p1, DisplayPosition* p2, RGBA color) {
@@ -269,7 +278,11 @@ static void __vga_printCharacter(DisplayPosition* position, Uint8 ch, RGBA color
         vgaTextMode_writeCell(textMode, position, &cell, 1);
     } else {
         //TODO: Graphic mode character print
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void __vga_printString(DisplayPosition* position, ConstCstring str, Size n, RGBA color) {
@@ -277,7 +290,7 @@ static void __vga_printString(DisplayPosition* position, ConstCstring str, Size 
     if (_vga_currentMode->memoryMode == VGA_MEMORY_MODE_TEXT) {
         VGAtextModeCell* tmpCells = memory_allocateFrame(DIVIDE_ROUND_UP(n * sizeof(VGAtextModeCell), PAGE_SIZE));
         if (tmpCells == NULL) {
-            return;
+            ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
         }
         tmpCells = paging_convertAddressP2V(tmpCells);
 
@@ -294,12 +307,16 @@ static void __vga_printString(DisplayPosition* position, ConstCstring str, Size 
         memory_freeFrame(tmpCells);
     } else {
         //TODO: Graphic mode string print
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void __vga_setCursorPosition(DisplayPosition* position) {
     if (_vga_currentMode->memoryMode != VGA_MEMORY_MODE_TEXT) {
-        return;
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
 
     Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_ALT_REG : VGA_CRT_CONTROLLER_INDEX_REG;
@@ -308,11 +325,14 @@ static void __vga_setCursorPosition(DisplayPosition* position) {
     Uint16 index = _vga_currentMode->width * position->x + position->y;
     vgaHardwareRegisters_writeCRTcontrollerRegister(crtControllerIndexRegister, crtControllerDataRegister, VGA_CRT_CONTROLLER_INDEX_CURSOR_LOCATION_LOW, EXTRACT_VAL(index, 16, 0, 8));
     vgaHardwareRegisters_writeCRTcontrollerRegister(crtControllerIndexRegister, crtControllerDataRegister, VGA_CRT_CONTROLLER_INDEX_CURSOR_LOCATION_HIGH, EXTRACT_VAL(index, 16, 8, 16));
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void __vga_switchCursor(bool enable) {
     if (_vga_currentMode->memoryMode != VGA_MEMORY_MODE_TEXT) {
-        return;
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
 
     Uint16 crtControllerIndexRegister = vgaHardwareRegisters_isUsingAltCRTcontrollerRegister(_vga_currentMode->registers.miscellaneous) ? VGA_CRT_CONTROLLER_INDEX_ALT_REG : VGA_CRT_CONTROLLER_INDEX_REG;
@@ -325,6 +345,9 @@ static void __vga_switchCursor(bool enable) {
         SET_FLAG_BACK(cursorStart, VGA_HARDWARE_REGISTERS_CRT_CONTROLLER_CURSOR_START_FLAG_CO);
     }
     vgaHardwareRegisters_writeCRTcontrollerRegister(crtControllerIndexRegister, crtControllerDataRegister, VGA_CRT_CONTROLLER_INDEX_CURSOR_START, cursorStart);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void vga_clearScreen() {

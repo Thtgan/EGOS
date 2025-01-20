@@ -13,7 +13,6 @@
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
-#include<result.h>
 
 void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
@@ -45,7 +44,7 @@ ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
     debug_blowup("DEAD\n");
 }
 
-Result* idt_init() {
+void idt_init() {
     _idt_idtDesc.size = (Uint16)sizeof(_idt_idtEntryTable) - 1;  //Initialize the IDT desc
     _idt_idtDesc.tablePtr = (Uintptr)_idt_idtEntryTable;
 
@@ -66,8 +65,6 @@ Result* idt_init() {
     _idt_enterCount = 0;
 
     asm volatile ("lidt %0" : : "m" (_idt_idtDesc));
-
-    ERROR_RETURN_OK();
 }
 
 void idt_registerISR(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes) {

@@ -9,8 +9,8 @@
 #include<memory/paging.h>
 #include<system/memoryMap.h>
 #include<debug.h>
+#include<error.h>
 #include<kernel.h>
-#include<result.h>
 
 /**
  * @brief Prepare the necessary information for memory, not done in boot stage for limitation on instructions
@@ -26,9 +26,9 @@ static HeapAllocator* heapAllocatorPtrs[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NU
 
 MemoryManager* mm;
 
-Result* mm_init() {
+void mm_init() {
     if (_memoryManager.initialized) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR);
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
     mm = &_memoryManager;
@@ -36,20 +36,21 @@ Result* mm_init() {
     memory_memcpy(&mm->mMap, sysInfo->mMap, sizeof(MemoryMap));
     __mm_auditE820(mm);
 
-    ERROR_TRY_BEGIN();
-
     frameMetadata_initStruct(&mm->frameMetadata);
     FrameMetadataHeader* header = frameMetadata_addFrames(&mm->frameMetadata, (void*)(mm->accessibleBegin * PAGE_SIZE), mm->accessibleEnd - mm->accessibleBegin);
     if (header == NULL) {
-        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY);
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
+
     buddyFrameAllocator_initStruct(&_buddyFrameAllocator);
     mm->frameAllocator = &_buddyFrameAllocator.allocator;
 
-    ERROR_TRY_CALL_DIRECT(frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum));
+    frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum);
+    ERROR_GOTO_IF_ERROR(0);
 
-    ERROR_TRY_CALL_DIRECT(paging_init());
-    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_PASS);
+    paging_init();
+    ERROR_GOTO_IF_ERROR(0);
 
     Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
     buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
@@ -62,7 +63,8 @@ Result* mm_init() {
     mm->heapAllocators = heapAllocatorPtrs;
 
     mm->initialized = true;
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void __mm_auditE820(MemoryManager* mm) {

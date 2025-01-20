@@ -17,7 +17,6 @@ typedef struct ATAcommand ATAcommand;
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
-#include<result.h>
 
 #define ATA_SECTOR_SIZE                                     512
 
@@ -84,7 +83,7 @@ typedef struct ATAcommand {
     Uint8 addr3;
 } ATAcommand;
 
-Result* ata_initDevices();
+void ata_initDevices();
 
 OldResult ata_sendCommand(ATAchannel* channel, ATAcommand* command);
 

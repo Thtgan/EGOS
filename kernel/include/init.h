@@ -2,8 +2,7 @@
 #define __INIT_H
 
 #include<kit/types.h>
-#include<result.h>
 
-Result* init_initKernel();
+void init_initKernel();
 
 #endif // __INIT_H

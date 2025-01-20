@@ -10,7 +10,6 @@ typedef struct AllocatorOperations AllocatorOperations;
 #include<kit/types.h>
 #include<kit/oop.h>
 #include<system/memoryLayout.h>
-#include<result.h>
 
 typedef struct FrameAllocator {
     Size total;
@@ -21,7 +20,7 @@ typedef struct FrameAllocator {
 typedef struct FrameAllocatorOperations {
     void* (*allocateFrame)(FrameAllocator* allocator, Size n);
     void (*freeFrame)(FrameAllocator* allocator, void* p, Size n);
-    Result* (*addFrames)(FrameAllocator* allocator, void* p, Size n);
+    void (*addFrames)(FrameAllocator* allocator, void* p, Size n);
 } FrameAllocatorOperations;
 
 static inline void* frameAllocator_allocateFrame(FrameAllocator* allocator, Size n) {
@@ -32,8 +31,8 @@ static inline void frameAllocator_freeFrame(FrameAllocator* allocator, void* p, 
     allocator->operations->freeFrame(allocator, p, n);
 }
 
-static inline Result* frameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n) {
-    return allocator->operations->addFrames(allocator, p, n);
+static inline void frameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n) {
+    allocator->operations->addFrames(allocator, p, n);
 }
 
 void frameAllocator_initStruct(FrameAllocator* allocator, FrameAllocatorOperations* opeartions);

@@ -7,7 +7,7 @@
 #include<kit/types.h>
 #include<multitask/schedule.h>
 #include<time/timer.h>
-#include<result.h>
+#include<error.h>
 
 #define __TIME_DAYS_IN_ERA          146097ll
 #define __TIME_DAYS_IN_4_YEARS      1461ll
@@ -121,12 +121,12 @@ ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower th
     timer_updateTimers();
 }
 
-Result* time_init() {
+void time_init() {
     clockSources_init();
 
     ClockSource* CMOSclockSource = clockSource_getSource(CLOCK_SOURCE_TYPE_CMOS), * mainClockSource, * beatClockSource;
     if (TEST_FLAGS_FAIL(CMOSclockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     _clock.time                 = (Timestamp) {
@@ -141,12 +141,12 @@ Result* time_init() {
 
     mainClockSource = clockSource_getSource(_clock.mainClockSource);
     if (TEST_FLAGS_FAIL(mainClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT | CLOCK_SOURCE_FLAGS_AUTO_UPDATE) || mainClockSource->readTick == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     beatClockSource = clockSource_getSource(_clock.beatClockSource);
     if (TEST_FLAGS_FAIL(beatClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT) || mainClockSource->readTick == NULL || beatClockSource->updateTick == NULL || beatClockSource->start == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     bool interruptEnabled = idt_disableInterrupt();
@@ -160,10 +160,11 @@ Result* time_init() {
     timer_init(beatClockSource);
 
     if (rawClockSourceStart(beatClockSource) == RESULT_ERROR) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void time_getTimestamp(Timestamp* timestamp) {

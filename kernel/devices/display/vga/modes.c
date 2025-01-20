@@ -8,7 +8,7 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<debug.h>
-#include<result.h>
+#include<error.h>
 
 static VGAtextModeOperations _vgaMode_textOpearations = {
     .writeCell = vgaMemory_textWriteCell,
@@ -294,7 +294,7 @@ static VGAmodeHeader* _vgaMode_modeHeaders[VGA_MODE_TYPE_NUM] = {
 
 static VGAcolorConverter _vgaMode_converters[VGA_MODE_TYPE_NUM];
 
-Result* vgaMode_init() {
+void vgaMode_init() {
     for (int i = 0; i < VGA_MODE_TYPE_NUM; ++i) {
         VGAmodeHeader* mode = _vgaMode_modeHeaders[i];
         if (mode->memoryMode == VGA_MEMORY_MODE_LINEAR) {
@@ -302,19 +302,28 @@ Result* vgaMode_init() {
         }
         
         VGApalette* palette = vgaDAC_getPalette(mode->paletteType);
-        ERROR_TRY_CATCH_DIRECT(
-            vgaColorConverter_initStruct(&_vgaMode_converters[i], &mode->registers, palette),
-            ERROR_CATCH_DEFAULT_CODES_PASS
-        );
+        if (palette == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
+        vgaColorConverter_initStruct(&_vgaMode_converters[i], &mode->registers, palette);
+        ERROR_GOTO_IF_ERROR(0);
 
         mode->converter = &_vgaMode_converters[i];
     }
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 VGAmodeHeader* vgaMode_getModeHeader(VGAmodeType mode) {
-    return mode >= VGA_MODE_TYPE_NUM ? NULL : _vgaMode_modeHeaders[mode];
+    if (mode >= VGA_MODE_TYPE_NUM) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    return _vgaMode_modeHeaders[mode];
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 VGAmodeHeader* vgaMode_searchModeFromLegacy(int legacyMode) {
@@ -325,6 +334,7 @@ VGAmodeHeader* vgaMode_searchModeFromLegacy(int legacyMode) {
         }
     }
 
+    ERROR_THROW_NO_GOTO(ERROR_ID_NOT_FOUND);
     return NULL;
 }
 
@@ -352,7 +362,10 @@ void vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
         vga_callRealmodeInt10(&inRegs, NULL);
     } else {
         VGApalette* palette = vgaDAC_getPalette(mode->paletteType);
-        DEBUG_ASSERT_SILENT(palette != NULL);
+        if (palette == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
 
         vgaDAC_writePalette(palette);
 
@@ -364,4 +377,7 @@ void vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
             vgaFont_loadFont(font, &mode->registers);
         }
     }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

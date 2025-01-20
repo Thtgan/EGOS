@@ -3,6 +3,7 @@
 #include<kit/types.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
+#include<error.h>
 
 void* memory_memset(void* dst, int byte, Size n) {
     void* ret = dst;
@@ -89,10 +90,12 @@ void memory_freeFrame(void* p) {
 
 void* memory_allocateDetailed(Size n, Uint8 presetID) {
     if (mm->heapAllocators[presetID] == NULL) {
-        return NULL;
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
     return heapAllocator_allocate(mm->heapAllocators[presetID], n);
+    ERROR_FINAL_BEGIN(0);
+    return 0;
 }
 
 void* memory_allocate(Size n) {
@@ -103,8 +106,11 @@ void memory_free(void* p) {
     Uint8 presetID = extendedPageTableRoot_peek(mm->extendedTable, p)->id;
     HeapAllocator* allocator = mm->heapAllocators[presetID];
     if (allocator == NULL) {
-        return;
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
     heapAllocator_free(allocator, p);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

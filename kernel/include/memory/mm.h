@@ -21,6 +21,6 @@ typedef struct MemoryManager {
     Uintptr accessibleBegin, accessibleEnd;
 } MemoryManager;
 
-Result* mm_init();
+void mm_init();
 
 #endif // __MEMORY_MM_H

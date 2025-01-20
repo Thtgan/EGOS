@@ -35,7 +35,7 @@ typedef struct CarrierMovMetadata CarrierMovMetadata;
 #define CARRIER_MOV_LIST(__NAME, ...) \
 .align 8;   \
 ASM_PUBLIC_SYMBOL(__NAME):   \
-FOREACH_MACRO_CALL(ASM_DATA_64, ;, __VA_ARGS__);    \
+MACRO_FOREACH_CALL(ASM_DATA_64, ;, __VA_ARGS__);    \
 ASM_DATA_64(0x0);
 
 #else

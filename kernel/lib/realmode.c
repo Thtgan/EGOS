@@ -12,7 +12,7 @@
 #include<carrier.h>
 #include<debug.h>
 #include<kernel.h>
-#include<result.h>
+#include<error.h>
 
 typedef void (*realmodeExecFunc)(Uintptr realmodeCode, Uintptr stack, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
@@ -38,7 +38,7 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n);
 
 void __realmode_setupPageTables(void* pageTableFrames);
 
-Result* realmode_init() {
+void realmode_init() {
     void* realmode_beginPtr = &realmode_begin;
     void* realmode_endPtr = &realmode_end;
     Size codeSize = (Uintptr)&realmode_end - (Uintptr)&realmode_begin;
@@ -48,36 +48,31 @@ Result* realmode_init() {
     Uint32 requiredPageNum = DIVIDE_ROUND_UP(codeSize, PAGE_SIZE);
     void* copyTo = __realmode_findHighestMemory(mMap, 0x10000, requiredPageNum);
 
-    ERROR_TRY_BEGIN();
-    ERROR_TRY_CALL_DIRECT(
-            extendedPageTableRoot_draw(
-            mm->extendedTable,
-            copyTo, copyTo, 
-            requiredPageNum,
-            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
-        )
+    extendedPageTableRoot_draw(
+        mm->extendedTable,
+        copyTo, copyTo, 
+        requiredPageNum,
+        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
     );
+    ERROR_GOTO_IF_ERROR(0);
 
     Uint32 stackNum = 1;
     Uint32 stackPageNum = stackNum;
 
     _realMode_stack = __realmode_findHighestMemory(mMap, 0x100000, requiredPageNum);
-    ERROR_TRY_CALL_DIRECT(
-        extendedPageTableRoot_draw(
-            mm->extendedTable,
-            _realMode_stack, _realMode_stack, 
-            stackPageNum,
-            extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
-        )
+    extendedPageTableRoot_draw(
+        mm->extendedTable,
+        _realMode_stack, _realMode_stack, 
+        stackPageNum,
+        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
     );
+    ERROR_GOTO_IF_ERROR(0);
 
     _realMode_stack = _realMode_stack + stackPageNum * PAGE_SIZE;
 
-    ERROR_TRY_END(ERROR_CATCH_DEFAULT_CODES_CRASH);
-
     void* pageTableFrames = memory_allocateFrame(3);    //TODO: Make sure it allocates fromn lower 4GB
     if ((Uintptr)pageTableFrames + 3 * PAGE_SIZE > 0x100000000) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     __realmode_setupPageTables(pageTableFrames);
@@ -85,12 +80,13 @@ Result* realmode_init() {
     _realmode_doExecFunc = (void*)realmode_doExec - realmode_beginPtr + copyTo;
 
     if (carrier_carry(realmode_beginPtr, copyTo, codeSize, &realmode_carryList) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     _realMode_funcNum = 0;
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs) {
@@ -112,12 +108,12 @@ OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* o
     return RESULT_SUCCESS;
 }
 
-Result* realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet) {
+void realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet) {
     DEBUG_ASSERT(_realMode_funcNum + funcNum <= __REALMODE_MAX_FUNC_NUM && indexRet != NULL, "");
 
     void* copyTo = __realmode_findHighestMemory(&mm->mMap, 0x10000, DIVIDE_ROUND_UP(codeSize, PAGE_SIZE));
     if (copyTo == NULL || carrier_carry(codeBegin, paging_convertAddressP2V(copyTo), codeSize, carrierList) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);   //TODO: Temporary solution
     }
 
     for (int i = 0; i < funcNum; ++i, ++_realMode_funcNum) {
@@ -125,7 +121,8 @@ Result* realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadat
         indexRet[i] = _realMode_funcNum;
     }
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void* __realmode_getFunc(Index16 index) {
@@ -157,12 +154,12 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n) {
 
     void* ret = (void*)algorithms_umin64(ALIGN_DOWN(target->base + target->length, PAGE_SIZE), below) - n * PAGE_SIZE;
 
-    ERROR_TRY_CATCH_DIRECT(
-        memoryMap_splitEntryAndTidyup(mMap, target, (Uint64)ret - target->base, MEMORY_MAP_ENTRY_TYPE_RESERVED, NULL),
-        ERROR_CATCH_DEFAULT_CODES_CRASH
-    );
+    memoryMap_splitEntryAndTidyup(mMap, target, (Uint64)ret - target->base, MEMORY_MAP_ENTRY_TYPE_RESERVED);
+    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 void __realmode_setupPageTables(void* pageTableFrames) {

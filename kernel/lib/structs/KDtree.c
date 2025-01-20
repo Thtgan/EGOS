@@ -2,7 +2,7 @@
 
 #include<algorithms.h>
 #include<kit/types.h>
-#include<result.h>
+#include<error.h>
 
 KDtreeNode* __KDtree_doInsert(KDtree* tree, KDtreeNode* currentNode, KDtreeNode* node, int currentDepth);
 
@@ -25,16 +25,17 @@ void KDtree_initStruct(KDtree* tree, int k, KDtreeCompareFunc compare, KDtreeDis
     tree->distance2 = distance2;
 }
 
-Result* KDtree_insert(KDtree* tree, KDtreeNode* node) {
+void KDtree_insert(KDtree* tree, KDtreeNode* node) {
     KDtreeNode* newRoot = __KDtree_doInsert(tree, tree->root, node, 0);
     if (newRoot == NULL) {
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST);
+        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
     }
     
     tree->root = newRoot;
     ++tree->size;
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 KDtreeNode* KDtree_delete(KDtree* tree, Object key) {
@@ -69,17 +70,19 @@ KDtreeNode* KDtree_search(KDtree* tree, Object key) {
     return NULL;
 }
 
-Result* KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet) {
+void KDtree_nearestNeighbour(KDtree* tree, Object key, Object* closestKeyRet) {
     KDtreeNode* closestNode = NULL;
     Uint64 minDistance2 = (Uint64)-1;
     __KDtree_doNearestNeighbour(tree, tree->root, key, &closestNode, &minDistance2, 0);
 
     if (closestNode == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND);
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
     *closestKeyRet = closestNode->key;
-    ERROR_RETURN_OK();
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 KDtreeNode* __KDtree_doInsert(KDtree* tree, KDtreeNode* currentNode, KDtreeNode* node, int currentDepth) {

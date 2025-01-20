@@ -4,38 +4,35 @@
 #include<devices/display/vga/default.h>
 #include<devices/display/vga/vga.h>
 #include<kit/types.h>
-#include<result.h>
+#include<error.h>
 
 //TODO: Add support for other video adapter
 
 static DisplayContext _display_currentContext;
 static bool _display_modeInitialized[DISPLAY_MODE_NUM] = { false };
 
-Result* display_init() {
-    ERROR_TRY_CATCH_DIRECT(
-        display_initMode(DISPLAY_MODE_DEFAULT),
-        ERROR_CATCH_DEFAULT_CODES_PASS
-    );
+void display_init() {
+    display_initMode(DISPLAY_MODE_DEFAULT);
+    ERROR_GOTO_IF_ERROR(0);
     
-    ERROR_TRY_CATCH_DIRECT(
-        display_switchMode(DISPLAY_MODE_DEFAULT),
-        ERROR_CATCH_DEFAULT_CODES_PASS
-    );
+    display_switchMode(DISPLAY_MODE_DEFAULT);
+    ERROR_GOTO_IF_ERROR(0);
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 DisplayContext* display_getCurrentContext() {
     return &_display_currentContext;
 }
 
-Result* display_initMode(DisplayMode mode) {
+void display_initMode(DisplayMode mode) {
     if (mode >= DISPLAY_MODE_NUM) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     if (_display_modeInitialized[mode]) {
-        ERROR_RETURN_OK();
+        return;
     }
 
     switch (mode) {
@@ -43,24 +40,24 @@ Result* display_initMode(DisplayMode mode) {
             break;
         }
         case DISPLAY_MODE_VGA: {
-            ERROR_TRY_CATCH_DIRECT(
-                vga_init(),
-                ERROR_CATCH_DEFAULT_CODES_PASS
-            );
+            vga_init();
+            ERROR_GOTO_IF_ERROR(0);
             break;
         }
         default: {
-            ERROR_THROW(ERROR_ID_UNKNOWN);
+            ERROR_THROW(ERROR_ID_UNKNOWN, 0);
         }
     }
 
     _display_modeInitialized[mode] = true;
-    ERROR_RETURN_OK();
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-Result* display_switchMode(DisplayMode mode) {
+void display_switchMode(DisplayMode mode) {
     if (!_display_modeInitialized[mode]) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR);
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
     switch (mode) {
@@ -73,10 +70,12 @@ Result* display_switchMode(DisplayMode mode) {
             break;
         }
         default: {
-            ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
+            ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
         }
     }
-    ERROR_RETURN_OK();
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void display_drawPixel(DisplayPosition* position, RGBA color) {

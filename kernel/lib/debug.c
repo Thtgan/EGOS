@@ -9,7 +9,7 @@
 #include<system/memoryLayout.h>
 
 __attribute__((noreturn))
-void debug_blowup(const Cstring format, ...) {
+void debug_blowup(ConstCstring format, ...) {
     va_list args;
     va_start(args, format);
 

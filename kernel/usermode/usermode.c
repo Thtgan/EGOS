@@ -15,7 +15,7 @@
 #include<system/pageTable.h>
 #include<usermode/elf.h>
 #include<usermode/syscall.h>
-#include<result.h>
+#include<error.h>
 
 __attribute__((naked))
 /**
@@ -36,12 +36,10 @@ void __usermode_syscallHandlerExit(int ret);
 
 static int __usermode_doExecute(ConstCstring path, File* file);
 
-Result* usermode_init() {
+void usermode_init() {
     syscall_init();
 
     syscall_registerHandler(SYSCALL_EXIT, __usermode_syscallHandlerExit);
-
-    ERROR_RETURN_OK();
 }
 
 int usermode_execute(ConstCstring path) {  //TODO: Unstable code
@@ -136,16 +134,14 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
             return -1;
         }
 
-        ERROR_TRY_CATCH_DIRECT(
-            extendedPageTableRoot_draw(
-                extendedTable,
-                (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i,
-                pAddr,
-                1,
-                extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
-            ),
-            ERROR_CATCH_DEFAULT_CODES_CRASH
+        extendedPageTableRoot_draw(
+            extendedTable,
+            (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i,
+            pAddr,
+            1,
+            extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
         );
+        ERROR_CHECKPOINT(); //TODO: Temporary solution
     }
 
     pushq(0);   //Reserved for return value
@@ -183,10 +179,8 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         if (pAddr == NULL) {
             return -1;
         }
-        ERROR_TRY_CATCH_DIRECT(
-            extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1),
-            ERROR_CATCH_DEFAULT_CODES_CRASH
-        );
+        extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
+        ERROR_CHECKPOINT(); //TODO: Temporary solution
 
         memory_freeFrame(pAddr);
     }

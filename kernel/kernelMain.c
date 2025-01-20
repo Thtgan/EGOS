@@ -42,7 +42,7 @@ static void printLOGO();
 #include<devices/display/vga/memory.h>
 
 #include<multitask/simpleSchedule.h>
-#include<result.h>
+#include<error.h>
 
 static void __timerFunc1(Timer* timer) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
@@ -61,13 +61,7 @@ void kernelMain(SystemInfo* info) {
         debug_blowup("Boot magic not match");
     }
 
-    ERROR_TRY_CATCH_DIRECT(
-        init_initKernel(),
-        {
-            print_printf(TERMINAL_LEVEL_DEBUG, "Initialization failed");
-            result_unhandledError(ERROR_CATCH_RESULT_NAME);
-        }
-    );
+    init_initKernel();
 
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
     terminalSwitch_switchDisplayMode(DISPLAY_MODE_VGA);

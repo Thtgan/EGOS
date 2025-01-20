@@ -7,7 +7,6 @@ typedef struct Scheduler Scheduler;
 #include<kit/types.h>
 #include<kit/oop.h>
 #include<multitask/process.h>
-#include<result.h>
 
 typedef struct Scheduler {
     OldResult (*start)(Scheduler* this, Process* initProcess);
@@ -28,7 +27,7 @@ typedef struct Scheduler {
     Uint32 criticalCount;
 } Scheduler;
 
-Result* schedule_init();
+void schedule_init();
 
 /**
  * @brief Get current scheduler

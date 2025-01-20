@@ -2,9 +2,8 @@
 #define __USERMODE_USERMODE_H
 
 #include<kit/types.h>
-#include<result.h>
 
-Result* usermode_init();
+void usermode_init();
 
 /**
  * @brief Execute ELF program at certain path, sets errorcode to indicate error

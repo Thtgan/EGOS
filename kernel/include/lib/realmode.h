@@ -6,7 +6,6 @@ typedef struct RealmodeRegs RealmodeRegs;
 #include<carrier.h>
 #include<kit/types.h>
 #include<multitask/context.h>
-#include<result.h>
 
 typedef struct RealmodeRegs {
     union {
@@ -46,10 +45,10 @@ typedef struct RealmodeRegs {
     Uint16 gs;
 }  __attribute__((packed)) RealmodeRegs; //TODO: Combine this to IntRegisters from intn.h
 
-Result* realmode_init();
+void realmode_init();
 
 OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
-Result* realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet);
+void realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet);
 
 #endif // __LIB_REALMODE_H

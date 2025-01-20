@@ -40,7 +40,7 @@
 #define __BATCH_ALLOCATE_SIZE_N_CALL(__PACKET)                  __BATCH_ALLOCATE_SIZE_N __PACKET
 #define __BATCH_ALLOCATE_SIZE_N(__TYPE, __N)                    ALIGN_UP(sizeof(__TYPE) * (__N), 16)
 
-#define BATCH_ALLOCATE_SIZE(...)                                FOREACH_MACRO_CALL(__BATCH_ALLOCATE_SIZE_N_CALL, +, __VA_ARGS__)
+#define BATCH_ALLOCATE_SIZE(...)                                MACRO_FOREACH_CALL(__BATCH_ALLOCATE_SIZE_N_CALL, +, __VA_ARGS__)
 
 #define __BATCH_ALLOCATE_DEFINE_PTRS_CALL(__PACKET)             __BATCH_ALLOCATE_DEFINE_PTRS __PACKET
 
@@ -50,10 +50,10 @@
 
 #define __BATCH_ALLOCATE_ASSIGN_PTRS(__TYPE, __NAME, __N)       __NAME = (__TYPE*)_tempPtr; _tempPtr += __BATCH_ALLOCATE_SIZE_N(__TYPE, __N);
 
-#define BATCH_ALLOCATE_DEFINE_PTRS(__PTR, ...)                  FOREACH_MACRO_CALL(__BATCH_ALLOCATE_DEFINE_PTRS_CALL, , __VA_ARGS__)        \
+#define BATCH_ALLOCATE_DEFINE_PTRS(__PTR, ...)                  MACRO_FOREACH_CALL(__BATCH_ALLOCATE_DEFINE_PTRS_CALL, , __VA_ARGS__)        \
                                                                 if ((__PTR) != NULL) {                                                      \
                                                                     void* _tempPtr = __PTR;                                                 \
-                                                                    FOREACH_MACRO_CALL(__BATCH_ALLOCATE_ASSIGN_PTRS_CALL, , __VA_ARGS__)    \
+                                                                    MACRO_FOREACH_CALL(__BATCH_ALLOCATE_ASSIGN_PTRS_CALL, , __VA_ARGS__)    \
                                                                 }                                                                           \
 
 #define SIZE_OF_STRUCT_MEMBER(__TYPE, __MEMBER)                 (sizeof(((__TYPE*)NULL)->__MEMBER))

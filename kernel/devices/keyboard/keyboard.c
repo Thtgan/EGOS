@@ -8,7 +8,6 @@
 #include<kit/types.h>
 #include<real/ports/keyboard.h>
 #include<real/simpleAsmLines.h>
-#include<result.h>
 
 __attribute__((aligned(4)))
 static KeyboardKeyEntry _keyboard_keyEntries[128] = {
@@ -167,14 +166,12 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
     }
 }
 
-Result* keyboard_init() {
+void keyboard_init() {
     for (int i = 0; i < 128; ++i) {
         _keyboard_pressed[i] = false;
     }
     _keyboard_capslock = false;
     idt_registerISR(0x21, __keyboard_interruptHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
-
-    ERROR_RETURN_OK();
 }
 
 static inline Uint8 __keyboard_readScancode() {

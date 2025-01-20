@@ -16,7 +16,6 @@ typedef struct VGAcolorConverter VGAcolorConverter;
 #include<devices/display/vga/registers.h>
 #include<kit/types.h>
 #include<structs/KDtree.h>
-#include<result.h>
 
 typedef struct VGAdacColor {
     union {
@@ -36,19 +35,19 @@ typedef struct VGApalette {
     KDtree colorApproximate;
 } VGApalette;
 
-Result* vgaPalette_initApproximate(VGApalette* palette);
+void vgaPalette_initApproximate(VGApalette* palette);
 
 VGAcolor vgaPalette_approximateColor(VGApalette* palette, RGBA color);
 
 RGBA vgaPalette_vgaColorToRGBA(VGApalette* palette, VGAcolor color);
 
-Result* vgaPalettes_init();
+void vgaPalettes_init();
 
 typedef struct VGAcolorConverter {
     VGAcolor convertData[16];
 } VGAcolorConverter;
 
-Result* vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareRegisters* registers, VGApalette* palette);
+void vgaColorConverter_initStruct(VGAcolorConverter* converter, VGAhardwareRegisters* registers, VGApalette* palette);
 
 VGAcolor vgaColorConverter_convert(VGAcolorConverter* converter, VGAcolor color);
 

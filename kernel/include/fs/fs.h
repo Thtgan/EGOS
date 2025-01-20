@@ -26,7 +26,7 @@ typedef struct FS {
 
 #define FS_PATH_SEPERATOR '/'
 
-Result* fs_init();
+void fs_init();
 
 /**
  * @brief Check type of file system on device

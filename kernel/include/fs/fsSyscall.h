@@ -2,9 +2,8 @@
 #define __FS_FSSYSCALL_H
 
 #include<kit/bit.h>
-#include<result.h>
 
-Result* fsSyscall_init();
+void fsSyscall_init();
 
 #define FSSYSCALL_STANDARD_OUTPUT_FILE_DESCRIPTOR   0
 

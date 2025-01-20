@@ -11,6 +11,7 @@
 #include<multitask/schedule.h>
 #include<print.h>
 #include<system/pageTable.h>
+#include<error.h>
 
 OldResult elf_readELF64Header(File* file, ELF64Header* header) {
     if (fs_fileSeek(file, 0, FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
@@ -129,10 +130,8 @@ OldResult elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
             }
 
             //TODO: Set to USER_CODE when code load complete
-            ERROR_TRY_CATCH_DIRECT(
-                extendedPageTableRoot_draw(extendedTable, base, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]),
-                ERROR_CATCH_DEFAULT_CODES_CRASH
-            );
+            extendedPageTableRoot_draw(extendedTable, base, pAddr, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]);
+            ERROR_CHECKPOINT(); //TODO: Temporary solution
         }
 
         Size readN = algorithms_min64(readRemain, to - from);
@@ -172,10 +171,8 @@ OldResult elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
             return RESULT_ERROR;
         }
 
-        ERROR_TRY_CATCH_DIRECT(
-            extendedPageTableRoot_erase(extendedTable, base, 1),
-            ERROR_CATCH_DEFAULT_CODES_CRASH
-        );
+        extendedPageTableRoot_erase(extendedTable, base, 1);
+        ERROR_CHECKPOINT(); //TODO: Temporary solution
 
         memory_freeFrame(pAddr);
         base += PAGE_SIZE;

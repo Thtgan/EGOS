@@ -12,7 +12,7 @@
 #include<cstring.h>
 #include<structs/queue.h>
 #include<system/memoryLayout.h>
-#include<result.h>
+#include<error.h>
 
 static Terminal* _terminal_currentTerminal = NULL;
 
@@ -75,11 +75,11 @@ static void __terminal_putCharacter(Terminal* terminal, char ch);
  */
 static void __terminal_scrollWindowToRow(Terminal* terminal, Index16 row);
 
-Result* terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
+void terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
     terminal->displayContext = display_getCurrentContext(); //TODO: Only considering text mode now
     DEBUG_ASSERT_SILENT(terminal->displayContext != NULL);
     if (bufferSize < terminal->displayContext->width * terminal->displayContext->width) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS);
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     terminal->loopRowBegin = 0;
@@ -103,7 +103,8 @@ Result* terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize) {
     initSemaphore(&terminal->inputLock, 1);
     inputBuffer_initStruct(&terminal->inputBuffer);
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void terminal_updateDisplayContext(Terminal* terminal) {

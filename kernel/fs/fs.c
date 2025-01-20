@@ -12,7 +12,7 @@
 #include<memory/paging.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>
-#include<result.h>
+#include<error.h>
 
 FS* rootFS = NULL, * devFS = NULL;
 BlockDevice devfsBlockDevice;
@@ -39,49 +39,50 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
     }
 };
 
-Result* fs_init() {
+void fs_init() {
     if (firstBootablePartition == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     FStype type = fs_checkType(firstBootablePartition);
     if (type == FS_TYPE_UNKNOWN) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     if (_supports[type].init() != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     rootFS = memory_allocate(sizeof(FS));
     if (rootFS == NULL || fs_open(rootFS, firstBootablePartition) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
     
     void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE));
     if (region == NULL || memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE") != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     if (_supports[FS_TYPE_DEVFS].init() != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     devFS = memory_allocate(sizeof(FS));
     if (devFS == NULL || fs_open(devFS, &devfsBlockDevice) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     fsEntryIdentifier devMountIdentifier;
     if (fsEntryIdentifier_initStruct(&devMountIdentifier, "/dev", FS_ENTRY_TYPE_DIRECTORY) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
     if (superBlock_rawMount(rootFS->superBlock, &devMountIdentifier, devFS->superBlock, devFS->superBlock->rootDirDesc) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
 
-    ERROR_RETURN_OK();
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 FStype fs_checkType(BlockDevice* device) {

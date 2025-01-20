@@ -13,7 +13,6 @@ typedef struct Timestamp Timestamp;
 
 #include<kit/types.h>
 #include<multitask/locks/spinlock.h>
-#include<result.h>
 
 typedef struct RealTime {
     Uint16  year;
@@ -40,7 +39,7 @@ void timestamp_step(Timestamp* timestamp, Uint64 time, TimeUnit unit);
 
 Int64 timestamp_compare(Timestamp* ts1, Timestamp* ts2);
 
-Result* time_init();
+void time_init();
 
 void time_getTimestamp(Timestamp* timestamp);
 

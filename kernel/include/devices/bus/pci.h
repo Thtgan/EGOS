@@ -14,7 +14,6 @@ typedef struct PCIdevice PCIdevice;
 #include<kit/util.h>
 #include<real/ports/pci.h>
 #include<real/simpleAsmLines.h>
-#include<result.h>
 
 #define PCI_MAX_REGISTER_NUM    POWER_2(PCI_CONFIG_ADDR_REGISTER_NUMBER_LENGTH)
 #define PCI_MAX_FUNCTION_NUM    POWER_2(PCI_CONFIG_ADDR_FUNCTION_NUMBER_LENGTH)
@@ -203,7 +202,7 @@ static inline void pci_write(Uint32 addr, Uint32 value) {
     )                                                                                       \
 )
 
-Result* pci_init();
+void pci_init();
 
 bool pci_checkExist();
 
