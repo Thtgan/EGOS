@@ -12,6 +12,7 @@
 #include<structs/hashTable.h>
 #include<structs/linkedList.h>
 #include<structs/string.h>
+#include<error.h>
 
 void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args) {
     superBlock->blockDevice     = args->blockDevice;
@@ -236,9 +237,9 @@ OldResult superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* ide
         linkedList_initStruct(&list->list);
         hashChainNode_initStruct(&list->node);
 
-        if (hashTable_insert(&superBlock->mounted, pathKey, &list->node) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        hashTable_insert(&superBlock->mounted, pathKey, &list->node);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        
         found = &list->node;
     }
 
@@ -246,6 +247,8 @@ OldResult superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* ide
     linkedListNode_insertFront(list, &mount->node);
 
     return RESULT_SUCCESS;
+    ERROR_FINAL_BEGIN(0);
+    return RESULT_ERROR;
 }
 
 OldResult superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier) {

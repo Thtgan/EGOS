@@ -99,6 +99,7 @@ static __Clock _clock;
 ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower than expection
     ClockSource* mainClockSource = clockSource_getSource(_clock.mainClockSource), * beatClockSource = clockSource_getSource(_clock.beatClockSource);
     rawClockSourceUpdateTick(beatClockSource);
+    ERROR_CHECKPOINT(); //TODO: Temporary solution
 
     spinlock_lock(&_clock.timeLock);
     Timestamp* time = &_clock.time, * expectedTime = &_clock.expectedTime;
@@ -159,12 +160,11 @@ void time_init() {
 
     timer_init(beatClockSource);
 
-    if (rawClockSourceStart(beatClockSource) == RESULT_ERROR) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
-    }
+    rawClockSourceStart(beatClockSource);
+    ERROR_GOTO_IF_ERROR(0);  //TODO: Temporary solution
 
     return;
-    ERROR_FINAL_BEGIN(0);
+    ERROR_FINAL_BEGIN(0);   //TODO: Temporary solution
 }
 
 void time_getTimestamp(Timestamp* timestamp) {

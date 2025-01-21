@@ -85,12 +85,12 @@ typedef struct ATAcommand {
 
 void ata_initDevices();
 
-OldResult ata_sendCommand(ATAchannel* channel, ATAcommand* command);
+void ata_sendCommand(ATAchannel* channel, ATAcommand* command);
 
 Flags8 ata_waitTillClear(Uint16 channelPortBase, Flags8 waitFlags);
 
 Flags8 ata_waitTillSet(Uint16 channelPortBase, Flags8 waitFlags);
 
-OldResult ata_waitForData(Uint16 channelPortBase);
+void ata_waitForData(Uint16 channelPortBase);
 
 #endif // __DEVICES_ATA_ATA_H

@@ -43,6 +43,10 @@ static inline OldResult iNode_rawResize(iNode* iNode, Size newSizeInByte) {
 
 ID iNode_generateID(fsEntryDesc* desc);
 
+static inline bool iNode_isDevice(iNode* iNode) {
+    return TEST_FLAGS(iNode->iNodeID, FLAG64(63));
+}
+
 iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex);
 
 OldResult iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex);

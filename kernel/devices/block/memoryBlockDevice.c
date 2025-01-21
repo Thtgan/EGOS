@@ -8,12 +8,13 @@
 #include<memory/memory.h>
 #include<cstring.h>
 #include<structs/singlyLinkedList.h>
+#include<error.h>
 
-static OldResult __memoryBlockDevice_read(Device* device, Index64 blockIndex, void* buffer, Size n);
+static void __memoryBlockDevice_read(Device* device, Index64 blockIndex, void* buffer, Size n);
 
-static OldResult __memoryBlockDevice_write(Device* device, Index64 blockIndex, const void* buffer, Size n);
+static void __memoryBlockDevice_write(Device* device, Index64 blockIndex, const void* buffer, Size n);
 
-static OldResult __memoryBlockDevice_flush(Device* device);
+static void __memoryBlockDevice_flush(Device* device);
 
 static DeviceOperations _memoryBlockDevice_deviceOperations = (DeviceOperations) {
     .read = __memoryBlockDevice_read,
@@ -21,20 +22,21 @@ static DeviceOperations _memoryBlockDevice_deviceOperations = (DeviceOperations)
     .flush = __memoryBlockDevice_flush
 };
 
-OldResult memoryBlockDevice_initStruct(BlockDevice* device, void* region, Size size, ConstCstring name) {
+void memoryBlockDevice_initStruct(BlockDevice* device, void* region, Size size, ConstCstring name) {
     if (region == NULL) {
-        // ERROR_CODE_SET(ERROR_CODE_OBJECT_ARGUMENT, ERROR_CODE_STATUS_IS_NULL);
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     MinorDeviceID minor = device_allocMinor(major);
     if (minor == DEVICE_INVALID_ID) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     Size blockNum = DIVIDE_ROUND_DOWN(size, BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
@@ -53,19 +55,18 @@ OldResult memoryBlockDevice_initStruct(BlockDevice* device, void* region, Size s
         },
     };
 
-    return blockDevice_initStruct(device, &args);
+    blockDevice_initStruct(device, &args);
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-static OldResult __memoryBlockDevice_read(Device* device, Index64 blockIndex, void* buffer, Size n) {
+static void __memoryBlockDevice_read(Device* device, Index64 blockIndex, void* buffer, Size n) {
     memory_memcpy(buffer, (void*)device->specificInfo + blockIndex * POWER_2(device->granularity), n * POWER_2(device->granularity));  //Just simple memcpy
-    return RESULT_SUCCESS;
 }
 
-static OldResult __memoryBlockDevice_write(Device* device, Index64 blockIndex, const void* buffer, Size n) {
+static void __memoryBlockDevice_write(Device* device, Index64 blockIndex, const void* buffer, Size n) {
     memory_memcpy((void*)device->specificInfo + blockIndex * POWER_2(device->granularity), buffer, n * POWER_2(device->granularity));  //Just simple memcpy
-    return RESULT_SUCCESS;
 }
 
-static OldResult __memoryBlockDevice_flush(Device* device) {
-    return RESULT_SUCCESS;
+static void __memoryBlockDevice_flush(Device* device) {
 }

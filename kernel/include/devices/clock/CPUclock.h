@@ -4,6 +4,6 @@
 #include<devices/clock/clockSource.h>
 #include<kit/types.h>
 
-OldResult CPUclock_initClockSource(ClockSource* clockSource);
+void CPUclock_initClockSource(ClockSource* clockSource);
 
 #endif // __DEVICES_CLOCK_CPUCLOCK_H

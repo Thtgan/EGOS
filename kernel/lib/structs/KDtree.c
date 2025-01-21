@@ -27,9 +27,8 @@ void KDtree_initStruct(KDtree* tree, int k, KDtreeCompareFunc compare, KDtreeDis
 
 void KDtree_insert(KDtree* tree, KDtreeNode* node) {
     KDtreeNode* newRoot = __KDtree_doInsert(tree, tree->root, node, 0);
-    if (newRoot == NULL) {
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
-    }
+    ERROR_GOTO_IF_ERROR(0);
+    DEBUG_ASSERT_SILENT(newRoot != NULL);
     
     tree->root = newRoot;
     ++tree->size;
@@ -41,12 +40,15 @@ void KDtree_insert(KDtree* tree, KDtreeNode* node) {
 KDtreeNode* KDtree_delete(KDtree* tree, Object key) {
     KDtreeNode* ret = NULL;
     KDtreeNode* newRoot = __KDtree_doDelete(tree, tree->root, key, 0, &ret);
-    if (ret != NULL) {
-        tree->root = newRoot;
-        --tree->size;
+    if (ret == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
+    tree->root = newRoot;
+    --tree->size;
 
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 KDtreeNode* KDtree_search(KDtree* tree, Object key) {
@@ -91,7 +93,7 @@ KDtreeNode* __KDtree_doInsert(KDtree* tree, KDtreeNode* currentNode, KDtreeNode*
     }
 
     if (tree->distance2(node->key, currentNode->key) == 0) {
-        return NULL;
+        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
     }  
 
     if (tree->compare(node->key, currentNode->key, 0, currentDepth % tree->k) < 0) {
@@ -100,6 +102,7 @@ KDtreeNode* __KDtree_doInsert(KDtree* tree, KDtreeNode* currentNode, KDtreeNode*
         currentNode->right = __KDtree_doInsert(tree, currentNode->right, node, currentDepth + 1);
     }
 
+    ERROR_FINAL_BEGIN(0);
     return currentNode;
 }
 

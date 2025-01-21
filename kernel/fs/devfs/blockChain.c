@@ -63,6 +63,7 @@ Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length) {
 }
 
 void devfs_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst) {
+    DEBUG_ASSERT_SILENT(chainFirst < DEVFS_BLOCKCHAIN_SIZE);
     Index8 current = chainFirst, last = INVALID_INDEX;
     while (current != (Index8)INVALID_INDEX) {
         last = current;
@@ -74,12 +75,15 @@ void devfs_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst
 }
 
 Index8 devfs_blockChain_cutChain(DevFSblockChains* blockChains, Index8 block) {
+    DEBUG_ASSERT_SILENT(block < DEVFS_BLOCKCHAIN_SIZE);
     Index32 ret = blockChains->nextBlocks[block];
     blockChains->nextBlocks[block] = INVALID_INDEX;
     return ret;
 }
 
 void devfs_blockChain_insertChain(DevFSblockChains* blockChains, Index8 block, Index8 chainFirst) {
+    DEBUG_ASSERT_SILENT(block < DEVFS_BLOCKCHAIN_SIZE);
+    DEBUG_ASSERT_SILENT(chainFirst < DEVFS_BLOCKCHAIN_SIZE);
     Index32 current = chainFirst;
     while (blockChains->nextBlocks[current] != INVALID_INDEX) {
         current = blockChains->nextBlocks[current];

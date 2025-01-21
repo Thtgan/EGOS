@@ -46,9 +46,8 @@ void hashChainNode_initStruct(HashChainNode* node);
  * @param table Hash table
  * @param key Key of value
  * @param node Value's hash chain node to insert
- * @return OldResult OldResult of the operation
  */
-OldResult hashTable_insert(HashTable* table, Object key, HashChainNode* node);
+void hashTable_insert(HashTable* table, Object key, HashChainNode* node);
 
 /**
  * @brief Delete a value corresponded to key

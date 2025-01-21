@@ -59,9 +59,12 @@ void fs_init() {
     }
     
     void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE));
-    if (region == NULL || memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE") != RESULT_SUCCESS) {
+    if (region == NULL) {
         ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
     }
+
+    memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE");
+    ERROR_GOTO_IF_ERROR(0);
 
     if (_supports[FS_TYPE_DEVFS].init() != RESULT_SUCCESS) {
         ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution

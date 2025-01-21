@@ -6,12 +6,13 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
+#include<error.h>
 
-static OldResult __pseudo_nullDevice_operations_read(Device* device, Index64 index, void* buffer, Size n);
+static void __pseudo_nullDevice_operations_read(Device* device, Index64 index, void* buffer, Size n);
 
-static OldResult __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n);
+static void __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n);
 
-static OldResult __pseudo_nullDevice_operations_flush(Device* device);
+static void __pseudo_nullDevice_operations_flush(Device* device);
 
 static DeviceOperations __pseudo_nullDevice_operations = (DeviceOperations) {
     .read   = __pseudo_nullDevice_operations_read,
@@ -19,11 +20,11 @@ static DeviceOperations __pseudo_nullDevice_operations = (DeviceOperations) {
     .flush  = __pseudo_nullDevice_operations_flush
 };
 
-static OldResult __pseudo_stdoutDevice_operations_read(Device* device, Index64 index, void* buffer, Size n);
+static void __pseudo_stdoutDevice_operations_read(Device* device, Index64 index, void* buffer, Size n);
 
-static OldResult __pseudo_stdoutDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n);
+static void __pseudo_stdoutDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n);
 
-static OldResult __pseudo_stdoutDevice_operations_flush(Device* device);
+static void __pseudo_stdoutDevice_operations_flush(Device* device);
 
 static DeviceOperations __pseudo_stdoutDevice_operations = (DeviceOperations) {
     .read   = __pseudo_stdoutDevice_operations_read,
@@ -34,15 +35,17 @@ static DeviceOperations __pseudo_stdoutDevice_operations = (DeviceOperations) {
 static CharDevice _pseudo_nullDevice;
 static CharDevice _pseudo_stdoutDevice;
 
-OldResult pseudoDevice_init() {
+void pseudoDevice_init() {
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     MinorDeviceID minor = device_allocMinor(major);
     if (minor == DEVICE_INVALID_ID) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     CharDeviceInitArgs args = (CharDeviceInitArgs) {
@@ -58,13 +61,14 @@ OldResult pseudoDevice_init() {
         },
     };
 
-    if (charDevice_initStruct(&_pseudo_nullDevice, &args) != RESULT_SUCCESS || device_registerDevice(&_pseudo_nullDevice.device) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    charDevice_initStruct(&_pseudo_nullDevice, &args);
+    device_registerDevice(&_pseudo_nullDevice.device);
+    ERROR_GOTO_IF_ERROR(0);
 
     minor = device_allocMinor(major);
     if (minor == DEVICE_INVALID_ID) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     args = (CharDeviceInitArgs) {
@@ -80,35 +84,30 @@ OldResult pseudoDevice_init() {
         },
     };
 
-    if (charDevice_initStruct(&_pseudo_stdoutDevice, &args) != RESULT_SUCCESS || device_registerDevice(&_pseudo_stdoutDevice.device) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    charDevice_initStruct(&_pseudo_stdoutDevice, &args);
+    device_registerDevice(&_pseudo_stdoutDevice.device);
+    ERROR_GOTO_IF_ERROR(0);
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-static OldResult __pseudo_nullDevice_operations_read(Device* device, Index64 index, void* buffer, Size n) {
+static void __pseudo_nullDevice_operations_read(Device* device, Index64 index, void* buffer, Size n) {
     PTR_TO_VALUE(8, buffer) = 0;
-    return RESULT_SUCCESS;
 }
 
-static OldResult __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
-    return RESULT_SUCCESS;
+static void __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
 }
 
-static OldResult __pseudo_nullDevice_operations_flush(Device* device) {
-    return RESULT_SUCCESS;
+static void __pseudo_nullDevice_operations_flush(Device* device) {
 }
 
-static OldResult __pseudo_stdoutDevice_operations_read(Device* device, Index64 index, void* buffer, Size n) {
-    return RESULT_SUCCESS;
+static void __pseudo_stdoutDevice_operations_read(Device* device, Index64 index, void* buffer, Size n) {
 }
 
-static OldResult __pseudo_stdoutDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
+static void __pseudo_stdoutDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
     print_printf(TERMINAL_LEVEL_OUTPUT, buffer);
-    return RESULT_SUCCESS;
 }
 
-static OldResult __pseudo_stdoutDevice_operations_flush(Device* device) {
-    return RESULT_SUCCESS;
+static void __pseudo_stdoutDevice_operations_flush(Device* device) {
 }

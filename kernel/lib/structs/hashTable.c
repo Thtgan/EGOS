@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<structs/singlyLinkedList.h>
+#include<error.h>
 
 Size hashTable_defaultHashFunc(HashTable* this, Object key) {
     return key % this->bucket;
@@ -20,7 +21,7 @@ void hashTable_initStruct(HashTable* table, Size bucket, SinglyLinkedList* chain
     }
 }
 
-OldResult hashTable_insert(HashTable* table, Object key, HashChainNode* newNode) {
+void hashTable_insert(HashTable* table, Object key, HashChainNode* newNode) {
     Size hashKey = table->hashFunc(table, key);
 
     SinglyLinkedList* chain = table->chains + hashKey;
@@ -28,7 +29,7 @@ OldResult hashTable_insert(HashTable* table, Object key, HashChainNode* newNode)
         HashChainNode* chainNode = HOST_POINTER(node, HashChainNode, node);
 
         if (chainNode->key == key) {
-            return RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
         }
     }
 
@@ -38,7 +39,8 @@ OldResult hashTable_insert(HashTable* table, Object key, HashChainNode* newNode)
 
     ++table->size;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void hashChainNode_initStruct(HashChainNode* node) {
@@ -62,6 +64,7 @@ HashChainNode* hashTable_delete(HashTable* table, Object key) {
         }
     }
 
+    ERROR_THROW_NO_GOTO(ERROR_ID_NOT_FOUND);
     return NULL;
 }
 

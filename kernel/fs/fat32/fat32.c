@@ -14,6 +14,7 @@
 #include<memory/paging.h>
 #include<structs/hashTable.h>
 #include<system/pageTable.h>
+#include<error.h>
 
 OldResult fat32_init() {
     return RESULT_SUCCESS;
@@ -25,9 +26,12 @@ OldResult fat32_init() {
 OldResult fat32_checkType(BlockDevice* blockDevice) {
     Device* device = &blockDevice->device;
     void* BPBbuffer = memory_allocate(POWER_2(device->granularity));
-    if (BPBbuffer == NULL || blockDevice_readBlocks(blockDevice, 0, BPBbuffer, 1) != RESULT_SUCCESS) {
+    if (BPBbuffer == NULL) {
         return RESULT_ERROR;
     }
+
+    blockDevice_readBlocks(blockDevice, 0, BPBbuffer, 1);
+    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
     FAT32BPB* BPB = (FAT32BPB*)BPBbuffer;
     Uint32 clusterNum = (device->capacity - BPB->reservedSectorNum - BPB->FATnum * BPB->sectorPerFAT) / BPB->sectorPerCluster - BPB->rootDirectoryClusterIndex;
@@ -38,6 +42,8 @@ OldResult fat32_checkType(BlockDevice* blockDevice) {
     memory_free(BPBbuffer);
 
     return RESULT_SUCCESS;
+    ERROR_FINAL_BEGIN(0); //TODO: Temporary solution
+    return RESULT_ERROR;
 }
 
 static OldResult __fat32_doOpen(FS* fs, BlockDevice* device, void* batchAllocated);
@@ -83,9 +89,12 @@ static OldResult __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAll
 
     Device* device = &blockDevice->device;
     void* buffer = memory_allocate(POWER_2(device->granularity));
-    if (buffer == NULL || blockDevice_readBlocks(blockDevice, 0, buffer, 1) != RESULT_SUCCESS) {
+    if (buffer == NULL) {
         return RESULT_ERROR;
     }
+
+    blockDevice_readBlocks(blockDevice, 0, buffer, 1);
+    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
     memory_memcpy(BPB, buffer, sizeof(FAT32BPB));
 
@@ -113,9 +122,8 @@ static OldResult __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAll
     }
 
     Index32* FAT                        = paging_convertAddressP2V(pFAT);
-    if (blockDevice_readBlocks(blockDevice, info->FATrange.begin, FAT, info->FATrange.length) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    blockDevice_readBlocks(blockDevice, info->FATrange.begin, FAT, info->FATrange.length);
+    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
     info->FAT                           = FAT;
 
@@ -173,6 +181,8 @@ static OldResult __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAll
     fs->superBlock                      = superBlock;
 
     return RESULT_SUCCESS;
+    ERROR_FINAL_BEGIN(0);   //TODO: Temporary solution
+    return RESULT_ERROR;
 }
 
 OldResult fat32_close(FS* fs) {
@@ -217,16 +227,16 @@ OldResult fat32_superBlock_flush(SuperBlock* superBlock) {
     }
 
     for (int i = 0; i < info->FATrange.n; ++i) {    //TODO: FAT is only saved here, maybe we can make it save at anytime
-        if (blockDevice_writeBlocks(superBlockBlockDevice, info->FATrange.begin + i * info->FATrange.length, FATcopy, info->FATrange.length) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_writeBlocks(superBlockBlockDevice, info->FATrange.begin + i * info->FATrange.length, FATcopy, info->FATrange.length);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
     }
 
     memory_freeFrame(paging_convertAddressV2P(FATcopy));
 
-    if (blockDevice_flush(superBlockBlockDevice) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    blockDevice_flush(superBlockBlockDevice);
+    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
     return RESULT_SUCCESS;
+    ERROR_FINAL_BEGIN(0);   //TODO: Temporary solution
+    return RESULT_ERROR;
 }

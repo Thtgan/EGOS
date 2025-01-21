@@ -6,6 +6,6 @@
 
 #define CLOCK_SOURCE_I8254_DEFAULT_FREQUENCY    100
 
-OldResult i8254_initClockSource(ClockSource* clockSource);
+void i8254_initClockSource(ClockSource* clockSource);
 
 #endif // __DEVICES_CLOCK_I8254_H

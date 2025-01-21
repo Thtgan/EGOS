@@ -9,7 +9,7 @@
 #include<memory/memory.h>
 
 ID iNode_generateID(fsEntryDesc* desc) {
-    return desc->type == FS_ENTRY_TYPE_DEVICE ? (FLAG64(63) | desc->device) : desc->dataRange.begin;
+    return desc->type == FS_ENTRY_TYPE_DEVICE ? (FLAG64(63) | desc->device) : desc->dataRange.begin;    //TODO: Ugly method to mark device
 }
 
 iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
@@ -18,7 +18,8 @@ iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
 }
 
 OldResult iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
-    return hashTable_insert(table, (Object)blockIndex, &iNode->openedNode);
+    hashTable_insert(table, (Object)blockIndex, &iNode->openedNode);
+    return RESULT_SUCCESS;  //TODO: Temporary solution
 }
 
 OldResult iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {

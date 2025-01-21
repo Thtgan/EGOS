@@ -14,6 +14,7 @@
 #include<memory/memory.h>
 #include<structs/string.h>
 #include<system/pageTable.h>
+#include<error.h>
 
 OldResult fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory) {
     if (*path == '\0') {
@@ -149,7 +150,9 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     }
 
     if (!device_isBlockDevice(targetDevice)) {
-        return charDevice_read(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
+        charDevice_read(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        return RESULT_SUCCESS;
     }
 
     void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
@@ -167,9 +170,8 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
             return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
         Size byteReadN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(buffer, blockBuffer + offsetInBlock, byteReadN);
@@ -182,9 +184,8 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
         OldResult res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
-            if (blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length) == RESULT_ERROR) {
-                return RESULT_ERROR;
-            }
+            blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length);
+            ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
             Size byteReadN = range.length * POWER_2(targetDevice->granularity);
             buffer += byteReadN;
@@ -202,9 +203,8 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
             return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
         memory_memcpy(buffer, blockBuffer, remainByteNum);
 
@@ -214,6 +214,8 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     memory_free(blockBuffer);
 
     return RESULT_SUCCESS;
+    ERROR_FINAL_BEGIN(0);
+    return RESULT_ERROR;    //TODO: Temporary solution
 }
 
 OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
@@ -228,7 +230,9 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     }
 
     if (!device_isBlockDevice(targetDevice)) {
-        return charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
+        charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        return RESULT_SUCCESS;
     }
 
     void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
@@ -251,16 +255,14 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
             return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
         Size byteWriteN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(blockBuffer + offsetInBlock, buffer, byteWriteN);
 
-        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
         buffer += byteWriteN;
         remainByteNum -= byteWriteN;
@@ -270,9 +272,8 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
         OldResult res;
         while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
-            if (blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length) != RESULT_SUCCESS) {
-                return RESULT_ERROR;
-            }
+            blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length);
+            ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
             Size byteWriteN = range.length * POWER_2(targetDevice->granularity);
             buffer += byteWriteN;
@@ -290,15 +291,13 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
             return RESULT_ERROR;
         }
 
-        if (blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
         memory_memcpy(blockBuffer, buffer, remainByteNum);
 
-        if (blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
 
         remainByteNum = 0;
     }
@@ -306,9 +305,15 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     memory_free(blockBuffer);
 
     return RESULT_SUCCESS;
+    ERROR_FINAL_BEGIN(0);
+    return RESULT_ERROR;    //TODO: Temporary solution
 }
 
 OldResult fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
+    if (iNode_isDevice(entry->iNode)) { //TODO: Temporary solution
+        return RESULT_SUCCESS;
+    }
+
     if (iNode_rawResize(entry->iNode, newSizeInByte) != RESULT_SUCCESS) {
         return RESULT_ERROR;
     }

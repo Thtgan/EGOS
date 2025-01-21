@@ -19,6 +19,8 @@ typedef struct ErrorRecord ErrorRecord;
 #define ERROR_ID_ALREADY_EXIST              7
 #define ERROR_ID_NOT_FOUND                  8
 #define ERROR_ID_OUT_OF_BOUND               9
+#define ERROR_ID_PERMISSION_ERROR           10
+#define ERROR_ID_IO_FAILED                  11
 
 typedef struct Error {
     ConstCstring desc;

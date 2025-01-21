@@ -45,9 +45,8 @@ void vector_clear(Vector* vector);
  * 
  * @param vector Vector
  * @param newCapacity New capacity to resize to, if capacity less than curretn size, data at the end will lost
- * @return OldResult OldResult of the operation
  */
-OldResult vector_resize(Vector* vector, Size newCapacity);
+void vector_resize(Vector* vector, Size newCapacity);
 
 /**
  * @brief Get object in vector
@@ -55,9 +54,8 @@ OldResult vector_resize(Vector* vector, Size newCapacity);
  * @param vector Vector
  * @param index Index of object in vector
  * @param retPtr Pointer to object
- * @return OldResult OldResult of the operation
  */
-OldResult vector_get(Vector* vector, Index64 index, Object* retPtr);
+Object vector_get(Vector* vector, Index64 index);
 
 /**
  * @brief Set object in vector
@@ -65,43 +63,38 @@ OldResult vector_get(Vector* vector, Index64 index, Object* retPtr);
  * @param vector Vector
  * @param index Index of object in vector
  * @param item Object to set
- * @return OldResult OldResult of the operation
  */
-OldResult vector_set(Vector* vector, Index64 index, Object item);
+void vector_set(Vector* vector, Index64 index, Object item);
 
 /**
  * @brief Erase object in vector
  * 
  * @param vector Vector
  * @param index Index of object to erase
- * @return OldResult OldResult of the operation
  */
-OldResult vector_erease(Vector* vector, Index64 index);
+void vector_erease(Vector* vector, Index64 index);
 
 /**
  * @brief Get last object of vector
  * 
  * @param vector Vector
  * @param retPtr Pointer to object
- * @return OldResult OldResult of the operation
  */
-OldResult vector_back(Vector* vector, Object* retPtr);
+Object vector_back(Vector* vector);
 
 /**
  * @brief Push object to the end of vector
  * 
  * @param vector Vector
  * @param item Object to push
- * @return OldResult OldResult of the operation
  */
-OldResult vector_push(Vector* vector, Object item);
+void vector_push(Vector* vector, Object item);
 
 /**
  * @brief Pop object from end of vector
  * 
  * @param vector Vector
- * @return OldResult OldResult of the operation
  */
-OldResult vector_pop(Vector* vector);
+void vector_pop(Vector* vector);
 
 #endif // __LIB_STRUCTS_VECTOR_H

@@ -61,6 +61,14 @@ void error_init() {
     error_registerError(
         ERROR_ID_OUT_OF_BOUND, "Out Of Bound"
     );
+
+    error_registerError(
+        ERROR_ID_OUT_OF_BOUND, "Permission Error"
+    );
+
+    error_registerError(
+        ERROR_ID_IO_FAILED, "IO Failed"
+    );
 }
 
 ErrorRecord* error_getCurrentRecord() {
@@ -86,5 +94,6 @@ void errorRecord_initStruct(ErrorRecord* record, ID errorID) {
 
 void errorRecord_print(ErrorRecord* record) {
     ID id = record->errorID;
+    DEBUG_ASSERT_SILENT(_error_errors[id].desc != NULL);
     print_printf(TERMINAL_LEVEL_DEBUG, "RIP: %#018lX RSP: %#018lX-%lu(%s)\n", record->rip, record->rsp, id, _error_errors[id].desc);
 }

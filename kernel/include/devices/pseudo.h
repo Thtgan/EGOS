@@ -3,6 +3,6 @@
 
 #include<kit/types.h>
 
-OldResult pseudoDevice_init();
+void pseudoDevice_init();
 
 #endif // __DEVICES_PSEUDO_H

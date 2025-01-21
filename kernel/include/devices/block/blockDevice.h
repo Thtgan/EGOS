@@ -21,14 +21,14 @@ typedef struct BlockDevice {
     BlockBuffer*        blockBuffer;
 } BlockDevice;
 
-OldResult blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args);
+void blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args);
 
-OldResult blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n);
+void blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n);
 
-OldResult blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const void* buffer, Size n);
+void blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const void* buffer, Size n);
 
-OldResult blockDevice_flush(BlockDevice* blockDevice);
+void blockDevice_flush(BlockDevice* blockDevice);
 
-OldResult blockDevice_probePartitions(BlockDevice* blockDevice);
+void blockDevice_probePartitions(BlockDevice* blockDevice);
 
 #endif // __DEVICES_BLOCK_BLOCKDEVICE_H

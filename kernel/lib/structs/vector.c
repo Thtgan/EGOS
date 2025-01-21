@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<error.h>
 
 #define __VECTOR_INIT_STORAGE_SIZE  48
 
@@ -26,10 +27,11 @@ void vector_clear(Vector* vector) {
     memory_memset(vector->storage, OBJECT_NULL, vector->capacity * sizeof(Object));
 }
 
-OldResult vector_resize(Vector* vector, Size newCapacity) {
+void vector_resize(Vector* vector, Size newCapacity) {
     Object* newStorage = memory_allocate(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     vector->capacity = newCapacity;
@@ -38,59 +40,72 @@ OldResult vector_resize(Vector* vector, Size newCapacity) {
     memory_free(vector->storage);
     vector->storage = newStorage;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult vector_get(Vector* vector, Index64 index, Object* retPtr) {
+Object vector_get(Vector* vector, Index64 index) {
     if (index >= vector->size) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    *retPtr = vector->storage[index];
-    return RESULT_SUCCESS;
+    return vector->storage[index];
+    ERROR_FINAL_BEGIN(0);
+    return OBJECT_NULL;
 }
 
-OldResult vector_set(Vector* vector, Index64 index, Object item) {
+void vector_set(Vector* vector, Index64 index, Object item) {
     if (index >= vector->size) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
     vector->storage[index] = item;
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult vector_erease(Vector* vector, Index64 index) {
+void vector_erease(Vector* vector, Index64 index) {
     if (index >= vector->size) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
     memory_memmove(vector->storage + index, vector->storage + index + 1, (vector->capacity - index - 1) * sizeof(Object));
-    return RESULT_SUCCESS;
+    --vector->size;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult vector_back(Vector* vector, Object* retPtr) {
+Object vector_back(Vector* vector) {
     if (vector_isEmpty(vector)) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    *retPtr = vector->storage[vector->size - 1];
-    return RESULT_SUCCESS;
+    return vector->storage[vector->size - 1];
+    ERROR_FINAL_BEGIN(0);
+    return OBJECT_NULL;
 }
 
-OldResult vector_push(Vector* vector, Object item) {
-    if (vector->size == vector->capacity && vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object)) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
+void vector_push(Vector* vector, Object item) {
+    if (vector->size == vector->capacity) {
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
     }
+
+    vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object));
+    ERROR_GOTO_IF_ERROR(0);
 
     vector->storage[vector->size++] = item;
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult vector_pop(Vector* vector) {
+void vector_pop(Vector* vector) {
     if (vector_isEmpty(vector)) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
     vector->storage[vector->size--] = OBJECT_NULL;
-    return RESULT_SUCCESS;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

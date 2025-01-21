@@ -5,17 +5,18 @@
 #include<kit/types.h>
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
+#include<error.h>
 
 Uint64 __CPUclock_readTick(ClockSource* this);
 
 #define __CPU_CLOCK_CALIBRATE_I8254_HZ      20  //The largest latch i8254's count register can holds, for more accurate calibrate
 #define __CPU_CLOCK_CALIBRATE_TEST_ROUND    5   //The largest latch i8254's count register can holds, for more accurate calibrate
 
-OldResult CPUclock_initClockSource(ClockSource* clockSource) {
+void CPUclock_initClockSource(ClockSource* clockSource) {
     ClockSourceType calibrateClockSourceType = CLOCK_SOURCE_TYPE_I8254;
     ClockSource* calibrateClockSource = clockSource_getSource(calibrateClockSourceType);
     if (TEST_FLAGS_FAIL(calibrateClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
     //TODO: Add support for HPET
@@ -51,7 +52,8 @@ OldResult CPUclock_initClockSource(ClockSource* clockSource) {
         .stop                   = NULL
     };
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 Uint64 __CPUclock_readTick(ClockSource* this) {
