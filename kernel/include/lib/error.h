@@ -35,6 +35,10 @@ ErrorRecord* error_getCurrentRecord();
 
 void error_unhandledRecord(ErrorRecord* record);
 
+void error_readRecord(ErrorRecord* readTo);
+
+void error_writeRecord(ErrorRecord* writeFrom);
+
 typedef struct ErrorRecord {
     ID errorID;
     Uintptr rip;

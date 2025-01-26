@@ -1,6 +1,7 @@
 #include<structs/RBtree.h>
 
 #include<kit/types.h>
+#include<error.h>
 
 /**
  * RB tree should obey following rules:
@@ -58,7 +59,7 @@ RBtreeNode* RBtree_search(RBtree* tree, Object val) {
     return NULL;
 }
 
-OldResult RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
+void RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = NULL;
 
     int cmp;
@@ -66,7 +67,7 @@ OldResult RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
         cmp = tree->cmpFunc(newNode, node);
 
         if (cmp == 0) {
-            return RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
         } else {
             parent = node;
             node = cmp < 0 ? node->left : node->right;
@@ -84,14 +85,15 @@ OldResult RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
 
     __RBtree_insertFix(tree, newNode);
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 RBtreeNode* RBtree_delete(RBtree* tree, Object val) {
     RBtreeNode* found = RBtree_search(tree, val);
 
     if (found == NULL) {
-        return NULL;
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
     RBtreeNode* replaceNode;
@@ -131,6 +133,8 @@ RBtreeNode* RBtree_delete(RBtree* tree, Object val) {
     found->parent = NULL;
     found->left = found->right = &tree->NIL;
     return found;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 RBtreeNode* RBtree_getPredecessor(RBtree* tree, RBtreeNode* node) {

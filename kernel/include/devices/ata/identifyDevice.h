@@ -225,7 +225,7 @@ typedef struct ATAdeviceIdentify {
         Uint16 reserved3                            : 1;
         Uint16 CBLIDAbove                           : 1;
         Uint16 reserved4                            : 2;
-    } hardwareResetOldResult;                              //Word 93
+    } hardwareResetResult;                              //Word 93
     Uint8 currentAutomaticAcousticManagementVal;
     Uint8 recommendedAutomaticAcousticManagementVal;    //Word 94
     Uint16 streamMinRequestSize;                        //Word 95
@@ -472,7 +472,7 @@ typedef struct ATAPIpacketDeviceIdentify {
         Uint16 reserved3                            : 1;
         Uint16 CBLIDAbove                           : 1;
         Uint16 reserved4                            : 2;
-    } hardwareResetOldResult;                              //Word 93
+    } hardwareResetResult;                              //Word 93
     Uint8 currentAutomaticAcousticManagementVal;
     Uint8 recommendedAutomaticAcousticManagementVal;    //Word 94
     Uint16 reserved13[30];                              //Word 95-124

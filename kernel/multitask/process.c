@@ -59,13 +59,15 @@ Process* process_init() {
     bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
 
     fs_fileOpen(&_process_stdoutFile, "/dev/stdout", FCNTL_OPEN_WRITE_ONLY);
-    ERROR_CHECKPOINT(); //TODO: Temporary solution
+    ERROR_GOTO_IF_ERROR(0);
 
     Process* mainProcess = __process_create(PROCESS_MAIN_PROCESS_RESERVE_PID, "Init", process_initKernelStack + PROCESS_KERNEL_STACK_SIZE);
     mainProcess->ppid = PROCESS_MAIN_PROCESS_RESERVE_PID;
     mainProcess->context.extendedTable = mm->extendedTable;
 
     return mainProcess;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 void process_switch(Process* from, Process* to) {

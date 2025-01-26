@@ -99,7 +99,7 @@ static __Clock _clock;
 ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower than expection
     ClockSource* mainClockSource = clockSource_getSource(_clock.mainClockSource), * beatClockSource = clockSource_getSource(_clock.beatClockSource);
     rawClockSourceUpdateTick(beatClockSource);
-    ERROR_CHECKPOINT(); //TODO: Temporary solution
+    ERROR_GOTO_IF_ERROR(0);
 
     spinlock_lock(&_clock.timeLock);
     Timestamp* time = &_clock.time, * expectedTime = &_clock.expectedTime;
@@ -120,6 +120,9 @@ ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower th
     }
 
     timer_updateTimers();
+    return;
+    ERROR_FINAL_BEGIN(0);
+    ERROR_CHECKPOINT();
 }
 
 void time_init() {
@@ -127,7 +130,7 @@ void time_init() {
 
     ClockSource* CMOSclockSource = clockSource_getSource(CLOCK_SOURCE_TYPE_CMOS), * mainClockSource, * beatClockSource;
     if (TEST_FLAGS_FAIL(CMOSclockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
     _clock.time                 = (Timestamp) {
@@ -141,13 +144,21 @@ void time_init() {
     _clock.mainClockSource      = CLOCK_SOURCE_TYPE_CPU;
 
     mainClockSource = clockSource_getSource(_clock.mainClockSource);
-    if (TEST_FLAGS_FAIL(mainClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT | CLOCK_SOURCE_FLAGS_AUTO_UPDATE) || mainClockSource->readTick == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+    if (TEST_FLAGS_FAIL(mainClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT | CLOCK_SOURCE_FLAGS_AUTO_UPDATE)) {
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
+    }
+    
+    if (mainClockSource->readTick == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
 
     beatClockSource = clockSource_getSource(_clock.beatClockSource);
-    if (TEST_FLAGS_FAIL(beatClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT) || mainClockSource->readTick == NULL || beatClockSource->updateTick == NULL || beatClockSource->start == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+    if (TEST_FLAGS_FAIL(beatClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
+    }
+
+    if (mainClockSource->readTick == NULL || beatClockSource->updateTick == NULL || beatClockSource->start == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
 
     bool interruptEnabled = idt_disableInterrupt();
@@ -161,10 +172,10 @@ void time_init() {
     timer_init(beatClockSource);
 
     rawClockSourceStart(beatClockSource);
-    ERROR_GOTO_IF_ERROR(0);  //TODO: Temporary solution
+    ERROR_GOTO_IF_ERROR(0);
 
     return;
-    ERROR_FINAL_BEGIN(0);   //TODO: Temporary solution
+    ERROR_FINAL_BEGIN(0);
 }
 
 void time_getTimestamp(Timestamp* timestamp) {

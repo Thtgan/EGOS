@@ -13,8 +13,6 @@ typedef enum {
 
 /**
  * @brief Initialize the terminal's switch
- * 
- * @return OldResult OldResult of the operation
  */
 void terminalSwitch_init();
 

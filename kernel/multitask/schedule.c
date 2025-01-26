@@ -5,6 +5,7 @@
 #include<kit/types.h>
 #include<multitask/process.h>
 #include<multitask/simpleSchedule.h>
+#include<error.h>
 
 static void __schedule_idle();
 
@@ -13,11 +14,20 @@ static Scheduler* _schedule_currentScheduler = NULL;
 void schedule_init() {
     _schedule_currentScheduler = simpleScheduler_create();
 
-    scheduler_start(_schedule_currentScheduler, process_init());
+    Process* initProcess = process_init();
+    if (initProcess == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
 
-    // if (process_fork("Idle") == NULL) {
-    //     __schedule_idle();
-    // }
+    scheduler_start(_schedule_currentScheduler, initProcess);
+
+    if (process_fork("Idle") == NULL) {
+        __schedule_idle();
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 Scheduler* schedule_getCurrentScheduler() {

@@ -16,7 +16,7 @@ bool mutex_isLocked(Mutex* mutex) {
     return ATOMIC_LOAD(&mutex->token) != OBJECT_NULL;
 }
 
-OldResult mutex_acquire(Mutex* mutex, Object token) {
+bool mutex_acquire(Mutex* mutex, Object token) {
     Scheduler* currentScheduler = schedule_getCurrentScheduler();
     DEBUG_ASSERT_SILENT(currentScheduler != NULL && currentScheduler->started);
     
@@ -35,7 +35,7 @@ OldResult mutex_acquire(Mutex* mutex, Object token) {
         }
 
         if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_TRY)) {
-            return RESULT_FAIL;
+            return false;
         }
 
         scheduler_yield(currentScheduler);
@@ -43,7 +43,7 @@ OldResult mutex_acquire(Mutex* mutex, Object token) {
 
     ATOMIC_INC_FETCH(&mutex->depth);
 
-    return RESULT_SUCCESS;
+    return true;
 }
 
 void mutex_release(Mutex* mutex, Object token) {

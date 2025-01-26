@@ -16,10 +16,10 @@ typedef struct Heap {
 
 void heap_initStruct(Heap* heap, Object* objectArray, Size n, CompareFunc compareFunc);
 
-OldResult heap_push(Heap* heap, Object object);
+void heap_push(Heap* heap, Object object);
 
-OldResult heap_top(Heap* heap, Object* object);
+void heap_top(Heap* heap, Object* object);
 
-OldResult heap_pop(Heap* heap);
+void heap_pop(Heap* heap);
 
 #endif // __LIB_STRUCTS_HEAP_H

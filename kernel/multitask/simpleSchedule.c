@@ -18,19 +18,19 @@ typedef struct {
     Mutex mutex;
 } __SimpleScheduler;
 
-OldResult __simpleScheduler_start(Scheduler* this, Process* initProcess);
+void __simpleScheduler_start(Scheduler* this, Process* initProcess);
 
 void __simpleScheduler_tick(Scheduler* this);
 
 void __simpleScheduler_yield(Scheduler* this);
 
-OldResult __simpleScheduler_addProcess(Scheduler* this, Process* process);
+void __simpleScheduler_addProcess(Scheduler* this, Process* process);
 
-OldResult __simpleScheduler_terminateProcess(Scheduler* this, Process* process);
+void __simpleScheduler_terminateProcess(Scheduler* this, Process* process);
 
-OldResult __simpleScheduler_blockProcess(Scheduler* this, Process* process);
+void __simpleScheduler_blockProcess(Scheduler* this, Process* process);
 
-OldResult __simpleScheduler_wakeProcess(Scheduler* this, Process* process);
+void __simpleScheduler_wakeProcess(Scheduler* this, Process* process);
 
 /**
  * @brief Schedule the process
@@ -63,9 +63,9 @@ static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* schedule
  * 
  * @param scheduler Simple scheduler in use
  * @param process Process to remove
- * @return OldResult OldResult of the operation
+ * @return void void of the operation
  */
-static OldResult __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
+static void __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process);
 
 Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
     __SimpleScheduler* ret = memory_allocate(sizeof(__SimpleScheduler));
@@ -96,15 +96,14 @@ Scheduler* simpleScheduler_create() {    //TODO: Scheduler found may stuck
     return &ret->scheduler;
 }
 
-OldResult __simpleScheduler_start(Scheduler* this, Process* initProcess) {
+void __simpleScheduler_start(Scheduler* this, Process* initProcess) {
+    this->currentProcess = initProcess;
     this->started = true;
     __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), initProcess, PROCESS_STATUS_RUNNING);
 }
 
 void __simpleScheduler_tick(Scheduler* this) {
-    if (!this->started) {
-        return;
-    }
+    DEBUG_ASSERT_SILENT(this->start);
 
     ++this->tickCnt;
     Process* p = this->currentProcess;
@@ -115,60 +114,47 @@ void __simpleScheduler_tick(Scheduler* this) {
 }
 
 void __simpleScheduler_yield(Scheduler* this) {
-    if (!this->started) {
-        return;
-    }
+    DEBUG_ASSERT_SILENT(this->start);
 
     DEBUG_ASSERT_SILENT(!idt_isInISR(true));
     __simpleScheduler_schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_READY);
 }
 
-OldResult __simpleScheduler_addProcess(Scheduler* this, Process* process) {
-    if (!this->started) {
-        return RESULT_ERROR;
-    }
+void __simpleScheduler_addProcess(Scheduler* this, Process* process) {
+    DEBUG_ASSERT_SILENT(this->start);
+
     __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_READY);
-    return RESULT_SUCCESS;
 }
 
-OldResult __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
-    if (!this->started) {
-        return RESULT_ERROR;
-    }
+void __simpleScheduler_terminateProcess(Scheduler* this, Process* process) {
+    DEBUG_ASSERT_SILENT(this->start);
 
     __SimpleScheduler* simpleScheduler = HOST_POINTER(this, __SimpleScheduler, scheduler);
 
     if (process == scheduler_getCurrentProcess(this)) {
-        __simpleScheduler_schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_DYING);
+        __simpleScheduler_schedule(simpleScheduler, PROCESS_STATUS_DYING);
         debug_blowup("Terminated process still alive\n");
+    } else {
+        __simpleScheduler_setProcessStatus(simpleScheduler, process, PROCESS_STATUS_DYING);
     }
-
-    __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_DYING);
-    return RESULT_SUCCESS;
 }
 
-OldResult __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
-    if (!this->started) {
-        return RESULT_ERROR;
-    }
+void __simpleScheduler_blockProcess(Scheduler* this, Process* process) {
+    DEBUG_ASSERT_SILENT(this->start);
+
+    __SimpleScheduler* simpleScheduler = HOST_POINTER(this, __SimpleScheduler, scheduler);
 
     if (process == scheduler_getCurrentProcess(this)) {
-        __simpleScheduler_schedule(HOST_POINTER(this, __SimpleScheduler, scheduler), PROCESS_STATUS_WAITING);
-
-        return RESULT_SUCCESS;
+        __simpleScheduler_schedule(simpleScheduler, PROCESS_STATUS_WAITING);
+    } else {
+        __simpleScheduler_setProcessStatus(simpleScheduler, process, PROCESS_STATUS_WAITING);
     }
-
-    __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_WAITING);
-    return RESULT_SUCCESS;
 }
 
-OldResult __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
-    if (!this->started) {
-        return RESULT_ERROR;
-    }
+void __simpleScheduler_wakeProcess(Scheduler* this, Process* process) {
+    DEBUG_ASSERT_SILENT(this->start);
 
     __simpleScheduler_setProcessStatus(HOST_POINTER(this, __SimpleScheduler, scheduler), process, PROCESS_STATUS_READY);
-    return RESULT_SUCCESS;
 }
 
 static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStatus newStatus) {
@@ -179,6 +165,7 @@ static void __simpleScheduler_schedule(__SimpleScheduler* scheduler, ProcessStat
     if (next != NULL) {
         __simpleScheduler_setProcessStatus(scheduler, current, newStatus);
         __simpleScheduler_setProcessStatus(scheduler, next, PROCESS_STATUS_RUNNING);
+        scheduler->scheduler.currentProcess = next;
 
         if (current != next) {
             DEBUG_ASSERT_SILENT(!idt_isInISR());
@@ -203,8 +190,8 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
 
     mutex_acquire(&scheduler->mutex, (Object)scheduler);
 
-    if (process->status != PROCESS_STATUS_UNKNOWN && __simpleScheduler_removeProcessFromQueue(scheduler, process) != RESULT_SUCCESS) {
-        debug_blowup("Remove process from queue failed\n");
+    if (process->status != PROCESS_STATUS_UNKNOWN) {
+        __simpleScheduler_removeProcessFromQueue(scheduler, process);
     }
 
     process->status = status;
@@ -212,9 +199,9 @@ static void __simpleScheduler_setProcessStatus(__SimpleScheduler* scheduler, Pro
     queueNode_initStruct(&process->statusQueueNode);
     queue_push(&scheduler->statusQueues[status], &process->statusQueueNode);
 
-    if (status == PROCESS_STATUS_RUNNING) {
-        scheduler->scheduler.currentProcess = process;
-    }
+    // if (status == PROCESS_STATUS_RUNNING) {
+    //     scheduler->scheduler.currentProcess = process;
+    // }
 
     mutex_release(&scheduler->mutex, (Object)scheduler);
 }
@@ -227,14 +214,14 @@ static Process* __simpleScheduler_getStatusQueueHead(__SimpleScheduler* schedule
     return ret;
 }
 
-static OldResult __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process) {
+static void __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* scheduler, Process* process) {
     mutex_acquire(&scheduler->mutex, (Object)scheduler);
 
     ProcessStatus status = process->status;
 
     QueueNode* nodeAddr = &process->statusQueueNode;
     Queue* queue = &scheduler->statusQueues[status];
-    bool ret = RESULT_ERROR;
+    bool found = false;
     for (QueueNode* i = &queue->q; i->next != &queue->q; i = i->next) {
         void* next = i->next;
         if (next == nodeAddr) {
@@ -246,12 +233,12 @@ static OldResult __simpleScheduler_removeProcessFromQueue(__SimpleScheduler* sch
 
             queueNode_initStruct(&process->statusQueueNode);
             
-            ret = RESULT_SUCCESS;
+            found = true;
             break;
         }
     }
 
-    mutex_release(&scheduler->mutex, (Object)scheduler);
+    DEBUG_ASSERT_SILENT(found);
 
-    return ret;
+    mutex_release(&scheduler->mutex, (Object)scheduler);
 }

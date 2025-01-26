@@ -9,17 +9,17 @@ typedef struct Scheduler Scheduler;
 #include<multitask/process.h>
 
 typedef struct Scheduler {
-    OldResult (*start)(Scheduler* this, Process* initProcess);
+    void (*start)(Scheduler* this, Process* initProcess);
     bool started;
 
     void (*tick)(Scheduler* this);
     Uint64 tickCnt;
 
     void (*yield)(Scheduler* this);
-    OldResult (*addProcess)(Scheduler* this, Process* process);
-    OldResult (*terminateProcess)(Scheduler* this, Process* process);
-    OldResult (*blockProcess)(Scheduler* this, Process* process);
-    OldResult (*wakeProcess)(Scheduler* this, Process* process);
+    void (*addProcess)(Scheduler* this, Process* process);
+    void (*terminateProcess)(Scheduler* this, Process* process);
+    void (*blockProcess)(Scheduler* this, Process* process);
+    void (*wakeProcess)(Scheduler* this, Process* process);
 
     Process* currentProcess;
 
@@ -40,10 +40,9 @@ Scheduler* schedule_getCurrentScheduler();
  * @brief Wrapper function of scheduler start
  *
  * @param initProcess Initial process
- * @return OldResult OldResult of the operation
  */
-static inline OldResult scheduler_start(Scheduler* scheduler, Process* initProcess) {
-    return scheduler->start(scheduler, initProcess);
+static inline void scheduler_start(Scheduler* scheduler, Process* initProcess) {
+    scheduler->start(scheduler, initProcess);
 }
 
 /**
@@ -64,40 +63,36 @@ static inline void scheduler_yield(Scheduler* scheduler) {
  * @brief Wrapper function of scheduler add process
  *
  * @param process Process
- * @return OldResult OldResult of the operation
  */
-static inline OldResult scheduler_addProcess(Scheduler* scheduler, Process* process) {
-    return scheduler->addProcess(scheduler, process);
+static inline void scheduler_addProcess(Scheduler* scheduler, Process* process) {
+    scheduler->addProcess(scheduler, process);
 }
 
 /**
  * @brief Wrapper function of scheduler terminate process
  *
  * @param process Process
- * @return OldResult OldResult of the operation
  */
-static inline OldResult scheduler_terminateProcess(Scheduler* scheduler, Process* process) {
-    return scheduler->terminateProcess(scheduler, process);
+static inline void scheduler_terminateProcess(Scheduler* scheduler, Process* process) {
+    scheduler->terminateProcess(scheduler, process);
 }
 
 /**
  * @brief Wrapper function of scheduler block process
  *
  * @param process Process
- * @return OldResult OldResult of the operation
  */
-static inline OldResult scheduler_blockProcess(Scheduler* scheduler, Process* process) {
-    return scheduler->blockProcess(scheduler, process);
+static inline void scheduler_blockProcess(Scheduler* scheduler, Process* process) {
+    scheduler->blockProcess(scheduler, process);
 }
 
 /**
  * @brief Wrapper function of scheduler wake process
  *
  * @param process Process
- * @return OldResult OldResult of the operation
  */
-static inline OldResult scheduler_wakeProcess(Scheduler* scheduler, Process* process) {
-    return scheduler->wakeProcess(scheduler, process);
+static inline void scheduler_wakeProcess(Scheduler* scheduler, Process* process) {
+    scheduler->wakeProcess(scheduler, process);
 }
 
 /**

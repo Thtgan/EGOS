@@ -2,6 +2,7 @@
 
 #include<algorithms.h>
 #include<kit/types.h>
+#include<error.h>
 
 void heap_initStruct(Heap* heap, Object* objectArray, Size n, CompareFunc compareFunc) {
     heap->objectArray   = objectArray;
@@ -10,9 +11,9 @@ void heap_initStruct(Heap* heap, Object* objectArray, Size n, CompareFunc compar
     heap->compareFunc   = compareFunc;
 }
 
-OldResult heap_push(Heap* heap, Object object) {
+void heap_push(Heap* heap, Object object) {
     if (heap->size == heap->capacity) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
     }
 
     Object* objectArray = heap->objectArray;
@@ -21,22 +22,24 @@ OldResult heap_push(Heap* heap, Object object) {
         algorithms_swap64(&objectArray[i], &objectArray[i >> 1]);
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult heap_top(Heap* heap, Object* object) {
+void heap_top(Heap* heap, Object* object) {
     if (heap->size == 0 || object == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
     *object = heap->objectArray[1];
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult heap_pop(Heap* heap) {
+void heap_pop(Heap* heap) {
     if (heap->size == 0) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
     Object* objectArray = heap->objectArray;
@@ -55,5 +58,6 @@ OldResult heap_pop(Heap* heap) {
         i = next;
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

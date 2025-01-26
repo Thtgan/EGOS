@@ -49,7 +49,7 @@ typedef struct CarrierMovMetadata {
     Uint16 magic;
 } CarrierMovMetadata;
 
-OldResult carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carryList);
+void carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carryList);
 
 #endif // __ASSEMBLER__
 

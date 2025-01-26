@@ -47,7 +47,7 @@ typedef struct RealmodeRegs {
 
 void realmode_init();
 
-OldResult realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
+void realmode_exec(Index16 funcIndex, RealmodeRegs* inRegs, RealmodeRegs* outRegs);
 
 void realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata** carrierList, void** funcList, Size funcNum, int* indexRet);
 

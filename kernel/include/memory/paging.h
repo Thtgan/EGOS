@@ -20,8 +20,6 @@
 
 /**
  * @brief Further initialization the paging
- * 
- * @return OldResult OldResult of the operation
  */
 void paging_init();
 

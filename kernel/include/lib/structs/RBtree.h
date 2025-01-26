@@ -58,9 +58,8 @@ RBtreeNode* RBtree_search(RBtree* tree, Object val);
  * 
  * @param tree RB tree
  * @param newNode New node to insert
- * @return OldResult OldResult of the operation(Theoretically, failure happens only when duplicated value)
  */
-OldResult RBtree_insert(RBtree* tree, RBtreeNode* newNode);
+void RBtree_insert(RBtree* tree, RBtreeNode* newNode);
 
 /**
  * @brief Delete node

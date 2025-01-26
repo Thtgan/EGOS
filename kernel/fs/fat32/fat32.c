@@ -33,7 +33,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     }
 
     blockDevice_readBlocks(blockDevice, 0, BPBbuffer, 1);
-    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+    ERROR_GOTO_IF_ERROR(0);
 
     FAT32BPB* BPB = (FAT32BPB*)BPBbuffer;
     Uint32 clusterNum = (device->capacity - BPB->reservedSectorNum - BPB->FATnum * BPB->sectorPerFAT) / BPB->sectorPerCluster - BPB->rootDirectoryClusterIndex;
@@ -42,7 +42,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     memory_free(BPBbuffer);
 
     return ret;
-    ERROR_FINAL_BEGIN(0); //TODO: Temporary solution
+    ERROR_FINAL_BEGIN(0);
     if (BPBbuffer != NULL) {
         memory_free(BPBbuffer);
     }
@@ -105,7 +105,7 @@ static void __fat32_doOpen(FS* fs, BlockDevice* blockDevice, void* batchAllocate
     }
 
     blockDevice_readBlocks(blockDevice, 0, buffer, 1);
-    ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+    ERROR_GOTO_IF_ERROR(0);
 
     memory_memcpy(BPB, buffer, sizeof(FAT32BPB));
 

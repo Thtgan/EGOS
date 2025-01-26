@@ -182,7 +182,9 @@ void kernelMain(SystemInfo* info) {
 
 
     timer_start(&timer1);
+    ERROR_CHECKPOINT();
     timer_start(&timer2);
+    ERROR_CHECKPOINT();
     fs_close(rootFS); //TODO: Move to better place
 
     print_printf(TERMINAL_LEVEL_OUTPUT, "DEAD\n");

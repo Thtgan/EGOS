@@ -83,7 +83,6 @@ typedef struct Terminal {
  * @param bufferSize Size of the buffer
  * @param width Width of terminal on display
  * @param height Height of terminal on display
- * @return OldResult OldResult of the operation
  */
 void terminal_initStruct(Terminal* terminal, void* buffer, Size bufferSize);
 
@@ -120,7 +119,6 @@ void terminal_flushDisplay();
  * @brief Scroll up
  * 
  * @param terminal Terminal
- * @return OldResult OldResult of the operation
  */
 bool terminal_scrollUp(Terminal* terminal);
 
@@ -128,7 +126,6 @@ bool terminal_scrollUp(Terminal* terminal);
  * @brief Scroll down
  * 
  * @param terminal Terminal
- * @return OldResult OldResult of the operation
  */
 bool terminal_scrollDown(Terminal* terminal);
 

@@ -45,7 +45,8 @@ void ata_initDevices() {
 
     MajorDeviceID major = device_allocMajor();
     if (major == DEVICE_INVALID_ID) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     for (int i = 0; i < 2; ++i) {
@@ -92,7 +93,8 @@ void ata_initDevices() {
 
             MajorDeviceID minor = device_allocMinor(major);
             if (minor == DEVICE_INVALID_ID) {
-                ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+                ERROR_ASSERT_ANY();
+                ERROR_GOTO(0);
             }
 
             BlockDeviceInitArgs args = {

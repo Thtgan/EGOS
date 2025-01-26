@@ -84,6 +84,20 @@ void error_unhandledRecord(ErrorRecord* record) {
     debug_blowup("Unhandled error\n");
 }
 
+void error_readRecord(ErrorRecord* readTo) {
+    ErrorRecord* currentRecord = error_getCurrentRecord();
+    readTo->errorID = currentRecord->errorID;
+    readTo->rip = currentRecord->rip;
+    readTo->rsp = currentRecord->rsp;
+}
+
+void error_writeRecord(ErrorRecord* writeFrom) {
+    ErrorRecord* currentRecord = error_getCurrentRecord();
+    currentRecord->errorID = writeFrom->errorID;
+    currentRecord->rip = writeFrom->rip;
+    currentRecord->rsp = writeFrom->rsp;
+}
+
 void errorRecord_initStruct(ErrorRecord* record, ID errorID) {
     record->errorID = errorID;
 

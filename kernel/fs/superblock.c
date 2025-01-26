@@ -267,7 +267,7 @@ void superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifi
         hashChainNode_initStruct(&mountList->node);
 
         hashTable_insert(&superBlock->mounted, pathKey, &mountList->node);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
         
         found = &mountList->node;
     }

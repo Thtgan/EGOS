@@ -63,6 +63,7 @@ MajorDeviceID device_allocMajor() {
         RBtreeNode_initStruct(&_device_majorDeviceTree, &newNode->majorTreeNode);
 
         RBtree_insert(&_device_majorDeviceTree, &newNode->majorTreeNode);
+        ERROR_GOTO_IF_ERROR(0);
     }
 
     return ret;
@@ -154,9 +155,10 @@ void device_registerDevice(Device* device) {
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode_initStruct(&node->minorTree, &device->deviceTreeNode);
-    if (RBtree_insert(&node->minorTree, &device->deviceTreeNode)) {
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
-    }
+
+    RBtree_insert(&node->minorTree, &device->deviceTreeNode);
+    ERROR_GOTO_IF_ERROR(0);
+
     ++node->deviceNum;
     
     return;
@@ -175,7 +177,8 @@ void device_unregisterDevice(DeviceID id) {
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode* deleted = RBtree_delete(&node->minorTree, minor);
     if (deleted == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
     --node->deviceNum;
 
