@@ -74,7 +74,7 @@ void kernelMain(SystemInfo* info) {
 
     // DisplayPosition pos = { 30, 30 };
     // display_printString(&pos, "TEST TEST-1145141919810  \n11 \r", 30, 0x00FF00);
-    
+
     // vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_25X80_D4), false);
     // VGAmodeHeader* mode = vga_getCurrentMode();
 
@@ -103,8 +103,8 @@ void kernelMain(SystemInfo* info) {
         for (int i = 0; i < pciDeviceNum; ++i) {
             PCIdevice* device = pci_getDevice(i);
             print_printf(
-                TERMINAL_LEVEL_OUTPUT, 
-                "%02X  %02X  %02X   %04X   %04X   %02X    %02X\n", 
+                TERMINAL_LEVEL_OUTPUT,
+                "%02X  %02X  %02X   %04X   %04X   %02X    %02X\n",
                 PCI_BUS_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_DEVICE_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_FUNCTION_NUMBER_FROM_ADDR(device->baseAddr),
@@ -166,9 +166,10 @@ void kernelMain(SystemInfo* info) {
     print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess(scheduler)->name);
 
     fsEntry entry;
-    if (fs_fileOpen(&entry, "/dev/null", FCNTL_OPEN_READ_WRITE) == RESULT_SUCCESS) {  //TODO: Seem it opens stdout instead, fix it
-        fs_fileWrite(&entry, "1145141919810", 14);
-    }
+    fs_fileOpen(&entry, "/dev/null", FCNTL_OPEN_READ_WRITE);
+    ERROR_CHECKPOINT();
+    fs_fileWrite(&entry, "1145141919810", 14);
+    ERROR_CHECKPOINT();
 
     Timer timer1, timer2;
     timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);
@@ -193,22 +194,25 @@ static void printLOGO() {
     char buffer[1024];
     fsEntry entry;
     FS_fileStat stat;
-    if (fs_fileOpen(&entry, "/LOGO.txt", FCNTL_OPEN_READ_ONLY) == RESULT_SUCCESS) {
-        fs_fileSeek(&entry, 0, FS_FILE_SEEK_END);
-        fs_fileStat(&entry, &stat);
-        fs_fileSeek(&entry, 0, FS_FILE_SEEK_BEGIN);
+    fs_fileOpen(&entry, "/LOGO.txt", FCNTL_OPEN_READ_ONLY);
+    ERROR_CHECKPOINT();
+    fs_fileSeek(&entry, 0, FS_FILE_SEEK_END);
+    fs_fileStat(&entry, &stat);
+    ERROR_CHECKPOINT();
+    fs_fileSeek(&entry, 0, FS_FILE_SEEK_BEGIN);
 
-        if (fs_fileRead(&entry, buffer, stat.size) == RESULT_SUCCESS) {
-            buffer[stat.size] = '\0';
-            print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
-        }
+    fs_fileRead(&entry, buffer, stat.size);
+    ERROR_CHECKPOINT();
+    buffer[stat.size] = '\0';
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
 
-        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.createTime.second);
-        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.accessTime.second);
-        print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.modifyTime.second);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.createTime.second);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.accessTime.second);
+    print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.modifyTime.second);
 
-        BlockDevice* device = entry.iNode->superBlock->blockDevice;
-        fs_fileClose(&entry);
-        blockDevice_flush(device);
-    }
+    BlockDevice* device = entry.iNode->superBlock->blockDevice;
+    fs_fileClose(&entry);
+    ERROR_CHECKPOINT();
+    blockDevice_flush(device);
+    ERROR_CHECKPOINT();
 }

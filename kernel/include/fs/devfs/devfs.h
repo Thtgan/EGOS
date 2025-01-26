@@ -14,14 +14,14 @@ typedef struct DEVFSspecificInfo {
     DevFSblockChains chains;
 } DEVFSspecificInfo;
 
-OldResult devfs_init();
+void devfs_init();
 
-OldResult devfs_checkType(BlockDevice* blockDevice);
+bool devfs_checkType(BlockDevice* blockDevice);
 
-OldResult devfs_open(FS* fs, BlockDevice* blockDevice);
+void devfs_open(FS* fs, BlockDevice* blockDevice);
 
-OldResult devfs_close(FS* fs);
+void devfs_close(FS* fs);
 
-OldResult devfs_superBlock_flush(SuperBlock* superBlock);
+void devfs_superBlock_flush(SuperBlock* superBlock);
 
 #endif // __FS_DEVFS_DEVFS_H

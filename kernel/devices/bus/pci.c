@@ -88,7 +88,7 @@ static bool __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
 
     memory_memcpy(pciDevice, &tmpDevice, sizeof(PCIdevice));
     __pci_addDevice(pciDevice);
-    ERROR_GOTO_IF_ERROR(2);
+    ERROR_GOTO_IF_ERROR(1);
 
     if (pciDevice->class == PCI_COMMON_HEADER_CLASS_CODE_BRIDGE && pciDevice->subClass == PCI_COMMON_HEADER_SUB_CALSS_PCI2PCI_BRIDGE) {
         __pci_probeBus(PCI_HEADER_READ(baseAddr, PCIHeaderType1, secondaryBusNumber));
@@ -100,11 +100,10 @@ static bool __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
     return false;
 
     ERROR_FINAL_BEGIN(1);
+    if (pciDevice != NULL) {
+        memory_free(pciDevice);
+    }
     return false;
-
-    ERROR_FINAL_BEGIN(2);
-    memory_free(pciDevice);
-    ERROR_GOTO(1);
 }
 
 Uint32 pci_getDeviceNum() {

@@ -16,74 +16,108 @@
 #include<system/pageTable.h>
 #include<error.h>
 
-OldResult fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory) {
+void fsEntryIdentifier_initStruct(fsEntryIdentifier* identifier, ConstCstring path, bool isDirectory) {
     if (*path == '\0') {
-        if (
-            string_initStruct(&identifier->parentPath, "") != RESULT_SUCCESS ||
-            string_initStruct(&identifier->name, "") != RESULT_SUCCESS
-        ) {
-            return RESULT_ERROR; //TODO: Memory release if failed here
-        }
+        string_initStruct(&identifier->parentPath, "");
+        ERROR_GOTO_IF_ERROR(0);
+        string_initStruct(&identifier->name, "");
+        ERROR_GOTO_IF_ERROR(0);
     } else {
         ConstCstring sep = cstring_strrchr(path, FS_PATH_SEPERATOR);
         if (sep == NULL) {
-            return RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
         }
-        if (
-            string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep)) != RESULT_SUCCESS ||
-            string_initStruct(&identifier->name, sep + 1) != RESULT_SUCCESS
-        ) {
-            return RESULT_ERROR; //TODO: Memory release if failed here
-        }
+        string_initStructN(&identifier->parentPath, path, ARRAY_POINTER_TO_INDEX(path, sep));
+        ERROR_GOTO_IF_ERROR(0);
+        string_initStruct(&identifier->name, sep + 1);
+        ERROR_GOTO_IF_ERROR(0);
     }
 
     identifier->isDirectory = isDirectory;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (STRING_IS_AVAILABLE(&identifier->parentPath)) {
+        string_clearStruct(&identifier->parentPath);
+    }
+
+    if (STRING_IS_AVAILABLE(&identifier->name)) {
+        string_clearStruct(&identifier->name);
+    }
 }
 
-OldResult fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory) {
-    if (
-        string_initStruct(&identifier->parentPath, parentPath) != RESULT_SUCCESS ||
-        string_initStruct(&identifier->name, name) != RESULT_SUCCESS
-    ) {
-        return RESULT_ERROR; //TODO: Memory release if failed here
-    }
+void fsEntryIdentifier_initStructSep(fsEntryIdentifier* identifier, ConstCstring parentPath, ConstCstring name, bool isDirectory) {
+    string_initStruct(&identifier->parentPath, parentPath);
+    ERROR_GOTO_IF_ERROR(0);
+    string_initStruct(&identifier->name, name);
+    ERROR_GOTO_IF_ERROR(0);
 
     identifier->isDirectory = isDirectory;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (STRING_IS_AVAILABLE(&identifier->parentPath)) {
+        string_clearStruct(&identifier->parentPath);
+    }
+
+    if (STRING_IS_AVAILABLE(&identifier->name)) {
+        string_clearStruct(&identifier->name);
+    }
+}
+
+void fsEntryIdentifier_initStructSepN(fsEntryIdentifier* identifier, ConstCstring parentPath, Size n1, ConstCstring name, Size n2, bool isDirectory) {
+    string_initStructN(&identifier->parentPath, parentPath, n1);
+    ERROR_GOTO_IF_ERROR(0);
+    string_initStructN(&identifier->name, name, n2);
+    ERROR_GOTO_IF_ERROR(0);
+
+    identifier->isDirectory = isDirectory;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (STRING_IS_AVAILABLE(&identifier->parentPath)) {
+        string_clearStruct(&identifier->parentPath);
+    }
+
+    if (STRING_IS_AVAILABLE(&identifier->name)) {
+        string_clearStruct(&identifier->name);
+    }
 }
 
 void fsEntryIdentifier_clearStruct(fsEntryIdentifier* identifier) {
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(identifier));
     string_clearStruct(&identifier->parentPath);
     string_clearStruct(&identifier->name);
     identifier->isDirectory = false;
 }
 
-OldResult fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
-    if (string_copy(&des->name, &src->name) != RESULT_SUCCESS || string_copy(&des->parentPath, &src->parentPath) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+void fsEntryIdentifier_copy(fsEntryIdentifier* des, fsEntryIdentifier* src) {
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(des));
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(src));
+    string_copy(&des->name, &src->name);
+    ERROR_GOTO_IF_ERROR(0);
+    string_copy(&des->parentPath, &src->parentPath);
+    ERROR_GOTO_IF_ERROR(0);
     
     des->isDirectory = src->isDirectory;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
-    return fsEntryIdentifier_initStruct(parentIdentifierOut, identifier->parentPath.data, true);
+void fsEntryIdentifier_getParent(fsEntryIdentifier* identifier, fsEntryIdentifier* parentIdentifierOut) {
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(identifier));
+    fsEntryIdentifier_initStruct(parentIdentifierOut, identifier->parentPath.data, true);
 }
 
-OldResult fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
+void fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
     if (args->name == NULL || args->parentPath == NULL) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     fsEntryIdentifier* identifier = &desc->identifier;
-    if (fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type == FS_ENTRY_TYPE_DIRECTORY) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    fsEntryIdentifier_initStructSep(identifier, args->parentPath, args->name, args->type == FS_ENTRY_TYPE_DIRECTORY);
+    ERROR_GOTO_IF_ERROR(0);
 
     desc->type              = args->type;
     if (desc->type == FS_ENTRY_TYPE_DEVICE) {
@@ -100,7 +134,8 @@ OldResult fsEntryDesc_initStruct(fsEntryDesc* desc, fsEntryDescInitArgs* args) {
     hashChainNode_initStruct(&desc->descNode);
     desc->descReferCnt      = 0;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
@@ -108,26 +143,28 @@ void fsEntryDesc_clearStruct(fsEntryDesc* desc) {
     memory_memset(desc, 0, sizeof(fsEntryDesc));
 }
 
-OldResult fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
+void fsEntry_genericOpen(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
     entry->desc         = desc;
     entry->openFlags    = flags;
     entry->pointer      = 0;
     entry->iNode        = iNode_open(superBlock, desc);
     if (entry->iNode == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
-    if (iNode_close(entry->iNode) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+void fsEntry_genericClose(SuperBlock* superBlock, fsEntry* entry) {
+    iNode_close(entry->iNode);
+    ERROR_GOTO_IF_ERROR(0);
 
     memory_memset(entry, 0, sizeof(fsEntry));
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
@@ -138,7 +175,9 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
     return entry->pointer = seekTo;
 }
 
-OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
+void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
+    void* blockBuffer = NULL;
+    
     fsEntryType type = entry->desc->type;
     iNode* iNode = entry->iNode;
 
@@ -151,13 +190,14 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     if (!device_isBlockDevice(targetDevice)) {
         charDevice_read(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
-        return RESULT_SUCCESS;
+        ERROR_GOTO_IF_ERROR(0);
+        return;
     }
 
-    void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
+    blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
     if (blockBuffer == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, targetDevice->granularity), offsetInBlock = entry->pointer % POWER_2(targetDevice->granularity);
@@ -166,12 +206,11 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     if (offsetInBlock != 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1);
+        ERROR_GOTO_IF_ERROR(0);
 
         blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
 
         Size byteReadN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(buffer, blockBuffer + offsetInBlock, byteReadN);
@@ -182,29 +221,29 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     if (remainByteNum >= blockSize) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
-        OldResult res;
-        while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
+        while (true) {
+            bool isEnd = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1);
+            ERROR_GOTO_IF_ERROR(0);
+            if (isEnd) {
+                break;
+            }
+
             blockDevice_readBlocks(targetBlockDevice, range.begin, buffer, range.length);
-            ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+            ERROR_GOTO_IF_ERROR(0);
 
             Size byteReadN = range.length * POWER_2(targetDevice->granularity);
             buffer += byteReadN;
             remainByteNum -= byteReadN;
         }
-
-        if (res != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
     }
 
     if (remainByteNum > 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1);
+        ERROR_GOTO_IF_ERROR(0);
 
         blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
 
         memory_memcpy(buffer, blockBuffer, remainByteNum);
 
@@ -213,12 +252,16 @@ OldResult fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 
     memory_free(blockBuffer);
 
-    return RESULT_SUCCESS;
+    return;
     ERROR_FINAL_BEGIN(0);
-    return RESULT_ERROR;    //TODO: Temporary solution
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
 }
 
-OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
+void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
+    void* blockBuffer = NULL;
+
     fsEntryType type = entry->desc->type;
     iNode* iNode = entry->iNode;
 
@@ -231,38 +274,37 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 
     if (!device_isBlockDevice(targetDevice)) {
         charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), entry->pointer, buffer, n);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
-        return RESULT_SUCCESS;
+        ERROR_GOTO_IF_ERROR(0);
+        return;
     }
 
-    void* blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
+    blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
     if (blockBuffer == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     Index64 blockIndex = DIVIDE_ROUND_DOWN_SHIFT(entry->pointer, targetDevice->granularity), offsetInBlock = entry->pointer % POWER_2(targetDevice->granularity);
     Size blockSize = POWER_2(targetDevice->granularity), remainByteNum = n;
     if (entry->pointer + n > entry->desc->dataRange.length) {
-        if (fsEntry_rawResize(entry, entry->pointer + n) != RESULT_SUCCESS) {  //TODO: May be remove this?
-            return RESULT_ERROR;
-        }
+        fsEntry_rawResize(entry, entry->pointer + n);
+        ERROR_GOTO_IF_ERROR(0);
     }
 
     Range range;
     if (offsetInBlock != 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1);
+        ERROR_GOTO_IF_ERROR(0);
 
         blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
 
         Size byteWriteN = algorithms_min64(remainByteNum, POWER_2(targetDevice->granularity) - offsetInBlock);
         memory_memcpy(blockBuffer + offsetInBlock, buffer, byteWriteN);
 
         blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
 
         buffer += byteWriteN;
         remainByteNum -= byteWriteN;
@@ -270,55 +312,57 @@ OldResult fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 
     if (remainByteNum >= blockSize) {
         Size remainBlockNum = DIVIDE_ROUND_DOWN_SHIFT(remainByteNum, targetDevice->granularity);
-        OldResult res;
-        while ((res = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1)) == RESULT_CONTINUE) {
+        while (true) {
+            bool isEnd = iNode_rawTranslateBlockPos(iNode, &blockIndex, &remainBlockNum, &range, 1);
+            ERROR_GOTO_IF_ERROR(0);
+            if (isEnd) {
+                break;
+            }
+
             blockDevice_writeBlocks(targetBlockDevice, range.begin, buffer, range.length);
-            ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+            ERROR_GOTO_IF_ERROR(0);
 
-            Size byteWriteN = range.length * POWER_2(targetDevice->granularity);
-            buffer += byteWriteN;
-            remainByteNum -= byteWriteN;
-        }
-
-        if (res == RESULT_ERROR) {
-            return RESULT_ERROR;
+            Size byteReadN = range.length * POWER_2(targetDevice->granularity);
+            buffer += byteReadN;
+            remainByteNum -= byteReadN;
         }
     }
 
     if (remainByteNum > 0) {
         Size tmpN = 1;
-        if (iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        iNode_rawTranslateBlockPos(iNode, &blockIndex, &tmpN, &range, 1);
+        ERROR_GOTO_IF_ERROR(0);
 
         blockDevice_readBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
 
         memory_memcpy(blockBuffer, buffer, remainByteNum);
 
         blockDevice_writeBlocks(targetBlockDevice, range.begin, blockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0); //TODO: Temporary solution
+        ERROR_GOTO_IF_ERROR(0);
 
         remainByteNum = 0;
     }
 
     memory_free(blockBuffer);
 
-    return RESULT_SUCCESS;
+    return;
     ERROR_FINAL_BEGIN(0);
-    return RESULT_ERROR;    //TODO: Temporary solution
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
 }
 
-OldResult fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
+void fsEntry_genericResize(fsEntry* entry, Size newSizeInByte) {
     if (iNode_isDevice(entry->iNode)) { //TODO: Temporary solution
-        return RESULT_SUCCESS;
+        return;
     }
 
-    if (iNode_rawResize(entry->iNode, newSizeInByte) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    iNode_rawResize(entry->iNode, newSizeInByte);
+    ERROR_GOTO_IF_ERROR(0);
 
     entry->desc->dataRange.length = newSizeInByte;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

@@ -3,6 +3,7 @@
 #include<fs/fat32/fat32.h>
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<error.h>
 
 void devfs_blockChain_initStruct(DevFSblockChains* blockChains) {
     for (int i = 0; i < DEVFS_BLOCKCHAIN_SIZE; ++i) {
@@ -17,19 +18,23 @@ void devfs_blockChain_clearStruct(DevFSblockChains* blockChains) {
 }
 
 Index8 devfs_blockChain_get(DevFSblockChains* blockChains, Index8 chainFirst, Index8 index) {
+    DEBUG_ASSERT_SILENT(chainFirst < DEVFS_BLOCKCHAIN_SIZE);
     Index8 ret = chainFirst;
     for (int i = 0; i < index; ++i) {
         ret = blockChains->nextBlocks[i];
         
         if (ret == (Index8)INVALID_INDEX) {
-            return INVALID_INDEX;
+            ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
         }
     }
 
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    return INVALID_INDEX;
 }
 
 Size devfs_blockChain_getChainLength(DevFSblockChains* blockChains, Index8 chainFirst) {
+    DEBUG_ASSERT_SILENT(chainFirst < DEVFS_BLOCKCHAIN_SIZE);
     Size ret = 0;
 
     Index8 current = chainFirst;
@@ -49,7 +54,7 @@ Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length) {
     Index8 current = blockChains->firstFreeBlock, last = INVALID_INDEX;
     for (int i = 0; i < length; ++i) {
         if (current == (Index8)INVALID_INDEX) {
-            return INVALID_INDEX;
+            ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
         }
 
         last = current;
@@ -60,6 +65,8 @@ Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length) {
     blockChains->firstFreeBlock = current;
     blockChains->nextBlocks[last] = INVALID_INDEX;
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    return INVALID_INDEX;
 }
 
 void devfs_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst) {

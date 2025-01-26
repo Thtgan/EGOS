@@ -15,9 +15,9 @@ void schedule_init() {
 
     scheduler_start(_schedule_currentScheduler, process_init());
 
-    if (process_fork("Idle") == NULL) {
-        __schedule_idle();
-    }
+    // if (process_fork("Idle") == NULL) {
+    //     __schedule_idle();
+    // }
 }
 
 Scheduler* schedule_getCurrentScheduler() {

@@ -21,6 +21,7 @@ typedef struct ErrorRecord ErrorRecord;
 #define ERROR_ID_OUT_OF_BOUND               9
 #define ERROR_ID_PERMISSION_ERROR           10
 #define ERROR_ID_IO_FAILED                  11
+#define ERROR_ID_VERIFICATION_FAILED        12
 
 typedef struct Error {
     ConstCstring desc;
@@ -75,13 +76,19 @@ extern ConstCstring error_assertNoneFailStr;
 extern ConstCstring error_assertAnyFailStr;
 extern ConstCstring error_assertFailStr;
 
-#define ERROR_ASSERT_NONE()         do { if (error_getCurrentRecord()->errorID != ERROR_ID_OK) debug_blowup(error_assertNoneFailStr); } while(0)
+#define ERROR_ASSERT_NONE()         do { if (error_getCurrentRecord()->errorID != ERROR_ID_OK) { debug_dump_stack(NULL, INFINITE); debug_blowup(error_assertNoneFailStr); } } while(0)
 
-#define ERROR_ASSERT_ANY()          do { if (error_getCurrentRecord()->errorID == ERROR_ID_OK) debug_blowup(error_assertAnyFailStr); } while(0)
+#define ERROR_ASSERT_ANY()          do { if (error_getCurrentRecord()->errorID == ERROR_ID_OK) { debug_dump_stack(NULL, INFINITE); debug_blowup(error_assertAnyFailStr); } } while(0)
 
-#define ERROR_ASSERT(__ERROR_ID)    do { if (error_getCurrentRecord()->errorID != __ERROR_ID) debug_blowup(error_assertFailStr, __ERROR_ID); } while(0)
+#define ERROR_ASSERT(__ERROR_ID)    do { if (error_getCurrentRecord()->errorID != __ERROR_ID) { debug_dump_stack(NULL, INFINITE); debug_blowup(error_assertFailStr, __ERROR_ID); } } while(0)
 
 #define ERROR_CHECKPOINT_DEFAULT_CODES  {error_unhandledRecord(ERROR_CATCH_RESULT_NAME);}
+
+#define ERROR_CASE_BUILDER_CALL(__PACKET)  ERROR_CASE_BUILDER __PACKET
+#define ERROR_CASE_BUILDER(__ERROR_ID, __CODES)    case __ERROR_ID: {   \
+    do __CODES while(0);                                                \
+    break;                                                              \
+}
 
 #define ERROR_CHECKPOINT(__DEFAULT_CODES, ...)  do {                                        \
     ErrorRecord* ERROR_CATCH_RESULT_NAME = error_getCurrentRecord();                        \

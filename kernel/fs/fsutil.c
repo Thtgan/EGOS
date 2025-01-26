@@ -9,6 +9,7 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<time/time.h>
+#include<error.h>
 
 Index64 fsutil_fileSeek(File* file, Int64 offset, Uint8 begin) {
     Index64 base = file->pointer;
@@ -42,14 +43,14 @@ Index64 fsutil_fileGetPointer(File* file) {
     return file->pointer;
 }
 
-OldResult fsutil_fileRead(File* file, void* buffer, Size n) {
+void fsutil_fileRead(File* file, void* buffer, Size n) {
     if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->openFlags) == FCNTL_OPEN_WRITE_ONLY) {
-        return RESULT_FAIL;
+        ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
     }
 
-    if (fsEntry_rawRead(file, buffer, n) != RESULT_SUCCESS || fsEntry_rawSeek(file, file->pointer + n) == INVALID_INDEX) {
-        return RESULT_ERROR;
-    }
+    fsEntry_rawRead(file, buffer, n);
+    ERROR_GOTO_IF_ERROR(0);
+    fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->openFlags, FCNTL_OPEN_NOATIME)) {
         Timestamp timestamp;
@@ -58,21 +59,22 @@ OldResult fsutil_fileRead(File* file, void* buffer, Size n) {
         file->desc->lastAccessTime = timestamp.second;
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }    
 
-OldResult fsutil_fileWrite(File* file, const void* buffer, Size n) {
+void fsutil_fileWrite(File* file, const void* buffer, Size n) {
     if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->openFlags) == FCNTL_OPEN_READ_ONLY) {
-        return RESULT_FAIL;
+        ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
     }
 
     if (TEST_FLAGS(file->openFlags, FCNTL_OPEN_APPEND)) {
         fsutil_fileSeek(file, 0, FS_FILE_SEEK_END);
     }
 
-    if (fsEntry_rawWrite(file, buffer, n) != RESULT_SUCCESS || fsutil_fileSeek(file, n, FS_FILE_SEEK_CURRENT) == INVALID_INDEX) {
-        return RESULT_ERROR;
-    }
+    fsEntry_rawWrite(file, buffer, n);
+    ERROR_GOTO_IF_ERROR(0);
+    fsutil_fileSeek(file, n, FS_FILE_SEEK_CURRENT);
 
     if (TEST_FLAGS_FAIL(file->openFlags, FCNTL_OPEN_NOATIME)) {
         Timestamp timestamp;
@@ -81,32 +83,41 @@ OldResult fsutil_fileWrite(File* file, const void* buffer, Size n) {
         file->desc->lastAccessTime = timestamp.second;
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags) {
+void fsutil_openfsEntry(SuperBlock* superBlock, ConstCstring path, fsEntry* entryOut, FCNTLopenFlags flags) {
     fsEntryIdentifier identifier;
-    if (fsEntryIdentifier_initStruct(&identifier, path, TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY)) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    fsEntryIdentifier_initStruct(&identifier, path, TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY));
+    ERROR_GOTO_IF_ERROR(0);
 
-    OldResult res = superBlock_openfsEntry(superBlock, &identifier, entryOut, flags);
+    superBlock_openfsEntry(superBlock, &identifier, entryOut, flags);
+    ERROR_GOTO_IF_ERROR(1);
     fsEntryIdentifier_clearStruct(&identifier);
-    return res;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
+    ERROR_FINAL_BEGIN(1);
+    fsEntryIdentifier_clearStruct(&identifier); //TODO: Need a method to identify is identifier active
+    ERROR_GOTO(0);
 }
 
-OldResult fsutil_closefsEntry(fsEntry* entry) {
-    return superBlock_closefsEntry(entry);
+void fsutil_closefsEntry(fsEntry* entry) {
+    superBlock_closefsEntry(entry); //Error passthrough
 }
 
-OldResult fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut) {
+void fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool isDirectory, fsEntryDesc* descOut, Size* entrySizeOut) {
     fsEntryDesc tmpDesc;
     Size entrySize;
-    OldResult res = RESULT_ERROR;
     fsEntry_rawSeek(directory, 0);
-    while ((res = fsEntry_rawDirReadEntry(directory, &tmpDesc, &entrySize)) != RESULT_ERROR) {
-        if (res == RESULT_SUCCESS) {    //Meaning no more entries
-            return RESULT_FAIL;
+    bool found = false;
+    while (!found) {
+        bool noMoreEntry = fsEntry_rawDirReadEntry(directory, &tmpDesc, &entrySize);
+        ERROR_GOTO_IF_ERROR(0);
+        if (noMoreEntry) {  //Meaning no more entries
+            ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
         }
 
         if (cstring_strcmp(name, tmpDesc.identifier.name.data) == 0 && isDirectory == tmpDesc.identifier.isDirectory) {
@@ -117,61 +128,89 @@ OldResult fsutil_lookupEntryDesc(Directory* directory, ConstCstring name, bool i
             if (entrySizeOut != NULL) {
                 *entrySizeOut = entrySize;
             }
-            return RESULT_SUCCESS;
+            found = true;
+            break;
         }
 
         fsEntryDesc_clearStruct(&tmpDesc);
         fsEntry_rawSeek(directory, directory->pointer + entrySize);
     }
 
-    return RESULT_ERROR;
+    if (!found) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut) {
+void fsutil_loacateRealIdentifier(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** superBlockOut, fsEntryIdentifier* identifierOut) {
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(identifier));
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(identifierOut));
     if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
         fsEntryIdentifier_copy(identifierOut, identifier);
-        return RESULT_SUCCESS;
+        ERROR_GOTO_IF_ERROR(0);
+        return;
     }
 
     String fullPath;
-    if (string_append(&fullPath, &identifier->parentPath, FS_PATH_SEPERATOR) != RESULT_SUCCESS || string_concat(&fullPath, &fullPath, &identifier->name) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    string_initStruct(&fullPath, identifier->parentPath.data);
+    ERROR_GOTO_IF_ERROR(0);
+    string_append(&fullPath, &fullPath, FS_PATH_SEPERATOR);
+    ERROR_GOTO_IF_ERROR(0);
+    string_concat(&fullPath, &fullPath, &identifier->name);
+    ERROR_GOTO_IF_ERROR(0);
 
     SuperBlock* currentSuperBlock = superBlock, * nextSuperBlock = NULL;
     Index64 pathSplit = INVALID_INDEX;
     fsEntryDesc* mountedToDesc;
-    OldResult res;
-    while ((res = superBlock_stepSearchMount(currentSuperBlock, &fullPath, &pathSplit, &nextSuperBlock, &mountedToDesc)) == RESULT_CONTINUE) {
-        String tmp;
+
+    String tmp;
+    while (true) {
+        bool noMoreMount = superBlock_stepSearchMount(currentSuperBlock, &fullPath, &pathSplit, &nextSuperBlock, &mountedToDesc);
+        ERROR_GOTO_IF_ERROR(0);
+        if (noMoreMount) {
+            break;
+        }
+        
         string_initStruct(&tmp, "");
+        ERROR_GOTO_IF_ERROR(0);
         if (mountedToDesc != nextSuperBlock->rootDirDesc) {
             string_append(&tmp, &mountedToDesc->identifier.parentPath, FS_PATH_SEPERATOR);
+            ERROR_GOTO_IF_ERROR(0);
             string_concat(&tmp, &tmp, &mountedToDesc->identifier.name);
+            ERROR_GOTO_IF_ERROR(0);
         }
 
         string_slice(&fullPath, &fullPath, pathSplit, -1);
+        ERROR_GOTO_IF_ERROR(0);
         string_concat(&fullPath, &tmp, &fullPath);
+        ERROR_GOTO_IF_ERROR(0);
         
         string_clearStruct(&tmp);
         currentSuperBlock = nextSuperBlock;
     }
 
-    if (res == RESULT_ERROR) {
-        return RESULT_ERROR;
-    } else {
-        fsEntryIdentifier_initStruct(identifierOut, fullPath.data, identifier->isDirectory);
-        *superBlockOut = currentSuperBlock;
-    }
+    *superBlockOut = currentSuperBlock;
+    fsEntryIdentifier_initStruct(identifierOut, fullPath.data, identifier->isDirectory);
+    ERROR_GOTO_IF_ERROR(0);
     string_clearStruct(&fullPath);
     
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (STRING_IS_AVAILABLE(&tmp)) {
+        string_clearStruct(&tmp);
+    }
+
+    if (STRING_IS_AVAILABLE(&fullPath)) {
+        string_clearStruct(&fullPath);
+    }
 }
 
-OldResult fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut) {
+void fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntryDesc** descOut) {
+    DEBUG_ASSERT_SILENT(fsEntryIdentifier_isActive(identifier));
     if (identifier->name.length == 0 && identifier->parentPath.length == 0) {
         *descOut = superBlock->rootDirDesc;
-        return RESULT_SUCCESS;
+        return;
     }
 
     fsEntry currentDirectory;
@@ -179,14 +218,18 @@ OldResult fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier*
     memory_memcpy(&currentEntryDesc, superBlock->rootDirDesc, sizeof(fsEntryDesc));
 
     String fullPath;
-    fsEntryIdentifier tmpIdentifier;
-    if (string_append(&fullPath, &identifier->parentPath, FS_PATH_SEPERATOR) != RESULT_SUCCESS || string_concat(&fullPath, &fullPath, &identifier->name) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    string_initStruct(&fullPath, identifier->parentPath.data);
+    ERROR_GOTO_IF_ERROR(0);
+    string_append(&fullPath, &fullPath, FS_PATH_SEPERATOR);
+    ERROR_GOTO_IF_ERROR(0);
+    string_concat(&fullPath, &fullPath, &identifier->name);
+    ERROR_GOTO_IF_ERROR(0);
+
     ConstCstring cFullPath = fullPath.data, name = cFullPath;
+    fsEntryIdentifier tmpIdentifier;
     while (true) {
         if (*name != FS_PATH_SEPERATOR) {
-            return RESULT_ERROR;
+            ERROR_THROW(ERROR_ID_DATA_ERROR, 0);
         }
         ++name;
 
@@ -195,37 +238,26 @@ OldResult fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier*
             ++next;
         }
         
-        //TODO: Ugly initialization
-        if (
-            string_initStructN(&tmpIdentifier.name, name, ARRAY_POINTER_TO_INDEX(name, next)) != RESULT_SUCCESS ||
-            string_initStructN(&tmpIdentifier.parentPath, cFullPath, ARRAY_POINTER_TO_INDEX(cFullPath, name) - 1) != RESULT_SUCCESS
-        ) {
-            return RESULT_ERROR;
-        }
-        tmpIdentifier.isDirectory = *next == '\0' ? identifier->isDirectory : true;
+        fsEntryIdentifier_initStructSepN(
+            &tmpIdentifier,
+            cFullPath, ARRAY_POINTER_TO_INDEX(cFullPath, name) - 1,
+            name, ARRAY_POINTER_TO_INDEX(name, next),
+            *next == '\0' ? identifier->isDirectory : true
+        );
+        ERROR_GOTO_IF_ERROR(0);
 
-        if (superBlock_rawOpenfsEntry(superBlock, &currentDirectory, &currentEntryDesc, FCNTL_OPEN_FILE_DEFAULT_FLAGS) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        superBlock_rawOpenfsEntry(superBlock, &currentDirectory, &currentEntryDesc, FCNTL_OPEN_FILE_DEFAULT_FLAGS);
+        ERROR_GOTO_IF_ERROR(0);
 
-        OldResult lookupRes;
-        if ((lookupRes = fsutil_lookupEntryDesc(&currentDirectory, tmpIdentifier.name.data, tmpIdentifier.isDirectory, &nextEntryDesc, NULL)) == RESULT_ERROR) {
-            return RESULT_ERROR;
-        }
+        fsutil_lookupEntryDesc(&currentDirectory, tmpIdentifier.name.data, tmpIdentifier.isDirectory, &nextEntryDesc, NULL);
+        ERROR_GOTO_IF_ERROR(0);
 
         fsEntryIdentifier_clearStruct(&tmpIdentifier);
-        if (superBlock_rawClosefsEntry(superBlock, &currentDirectory) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
-
-        if (lookupRes == RESULT_FAIL) {
-            return RESULT_FAIL;
-        }
+        superBlock_rawClosefsEntry(superBlock, &currentDirectory);
+        ERROR_GOTO_IF_ERROR(0);
 
         if (*next == '\0') {
-            if (*descOut == NULL) {
-                return RESULT_ERROR;
-            }
+            DEBUG_ASSERT_SILENT(*descOut != NULL);
             memory_memcpy(*descOut, &nextEntryDesc, sizeof(fsEntryDesc));
             break;
         }
@@ -234,5 +266,9 @@ OldResult fsutil_seekLocalFSentryDesc(SuperBlock* superBlock, fsEntryIdentifier*
         memory_memcpy(&currentEntryDesc, &nextEntryDesc, sizeof(fsEntryDesc));
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (fsEntryIdentifier_isActive(&tmpIdentifier)) {
+        fsEntryIdentifier_clearStruct(&tmpIdentifier);
+    }
 }

@@ -104,6 +104,7 @@ int print_printf(TerminalLevel level, const char* format, ...) {
     return ret;
 }
 
+//TODO: BUG: printed string doesn't end well
 int print_sprintf(char* buffer, const char* format, ...) {
     va_list args;
     va_start(args, format);

@@ -8,6 +8,7 @@
 #include<memory/memory.h>
 #include<multitask/schedule.h>
 #include<usermode/syscall.h>
+#include<error.h>
 
 static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n);
 
@@ -30,37 +31,60 @@ void fsSyscall_init() {
 static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
-    if (file == NULL || fs_fileRead(file, buffer, n) != RESULT_SUCCESS) {
-        return -1;
+    if (file == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
+    fs_fileRead(file, buffer, n);
+    ERROR_GOTO_IF_ERROR(0);
+
     return 0;
+    ERROR_FINAL_BEGIN(0);
+    return -1;
 }
 
 static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
     Scheduler* scheduler = schedule_getCurrentScheduler();
     File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
-    if (file == NULL || fs_fileWrite(file, buffer, n) != RESULT_SUCCESS) {
-        return -1;
+    if (file == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
+    fs_fileWrite(file, buffer, n);
+    ERROR_GOTO_IF_ERROR(0);
+
     return 0;
+    ERROR_FINAL_BEGIN(0);
+    return -1;
 }
 
 static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
-    File* file = memory_allocate(sizeof(File));
+    File* file = NULL;
+
+    file = memory_allocate(sizeof(File));
     if (file == NULL) {
-        return -1;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     Scheduler* scheduler = schedule_getCurrentScheduler();
     int ret = process_allocateFileSlot(scheduler_getCurrentProcess(scheduler), file);
-    if (ret == -1 || fs_fileOpen(file, filename, flags) != RESULT_SUCCESS) {
-        memory_free(file);
-        return -1;
+    if (ret == INVALID_INDEX) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
+    fs_fileOpen(file, filename, flags);
+    ERROR_GOTO_IF_ERROR(0);
+
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    if (file != NULL) {
+        memory_free(file);
+    }
+    return INVALID_INDEX;
 }
 
 static int __fsSyscall_close(int fileDescriptor) {
@@ -68,32 +92,34 @@ static int __fsSyscall_close(int fileDescriptor) {
     Process* process = scheduler_getCurrentProcess(scheduler);
     File* file = process_getFileFromSlot(process, fileDescriptor);
     if (file == NULL) {
-        return -1;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
-    if (fs_fileClose(file) != RESULT_SUCCESS) {
-        return -1;
-    }
+    fs_fileClose(file);
+    ERROR_GOTO_IF_ERROR(0);
 
     process_releaseFileSlot(process, fileDescriptor);
     memory_free(file);
 
     return 0;
+    ERROR_FINAL_BEGIN(0);
+    return -1;
 }
 
 static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat) {
     File file;
-    if (fs_fileOpen(&file, filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS) != RESULT_SUCCESS) {
-        return -1;
-    }
 
-    if (fs_fileStat(&file, stat) != RESULT_SUCCESS) {
-        return -1;
-    }
+    fs_fileOpen(&file, filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS);
+    ERROR_GOTO_IF_ERROR(0);
 
-    if (fs_fileClose(&file) != RESULT_SUCCESS) {
-        return -1;
-    }
+    fs_fileStat(&file, stat);
+    ERROR_GOTO_IF_ERROR(0);
+
+    fs_fileClose(&file);
+    ERROR_GOTO_IF_ERROR(0);
 
     return 0;
+    ERROR_FINAL_BEGIN(0);
+    return -1;
 }

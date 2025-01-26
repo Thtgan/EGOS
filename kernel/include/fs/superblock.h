@@ -27,17 +27,17 @@ typedef struct SuperBlock {
 } SuperBlock;
 
 typedef struct SuperBlockOperations {
-    OldResult  (*openInode)(SuperBlock* superBlock, iNode* iNodePtr, fsEntryDesc* desc);
-    OldResult  (*closeInode)(SuperBlock* superBlock, iNode* iNode);
+    void  (*openInode)(SuperBlock* superBlock, iNode* iNodePtr, fsEntryDesc* desc);
+    void  (*closeInode)(SuperBlock* superBlock, iNode* iNode);
 
-    OldResult  (*openfsEntry)(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
-    OldResult  (*closefsEntry)(SuperBlock* superBlock, fsEntry* entry);
+    void  (*openfsEntry)(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags);
+    void  (*closefsEntry)(SuperBlock* superBlock, fsEntry* entry);
 
-    OldResult  (*create)(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags);
-    OldResult  (*flush)(SuperBlock* superBlock);
+    void  (*create)(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags);
+    void  (*flush)(SuperBlock* superBlock);
 
-    OldResult  (*mount)(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
-    OldResult  (*unmount)(SuperBlock* superBlock, fsEntryIdentifier* identifier);
+    void  (*mount)(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
+    void  (*unmount)(SuperBlock* superBlock, fsEntryIdentifier* identifier);
 } SuperBlockOperations;
 
 typedef struct SuperBlockInitArgs {
@@ -67,58 +67,58 @@ typedef struct Mount {
     fsEntryDesc*    targetDesc;
 } Mount;
 
-static inline OldResult superBlock_rawOpenInode(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
-    return superBlock->operations->openInode(superBlock, iNode, desc);
+static inline void superBlock_rawOpenInode(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
+    superBlock->operations->openInode(superBlock, iNode, desc);
 }
 
-static inline OldResult superBlock_rawCloseInode(SuperBlock* superBlock, iNode* iNode) {
-    return superBlock->operations->closeInode(superBlock, iNode);
+static inline void superBlock_rawCloseInode(SuperBlock* superBlock, iNode* iNode) {
+    superBlock->operations->closeInode(superBlock, iNode);
 }
 
-static inline OldResult superBlock_rawOpenfsEntry(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
-    return superBlock->operations->openfsEntry(superBlock, entry, desc, flags);
+static inline void superBlock_rawOpenfsEntry(SuperBlock* superBlock, fsEntry* entry, fsEntryDesc* desc, FCNTLopenFlags flags) {
+    superBlock->operations->openfsEntry(superBlock, entry, desc, flags);
 }
 
-static inline OldResult superBlock_rawClosefsEntry(SuperBlock* superBlock, fsEntry* entry) {
-    return superBlock->operations->closefsEntry(superBlock, entry);
+static inline void superBlock_rawClosefsEntry(SuperBlock* superBlock, fsEntry* entry) {
+    superBlock->operations->closefsEntry(superBlock, entry);
 }
 
-static inline OldResult superBlock_rawCreate(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags) {
-    return superBlock->operations->create(superBlock, descOut, name, parentPath, type, deviceID, flags);
+static inline void superBlock_rawCreate(SuperBlock* superBlock, fsEntryDesc* descOut, ConstCstring name, ConstCstring parentPath, fsEntryType type, DeviceID deviceID, Flags16 flags) {
+    superBlock->operations->create(superBlock, descOut, name, parentPath, type, deviceID, flags);
 }
 
-static inline OldResult superBlock_rawMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
-    return superBlock->operations->mount(superBlock, identifier, targetSuperBlock, targetDesc);
+static inline void superBlock_rawMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc) {
+    superBlock->operations->mount(superBlock, identifier, targetSuperBlock, targetDesc);
 }
 
-static inline OldResult superBlock_rawUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier) {
-    return superBlock->operations->unmount(superBlock, identifier);
+static inline void superBlock_rawUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier) {
+    superBlock->operations->unmount(superBlock, identifier);
 }
 
-static inline OldResult superBlock_rawFlush(SuperBlock* superBlock) {
-    return superBlock->operations->flush(superBlock);
+static inline void superBlock_rawFlush(SuperBlock* superBlock) {
+    superBlock->operations->flush(superBlock);
 }
 
 void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args);
 
-OldResult superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** finalSuperBlockOut, fsEntryDesc** descOut);
+void superBlock_getfsEntryDesc(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock** finalSuperBlockOut, fsEntryDesc** descOut);
 
-OldResult superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryDesc);
+void superBlock_releasefsEntryDesc(SuperBlock* superBlock, fsEntryDesc* entryDesc);
 
-OldResult superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut, FCNTLopenFlags flags);
+void superBlock_openfsEntry(SuperBlock* superBlock, fsEntryIdentifier* identifier, fsEntry* entryOut, FCNTLopenFlags flags);
 
-OldResult superBlock_closefsEntry(fsEntry* entry);
+void superBlock_closefsEntry(fsEntry* entry);
 
-OldResult mount_initStruct(Mount* mount, ConstCstring path, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
+void mount_initStruct(Mount* mount, ConstCstring path, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
 
 void mount_clearStruct(Mount* mount);
 
-OldResult superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
+void superBlock_genericMount(SuperBlock* superBlock, fsEntryIdentifier* identifier, SuperBlock* targetSuperBlock, fsEntryDesc* targetDesc);
 
-OldResult superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier);
+void superBlock_genericUnmount(SuperBlock* superBlock, fsEntryIdentifier* identifier);
 
 DirMountList* superBlock_getDirMountList(SuperBlock* superBlock, ConstCstring directoryPath);
 
-OldResult superBlock_stepSearchMount(SuperBlock* superBlock, String* searchPath, Index64* searchPathSplitRet, SuperBlock** newSuperBlockRet, fsEntryDesc** mountedToDescRet);
+bool superBlock_stepSearchMount(SuperBlock* superBlock, String* searchPath, Index64* searchPathSplitRet, SuperBlock** newSuperBlockRet, fsEntryDesc** mountedToDescRet);
 
 #endif // __FS_SUPERBLOCK_H

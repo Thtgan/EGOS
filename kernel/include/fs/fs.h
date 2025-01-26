@@ -42,21 +42,20 @@ FStype fs_checkType(BlockDevice* device);
  * @param device Device to open
  * @return FS* File system, NULL if error happens
  */
-OldResult fs_open(FS* fs, BlockDevice* device);
+void fs_open(FS* fs, BlockDevice* device);
 
 /**
  * @brief Close a opened file system, cannot close a closed file system, sets errorcode to indicate error
  * 
  * @param system File system
- * @return OldResult OldResult of the operation, NULL if error happens
  */
-OldResult fs_close(FS* fs);
+void fs_close(FS* fs);
 
 //Non-FS codes should use these functions
 
-OldResult fs_fileRead(File* file, void* buffer, Size n);
+void fs_fileRead(File* file, void* buffer, Size n);
 
-OldResult fs_fileWrite(File* file, const void* buffer, Size n);
+void fs_fileWrite(File* file, const void* buffer, Size n);
 
 #define FS_FILE_SEEK_BEGIN      0
 #define FS_FILE_SEEK_CURRENT    1
@@ -64,9 +63,9 @@ OldResult fs_fileWrite(File* file, const void* buffer, Size n);
 
 Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin);
 
-OldResult fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags);
+void fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags);
 
-OldResult fs_fileClose(File* file);
+void fs_fileClose(File* file);
 
 typedef struct FS_fileStat {
     Uint64 deviceID;
@@ -95,6 +94,6 @@ typedef struct FS_fileStat {
     Uint64 reserved1[3];
 } FS_fileStat;
 
-OldResult fs_fileStat(File* file, FS_fileStat* stat);
+void fs_fileStat(File* file, FS_fileStat* stat);
 
 #endif // __FS_FS_H

@@ -10,6 +10,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<error.h>
 
 static ConstCstring __devfs_name = "DEVFS";
 static SuperBlockOperations __devfs_superBlockOperations = {
@@ -28,26 +29,27 @@ static bool _devfs_opened = false;
 
 static DEVFSspecificInfo _devfs_specificInfo;
 
-OldResult devfs_init() {
-    return RESULT_SUCCESS;
+void devfs_init() {
 }
 
-OldResult devfs_checkType(BlockDevice* blockDevice) {
-    return RESULT_SUCCESS;  //TODO: Not a good logic
+bool devfs_checkType(BlockDevice* blockDevice) {
+    return true;  //TODO: Not a good logic
 }
 
 #define __DEVFS_SUPERBLOCK_HASH_BUCKET  16
 #define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET))
 
-OldResult devfs_open(FS* fs, BlockDevice* blockDevice) {
+void devfs_open(FS* fs, BlockDevice* blockDevice) {
+    void* batchAllocated = NULL;
     Device* device = &blockDevice->device;
     if (_devfs_opened || device->capacity != DEVFS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
-    void* batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);    //TODO: Bad memory management
+    batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);    //TODO: Bad memory management
     if (batchAllocated == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
@@ -74,13 +76,12 @@ OldResult devfs_open(FS* fs, BlockDevice* blockDevice) {
     };
 
     superBlock_initStruct(superBlock, &args);
-    if (devfs_fsEntry_buildRootDir(superBlock) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
 
-    if (devfs_fsEntry_initRootDir(superBlock) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    devfs_fsEntry_buildRootDir(superBlock);
+    ERROR_GOTO_IF_ERROR(0);
+
+    devfs_fsEntry_initRootDir(superBlock);
+    ERROR_GOTO_IF_ERROR(0);
 
     fs->superBlock = superBlock;
     fs->name = __devfs_name;
@@ -88,15 +89,17 @@ OldResult devfs_open(FS* fs, BlockDevice* blockDevice) {
 
     _devfs_opened = true;
     
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (batchAllocated != NULL) {
+        memory_free(batchAllocated);
+    }
 }
 
-OldResult devfs_close(FS* fs) {
+void devfs_close(FS* fs) {
     _devfs_opened = false;
-
-    return RESULT_SUCCESS;
+    memory_free(fs->superBlock);
 }
 
-OldResult devfs_superBlock_flush(SuperBlock* superBlock) {
-    return RESULT_SUCCESS;
+void devfs_superBlock_flush(SuperBlock* superBlock) {
 }

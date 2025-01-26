@@ -44,9 +44,8 @@ void usermode_init() {
 
 int usermode_execute(ConstCstring path) {  //TODO: Unstable code
     fsEntry entry;
-    if (fs_fileOpen(&entry, path, FCNTL_OPEN_READ_ONLY) != RESULT_SUCCESS) {
-        return -1;
-    }
+    fs_fileOpen(&entry, path, FCNTL_OPEN_READ_ONLY);
+    ERROR_CHECKPOINT(); //TODO: Temporary solution
 
     int ret = __usermode_doExecute(path, &entry);
 

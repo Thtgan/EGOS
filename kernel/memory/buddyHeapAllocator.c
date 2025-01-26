@@ -289,11 +289,11 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     void* base = (void*)header - header->padding;
     __BuddyTail* tail = (__BuddyTail*)(base + header->size - sizeof(__BuddyTail));
     if (header->magic != REGION_HEADER_MAGIC) {
-        ERROR_THROW(ERROR_ID_DATA_ERROR, 1);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 1);
     }
     
     if (tail->magic != REGION_TAIL_MAGIC) {
-        ERROR_THROW(ERROR_ID_DATA_ERROR, 2);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 2);
     }
 
     Size size = header->size;

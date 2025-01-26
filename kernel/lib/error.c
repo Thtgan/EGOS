@@ -69,6 +69,10 @@ void error_init() {
     error_registerError(
         ERROR_ID_IO_FAILED, "IO Failed"
     );
+
+    error_registerError(
+        ERROR_ID_VERIFICATION_FAILED, "Verification Failed"
+    );
 }
 
 ErrorRecord* error_getCurrentRecord() {

@@ -7,6 +7,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<error.h>
 
 ID iNode_generateID(fsEntryDesc* desc) {
     return desc->type == FS_ENTRY_TYPE_DEVICE ? (FLAG64(63) | desc->device) : desc->dataRange.begin;    //TODO: Ugly method to mark device
@@ -17,49 +18,58 @@ iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex) {
     return found == NULL ? NULL : HOST_POINTER(found, iNode, openedNode);
 }
 
-OldResult iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
-    hashTable_insert(table, (Object)blockIndex, &iNode->openedNode);
-    return RESULT_SUCCESS;  //TODO: Temporary solution
+void iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex) {
+    hashTable_insert(table, (Object)blockIndex, &iNode->openedNode);    //Error passthrough
 }
 
-OldResult iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
-    return hashTable_delete(table, (Object)blockIndex) != NULL ? RESULT_SUCCESS : RESULT_FAIL;
+void iNode_removeFromOpened(HashTable* table, Index64 blockIndex) {
+    hashTable_delete(table, (Object)blockIndex);    //Error passthrough
 }
 
 iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc) {
+    iNode* ret = NULL;
+    
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     Index64 key = iNode_generateID(desc);
-    iNode* ret = iNode_openFromOpened(&superBlock->openedInode, key);
+    ret = iNode_openFromOpened(&superBlock->openedInode, key);
     if (ret == NULL) {
         ret = memory_allocate(sizeof(iNode));
-        if (ret == NULL || superBlock_rawOpenInode(superBlock, ret, desc) != RESULT_SUCCESS) {
-            return NULL;
+        if (ret == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
         }
 
-        if (iNode_addToOpened(&superBlock->openedInode, ret, key) != RESULT_SUCCESS) {
-            memory_free(ret);
-            return NULL;
-        }
+        superBlock_rawOpenInode(superBlock, ret, desc);
+        ERROR_GOTO_IF_ERROR(0);
+
+        iNode_addToOpened(&superBlock->openedInode, ret, key);
+        ERROR_GOTO_IF_ERROR(0);
     } else {
         ++ret->openCnt;
     }
 
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    if (ret != NULL) {
+        memory_free(ret);
+    }
+
+    return NULL;
 }
 
-OldResult iNode_close(iNode* iNode) {
+void iNode_close(iNode* iNode) {
     SuperBlock* superBlock = iNode->superBlock;
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     if (--iNode->openCnt == 0) {
-        if (iNode_removeFromOpened(&superBlock->openedInode, iNode->iNodeID) == RESULT_FAIL) {
-            return RESULT_ERROR;
-        }
+        iNode_removeFromOpened(&superBlock->openedInode, iNode->iNodeID);
+        ERROR_GOTO_IF_ERROR(0);
         
-        if (superBlock_rawCloseInode(superBlock, iNode) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        superBlock_rawCloseInode(superBlock, iNode);
+        ERROR_GOTO_IF_ERROR(0);
+        
         memory_free(iNode);
     }
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }

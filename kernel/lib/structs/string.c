@@ -5,18 +5,22 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<cstring.h>
+#include<error.h>
 
 #define __STRING_CAPACITY_ALIGN 32
 
-OldResult string_initStruct(String* str, ConstCstring cstr) {
-    return string_initStructN(str, cstr, -1);
+static void __string_doResize(String* str, Size newCapacity, bool reset);
+
+void string_initStruct(String* str, ConstCstring cstr) {
+    string_initStructN(str, cstr, -1);
 }
 
-OldResult string_initStructN(String* str, ConstCstring cstr, Size n) {
+void string_initStructN(String* str, ConstCstring cstr, Size n) {
     Size len = algorithms_umin64(n, cstring_strlen(cstr)), capacity = ALIGN_UP(len + 1, __STRING_CAPACITY_ALIGN);
     Cstring data = memory_allocate(capacity);
     if (data == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
     memory_memcpy(data, cstr, len);
@@ -27,206 +31,195 @@ OldResult string_initStructN(String* str, ConstCstring cstr, Size n) {
     str->capacity   = capacity;
     str->magic      = STRING_MAGIC;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void string_clearStruct(String* str) {
     if (!STRING_IS_AVAILABLE(str)) {
-        return;
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
     str->capacity = str->length = str->magic = 0;
     memory_free(str->data);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult string_concat(String* des, String* str1, String* str2) {
-    if (!(STRING_IS_AVAILABLE(str1) && STRING_IS_AVAILABLE(str2))) {
-        return RESULT_ERROR;
+void string_concat(String* des, String* str1, String* str2) {
+    if (!(STRING_IS_AVAILABLE(des) && STRING_IS_AVAILABLE(str1) && STRING_IS_AVAILABLE(str2))) {
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
-    Size newLen = str1->length + str2->length, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
+    Size strLen1 = str1->length, strLen2 = str2->length;
+    Size newLen = strLen1 + strLen2, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
+
+    // des->length = 0;    //To pass length check in resize
+    // string_resize(des, newCapacity);
+    __string_doResize(des, newCapacity, true);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (des == str1) {
-        if (string_resize(des, newCapacity) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
-
-        memory_memcpy(des->data + str1->length, str2->data, str2->length);
-        des->data[newLen] = '\0';
+        memory_memcpy(des->data + strLen1, str2->data, strLen2);
     } else if (des == str2) {
-        if (string_resize(des, newCapacity) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
-        memory_memmove(des->data + str1->length, str1->data, str1->length);
-        memory_memcpy(des->data, str2->data, str2->length);
-        des->data[newLen] = '\0';
+        memory_memmove(des->data + strLen1, str1->data, strLen1);
+        memory_memcpy(des->data, str2->data, strLen2);
     } else {
-        Cstring data = memory_allocate(newCapacity);
-        if (data == NULL) {
-            return RESULT_ERROR;
-        }
-
-        memory_memcpy(data, str1->data, str1->length);
-        memory_memcpy(data + str1->length, str2->data, str2->length);
-        data[newLen] = '\0';
-
-        des->data   = data;
-        des->magic  = STRING_MAGIC;
+        memory_memcpy(des->data, str1->data, strLen1);
+        memory_memcpy(des->data + strLen1, str2->data, strLen2);
     }
+    des->data[newLen] = '\0';
 
-    des->length     = newLen;
-    des->capacity   = newCapacity;
+    des->length = newLen;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult string_cconcat(String* des, String* str1, Cstring str2) {
-    if (!STRING_IS_AVAILABLE(str1)) {
-        return RESULT_ERROR;
+void string_cconcat(String* des, String* str1, Cstring str2) {
+    if (!(STRING_IS_AVAILABLE(des) && STRING_IS_AVAILABLE(str1))) {
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
-    Size len2 = cstring_strlen(str2);
-    Size newLen = str1->length + len2, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
+    Size strLen1 = str1->length, strLen2 = cstring_strlen(str2);
+    Size newLen = strLen1 + strLen2, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
+
+    // des->length = 0;    //To pass length check in resize
+    // string_resize(des, newCapacity);
+    __string_doResize(des, newCapacity, true);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (des == str1) {
-        if (string_resize(des, newCapacity) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
-
-        memory_memcpy(des->data + str1->length, str2, len2);
-        des->data[newLen] = '\0';
+        memory_memcpy(des->data + strLen1, str2, strLen2);
     } else {
-        Cstring data = memory_allocate(newCapacity);
-        if (data == NULL) {
-            return RESULT_ERROR;
-        }
-
-        memory_memcpy(data, str1->data, str1->length);
-        memory_memcpy(data + str1->length, str2, len2);
-        data[newLen] = '\0';
-
-        des->data   = data;
-        des->magic  = STRING_MAGIC;
+        memory_memcpy(des->data, str1->data, strLen1);
+        memory_memcpy(des->data + strLen1, str2, strLen2);
     }
+    des->data[newLen] = '\0';
 
-    des->length     = newLen;
-    des->capacity   = newCapacity;
+    des->length = newLen;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult string_append(String* des, String* str, int ch) {
-    if (!STRING_IS_AVAILABLE(str)) {
-        return RESULT_ERROR;
+void string_append(String* des, String* str, int ch) {
+    if (!(STRING_IS_AVAILABLE(des) && STRING_IS_AVAILABLE(str))) {
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
-    Size newLen = str->length + 1, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
+    Size strLen = str->length;
+    Size newLen = strLen + 1, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
+
+    // des->length = 0;    //To pass length check in resize
+    // string_resize(des, newCapacity);
+    __string_doResize(des, newCapacity, true);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (des == str) {
-        if (string_resize(des, newCapacity) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
-
-        des->data[str->length] = ch;
-        des->data[newLen] = '\0';
-    } else {
-        Cstring data = memory_allocate(newCapacity);
-        if (data == NULL) {
-            return RESULT_ERROR;
-        }
-
-        memory_memcpy(data, str->data, str->length);
-        data[str->length] = ch;
-        data[newLen] = '\0';
-
-        des->data   = data;
-        des->magic  = STRING_MAGIC;
+        memory_memcpy(des->data, str->data, strLen);
     }
+    
+    des->data[strLen] = ch;
+    des->data[newLen] = '\0';
 
     des->length     = newLen;
-    des->capacity   = newCapacity;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult string_slice(String* des, String* src, int from, int to) {
-    if (!STRING_IS_AVAILABLE(src)) {
-        return RESULT_ERROR;
+void string_slice(String* des, String* src, int from, int to) {
+    if (!(STRING_IS_AVAILABLE(des) && STRING_IS_AVAILABLE(src))) {
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
     from = (src->length + from) % src->length, to = (src->length + to + 1) % (src->length + 1);
     if (from >= to) {
-        return RESULT_ERROR;
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
+    // des->length = 0;    //To pass length check in resize
     Size newLen = to - from, newCapacity = ALIGN_UP(newLen + 1, __STRING_CAPACITY_ALIGN);
     if (des == src) {
         memory_memmove(des->data, des->data + from, newLen);
         des->data[newLen] = '\0';
-        if (string_resize(des, newCapacity) != RESULT_SUCCESS) {
-            return RESULT_ERROR;
-        }
+        des->length = newLen;
+        __string_doResize(des, newCapacity, false);
+        ERROR_GOTO_IF_ERROR(0);
     } else {
-        Cstring data = memory_allocate(newCapacity);
-        if (data == NULL) {
-            return RESULT_ERROR;
-        }
+        __string_doResize(des, newCapacity, true);
+        ERROR_GOTO_IF_ERROR(0);
 
-        memory_memcpy(data, src->data, newLen);
-        data[newLen] = '\0';
-
-        des->data   = data;
-        des->magic  = STRING_MAGIC;
+        memory_memcpy(des->data, src->data, newLen);
+        des->data[newLen] = '\0';
+        des->length = newLen;
     }
 
-    des->length     = newLen;
-    des->capacity   = newCapacity;
-
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
-OldResult string_resize(String* str, Size newCapacity) {
-    if (!STRING_IS_AVAILABLE(str) || newCapacity < str->length + 1) {
-        return RESULT_ERROR;
+void string_resize(String* str, Size newCapacity) {
+    __string_doResize(str, newCapacity, false); //Error passthrough
+}
+
+void string_copy(String* des, String* src) {
+    if (!(STRING_IS_AVAILABLE(des) && STRING_IS_AVAILABLE(src))) {
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
+    }
+
+    des->length = 0;
+    string_resize(des, src->capacity);
+    ERROR_GOTO_IF_ERROR(0);
+
+    memory_memcpy(des->data, src->data, src->length);
+    des->data[src->length] = '\0';
+    des->length = src->length;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __string_doResize(String* str, Size newCapacity, bool reset) {
+    if (!STRING_IS_AVAILABLE(str)) {
+        debug_blowup("Bad String %d\n", __LINE__);
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
+    }
+
+    if (!reset && newCapacity < str->length + 1) {
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
     if (newCapacity == str->capacity) {
-        return RESULT_SUCCESS;
+        return;
     }
 
     Cstring newData = memory_allocate(newCapacity);
     if (newData == NULL) {
-        return RESULT_ERROR;
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
 
-    memory_memcpy(newData, str->data, newCapacity);
-    newData[str->length] = '\0';
+    if (reset) {
+        newData[0] = '\0';
+        str->length = 0;
+    } else {
+        memory_memcpy(newData, str->data, newCapacity);
+        newData[str->length] = '\0';
+    }
     memory_free(str->data);
 
     str->data       = newData;
     str->capacity   = newCapacity;
 
-    return RESULT_SUCCESS;
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
-
-OldResult string_copy(String* str, String* src) {
-    if (!STRING_IS_AVAILABLE(src)) {
-        return RESULT_ERROR;
-    }
-
-    Cstring newData = memory_allocate(src->capacity);
-    if (newData == NULL) {
-        return RESULT_ERROR;
-    }
-
-    str->data       = newData;
-    memory_memcpy(str->data, src->data, src->length);
-    str->data[src->length] = '\0';
-
-    str->capacity   = src->capacity;
-    str->length     = src->length;
-    str->magic      = STRING_MAGIC;
-
-    return RESULT_SUCCESS;
-}
-

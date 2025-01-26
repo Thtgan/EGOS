@@ -19,6 +19,7 @@
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 #include<real/simpleAsmLines.h>
+#include<error.h>
 
 /**
  * @brief Create  process with basic initialization
@@ -57,9 +58,8 @@ Process* process_init() {
     bitmap_initStruct(&_process_pidBitmap, PROCESS_MAXIMUM_PROCESS_NUM, &_process_pidBitmap);
     bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
 
-    if (fs_fileOpen(&_process_stdoutFile, "/dev/stdout", FCNTL_OPEN_WRITE_ONLY) != RESULT_SUCCESS) {
-        return NULL;
-    }
+    fs_fileOpen(&_process_stdoutFile, "/dev/stdout", FCNTL_OPEN_WRITE_ONLY);
+    ERROR_CHECKPOINT(); //TODO: Temporary solution
 
     Process* mainProcess = __process_create(PROCESS_MAIN_PROCESS_RESERVE_PID, "Init", process_initKernelStack + PROCESS_KERNEL_STACK_SIZE);
     mainProcess->ppid = PROCESS_MAIN_PROCESS_RESERVE_PID;

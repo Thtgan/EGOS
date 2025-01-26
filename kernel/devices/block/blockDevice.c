@@ -41,20 +41,16 @@ void blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args)
         }
 
         blockBuffer_initStruct(blockBuffer, BLOCK_BUFFER_DEFAULT_HASH_SIZE, BLOCK_BUFFER_DEFAULT_MAX_BLOCK_NUM, device->granularity);
-        ERROR_GOTO_IF_ERROR(1);
+        ERROR_GOTO_IF_ERROR(0);
 
         blockDevice->blockBuffer = blockBuffer;
     }
 
     return;
     ERROR_FINAL_BEGIN(0);
-    return;
-
-    ERROR_FINAL_BEGIN(1);
     if (blockBuffer != NULL) {
         memory_free(blockBuffer);
     }
-    ERROR_GOTO(0);
 }
 
 void blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n) {
@@ -245,10 +241,10 @@ static void __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* buff
             }
 
             blockDevice_initStruct(partitionDevice, &args);
-            ERROR_GOTO_IF_ERROR(1);
+            ERROR_GOTO_IF_ERROR(0);
 
             device_registerDevice(&partitionDevice->device);
-            ERROR_GOTO_IF_ERROR(1);
+            ERROR_GOTO_IF_ERROR(0);
             
             if (firstBootablePartition == NULL) {
                 firstBootablePartition = partitionDevice;
@@ -258,12 +254,9 @@ static void __blockDevice_doProbePartitions(BlockDevice* blockDevice, void* buff
 
     return;
     ERROR_FINAL_BEGIN(0);
-    return;
-    ERROR_FINAL_BEGIN(1);
     if (partitionDevice != NULL) {
         memory_free(partitionDevice);
     }
-    ERROR_GOTO(0);
 }
 
 static void __blockDevice_partition_read(Device* device, Index64 index, void* buffer, Size n) {

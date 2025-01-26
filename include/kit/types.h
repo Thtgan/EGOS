@@ -54,7 +54,7 @@ typedef Uint32                          Index32;
 typedef Uint16                          Index16;
 typedef Uint8                           Index8;
 
-#define INVALID_INDEX                   -1
+#define INVALID_INDEX                   -1  //TODO: Set size variants
 
 typedef char*                           Cstring;
 typedef const char*                     ConstCstring;

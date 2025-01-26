@@ -18,9 +18,8 @@ OldResult elf_readELF64Header(File* file, ELF64Header* header) {
         return RESULT_ERROR;
     }
 
-    if (fs_fileRead(file, header, sizeof(ELF64Header)) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    fs_fileRead(file, header, sizeof(ELF64Header));
+    ERROR_CHECKPOINT(); //TODO: Temporary solution
 
     if (header->identification.magic != ELF_IDENTIFICATION_MAGIC) {
         // ERROR_CODE_SET(ERROR_CODE_OBJECT_FILE, ERROR_CODE_STATUS_VERIFIVCATION_FAIL);
@@ -63,13 +62,10 @@ OldResult elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64Pr
         return RESULT_ERROR;
     }
 
-    if (fs_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FS_FILE_SEEK_BEGIN) == INVALID_INDEX) {
-        return RESULT_ERROR;
-    }
+    fs_fileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader), FS_FILE_SEEK_BEGIN);
 
-    if (fs_fileRead(file, programHeader, sizeof(ELF64ProgramHeader)) != RESULT_SUCCESS) {
-        return RESULT_ERROR;
-    }
+    fs_fileRead(file, programHeader, sizeof(ELF64ProgramHeader));
+    ERROR_CHECKPOINT(); //TODO: Temporary solution
 
     return RESULT_SUCCESS;
 }
@@ -136,9 +132,8 @@ OldResult elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
         Size readN = algorithms_min64(readRemain, to - from);
         if (readN > 0) {
-            if (fs_fileRead(file, (void*)from, readN) != RESULT_SUCCESS) {
-                return RESULT_ERROR;
-            }
+            fs_fileRead(file, (void*)from, readN);
+            ERROR_CHECKPOINT(); //TODO: Temporary solution
             readRemain -= readN;
         }
 

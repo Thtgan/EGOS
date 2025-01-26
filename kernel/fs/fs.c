@@ -18,10 +18,10 @@ FS* rootFS = NULL, * devFS = NULL;
 BlockDevice devfsBlockDevice;
 
 typedef struct {
-    OldResult  (*init)();
-    OldResult  (*checkType)(BlockDevice* device);
-    OldResult  (*open)(FS* fs, BlockDevice* device);
-    OldResult  (*close)(FS* fs);
+    void  (*init)();
+    bool  (*checkType)(BlockDevice* device);
+    void  (*open)(FS* fs, BlockDevice* device);
+    void  (*close)(FS* fs);
 } __FileSystemSupport;
 
 static __FileSystemSupport _supports[FS_TYPE_NUM] = {
@@ -40,93 +40,112 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
 };
 
 void fs_init() {
+    void* region = NULL;
+
     if (firstBootablePartition == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
     FStype type = fs_checkType(firstBootablePartition);
     if (type == FS_TYPE_UNKNOWN) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
-    if (_supports[type].init() != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
-    }
+    _supports[type].init();
+    ERROR_GOTO_IF_ERROR(0);
 
     rootFS = memory_allocate(sizeof(FS));
-    if (rootFS == NULL || fs_open(rootFS, firstBootablePartition) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+    if (rootFS == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
+
+    fs_open(rootFS, firstBootablePartition);
+    ERROR_GOTO_IF_ERROR(0);
     
-    void* region = paging_convertAddressP2V(memory_allocateFrame(DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE));
+    region = memory_allocateFrame(DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE);
     if (region == NULL) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
+    region = paging_convertAddressP2V(region);
 
     memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCKDEVICE_BLOCK_NUM * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE");
     ERROR_GOTO_IF_ERROR(0);
 
-    if (_supports[FS_TYPE_DEVFS].init() != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
-    }
+    _supports[FS_TYPE_DEVFS].init();
+    ERROR_GOTO_IF_ERROR(0);
 
     devFS = memory_allocate(sizeof(FS));
-    if (devFS == NULL || fs_open(devFS, &devfsBlockDevice) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
+    if (devFS == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
     }
+
+    fs_open(devFS, &devfsBlockDevice);
+    ERROR_GOTO_IF_ERROR(0);
 
     fsEntryIdentifier devMountIdentifier;
-    if (fsEntryIdentifier_initStruct(&devMountIdentifier, "/dev", FS_ENTRY_TYPE_DIRECTORY) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
-    }
+    fsEntryIdentifier_initStruct(&devMountIdentifier, "/dev", FS_ENTRY_TYPE_DIRECTORY);
+    ERROR_GOTO_IF_ERROR(0);
 
-    if (superBlock_rawMount(rootFS->superBlock, &devMountIdentifier, devFS->superBlock, devFS->superBlock->rootDirDesc) != RESULT_SUCCESS) {
-        ERROR_THROW(ERROR_ID_UNKNOWN, 0);  //TODO: Temporary solution
-    }
+    superBlock_rawMount(rootFS->superBlock, &devMountIdentifier, devFS->superBlock, devFS->superBlock->rootDirDesc);
+    ERROR_GOTO_IF_ERROR(0);
 
     return;
     ERROR_FINAL_BEGIN(0);
+    if (rootFS != NULL) {
+        memory_free(rootFS);
+    }
+
+    if (region != NULL) {
+        memory_freeFrame(paging_convertAddressV2P(region));
+    }
+
+    if (devFS != NULL) {
+        memory_free(devFS);
+    }
 }
 
 FStype fs_checkType(BlockDevice* device) {
     for (FStype i = 0; i < FS_TYPE_NUM; ++i) {
-        if (_supports[i].checkType(device) == RESULT_SUCCESS) {
+        if (_supports[i].checkType(device)) {
             return i;
         }
     }
-    return FS_TYPE_NUM;
+    return FS_TYPE_UNKNOWN;
 }
 
-OldResult fs_open(FS* fs, BlockDevice* device) {
+void fs_open(FS* fs, BlockDevice* device) {
     FStype type = fs_checkType(device);
-    return _supports[type].open(fs, device);
+    _supports[type].open(fs, device);
 }
 
-OldResult fs_close(FS* fs) {
-    return _supports[fs->type].close(fs);
+void fs_close(FS* fs) {
+    _supports[fs->type].close(fs);
 }
 
-OldResult fs_fileRead(File* file, void* buffer, Size n) {
-    return fsutil_fileRead(file, buffer, n);
+void fs_fileRead(File* file, void* buffer, Size n) {
+    fsutil_fileRead(file, buffer, n);
 }
 
-OldResult fs_fileWrite(File* file, const void* buffer, Size n) {
-    return fsutil_fileWrite(file, buffer, n);
+void fs_fileWrite(File* file, const void* buffer, Size n) {
+    fsutil_fileWrite(file, buffer, n);
 }
 
 Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
     return fsutil_fileSeek(file, offset, begin);
 }
 
-OldResult fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags) {
-    return fsutil_openfsEntry(rootFS->superBlock, filepath, file, flags);
+void fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags) {
+    fsutil_openfsEntry(rootFS->superBlock, filepath, file, flags);
 }
 
-OldResult fs_fileClose(File* file) {
-    return fsutil_closefsEntry(file);
+void fs_fileClose(File* file) {
+    fsutil_closefsEntry(file);
 }
 
-OldResult fs_fileStat(File* file, FS_fileStat* stat) {
+void fs_fileStat(File* file, FS_fileStat* stat) {
     fsEntryDesc* desc = file->desc;
     iNode* iNode = file->iNode;
     SuperBlock* superBlock = iNode->superBlock;
@@ -162,6 +181,4 @@ OldResult fs_fileStat(File* file, FS_fileStat* stat) {
     stat->accessTime.second = desc->lastAccessTime;
     stat->modifyTime.second = desc->lastModifyTime;
     stat->createTime.second = desc->createTime;
-
-    return RESULT_SUCCESS;
 }
