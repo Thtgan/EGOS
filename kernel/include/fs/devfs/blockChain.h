@@ -1,32 +1,33 @@
 #if !defined(__FS_DEVFS_BLOCKCHAIN_H)
 #define __FS_DEVFS_BLOCKCHAIN_H
 
-typedef struct DevFSblockChains DevFSblockChains;
+typedef struct DevfsBlockChains DevfsBlockChains;
 
-#include<devices/block/blockDevice.h>
 #include<kit/types.h>
 
-#define DEVFS_BLOCKCHAIN_SIZE       64
+#define DEVFS_BLOCK_CHAIN_CAPACITY  64
 
-typedef struct DevFSblockChains {
-    Uint8 nextBlocks[DEVFS_BLOCKCHAIN_SIZE];
+typedef struct DevfsBlockChains {
+    Uint8 nextBlocks[DEVFS_BLOCK_CHAIN_CAPACITY];
     Uint8 firstFreeBlock;
-} DevFSblockChains;
+} DevfsBlockChains;
 
-void devfs_blockChain_initStruct(DevFSblockChains* blockChains);
+void devfs_blockChain_initStruct(DevfsBlockChains* blockChains);
 
-void devfs_blockChain_clearStruct(DevFSblockChains* blockChains);
+void devfs_blockChain_clearStruct(DevfsBlockChains* blockChains);
 
-Index8 devfs_blockChain_get(DevFSblockChains* blockChains, Index8 chainFirst, Index8 index);
+Index8 devfs_blockChain_get(DevfsBlockChains* blockChains, Index8 firstBlock, Index8 index);
 
-Size devfs_blockChain_getChainLength(DevFSblockChains* blockChains, Index8 chainFirst);
+Index8 devfs_blockChain_step(DevfsBlockChains* blockChains, Index8 firstBlock, Size n, Size* continousRet);
 
-Index8 devfs_blockChain_allocChain(DevFSblockChains* blockChains, Size length);
+Size devfs_blockChain_getChainLength(DevfsBlockChains* blockChains, Index8 firstBlock);
 
-void devfs_blockChain_freeChain(DevFSblockChains* blockChains, Index8 chainFirst);
+Index8 devfs_blockChain_allocChain(DevfsBlockChains* blockChains, Size length);
 
-Index8 devfs_blockChain_cutChain(DevFSblockChains* blockChains, Index8 block);
+void devfs_blockChain_freeChain(DevfsBlockChains* blockChains, Index8 firstBlock);
 
-void devfs_blockChain_insertChain(DevFSblockChains* blockChains, Index8 block, Index8 chainFirst);
+Index8 devfs_blockChain_cutChain(DevfsBlockChains* blockChains, Index8 block);
+
+void devfs_blockChain_insertChain(DevfsBlockChains* blockChains, Index8 block, Index8 firstBlock);
 
 #endif // __FS_DEVFS_BLOCKCHAIN_H

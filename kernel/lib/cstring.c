@@ -159,7 +159,7 @@ Cstring cstring_strncpy(Cstring des, ConstCstring src, Size n) {
 }
 
 int cstring_strcmp(ConstCstring str1, ConstCstring str2) {
-    while (*str1 == *str2 && *str1 != '\0') {
+    while (*str1 == *str2 && *str1 != '\0') {   //Not need to check str2 is 0
         ++str1, ++str2;
     }
     
@@ -167,18 +167,26 @@ int cstring_strcmp(ConstCstring str1, ConstCstring str2) {
 }
 
 int cstring_strncmp(ConstCstring str1, ConstCstring str2, Size n) {
-    for (int i = 1; i < n && *str1 == *str2 && *str1 != '\0'; ++i) {
+    for (int i = 1; i < n && *str1 == *str2 && *str1 != '\0'; ++i) {    //Not need to check str2 is 0
         ++str1, ++str2;
     }
     
     return *str1 - *str2;
 }
 
-Size cstring_strhash(ConstCstring str) {
-    Size ret = 0;
-    for (int c = *str; c != 0; c = *(++str)) {
-        ret = (ret << 6) + (ret << 16) - ret + c;
+Object cstring_strhash(ConstCstring str) {
+    Object hash = 0xCBF29CE484222325ull;
+    while (*str) {
+        hash ^= (Object)(*str++);
+        hash *= 0x00000100000001B3ull;
     }
+    return hash;
+}
 
+Size cstring_prefixLen(ConstCstring str1, ConstCstring str2) {
+    Size ret = 0;
+    for (; *str1 == *str2 &&*str1 != '\0'; ++str1, ++str2) {    //Not need to check str2 is 0
+        ++ret;
+    }
     return ret;
 }

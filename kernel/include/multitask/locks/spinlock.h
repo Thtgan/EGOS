@@ -4,6 +4,7 @@
 typedef struct Spinlock Spinlock;
 
 #include<kit/types.h>
+#include<kit/atomic.h>
 
 typedef struct Spinlock {
     volatile Uint8 counter;
@@ -11,6 +12,10 @@ typedef struct Spinlock {
 
 #define SPINLOCK_UNLOCKED   (Spinlock) {1}
 #define SPINLOCK_LOCKED     (Spinlock) {0}
+
+static inline bool spinlock_isLocked(Spinlock* lock) {
+    return ATOMIC_BARRIER_READ(lock->counter) == 0;
+}
 
 /**
  * @brief Lock a spinlock, spinning if lock is already locked

@@ -1,7 +1,7 @@
 #include<usermode/usermode.h>
 
 #include<fs/fcntl.h>
-#include<fs/fsutil.h>
+#include<fs/fs.h>
 #include<fs/inode.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -43,18 +43,20 @@ void usermode_init() {
 }
 
 int usermode_execute(ConstCstring path) {  //TODO: Unstable code
-    fsEntry entry;
-    fs_fileOpen(&entry, path, FCNTL_OPEN_READ_ONLY);
+    File* file = fs_fileOpen(path, FCNTL_OPEN_READ_ONLY);
     ERROR_GOTO_IF_ERROR(0);
 
-    int ret = __usermode_doExecute(path, &entry);
+    int ret = __usermode_doExecute(path, file);
     ERROR_GOTO_IF_ERROR(0);
 
-    fs_fileClose(&entry);
+    fs_fileClose(file);
     ERROR_GOTO_IF_ERROR(0);
 
     return ret;
     ERROR_FINAL_BEGIN(0);
+    if (file != NULL) {
+        fs_fileClose(file);
+    }
     return -1;
 }
 

@@ -3,7 +3,6 @@
 #include<fs/fcntl.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
-#include<fs/fsutil.h>
 #include<kit/types.h>
 #include<memory/memory.h>
 #include<multitask/schedule.h>
@@ -63,11 +62,8 @@ static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
 static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
     File* file = NULL;
 
-    file = memory_allocate(sizeof(File));
-    if (file == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    file = fs_fileOpen(filename, flags);
+    ERROR_GOTO_IF_ERROR(0);
 
     Scheduler* scheduler = schedule_getCurrentScheduler();
     int ret = process_allocateFileSlot(scheduler_getCurrentProcess(scheduler), file);
@@ -76,13 +72,10 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
         ERROR_GOTO(0);
     }
 
-    fs_fileOpen(file, filename, flags);
-    ERROR_GOTO_IF_ERROR(0);
-
     return ret;
     ERROR_FINAL_BEGIN(0);
     if (file != NULL) {
-        memory_free(file);
+        fs_fileClose(file);
     }
     return INVALID_INDEX;
 }
@@ -96,11 +89,11 @@ static int __fsSyscall_close(int fileDescriptor) {
         ERROR_GOTO(0);
     }
 
+    process_releaseFileSlot(process, fileDescriptor);
+
     fs_fileClose(file);
     ERROR_GOTO_IF_ERROR(0);
-
-    process_releaseFileSlot(process, fileDescriptor);
-    memory_free(file);
+    // memory_free(file);
 
     return 0;
     ERROR_FINAL_BEGIN(0);
@@ -108,18 +101,21 @@ static int __fsSyscall_close(int fileDescriptor) {
 }
 
 static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat) {
-    File file;
+    File* file = NULL;
 
-    fs_fileOpen(&file, filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS);
+    file = fs_fileOpen(filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
-    fs_fileStat(&file, stat);
+    fs_fileStat(file, stat);
     ERROR_GOTO_IF_ERROR(0);
 
-    fs_fileClose(&file);
+    fs_fileClose(file);
     ERROR_GOTO_IF_ERROR(0);
 
     return 0;
     ERROR_FINAL_BEGIN(0);
+    if (file != NULL) {
+        fs_fileClose(file);
+    }
     return -1;
 }

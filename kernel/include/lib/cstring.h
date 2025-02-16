@@ -113,11 +113,13 @@ int cstring_strcmp(ConstCstring str1, ConstCstring str2);
 int cstring_strncmp(ConstCstring str1, ConstCstring str2, Size n);
 
 /**
- * @brief Get SDBM hash of the string
+ * @brief Get FNV-1a hash of the string
  * 
  * @param str String to hash
  * @return Size Hash value of string
  */
-Size cstring_strhash(ConstCstring str);
+Object cstring_strhash(ConstCstring str);
+
+Size cstring_prefixLen(ConstCstring str1, ConstCstring str2);
 
 #endif // __LIB_CSTRING_H

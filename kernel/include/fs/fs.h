@@ -18,13 +18,33 @@ typedef struct FS_fileStat FS_fileStat;
 #include<kit/types.h>
 #include<time/time.h>
 
+/**
+ * Basic structure of EGOS VFS
+ * 
+ *                                                       ┌─────┐    
+ *                           ┌──────┐Root┌───────────┐   │Mount│┐   
+ *                           │fsNode│◄───┤Super Block├──►└─────┘│┐  
+ *                           └──┬───┘    └───────────┘    └─────┘│  
+ *                              │              ▲           └─┬───┘  
+ *                              │              │             │      
+ *                              ▼              │             ▼      
+ * ┌────────────┐ Points To  ┌──────┐       ┌──┴──┐      ┌───────┐  
+ * │fsIdentifier├────────┬──►│fsNode│◄──────┤iNode│◄─────┤fsEntry│┐ 
+ * └────────────┘        │   └──┬───┘       └─────┘      └───────┘│┐
+ * ┌────────────┐        │      │                         └───────┘│
+ * │fsIdentifier├────────┘      ▼                          └───────┘
+ * └────────────┘           ┌──────┐                                
+ *                          │fsNode│┐                               
+ *                          └──────┘│┬─────►...                     
+ *                           └──────┘│                              
+ *                            └──────┘                              
+ */
+
 typedef struct FS {
     SuperBlock*     superBlock;
     ConstCstring    name;
     FStype          type;
 } FS;
-
-#define FS_PATH_SEPERATOR '/'
 
 void fs_init();
 
@@ -53,6 +73,10 @@ void fs_close(FS* fs);
 
 //Non-FS codes should use these functions
 
+File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags);
+
+void fs_fileClose(File* file);
+
 void fs_fileRead(File* file, void* buffer, Size n);
 
 void fs_fileWrite(File* file, const void* buffer, Size n);
@@ -63,13 +87,9 @@ void fs_fileWrite(File* file, const void* buffer, Size n);
 
 Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin);
 
-void fs_fileOpen(File* file, ConstCstring filepath, FCNTLopenFlags flags);
-
-void fs_fileClose(File* file);
-
 typedef struct FS_fileStat {
     Uint64 deviceID;
-    Uint64 iNodeID;
+    Uint64 inodeID;
     Uint64 nLink;
     Uint32 mode;
 #define FS_FILE_STAT_MODE_GET_TYPE(__MODE)          TRIM_VAL(EXTRACT_VAL(__MODE, 32, 16, 24), 0x17);

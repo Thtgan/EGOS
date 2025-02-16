@@ -11,7 +11,6 @@ typedef struct ELF64ProgramHeader ELF64ProgramHeader;
 
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/fsEntry.h>
-#include<fs/fsutil.h>
 #include<kit/types.h>
 
 #define ELF_IDENTIFICATION_MAGIC            0x464C457F  //0x7F + "ELF"

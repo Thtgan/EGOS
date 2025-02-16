@@ -64,9 +64,9 @@ void init_initKernel() {
 
         ERROR_CHECKPOINT({
             if (_initFuncs[i].name != NULL) {
-                debug_blowup("Initialization of %s failed\n", _initFuncs[i].name);
+                print_printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
             } else {
-                debug_blowup("Initialization failed");
+                print_printf(TERMINAL_LEVEL_DEBUG, "Initialization failed");
             }
             error_unhandledRecord(error_getCurrentRecord());
         });

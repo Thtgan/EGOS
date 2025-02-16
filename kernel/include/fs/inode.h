@@ -1,6 +1,7 @@
 #if !defined(__FS_INODE_H)
 #define __FS_INODE_H
 
+typedef struct iNodeAttribute iNodeAttribute;
 typedef struct iNode iNode;
 typedef struct iNodeOperations iNodeOperations;
 
@@ -10,51 +11,100 @@ typedef struct iNodeOperations iNodeOperations;
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
 
+#include<fs/fsNode.h>
+#include<structs/refCounter.h>
+#include<multitask/locks/spinlock.h>
+
+typedef struct iNodeAttribute {
+    Uint32 uid; //TODO: Not used yet
+    Uint32 gid; //TODO: Not used yet
+    Uint64 createTime;
+    Uint64 lastAccessTime;
+    Uint64 lastModifyTime;
+} iNodeAttribute;
+
 typedef struct iNode {
     Uint32                  signature;
 #define INODE_SIGNATURE     0x120DE516
-    ID                      iNodeID;
+    ID                      inodeID;
     Size                    sizeInBlock;
+    Size                    sizeInByte;
     SuperBlock*             superBlock;
-    Uint32                  openCnt;
     iNodeOperations*        operations;
-    HashChainNode           openedNode;
-    SinglyLinkedListNode    mountNode;  //TODO: Is this necessary?
 
-    union {
-        Object              specificInfo;
-        Device*             device; //Only for when iNode is mapped to a device
-    };
+    RefCounter              refCounter;
+    HashChainNode           openedNode;
+    fsNode*                 fsNode;
+
+    iNodeAttribute          attribute;
+
+    ID                      deviceID;
+
+    Spinlock                lock;   //TODO: Use mutex?
 } iNode;
 
 typedef struct iNodeOperations {
-    bool (*translateBlockPos)(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
+    void (*readData)(iNode* inode, Index64 begin, void* buffer, Size byteN);
 
-    void (*resize)(iNode* iNode, Size newSizeInByte);
+    void (*writeData)(iNode* inode, Index64 begin, const void* buffer, Size byteN);
+
+    void (*resize)(iNode* inode, Size newSizeInByte);   //TODO: Add Sync
+
+    void (*readAttr)(iNode* inode, iNodeAttribute* attribute);
+
+    void (*writeAttr)(iNode* inode, iNodeAttribute* attribute);
+    //=========== Directory Functions ===========
+    fsNode* (*lookupDirectoryEntry)(iNode* inode, ConstCstring name, bool isDirectory);
+
+    void (*addDirectoryEntry)(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID);
+
+    void (*removeDirectoryEntry)(iNode* inode, ConstCstring name, bool isDirectory);
+
+    void (*renameDirectoryEntry)(iNode* inode, fsNode* entry, iNode* moveTo, ConstCstring newName);
 } iNodeOperations;
 
-static inline bool iNode_rawTranslateBlockPos(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
-    return iNode->operations->translateBlockPos(iNode, vBlockIndex, n, pBlockRanges, rangeN);
+static inline void iNode_rawReadData(iNode* inode, Index64 begin, void* buffer, Size byteN) {
+    inode->operations->readData(inode, begin, buffer, byteN);
 }
 
-static inline void iNode_rawResize(iNode* iNode, Size newSizeInByte) {
-    iNode->operations->resize(iNode, newSizeInByte);
+static inline void iNode_rawWriteData(iNode* inode, Index64 begin, const void* buffer, Size byteN) {
+    inode->operations->writeData(inode, begin, buffer, byteN);
 }
 
-ID iNode_generateID(fsEntryDesc* desc);
-
-static inline bool iNode_isDevice(iNode* iNode) {
-    return TEST_FLAGS(iNode->iNodeID, FLAG64(63));
+static inline void iNode_rawResize(iNode* inode, Size newSizeInByte) {
+    inode->operations->resize(inode, newSizeInByte);
 }
 
-iNode* iNode_openFromOpened(HashTable* table, Index64 blockIndex);
+static inline void iNode_rawReadAttr(iNode* inode, iNodeAttribute* attribute) {
+    inode->operations->readAttr(inode, attribute);
+}
 
-void iNode_addToOpened(HashTable* table, iNode* iNode, Index64 blockIndex);
+static inline void iNode_rawWriteAttr(iNode* inode, iNodeAttribute* attribute) {
+    inode->operations->writeAttr(inode, attribute);
+}
 
-void iNode_removeFromOpened(HashTable* table, Index64 blockIndex);
+static inline fsNode* iNode_rawLookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+    return inode->operations->lookupDirectoryEntry(inode, name, isDirectory);
+}
 
-iNode* iNode_open(SuperBlock* superBlock, fsEntryDesc* desc);
+static inline void iNode_rawAddDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID) {
+    inode->operations->addDirectoryEntry(inode, name, type, attr, deviceID);
+}
 
-void iNode_close(iNode* iNode);
+static inline void iNode_rawRemoveDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+    inode->operations->removeDirectoryEntry(inode, name, isDirectory);
+}
+
+static inline void iNode_rawRenameDirectoryEntry(iNode* inode, fsNode* entry, iNode* moveTo, ConstCstring newName) {
+    inode->operations->renameDirectoryEntry(inode, entry, moveTo, newName);
+}
+
+fsNode* iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory);
+
+void iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory);
+
+void iNode_genericReadAttr(iNode* inode, iNodeAttribute* attribute);
+
+void iNode_genericWriteAttr(iNode* inode, iNodeAttribute* attribute);
 
 #endif // __FS_INODE_H

@@ -1,9 +1,9 @@
 #include<fs/devfs/inode.h>
 
 #include<devices/block/blockDevice.h>
+#include<devices/char/charDevice.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/devfs.h>
-#include<fs/devfs/fsEntry.h>
 #include<fs/inode.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
@@ -11,144 +11,331 @@
 #include<memory/memory.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
+#include<algorithms.h>
 #include<debug.h>
 #include<error.h>
 
-typedef struct {
-    Index8  firstBlock;
-} __DEVFSiNodeInfo;
+static void __devfs_iNode_readData(iNode* inode, Index64 begin, void* buffer, Size byteN);
 
-static bool __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN);
+static void __devfs_iNode_writeData(iNode* inode, Index64 begin, const void* buffer, Size byteN);
 
-static void __devfs_iNode_resize(iNode* iNode, Size newSizeInByte);
+static void __devfs_iNode_doReadData(iNode* inode, Index64 begin, void* buffer, Size byteN, void* blockBuffer);
+
+static void __devfs_iNode_doWriteData(iNode* inode, Index64 begin, const void* buffer, Size byteN, void* blockBuffer);
+
+static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte);
+
+static fsNode* __devfs_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory);
+
+static void __devfs_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID);
+
+static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory);
+
+static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNode* moveTo, ConstCstring newName);
+
+static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* dirEntry);
 
 static iNodeOperations _devfs_iNodeOperations = {
-    .translateBlockPos  = __devfs_iNode_mapBlockPosition,
-    .resize             = __devfs_iNode_resize
+    .readData               = __devfs_iNode_readData,
+    .writeData              = __devfs_iNode_writeData,
+    .resize                 = __devfs_iNode_resize,
+    .readAttr               = iNode_genericReadAttr,
+    .writeAttr              = iNode_genericWriteAttr,
+    .lookupDirectoryEntry   = __devfs_iNode_lookupDirectoryEntry,
+    .addDirectoryEntry      = __devfs_iNode_addDirectoryEntry,
+    .removeDirectoryEntry   = __devfs_iNode_removeDirectoryEntry,
+    .renameDirectoryEntry   = __devfs_iNode_renameDirectoryEntry
 };
 
-void devfs_iNode_open(SuperBlock* superBlock, iNode* iNode, fsEntryDesc* desc) {
-    __DEVFSiNodeInfo* iNodeInfo = NULL;
-    iNodeInfo = memory_allocate(sizeof(__DEVFSiNodeInfo));
-    if (iNodeInfo == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, ID deviceID) {
+    if (cstring_strlen(name) > DEVFS_DIRECTORY_ENTRY_NAME_LIMIT) {
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
-    BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
-    Size granularity = superBlockBlockDevice->device.granularity;
-    if (desc->type == FS_ENTRY_TYPE_DEVICE) {
-        Device* device = device_getDevice(desc->device);
-        if (device == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-
-        iNode->sizeInBlock      = INFINITE;
-        iNode->device           = device;
+    cstring_strcpy(entry->name, name);
+    if (type == FS_ENTRY_TYPE_DEVICE) {
+        entry->device = deviceID;
     } else {
-        DevFSblockChains* chains = &((DEVFSspecificInfo*)superBlock->specificInfo)->chains;
-        iNodeInfo->firstBlock   = DIVIDE_ROUND_DOWN_SHIFT(desc->dataRange.begin, granularity);
-        Uint64 sizeInBlock = devfs_blockChain_getChainLength(chains, iNodeInfo->firstBlock);
-        iNode->sizeInBlock      = sizeInBlock;
-        iNode->specificInfo     = (Object)iNodeInfo;
+        entry->dataRange = (Range) {
+            .begin = INVALID_INDEX,
+            .length = 0
+        };
     }
 
-    iNode->signature        = INODE_SIGNATURE;
-    iNode->iNodeID          = iNode_generateID(desc);
-    iNode->superBlock       = superBlock;
-    iNode->openCnt          = 1;
-    iNode->operations       = &_devfs_iNodeOperations;
-    hashChainNode_initStruct(&iNode->openedNode);
-    singlyLinkedListNode_initStruct(&iNode->mountNode);
+    entry->attribute = EMPTY_FLAGS;
+    switch (type) {
+        case FS_ENTRY_TYPE_DIRECTORY: {
+            SET_FLAG_BACK(entry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY);
+            break;
+        }
+        case FS_ENTRY_TYPE_FILE: {
+            SET_FLAG_BACK(entry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE);
+            break;
+        }
+        case FS_ENTRY_TYPE_DEVICE: {
+            SET_FLAG_BACK(entry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE);
+            break;
+        }
+        default: {
+            ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
+        }
+    }
+    
+    entry->magic = __DEVFS_DIRECTORY_ENTRY_MAGIC;
 
     return;
     ERROR_FINAL_BEGIN(0);
-    if (iNodeInfo != NULL) {
-        memory_free(iNodeInfo);
-    }
 }
 
-void devfs_iNode_close(SuperBlock* superBlock, iNode* iNode) {
-    memory_free((void*)iNode->specificInfo);
+iNodeOperations* devfs_iNode_getOperations() {
+    return &_devfs_iNodeOperations;
 }
 
-//TODO: Seems it needs rework...
-static bool __devfs_iNode_mapBlockPosition(iNode* iNode, Index64* vBlockIndex, Size* n, Range* pBlockRanges, Size rangeN) {
-    DEBUG_ASSERT_SILENT(vBlockIndex != NULL && n != NULL && pBlockRanges != NULL);
-    if (*n == 0) {
-        return true;
-    }
-
-    Index32 vBlockEnd = iNode->sizeInBlock;
-    if (*vBlockIndex + *n > vBlockEnd) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
-
-    __DEVFSiNodeInfo* iNodeInfo = (__DEVFSiNodeInfo*)iNode->specificInfo;
-
-    Index64 offsetInCluster = *vBlockIndex;
-    Index32 current = iNodeInfo->firstBlock;
-    if (current == INVALID_INDEX) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
-
-    DevFSblockChains* blockChains = (DevFSblockChains*)iNode->superBlock->specificInfo;
-    current = devfs_blockChain_get(blockChains, current, offsetInCluster);
-    if (current == INVALID_INDEX) {
+static void __devfs_iNode_readData(iNode* inode, Index64 begin, void* buffer, Size byteN) {
+    void* blockBuffer = NULL;
+    
+    SuperBlock* superBlock = inode->superBlock;
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+    
+    blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
+    if (blockBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    Size remain = *n;
-    for (int i = 0; remain > 0 && i < rangeN; ++i) {
-        Range* range = pBlockRanges + i;
-        range->begin = current;
-        range->length = 0;
+    __devfs_iNode_doReadData(inode, begin, buffer, byteN, blockBuffer);
+    ERROR_GOTO_IF_ERROR(0);
 
-        while (true) {
-            ++range->length;
-            --remain;
+    memory_free(blockBuffer);
 
-            if (remain == 0) {
-                break;
-            }
-
-            Index32 next = blockChains->nextBlocks[current];
-            if (next == INVALID_INDEX) {
-                ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-            }
-            current = next;
-
-            if (next != current + 1) {
-                break;
-            }
-        }
-    }
-
-    *vBlockIndex += (*n - remain);
-    *n = remain;
-
+    return;
     ERROR_FINAL_BEGIN(0);
-    return false;
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
 }
 
-static void __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
-    Index32 freeBlockChain = INVALID_INDEX;
+static void __devfs_iNode_writeData(iNode* inode, Index64 begin, const void* buffer, Size byteN) {
+    void* blockBuffer = NULL;
+    
+    SuperBlock* superBlock = inode->superBlock;
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+    
+    blockBuffer = memory_allocate(POWER_2(targetDevice->granularity));
+    if (blockBuffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
 
-    DevFSblockChains* blockChains = (DevFSblockChains*)iNode->superBlock->specificInfo;
-    __DEVFSiNodeInfo* iNodeInfo = (__DEVFSiNodeInfo*)iNode->specificInfo;
-    Size newSizeInBlock = DIVIDE_ROUND_UP_SHIFT(newSizeInByte, iNode->superBlock->blockDevice->device.granularity), oldSizeInBlock = iNode->sizeInBlock;
+    __devfs_iNode_doWriteData(inode, begin, buffer, byteN, blockBuffer);
+    ERROR_GOTO_IF_ERROR(0);
 
-    if (newSizeInBlock < oldSizeInBlock) {
-        Index32 tail = devfs_blockChain_get(blockChains, iNodeInfo->firstBlock, newSizeInBlock - 1);
-        if (tail == INVALID_INDEX) {
+    memory_free(blockBuffer);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
+}
+
+static void __devfs_iNode_doReadData(iNode* inode, Index64 begin, void* buffer, Size byteN, void* blockBuffer) {
+    SuperBlock* superBlock = inode->superBlock;
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
+    DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
+    
+    fsNode* node = inode->fsNode;
+    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
+
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+
+    if (node->type == FS_ENTRY_TYPE_DEVICE) {
+        targetDevice = device_getDevice(node->inodeID);
+        if (targetDevice == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
+    }
 
-        Index32 cut = devfs_blockChain_cutChain(blockChains, tail);
-        devfs_blockChain_freeChain(blockChains, cut);
+    if (!device_isBlockDevice(targetDevice)) {
+        charDevice_read(HOST_POINTER(targetDevice, CharDevice, device), begin, buffer, byteN);
+        ERROR_GOTO_IF_ERROR(0);
+        return;
+    }
+
+    Size blockSize = POWER_2(targetDevice->granularity);
+
+    Index64 currentBlockIndex = devfs_blockChain_get(blockChains, devfsInode->firstBlock, begin / blockSize);
+    if (currentBlockIndex == INVALID_INDEX) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Size remainByteNum = algorithms_umin64(byteN, inode->sizeInByte - begin);   //TODO: Or fail when access exceeds limitation?
+
+    if (begin % blockSize != 0) {
+        Index64 offsetInBlock = begin % blockSize;
+        blockDevice_readBlocks(targetBlockDevice, currentBlockIndex, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Size byteReadN = algorithms_umin64(remainByteNum, blockSize - offsetInBlock);
+        memory_memcpy(buffer, blockBuffer + offsetInBlock, byteReadN);
+        
+        currentBlockIndex = devfs_blockChain_get(blockChains, currentBlockIndex, 1);
+
+        buffer += byteReadN;
+        remainByteNum -= byteReadN;
+    }
+
+    if (remainByteNum >= blockSize) {
+        Size remainingFullBlockNum = remainByteNum / blockSize;
+        while (remainingFullBlockNum > 0) {
+            DEBUG_ASSERT_SILENT(currentBlockIndex != INVALID_INDEX);
+
+            Size continousBlockLength = 0;
+            currentBlockIndex = devfs_blockChain_step(blockChains, currentBlockIndex, remainingFullBlockNum, &continousBlockLength);
+            DEBUG_ASSERT_SILENT(VALUE_WITHIN(0, remainingFullBlockNum, continousBlockLength, <, <=));
+
+            blockDevice_readBlocks(targetBlockDevice, currentBlockIndex, buffer, continousBlockLength);
+            ERROR_GOTO_IF_ERROR(0);
+
+            buffer += continousBlockLength * blockSize;
+            remainingFullBlockNum -= continousBlockLength;
+        }
+
+        remainByteNum %= blockSize;
+    }
+
+    if (remainByteNum > 0) {
+        DEBUG_ASSERT_SILENT(currentBlockIndex != INVALID_INDEX);
+        blockDevice_readBlocks(targetBlockDevice, currentBlockIndex, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0);
+
+        memory_memcpy(buffer, blockBuffer, remainByteNum);
+
+        remainByteNum = 0;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __devfs_iNode_doWriteData(iNode* inode, Index64 begin, const void* buffer, Size byteN, void* blockBuffer) {
+    SuperBlock* superBlock = inode->superBlock;
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
+    DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
+    
+    fsNode* node = inode->fsNode;
+    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
+
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+
+    if (node->type == FS_ENTRY_TYPE_DEVICE) {
+        targetDevice = device_getDevice(node->inodeID);
+        if (targetDevice == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
+    }
+
+    if (!device_isBlockDevice(targetDevice)) {
+        charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), begin, buffer, byteN);
+        ERROR_GOTO_IF_ERROR(0);
+        return;
+    }
+
+    Size blockSize = POWER_2(targetDevice->granularity);
+
+    Index64 currentBlockIndex = devfs_blockChain_get(blockChains, devfsInode->firstBlock, begin / blockSize);
+    if (currentBlockIndex == INVALID_INDEX) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Size remainByteNum = algorithms_umin64(byteN, inode->sizeInByte - begin);   //TODO: Or fail when access exceeds limitation?
+
+    if (begin % blockSize != 0) {
+        Index64 offsetInBlock = begin % blockSize;
+        blockDevice_readBlocks(targetBlockDevice, currentBlockIndex, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        Size byteReadN = algorithms_umin64(remainByteNum, blockSize - offsetInBlock);
+        memory_memcpy(blockBuffer + offsetInBlock, buffer, byteReadN);
+        
+        blockDevice_writeBlocks(targetBlockDevice, currentBlockIndex, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0);
+
+        currentBlockIndex = devfs_blockChain_get(blockChains, currentBlockIndex, 1);
+
+        buffer += byteReadN;
+        remainByteNum -= byteReadN;
+    }
+
+    if (remainByteNum >= blockSize) {
+        Size remainingFullBlockNum = remainByteNum / blockSize;
+        while (remainingFullBlockNum > 0) {
+            DEBUG_ASSERT_SILENT(currentBlockIndex != INVALID_INDEX);
+
+            Size continousBlockLength = 0;
+            Index8 nextCurrentBlockIndex = devfs_blockChain_step(blockChains, currentBlockIndex, remainingFullBlockNum, &continousBlockLength);
+            DEBUG_ASSERT_SILENT(VALUE_WITHIN(0, remainingFullBlockNum, continousBlockLength, <, <=));
+
+            blockDevice_writeBlocks(targetBlockDevice, currentBlockIndex, buffer, continousBlockLength);
+            ERROR_GOTO_IF_ERROR(0);
+
+            currentBlockIndex = nextCurrentBlockIndex;
+
+            buffer += continousBlockLength * blockSize;
+            remainingFullBlockNum -= continousBlockLength;
+        }
+
+        remainByteNum %= blockSize;
+    }
+
+    if (remainByteNum > 0) {
+        DEBUG_ASSERT_SILENT(currentBlockIndex != INVALID_INDEX);
+        blockDevice_readBlocks(targetBlockDevice, currentBlockIndex, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        memory_memcpy(blockBuffer, buffer, remainByteNum);
+        
+        blockDevice_writeBlocks(targetBlockDevice, currentBlockIndex, blockBuffer, 1);
+        ERROR_GOTO_IF_ERROR(0);
+
+        remainByteNum = 0;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
+    Index32 freeBlockChain = INVALID_INDEX;
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(inode->superBlock, DevfsSuperBlock, superBlock);
+    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
+
+    DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
+    Size newSizeInBlock = DIVIDE_ROUND_UP_SHIFT(newSizeInByte, inode->superBlock->blockDevice->device.granularity), oldSizeInBlock = inode->sizeInBlock;
+    DEBUG_ASSERT_SILENT((oldSizeInBlock == 0) ^ (devfsInode->firstBlock != (Index8)INVALID_INDEX));
+
+    if (newSizeInBlock < oldSizeInBlock) {
+        if (newSizeInBlock == 0) {
+            devfs_blockChain_freeChain(blockChains, devfsInode->firstBlock);
+            devfsInode->firstBlock = INVALID_INDEX;
+        } else {
+            Index32 tail = devfs_blockChain_get(blockChains, devfsInode->firstBlock, newSizeInBlock - 1);
+            if (tail == INVALID_INDEX) {
+                ERROR_ASSERT_ANY();
+                ERROR_GOTO(0);
+            }
+    
+            Index32 cut = devfs_blockChain_cutChain(blockChains, tail);
+            devfs_blockChain_freeChain(blockChains, cut);
+        }
     } else if (newSizeInBlock > oldSizeInBlock) {
         freeBlockChain = devfs_blockChain_allocChain(blockChains, newSizeInBlock - oldSizeInBlock);
         if (freeBlockChain == INVALID_INDEX) {
@@ -156,20 +343,317 @@ static void __devfs_iNode_resize(iNode* iNode, Size newSizeInByte) {
             ERROR_GOTO(0);
         }
 
-        Index32 tail = devfs_blockChain_get(blockChains, iNodeInfo->firstBlock, iNode->sizeInBlock - 1);
-        if (freeBlockChain == INVALID_INDEX) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
+        if (oldSizeInBlock == 0) {
+            devfsInode->firstBlock = freeBlockChain;
+        } else {
+            Index32 tail = devfs_blockChain_get(blockChains, devfsInode->firstBlock, oldSizeInBlock - 1);
+            if (freeBlockChain == INVALID_INDEX) {
+                ERROR_ASSERT_ANY();
+                ERROR_GOTO(0);
+            }
+    
+            devfs_blockChain_insertChain(blockChains, tail, freeBlockChain);
         }
-
-        devfs_blockChain_insertChain(blockChains, tail, freeBlockChain);
     }
 
-    iNode->sizeInBlock = newSizeInBlock;
+    inode->sizeInBlock = newSizeInBlock;
+    inode->sizeInByte = newSizeInByte;
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (freeBlockChain != INVALID_INDEX) {
         devfs_blockChain_freeChain(blockChains, freeBlockChain);
     }
+}
+
+static fsNode* __devfs_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+    DEBUG_ASSERT_SILENT(inode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
+
+    void* blockBuffer = NULL;
+    
+    SuperBlock* superBlock = inode->superBlock;
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+    Size blockSize = POWER_2(targetDevice->granularity);
+    
+    blockBuffer = memory_allocate(blockSize);
+    if (blockBuffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    
+    fsNode* ret = NULL;
+
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
+    DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
+
+    Size currentPointer = 0;
+    DevfsDirectoryEntry dirEntry;
+    while (ret == NULL && currentPointer < inode->sizeInByte) {
+        __devfs_iNode_doReadData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        Uint8 attribute = dirEntry.attribute;
+        if (cstring_strcmp(name, dirEntry.name) == 0 && isDirectory == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+            ret = __devfs_directoryEntryToFSnode(inode, &dirEntry);
+            ERROR_GOTO_IF_ERROR(0);
+            break;
+        }
+        
+        currentPointer += sizeof(DevfsDirectoryEntry);
+    }
+
+    if (ret != NULL) {
+        DEBUG_ASSERT_SILENT(!ret->isInodeActive);
+
+        ID inodeID = fsNode_getInodeID(ret, superBlock);
+        bool isDevice = TEST_FLAGS(dirEntry.attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY);
+        devfsSuperBlock_registerInodeID(devfsSuperBlock, inodeID, ret, isDevice ? INFINITE : dirEntry.dataRange.length, isDevice ? dirEntry.device : dirEntry.dataRange.begin);
+        ERROR_GOTO_IF_ERROR(0);
+    }
+
+    memory_free(blockBuffer);
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
+
+    return NULL;
+}
+
+static void __devfs_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID) {
+    DEBUG_ASSERT_SILENT(inode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
+
+    void* blockBuffer = NULL;
+    
+    SuperBlock* superBlock = inode->superBlock;
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+    Size blockSize = POWER_2(targetDevice->granularity);
+    
+    blockBuffer = memory_allocate(blockSize);
+    if (blockBuffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Size currentPointer = 0;
+    DevfsDirectoryEntry dirEntry;
+    while (currentPointer < inode->sizeInByte) {
+        __devfs_iNode_doReadData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        Uint8 attribute = dirEntry.attribute;
+        if (cstring_strcmp(name, dirEntry.name) == 0 && (type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+            ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
+            break;
+        }
+
+        currentPointer += sizeof(DevfsDirectoryEntry);
+    }
+
+    devfsDirectoryEntry_initStruct(&dirEntry, name, type, deviceID);
+
+    iNode_rawResize(inode, inode->sizeInByte + sizeof(DevfsDirectoryEntry));
+    ERROR_GOTO_IF_ERROR(0);
+
+    __devfs_iNode_doWriteData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+    ERROR_GOTO_IF_ERROR(0);
+
+    memory_free(blockBuffer);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
+}
+
+static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+    DEBUG_ASSERT_SILENT(inode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
+
+    void* blockBuffer = NULL, * remainingData = NULL;
+    
+    SuperBlock* superBlock = inode->superBlock;
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+    Size blockSize = POWER_2(targetDevice->granularity);
+    
+    blockBuffer = memory_allocate(blockSize);
+    if (blockBuffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Size currentPointer = 0;
+    bool found = false;
+    DevfsDirectoryEntry dirEntry;
+    while (currentPointer < inode->sizeInByte) {
+        __devfs_iNode_doReadData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Uint8 attribute = dirEntry.attribute;
+        if (cstring_strcmp(name, dirEntry.name) == 0 && isDirectory == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+            found = true;
+            break;
+        }
+
+        currentPointer += sizeof(DevfsDirectoryEntry);
+    }
+
+    if (!found) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    if (currentPointer + sizeof(DevfsDirectoryEntry) < inode->sizeInByte) {
+        Size remainingDataSize = inode->sizeInByte - currentPointer - sizeof(DevfsDirectoryEntry);
+        remainingData = memory_allocate(remainingDataSize);
+        __devfs_iNode_doReadData(inode, currentPointer, remainingData + sizeof(DevfsDirectoryEntry), remainingDataSize, blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+        __devfs_iNode_doWriteData(inode, currentPointer, remainingData, remainingDataSize, blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+        memory_free(remainingData);
+        remainingData = NULL;
+    }
+
+    iNode_rawResize(inode, inode->sizeInByte - sizeof(DevfsDirectoryEntry));
+    ERROR_GOTO_IF_ERROR(0);
+
+    memory_free(blockBuffer);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
+
+    if (remainingData != NULL) {
+        memory_free(remainingData);
+    }
+}
+
+static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNode* moveTo, ConstCstring newName) {
+    DEBUG_ASSERT_SILENT(inode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(moveTo->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(inode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
+
+    void* blockBuffer = NULL, * remainingData = NULL;
+
+    SuperBlock* superBlock = inode->superBlock;
+    BlockDevice* targetBlockDevice = superBlock->blockDevice;
+    Device* targetDevice = &targetBlockDevice->device;
+    Size blockSize = POWER_2(targetDevice->granularity);
+    
+    blockBuffer = memory_allocate(blockSize);
+    if (blockBuffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    //Remove from inode directory
+    
+    Size currentPointer = 0;
+    bool found = false;
+    DevfsDirectoryEntry dirEntry, transplantDirEntry;
+    while (currentPointer < inode->sizeInByte) {
+        __devfs_iNode_doReadData(inode, currentPointer, &transplantDirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Uint8 attribute = transplantDirEntry.attribute;
+        if (cstring_strcmp(entry->name.data, transplantDirEntry.name) == 0 && (entry->type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+            found = true;
+            break;
+        }
+
+        currentPointer += sizeof(DevfsDirectoryEntry);
+    }
+
+    if (!found) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    if (currentPointer + sizeof(DevfsDirectoryEntry) < inode->sizeInByte) {
+        Size remainingDataSize = inode->sizeInByte - currentPointer - sizeof(DevfsDirectoryEntry);
+        remainingData = memory_allocate(remainingDataSize);
+        __devfs_iNode_doReadData(inode, currentPointer, remainingData + sizeof(DevfsDirectoryEntry), remainingDataSize, blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+        __devfs_iNode_doWriteData(inode, currentPointer, remainingData, remainingDataSize, blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+        memory_free(remainingData);
+        remainingData = NULL;
+    }
+
+    iNode_rawResize(inode, inode->sizeInByte - sizeof(DevfsDirectoryEntry));
+    ERROR_GOTO_IF_ERROR(0);
+
+    //Write to moveTo directory
+
+    currentPointer = 0;
+    found = false;
+    while (currentPointer < moveTo->sizeInByte) {
+        __devfs_iNode_doReadData(moveTo, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Uint8 attribute = dirEntry.attribute;
+        if (cstring_strcmp(entry->name.data, dirEntry.name) == 0 && (entry->type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+            found = true;
+            break;
+        }
+
+        currentPointer += sizeof(DevfsDirectoryEntry);
+    }
+
+    if (found) {
+        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
+    }
+    
+    iNode_rawResize(moveTo, moveTo->sizeInByte + sizeof(DevfsDirectoryEntry));
+    ERROR_GOTO_IF_ERROR(0);
+
+    __devfs_iNode_doWriteData(moveTo, currentPointer, &transplantDirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+    ERROR_GOTO_IF_ERROR(0);
+
+    fsNode_transplant(entry, moveTo->fsNode);
+    ERROR_GOTO_IF_ERROR(0);
+
+    memory_free(blockBuffer);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (blockBuffer != NULL) {
+        memory_free(blockBuffer);
+    }
+
+    if (remainingData != NULL) {
+        memory_free(remainingData);
+    }
+}
+
+static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* dirEntry) {
+    if (dirEntry->magic != __DEVFS_DIRECTORY_ENTRY_MAGIC) {
+        ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
+    }
+
+    fsNode* ret = NULL;
+
+    Uint8 attribute = dirEntry->attribute;
+    if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE)) {
+        ret = fsNode_create(dirEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode);
+    } else if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+        ret = fsNode_create(dirEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode);
+    } else if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE)) {
+        ret = fsNode_create(dirEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode);
+    }
+
+    if (ret == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }

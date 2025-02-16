@@ -244,7 +244,7 @@ static void __vga_fill(DisplayPosition* p1, DisplayPosition* p2, RGBA color) {
     if (y1 > y2) {
         algorithms_swap16(&y1, &y2);
     }
-    y2 = algorithms_umin16(y2, _vga_currentMode->height - 1);
+    y2 = algorithms_umin16(y2, _vga_currentMode->width - 1);
 
     Uint16 width = y2 - y1 + 1;
     DisplayPosition position = {

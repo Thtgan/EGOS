@@ -1,6 +1,5 @@
 #include<debug.h>
 #include<devices/bus/pci.h>
-#include<fs/fsutil.h>
 #include<init.h>
 #include<kit/types.h>
 #include<memory/allocator.h>
@@ -27,9 +26,9 @@ static void printLOGO();
 #include<system/memoryLayout.h>
 #include<memory/paging.h>
 #include<interrupt/IDT.h>
+#include<fs/fs.h>
 #include<fs/fcntl.h>
 #include<fs/fat32/fat32.h>
-#include<fs/fsutil.h>
 #include<fs/fsEntry.h>
 
 #include<memory/memory.h>
@@ -66,8 +65,9 @@ void kernelMain(SystemInfo* info) {
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
     terminalSwitch_switchDisplayMode(DISPLAY_MODE_VGA);
 
-    DisplayPosition p1 = {15, 15};
-    DisplayPosition p2 = {29, 29};
+    VGAmodeHeader* mode = vga_getCurrentMode();
+    DisplayPosition p1 = {0, 0};
+    DisplayPosition p2 = {mode->height - 1, mode->width - 1};
     display_fill(&p1, &p2, 0x00FF00);
 
     // vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_GRAPHIC_200X320_D8), false);
@@ -165,11 +165,13 @@ void kernelMain(SystemInfo* info) {
 
     print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess(scheduler)->name);
 
-    fsEntry entry;
-    fs_fileOpen(&entry, "/dev/null", FCNTL_OPEN_READ_WRITE);
-    ERROR_CHECKPOINT();
-    fs_fileWrite(&entry, "1145141919810", 14);
-    ERROR_CHECKPOINT();
+    {
+        File* file = fs_fileOpen("/dev/null", FCNTL_OPEN_READ_WRITE);
+        ERROR_CHECKPOINT();
+        fs_fileWrite(file, "1145141919810", 14);
+        ERROR_CHECKPOINT();
+        fs_fileClose(file);
+    }
 
     Timer timer1, timer2;
     timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);
@@ -194,16 +196,15 @@ void kernelMain(SystemInfo* info) {
 
 static void printLOGO() {
     char buffer[1024];
-    fsEntry entry;
     FS_fileStat stat;
-    fs_fileOpen(&entry, "/LOGO.txt", FCNTL_OPEN_READ_ONLY);
+    File* file = fs_fileOpen("/LOGO.txt", FCNTL_OPEN_READ_ONLY);
     ERROR_CHECKPOINT();
-    fs_fileSeek(&entry, 0, FS_FILE_SEEK_END);
-    fs_fileStat(&entry, &stat);
+    fs_fileSeek(file, 0, FS_FILE_SEEK_END);
+    fs_fileStat(file, &stat);
     ERROR_CHECKPOINT();
-    fs_fileSeek(&entry, 0, FS_FILE_SEEK_BEGIN);
+    fs_fileSeek(file, 0, FS_FILE_SEEK_BEGIN);
 
-    fs_fileRead(&entry, buffer, stat.size);
+    fs_fileRead(file, buffer, stat.size);
     ERROR_CHECKPOINT();
     buffer[stat.size] = '\0';
     print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
@@ -212,8 +213,8 @@ static void printLOGO() {
     print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.accessTime.second);
     print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.modifyTime.second);
 
-    BlockDevice* device = entry.iNode->superBlock->blockDevice;
-    fs_fileClose(&entry);
+    BlockDevice* device = file->inode->superBlock->blockDevice;
+    fs_fileClose(file);
     ERROR_CHECKPOINT();
     blockDevice_flush(device);
     ERROR_CHECKPOINT();

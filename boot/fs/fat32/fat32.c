@@ -72,12 +72,12 @@ typedef struct {
     Uint32  size;
 } __attribute__((packed)) __FAT32DirectoryEntry;
 
-#define __FAT32_LONG_NAME_ENTRY_FLAG        FLAG8(6)
-#define __FAT32_LONG_NAME_ENTRY_ATTRIBUTE   (__FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_SYSTEM | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_VOLUME_ID)
-#define __FAT32_LONG_NAME_ENTRY_LEN1        5
-#define __FAT32_LONG_NAME_ENTRY_LEN2        6
-#define __FAT32_LONG_NAME_ENTRY_LEN3        2
-#define __FAT32_LONG_NAME_ENTRY_LEN         (__FAT32_LONG_NAME_ENTRY_LEN1 + __FAT32_LONG_NAME_ENTRY_LEN2 + __FAT32_LONG_NAME_ENTRY_LEN3)
+#define __FAT32_DIRECTORY_ENTRY_LONG_NAME_FLAG        FLAG8(6)
+#define __FAT32_DIRECTORY_ENTRY_LONG_NAME_ATTRIBUTE   (__FAT32_DIRECTORY_ENTRY_ATTRIBUTE_READ_ONLY | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_HIDDEN | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_SYSTEM | __FAT32_DIRECTORY_ENTRY_ATTRIBUTE_VOLUME_ID)
+#define __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN1        5
+#define __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN2        6
+#define __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN3        2
+#define __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN         (__FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN1 + __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN2 + __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN3)
 
 typedef struct {
     Uint8   order;
@@ -484,14 +484,14 @@ static OldResult __FAT32ReadDirectoryEntry(Volume* v, Index32 cluster, Index32 o
     *entrySizeInDevice = 0;
 
     Uint8 longNameOrder = 0;
-    if (((__FAT32LongNameEntry*)dummyBuffer)->attribute == __FAT32_LONG_NAME_ENTRY_ATTRIBUTE) {
+    if (((__FAT32LongNameEntry*)dummyBuffer)->attribute == __FAT32_DIRECTORY_ENTRY_LONG_NAME_ATTRIBUTE) {
         __FAT32LongNameEntry* longNameEntry = (__FAT32LongNameEntry*)(dummyBuffer);
 
-        if (TEST_FLAGS_FAIL(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG)) {
+        if (TEST_FLAGS_FAIL(longNameEntry->order, __FAT32_DIRECTORY_ENTRY_LONG_NAME_FLAG)) {
             return RESULT_ERROR;
         }
 
-        longNameOrder = (Uint8)VAL_XOR(longNameEntry->order, __FAT32_LONG_NAME_ENTRY_FLAG);
+        longNameOrder = (Uint8)VAL_XOR(longNameEntry->order, __FAT32_DIRECTORY_ENTRY_LONG_NAME_FLAG);
     }
 
     Size entrySize = longNameOrder * sizeof(__FAT32LongNameEntry) + sizeof(__FAT32DirectoryEntry);
@@ -534,15 +534,15 @@ static OldResult __FAT32ConvertDirectoryEntry(Volume* v, FileSystemEntry* entry,
             __FAT32LongNameEntry* longNameEntry = (__FAT32LongNameEntry*)(entryBuffer + i * sizeof(__FAT32LongNameEntry));
 
             bool notEnd = true;
-            for (int i = 0; i < __FAT32_LONG_NAME_ENTRY_LEN1 && (notEnd &= longNameEntry->doubleBytes1[i] != 0) && nameLength < __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH; ++i) {
+            for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN1 && (notEnd &= longNameEntry->doubleBytes1[i] != 0) && nameLength < __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH; ++i) {
                 nameBuffer[nameLength++] = (char)longNameEntry->doubleBytes1[i];
             }
 
-            for (int i = 0; i < __FAT32_LONG_NAME_ENTRY_LEN2 && (notEnd &= longNameEntry->doubleBytes2[i] != 0) && nameLength < __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH; ++i) {
+            for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN2 && (notEnd &= longNameEntry->doubleBytes2[i] != 0) && nameLength < __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH; ++i) {
                 nameBuffer[nameLength++] = (char)longNameEntry->doubleBytes2[i];
             }
 
-            for (int i = 0; i < __FAT32_LONG_NAME_ENTRY_LEN3 && (notEnd &= longNameEntry->doubleBytes3[i] != 0) && nameLength < __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH; ++i) {
+            for (int i = 0; i < __FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN3 && (notEnd &= longNameEntry->doubleBytes3[i] != 0) && nameLength < __FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH; ++i) {
                 nameBuffer[nameLength++] = (char)longNameEntry->doubleBytes3[i];
             }
 

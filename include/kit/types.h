@@ -48,6 +48,7 @@ typedef Uintptr                         Object;
 #define OBJECT_NULL                     (Object)NULL
 
 typedef Uint64                          ID;
+#define INVALID_ID                      ((ID)-1)
 
 typedef Uint64                          Index64;
 typedef Uint32                          Index32;

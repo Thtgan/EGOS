@@ -3,31 +3,48 @@
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
+#include<fs/fsNode.h>
 #include<fs/superblock.h>
 #include<fs/devfs/blockChain.h>
-#include<fs/devfs/fsEntry.h>
 #include<fs/devfs/inode.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<multitask/locks/spinlock.h>
+#include<structs/hashTable.h>
+#include<structs/refCounter.h>
 #include<error.h>
+
+static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID);
+
+static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock);
+
+static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode);
+
+static void __devfs_superBlock_sync(SuperBlock* superBlock);
+
+static fsEntry* __devfs_superBlock_openFSentry(SuperBlock* superBlock, iNode* inode, FCNTLopenFlags flags);
 
 static ConstCstring __devfs_name = "DEVFS";
 static SuperBlockOperations __devfs_superBlockOperations = {
-    .openInode      = devfs_iNode_open,
-    .closeInode     = devfs_iNode_close,
-    .openfsEntry    = devfs_fsEntry_open,
-    .closefsEntry   = fsEntry_genericClose,
-    .create         = devfs_fsEntry_create,
-    .flush          = devfs_superBlock_flush,
-    .mount          = NULL,
-    .unmount        = NULL
+    .openInode      = __devfs_superBlock_openInode,
+    .openRootInode  = __devfs_superBlock_openRootInode,
+    .closeInode     = __devfs_superBlock_closeInode,
+    .sync           = __devfs_superBlock_sync,
+    .openFSentry    = __devfs_superBlock_openFSentry,
+    .closeFSentry   = superBlock_genericCloseFSentry,
+    .mount          = superBlock_genericMount,
+    .unmount        = superBlock_genericUnmount
+};
+
+static fsEntryOperations _devfs_fsEntryOperations = {
+    .seek           = fsEntry_genericSeek,
+    .read           = fsEntry_genericRead,
+    .write          = fsEntry_genericWrite
 };
 
 //TODO: Capsule these data
 static bool _devfs_opened = false;
-
-static DEVFSspecificInfo _devfs_specificInfo;
 
 void devfs_init() {
 }
@@ -36,52 +53,41 @@ bool devfs_checkType(BlockDevice* blockDevice) {
     return true;  //TODO: Not a good logic
 }
 
-#define __DEVFS_SUPERBLOCK_HASH_BUCKET  16
-#define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((SuperBlock, 1), (fsEntryDesc, 1), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET))
+#define __DEVFS_SUPERBLOCK_HASH_BUCKET  31
+#define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((DevfsSuperBlock, 1), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET))
 
 void devfs_open(FS* fs, BlockDevice* blockDevice) {
     void* batchAllocated = NULL;
     Device* device = &blockDevice->device;
-    if (_devfs_opened || device->capacity != DEVFS_BLOCKDEVICE_BLOCK_NUM) { //TODO: Make it flexible
+    if (_devfs_opened || device->capacity != DEVFS_BLOCK_CHAIN_CAPACITY) { //TODO: Make it flexible
         ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
-    batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);    //TODO: Bad memory management
+    batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);
     if (batchAllocated == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
-        (SuperBlock, superBlock, 1),
-        (fsEntryDesc, desc, 1),
-        (SinglyLinkedList, openedInodeChains, __DEVFS_SUPERBLOCK_HASH_BUCKET),
-        (SinglyLinkedList, mountedChains, __DEVFS_SUPERBLOCK_HASH_BUCKET),
-        (SinglyLinkedList, fsEntryDescChains, __DEVFS_SUPERBLOCK_HASH_BUCKET)
+        (DevfsSuperBlock, devfsSuperBlock, 1),
+        (SinglyLinkedList, openedInodeChains, __DEVFS_SUPERBLOCK_HASH_BUCKET)
     );
 
-    devfs_blockChain_initStruct(&_devfs_specificInfo.chains);
+    SuperBlock* superBlock = &devfsSuperBlock->superBlock;
+    DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
+    devfs_blockChain_initStruct(blockChains);
+
+    hashTable_initStruct(&devfsSuperBlock->inodeIDtable, DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM, devfsSuperBlock->inodeIDtableChains, hashTable_defaultHashFunc);
 
     SuperBlockInitArgs args = {
         .blockDevice        = blockDevice,
         .operations         = &__devfs_superBlockOperations,
-        .rootDirDesc        = desc,
-        .specificInfo       = &_devfs_specificInfo,
         .openedInodeBucket  = __DEVFS_SUPERBLOCK_HASH_BUCKET,
-        .openedInodeChains  = openedInodeChains,
-        .mountedBucket      = __DEVFS_SUPERBLOCK_HASH_BUCKET,
-        .mountedChains      = mountedChains,
-        .fsEntryDescBucket  = __DEVFS_SUPERBLOCK_HASH_BUCKET,
-        .fsEntryDescChains  = fsEntryDescChains
+        .openedInodeChains  = openedInodeChains
     };
 
     superBlock_initStruct(superBlock, &args);
-
-    devfs_fsEntry_buildRootDir(superBlock);
-    ERROR_GOTO_IF_ERROR(0);
-
-    devfs_fsEntry_initRootDir(superBlock);
-    ERROR_GOTO_IF_ERROR(0);
 
     fs->superBlock = superBlock;
     fs->name = __devfs_name;
@@ -101,5 +107,195 @@ void devfs_close(FS* fs) {
     memory_free(fs->superBlock);
 }
 
-void devfs_superBlock_flush(SuperBlock* superBlock) {
+void devfsSuperBlock_registerInodeID(DevfsSuperBlock* superBlock, ID inodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
+    DevfsInodeIDtableNode* iNodeIDtableNode = NULL;
+    iNodeIDtableNode = memory_allocate(sizeof(DevfsInodeIDtableNode));
+    if (iNodeIDtableNode == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    iNodeIDtableNode->node = node;
+    iNodeIDtableNode->sizeInByte = sizeInByte ;
+    iNodeIDtableNode->pointsTo = pointsTo;
+
+    hashTable_insert(&superBlock->inodeIDtable, inodeID, &iNodeIDtableNode->hashNode);
+    ERROR_CHECKPOINT({ 
+            ERROR_GOTO(0);
+        },
+        (ERROR_ID_ALREADY_EXIST, {
+            ERROR_CLEAR();
+            memory_free(iNodeIDtableNode);
+        })
+    );
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    if (iNodeIDtableNode != NULL) {
+        memory_free(iNodeIDtableNode);
+    }
+}
+
+void devfsSuperBlock_unregisterInodeID(DevfsSuperBlock* superBlock, ID inodeID) {
+    HashChainNode* deleted = hashTable_delete(&superBlock->inodeIDtable, inodeID);
+    if (deleted == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    DevfsInodeIDtableNode* node = HOST_POINTER(deleted, DevfsInodeIDtableNode, hashNode);
+    memory_free(node);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
+    DevfsInode* devfsInode = NULL;
+
+    devfsInode = memory_allocate(sizeof(DevfsInode));
+    if (devfsInode == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
+    HashChainNode* found = hashTable_find(&devfsSuperBlock->inodeIDtable, inodeID);
+    if (found == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    iNode* inode = &devfsInode->inode;
+    DevfsInodeIDtableNode* iNodeIDtableNode = HOST_POINTER(found, DevfsInodeIDtableNode, hashNode);
+    if (iNodeIDtableNode->node->type == FS_ENTRY_TYPE_DEVICE) {
+        inode->sizeInByte       = INFINITE;
+        inode->sizeInBlock      = INFINITE;
+        inode->deviceID         = (ID)iNodeIDtableNode->pointsTo;
+    } else {
+        DevfsBlockChains* chains = &devfsSuperBlock->blockChains;
+        devfsInode->firstBlock  = (Index8)iNodeIDtableNode->pointsTo;
+        inode->sizeInByte       = iNodeIDtableNode->sizeInByte;
+        Uint64 sizeInBlock      = devfs_blockChain_getChainLength(chains, devfsInode->firstBlock);
+        inode->sizeInBlock      = sizeInBlock;
+
+        BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
+        DEBUG_ASSERT_SILENT(inode->sizeInByte <= inode->sizeInBlock * POWER_2(superBlockBlockDevice->device.granularity));
+    }
+
+    inode->signature        = INODE_SIGNATURE;
+    inode->inodeID          = inodeID;
+    inode->superBlock       = superBlock;
+    inode->operations       = devfs_iNode_getOperations();
+
+    refCounter_initStruct(&inode->refCounter);
+    hashChainNode_initStruct(&inode->openedNode);
+
+    inode->attribute = (iNodeAttribute) {   //TODO: Ugly code
+        .uid = 0,
+        .gid = 0,
+        .createTime = 0,
+        .lastAccessTime = 0,
+        .lastModifyTime = 0
+    };
+
+    inode->fsNode = iNodeIDtableNode->node;
+    fsNode_refer(inode->fsNode);
+    inode->lock             = SPINLOCK_UNLOCKED;
+
+    return inode;
+    ERROR_FINAL_BEGIN(0);
+    if (devfsInode != NULL) {
+        memory_free(devfsInode);
+    }
+
+    return NULL;
+}
+
+static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
+    DevfsInode* devfsInode = NULL;
+    
+    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL);
+    ID inodeID = fsNode_getInodeID(rootNode, superBlock);
+
+    devfsInode = memory_allocate(sizeof(DevfsInode));
+    if (devfsInode == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    iNode* inode = &devfsInode->inode;
+
+    devfsInode->firstBlock  = INVALID_INDEX;
+    inode->sizeInByte       = 0;
+    inode->sizeInBlock      = 0;
+
+    BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
+    DEBUG_ASSERT_SILENT(inode->sizeInByte <= inode->sizeInBlock * POWER_2(superBlockBlockDevice->device.granularity));
+
+    inode->signature        = INODE_SIGNATURE;
+    inode->inodeID          = inodeID;
+    inode->superBlock       = superBlock;
+    inode->operations       = devfs_iNode_getOperations();
+
+    refCounter_initStruct(&inode->refCounter);
+    hashChainNode_initStruct(&inode->openedNode);
+
+    inode->attribute = (iNodeAttribute) {   //TODO: Ugly code
+        .uid = 0,
+        .gid = 0,
+        .createTime = 0,
+        .lastAccessTime = 0,
+        .lastModifyTime = 0
+    };
+
+    inode->fsNode = rootNode;
+    fsNode_refer(inode->fsNode);
+    inode->lock             = SPINLOCK_UNLOCKED;
+    refCounter_refer(&inode->refCounter);
+
+    rootNode->isInodeActive = true; //TODO: Ugly code
+
+    iNodeAttribute attribute = (iNodeAttribute) {   //TODO: Ugly code
+        .uid = 0,
+        .gid = 0,
+        .createTime = 0,
+        .lastAccessTime = 0,
+        .lastModifyTime = 0
+    };
+
+    for (MajorDeviceID major = device_iterateMajor(DEVICE_INVALID_ID); major != DEVICE_INVALID_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
+        for (Device* device = device_iterateMinor(major, DEVICE_INVALID_ID); device != NULL; device = device_iterateMinor(major, DEVICE_MINOR_FROM_ID(device->id))) {
+            iNode_rawAddDirectoryEntry(inode, device->name, FS_ENTRY_TYPE_DEVICE, &attribute, device->id);
+            ERROR_GOTO_IF_ERROR(0);
+        }
+    }
+
+    return inode;
+    ERROR_FINAL_BEGIN(0);
+    if (devfsInode != NULL) {
+        memory_free(devfsInode);
+    }
+
+    return NULL;
+}
+
+static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
+    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
+    fsNode_release(inode->fsNode);
+
+    memory_free(devfsInode);
+}
+
+static void __devfs_superBlock_sync(SuperBlock* superBlock) {
+
+}
+
+static fsEntry* __devfs_superBlock_openFSentry(SuperBlock* superBlock, iNode* inode, FCNTLopenFlags flags) {
+    fsEntry* ret = superBlock_genericOpenFSentry(superBlock, inode, flags);
+    ERROR_GOTO_IF_ERROR(0);
+
+    ret->operations = &_devfs_fsEntryOperations;
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }

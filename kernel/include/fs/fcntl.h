@@ -15,6 +15,7 @@ typedef Flags32 FCNTLopenFlags;
 #define FCNTL_OPEN_EXTRACL_ACCESS_MODE(__FLAGS) TRIM_VAL_SIMPLE(__FLAGS, 32, 3) //Known as ACCMODE
 #define FCNTL_OPEN_CREAT                        FLAG32(8)   //Create if file not exist
 //TODO: EXCL works on block device without CREAT
+//TODO: Not implemented
 #define FCNTL_OPEN_EXCL                         FLAG32(9)   //Ensure that this call creates the file
 //TODO: Not implemented
 #define FCNTL_OPEN_NOCTTY                       FLAG32(10)  //If file is terminal device, process haver no control on it
@@ -31,7 +32,7 @@ typedef Flags32 FCNTLopenFlags;
 //TODO: Not implemented
 #define FCNTL_OPEN_DIRECT                       FLAG32(18)  //Try to minimize cache effects of the I/O to and from file
 //TODO: Not implemented
-#define FCNTL_OPEN_LARGEFILE                    FLAG32(20)  //WHen file size cannot be represented in 32 bit
+#define FCNTL_OPEN_LARGEFILE                    FLAG32(20)  //When file size cannot be represented in 32 bit
 #define FCNTL_OPEN_DIRECTORY                    FLAG32(21)  //Fail if path is not a file
 //TODO: Not implemented
 #define FCNTL_OPEN_NOFOLLOW                     FLAG32(22)  //Fail if basename of path is symbolic link
