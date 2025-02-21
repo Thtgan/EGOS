@@ -11,12 +11,13 @@ typedef struct FAT32Inode FAT32Inode;
 typedef struct FAT32Inode {
     iNode inode;
     Index32 firstCluster;
+    bool isTouched;
 } FAT32Inode;
 
 void fat32_iNode_init();
 
 iNodeOperations* fat32_iNode_getOperations();
 
-Size fat32_iNode_getDirectorySizeInByte(iNode* inode);
+Size fat32_iNode_touchDirectory(iNode* inode);
 
 #endif // __FS_FAT32_INODE_H

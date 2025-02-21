@@ -13,7 +13,7 @@
 #include<debug.h>
 #include<error.h>
 
-fsNode* iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+fsNode* iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) { //TODO: Shouldn't assume node has known its all children
     fsNode* thisNode = inode->fsNode, * ret = NULL;
     DEBUG_ASSERT_SILENT(thisNode->isInodeActive);
     DEBUG_ASSERT_SILENT(thisNode->inodeID == inode->inodeID);
@@ -22,30 +22,9 @@ fsNode* iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirec
     spinlock_lock(&inode->lock);
 
     ret = fsNode_lookup(thisNode, name, isDirectory);    //Refer 'ret' once
-    if (ret != NULL) {
-        spinlock_unlock(&inode->lock);
-        return ret;
-    }
-
-    ret = iNode_rawLookupDirectoryEntry(inode, name, isDirectory);
-    ERROR_GOTO_IF_ERROR(0);
-
-    if (ret != NULL) {
-        DEBUG_ASSERT_SILENT(fsNode_isAlone(ret));
-        fsNode_refer(ret);  //Refer 'ret' once
-    }
 
     spinlock_unlock(&inode->lock);
     return ret;
-    ERROR_FINAL_BEGIN(0);
-    if (spinlock_isLocked(&inode->lock)) {
-        spinlock_unlock(&inode->lock);
-    }
-
-    if (ret != NULL) {
-        fsNode_release(ret);
-    }
-    return NULL;
 }
 
 void iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {

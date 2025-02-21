@@ -4,6 +4,7 @@
 #include<devices/char/charDevice.h>
 #include<fs/devfs/blockChain.h>
 #include<fs/devfs/devfs.h>
+#include<fs/directoryEntry.h>
 #include<fs/inode.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
@@ -25,7 +26,9 @@ static void __devfs_iNode_doWriteData(iNode* inode, Index64 begin, const void* b
 
 static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte);
 
-static fsNode* __devfs_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory);
+static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret);
+
+static fsEntryType __devfs_iNode_getDirectoryEntryType(DevfsDirectoryEntry* entry);
 
 static void __devfs_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID);
 
@@ -33,7 +36,7 @@ static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
 
 static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNode* moveTo, ConstCstring newName);
 
-static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* dirEntry);
+static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* devfsDirectoryEntry);
 
 static iNodeOperations _devfs_iNodeOperations = {
     .readData               = __devfs_iNode_readData,
@@ -41,13 +44,12 @@ static iNodeOperations _devfs_iNodeOperations = {
     .resize                 = __devfs_iNode_resize,
     .readAttr               = iNode_genericReadAttr,
     .writeAttr              = iNode_genericWriteAttr,
-    .lookupDirectoryEntry   = __devfs_iNode_lookupDirectoryEntry,
     .addDirectoryEntry      = __devfs_iNode_addDirectoryEntry,
     .removeDirectoryEntry   = __devfs_iNode_removeDirectoryEntry,
     .renameDirectoryEntry   = __devfs_iNode_renameDirectoryEntry
 };
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, ID deviceID) {
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, SuperBlock* superBlock, ConstCstring name, fsEntryType type, ID deviceID) {
     if (cstring_strlen(name) > DEVFS_DIRECTORY_ENTRY_NAME_LIMIT) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
@@ -82,6 +84,7 @@ void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring nam
     }
     
     entry->magic = __DEVFS_DIRECTORY_ENTRY_MAGIC;
+    entry->inodeID = superBlock_allocateInodeID(superBlock);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -366,12 +369,13 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
     }
 }
 
-static fsNode* __devfs_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret) {
     DEBUG_ASSERT_SILENT(inode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
 
     void* blockBuffer = NULL;
     
     SuperBlock* superBlock = inode->superBlock;
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     Size blockSize = POWER_2(targetDevice->granularity);
@@ -381,54 +385,70 @@ static fsNode* __devfs_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring nam
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    
-    fsNode* ret = NULL;
-
-    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
-    DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
 
     Size currentPointer = 0;
-    DevfsDirectoryEntry dirEntry;
-    while (ret == NULL && currentPointer < inode->sizeInByte) {
-        __devfs_iNode_doReadData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+    DevfsDirectoryEntry devfsDirectoryEntry;
+    DirectoryEntry directoryEntry;
+    while (currentPointer < inode->sizeInByte) {
+        __devfs_iNode_doReadData(inode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
         ERROR_GOTO_IF_ERROR(0);
+
+        DevfsNodeMetadata* metadata = devfsSuperBlock_getMetadata(devfsSuperBlock, devfsDirectoryEntry.inodeID);
+        if (metadata == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_CLEAR();
+        }
         
-        Uint8 attribute = dirEntry.attribute;
-        if (cstring_strcmp(name, dirEntry.name) == 0 && isDirectory == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
-            ret = __devfs_directoryEntryToFSnode(inode, &dirEntry);
-            ERROR_GOTO_IF_ERROR(0);
+        directoryEntry.name = devfsDirectoryEntry.name;
+        directoryEntry.type = __devfs_iNode_getDirectoryEntryType(&devfsDirectoryEntry);
+        directoryEntry.inodeID = devfsDirectoryEntry.inodeID;
+        if (fsEntryType_isDevice(directoryEntry.type)) {
+            directoryEntry.size = DIRECTORY_ENTRY_SIZE_ANY;
+            directoryEntry.deviceID = devfsDirectoryEntry.device;
+        } else {
+            directoryEntry.size = devfsDirectoryEntry.dataRange.length;
+            directoryEntry.deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY;
+        }
+
+        if (func(&directoryEntry, arg, ret)) {
             break;
         }
+        ERROR_GOTO_IF_ERROR(0);
         
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    if (ret != NULL) {
-        DEBUG_ASSERT_SILENT(!ret->isInodeActive);
-
-        ID inodeID = fsNode_getInodeID(ret, superBlock);
-        bool isDevice = TEST_FLAGS(dirEntry.attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY);
-        devfsSuperBlock_registerInodeID(devfsSuperBlock, inodeID, ret, isDevice ? INFINITE : dirEntry.dataRange.length, isDevice ? dirEntry.device : dirEntry.dataRange.begin);
-        ERROR_GOTO_IF_ERROR(0);
-    }
-
     memory_free(blockBuffer);
 
-    return ret;
+    return;
     ERROR_FINAL_BEGIN(0);
     if (blockBuffer != NULL) {
         memory_free(blockBuffer);
     }
 
-    return NULL;
+    return;
+}
+
+static fsEntryType __devfs_iNode_getDirectoryEntryType(DevfsDirectoryEntry* entry) {
+    if (TEST_FLAGS(entry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+        return FS_ENTRY_TYPE_DIRECTORY;
+    } else if (TEST_FLAGS(entry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE)) {
+        return FS_ENTRY_TYPE_FILE;
+    } else if (TEST_FLAGS(entry->attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE)) {
+        return FS_ENTRY_TYPE_DEVICE;
+    }
+
+    return FS_ENTRY_TYPE_DUMMY;
 }
 
 static void __devfs_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID) {
     DEBUG_ASSERT_SILENT(inode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
 
     void* blockBuffer = NULL;
+    fsNode* node = NULL;
     
     SuperBlock* superBlock = inode->superBlock;
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     Size blockSize = POWER_2(targetDevice->granularity);
@@ -440,13 +460,13 @@ static void __devfs_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsE
     }
 
     Size currentPointer = 0;
-    DevfsDirectoryEntry dirEntry;
+    DevfsDirectoryEntry devfsDirectoryEntry;
     while (currentPointer < inode->sizeInByte) {
-        __devfs_iNode_doReadData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        __devfs_iNode_doReadData(inode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
         ERROR_GOTO_IF_ERROR(0);
         
-        Uint8 attribute = dirEntry.attribute;
-        if (cstring_strcmp(name, dirEntry.name) == 0 && (type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+        Uint8 attribute = devfsDirectoryEntry.attribute;
+        if (cstring_strcmp(name, devfsDirectoryEntry.name) == 0 && (type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
             ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
             break;
         }
@@ -454,21 +474,35 @@ static void __devfs_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsE
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    devfsDirectoryEntry_initStruct(&dirEntry, name, type, deviceID);
+    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, superBlock, name, type, deviceID);
 
     iNode_rawResize(inode, inode->sizeInByte + sizeof(DevfsDirectoryEntry));
     ERROR_GOTO_IF_ERROR(0);
 
-    __devfs_iNode_doWriteData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+    __devfs_iNode_doWriteData(inode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
     ERROR_GOTO_IF_ERROR(0);
+
+    node = __devfs_directoryEntryToFSnode(inode, &devfsDirectoryEntry);
+    if (node == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    bool isDevice = TEST_FLAGS(devfsDirectoryEntry.attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY);
+    devfsSuperBlock_registerMetadata(devfsSuperBlock, devfsDirectoryEntry.inodeID, node, isDevice ? INFINITE : devfsDirectoryEntry.dataRange.length, isDevice ? devfsDirectoryEntry.device : devfsDirectoryEntry.dataRange.begin);
+    ERROR_GOTO_IF_ERROR(0);
+    node = NULL;
 
     memory_free(blockBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
-
     if (blockBuffer != NULL) {
         memory_free(blockBuffer);
+    }
+
+    if (node != NULL) {
+        fsNode_release(node);
     }
 }
 
@@ -478,6 +512,7 @@ static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
     void* blockBuffer = NULL, * remainingData = NULL;
     
     SuperBlock* superBlock = inode->superBlock;
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     Size blockSize = POWER_2(targetDevice->granularity);
@@ -490,13 +525,13 @@ static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
 
     Size currentPointer = 0;
     bool found = false;
-    DevfsDirectoryEntry dirEntry;
+    DevfsDirectoryEntry devfsDirectoryEntry;
     while (currentPointer < inode->sizeInByte) {
-        __devfs_iNode_doReadData(inode, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        __devfs_iNode_doReadData(inode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
         ERROR_GOTO_IF_ERROR(0);
 
-        Uint8 attribute = dirEntry.attribute;
-        if (cstring_strcmp(name, dirEntry.name) == 0 && isDirectory == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+        Uint8 attribute = devfsDirectoryEntry.attribute;
+        if (cstring_strcmp(name, devfsDirectoryEntry.name) == 0 && isDirectory == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
             found = true;
             break;
         }
@@ -507,6 +542,9 @@ static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
     if (!found) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
+
+    devfsSuperBlock_unregisterMetadata(devfsSuperBlock, devfsDirectoryEntry.inodeID);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (currentPointer + sizeof(DevfsDirectoryEntry) < inode->sizeInByte) {
         Size remainingDataSize = inode->sizeInByte - currentPointer - sizeof(DevfsDirectoryEntry);
@@ -557,7 +595,7 @@ static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     
     Size currentPointer = 0;
     bool found = false;
-    DevfsDirectoryEntry dirEntry, transplantDirEntry;
+    DevfsDirectoryEntry devfsDirectoryEntry, transplantDirEntry;
     while (currentPointer < inode->sizeInByte) {
         __devfs_iNode_doReadData(inode, currentPointer, &transplantDirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
         ERROR_GOTO_IF_ERROR(0);
@@ -594,11 +632,11 @@ static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     currentPointer = 0;
     found = false;
     while (currentPointer < moveTo->sizeInByte) {
-        __devfs_iNode_doReadData(moveTo, currentPointer, &dirEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
+        __devfs_iNode_doReadData(moveTo, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry), blockBuffer);
         ERROR_GOTO_IF_ERROR(0);
 
-        Uint8 attribute = dirEntry.attribute;
-        if (cstring_strcmp(entry->name.data, dirEntry.name) == 0 && (entry->type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
+        Uint8 attribute = devfsDirectoryEntry.attribute;
+        if (cstring_strcmp(entry->name.data, devfsDirectoryEntry.name) == 0 && (entry->type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
             found = true;
             break;
         }
@@ -632,26 +670,28 @@ static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     }
 }
 
-static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* dirEntry) {
-    if (dirEntry->magic != __DEVFS_DIRECTORY_ENTRY_MAGIC) {
+static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* devfsDirectoryEntry) {
+    if (devfsDirectoryEntry->magic != __DEVFS_DIRECTORY_ENTRY_MAGIC) {
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
     fsNode* ret = NULL;
 
-    Uint8 attribute = dirEntry->attribute;
+    Uint8 attribute = devfsDirectoryEntry->attribute;
     if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE)) {
-        ret = fsNode_create(dirEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode);
+        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode);
     } else if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
-        ret = fsNode_create(dirEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode);
+        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode);
     } else if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE)) {
-        ret = fsNode_create(dirEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode);
+        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode);
     }
 
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
+
+    ret->inodeID = devfsDirectoryEntry->inodeID;    //TODO: Ugly code
 
     return ret;
     ERROR_FINAL_BEGIN(0);

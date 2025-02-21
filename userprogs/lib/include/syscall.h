@@ -4,13 +4,13 @@
 #include<stdint.h>
 
 typedef enum {
-    SYSCALL_READ,
-    SYSCALL_WRITE,
-    SYSCALL_OPEN,
-    SYSCALL_CLOSE,
-    SYSCALL_STAT,
-    SYSCALL_EXIT,
-    SYSCALL_TEST,
+    SYSCALL_READ    = 0x00,
+    SYSCALL_WRITE   = 0x01,
+    SYSCALL_OPEN    = 0x02,
+    SYSCALL_CLOSE   = 0x03,
+    SYSCALL_STAT    = 0x04,
+    SYSCALL_EXIT    = 0xFD,
+    SYSCALL_TEST    = 0xFE,
     SYSCALL_NUM
 } SyscallType;
 

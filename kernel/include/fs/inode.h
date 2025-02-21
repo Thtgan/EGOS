@@ -5,15 +5,15 @@ typedef struct iNodeAttribute iNodeAttribute;
 typedef struct iNode iNode;
 typedef struct iNodeOperations iNodeOperations;
 
+#include<fs/directoryEntry.h>
 #include<fs/fsEntry.h>
+#include<fs/fsNode.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
-#include<structs/hashTable.h>
-#include<structs/singlyLinkedList.h>
-
-#include<fs/fsNode.h>
-#include<structs/refCounter.h>
 #include<multitask/locks/spinlock.h>
+#include<structs/hashTable.h>
+#include<structs/refCounter.h>
+#include<structs/singlyLinkedList.h>
 
 typedef struct iNodeAttribute {
     Uint32 uid; //TODO: Not used yet
@@ -43,6 +43,8 @@ typedef struct iNode {
     Spinlock                lock;   //TODO: Use mutex?
 } iNode;
 
+typedef bool (*iNodeOperationIterateDirectoryEntryFunc)(DirectoryEntry* entry, Object arg, void* ret);  //TODO: Add mode
+
 typedef struct iNodeOperations {
     void (*readData)(iNode* inode, Index64 begin, void* buffer, Size byteN);
 
@@ -54,7 +56,9 @@ typedef struct iNodeOperations {
 
     void (*writeAttr)(iNode* inode, iNodeAttribute* attribute);
     //=========== Directory Functions ===========
-    fsNode* (*lookupDirectoryEntry)(iNode* inode, ConstCstring name, bool isDirectory);
+    void (*iterateDirectoryEntries)(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret);
+
+    // fsNode* (*lookupDirectoryEntry)(iNode* inode, ConstCstring name, bool isDirectory);
 
     void (*addDirectoryEntry)(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID);
 
@@ -83,8 +87,8 @@ static inline void iNode_rawWriteAttr(iNode* inode, iNodeAttribute* attribute) {
     inode->operations->writeAttr(inode, attribute);
 }
 
-static inline fsNode* iNode_rawLookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
-    return inode->operations->lookupDirectoryEntry(inode, name, isDirectory);
+static inline void iNode_rawIterateDirectoryEntries(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret) {
+    inode->operations->iterateDirectoryEntries(inode, func, arg, ret);
 }
 
 static inline void iNode_rawAddDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID) {

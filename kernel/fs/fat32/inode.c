@@ -1,6 +1,7 @@
 #include<fs/fat32/inode.h>
 
 #include<devices/char/charDevice.h>
+#include<fs/directoryEntry.h>
 #include<fs/fat32/cluster.h>
 #include<fs/fat32/directoryEntry.h>
 #include<fs/fat32/fat32.h>
@@ -26,7 +27,7 @@ static void __fat32_iNode_doWriteData(iNode* inode, Index64 begin, const void* b
 
 static void __fat32_iNode_resize(iNode* inode, Size newSizeInByte);
 
-static fsNode* __fat32_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory);
+static void __fat32_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret);
 
 static void __fat32_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID);
 
@@ -40,7 +41,6 @@ static iNodeOperations _fat32_iNodeOperations = {
     .resize                 = __fat32_iNode_resize,
     .readAttr               = iNode_genericReadAttr,
     .writeAttr              = iNode_genericWriteAttr,
-    .lookupDirectoryEntry   = __fat32_iNode_lookupDirectoryEntry,
     .addDirectoryEntry      = __fat32_iNode_addDirectoryEntry,
     .removeDirectoryEntry   = __fat32_iNode_removeDirectoryEntry,
     .renameDirectoryEntry   = __fat32_iNode_renameDirectoryEntry
@@ -60,8 +60,11 @@ iNodeOperations* fat32_iNode_getOperations() {
     return &_fat32_iNodeOperations;
 }
 
-Size fat32_iNode_getDirectorySizeInByte(iNode* inode) {
+Size fat32_iNode_touchDirectory(iNode* inode) {
+    DEBUG_ASSERT_SILENT(inode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY && !HOST_POINTER(inode, FAT32Inode, inode)->isTouched);
+    
     void* clusterBuffer = NULL, * entriesBuffer = NULL;
+    fsNode* entryFSnode = NULL;
     
     SuperBlock* superBlock = inode->superBlock;
     FAT32SuperBlock* fat32SuperBlock = HOST_POINTER(superBlock, FAT32SuperBlock, superBlock);
@@ -76,22 +79,71 @@ Size fat32_iNode_getDirectorySizeInByte(iNode* inode) {
         ERROR_GOTO(0);
     }
 
+    entriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    if (entriesBuffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    String entryName;   //TODO: Not necessary
+    string_initStruct(&entryName);
+    ERROR_GOTO_IF_ERROR(0);
+    Flags8 attribute = EMPTY_FLAGS;
+    iNodeAttribute inodeAttribute;
+    Index32 firstCluster = 0;
+    Size size = 0;
     Index64 currentPointer = 0;
-    FAT32UnknownTypeEntry tmpEntry;
     while (true) {
-        __fat32_iNode_doReadData(inode, currentPointer, &tmpEntry, sizeof(FAT32UnknownTypeEntry), clusterBuffer);
+        __fat32_iNode_doReadData(inode, currentPointer, entriesBuffer, sizeof(FAT32UnknownTypeEntry), clusterBuffer);
         ERROR_GOTO_IF_ERROR(0);
-        if (fat32_directoryEntry_isEnd(&tmpEntry)) {
+        if (fat32_directoryEntry_isEnd((FAT32UnknownTypeEntry*)entriesBuffer)) {
             break;
         }
+
+        Size entriesLength = fat32_directoryEntry_getEntriesLength(entriesBuffer);
+        __fat32_iNode_doReadData(inode, currentPointer, entriesBuffer, entriesLength, clusterBuffer);
+        ERROR_GOTO_IF_ERROR(0);
         
-        currentPointer += fat32_directoryEntry_getEntriesLength(&tmpEntry);
+        fat32_directoryEntry_parse(entriesBuffer, &entryName, &attribute, &inodeAttribute, &firstCluster, &size);
+
+        fsEntryType type = TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
+        entryFSnode = fsNode_create(entryName.data, type, inode->fsNode);
+        if (entryFSnode == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
+
+        ID entryInodeID = superBlock_allocateInodeID(superBlock);
+        entryFSnode->inodeID = entryInodeID;    //TODO: Ugly code
+
+        fat32SuperBlock_registerMetadata(fat32SuperBlock, firstCluster, entryInodeID, entryFSnode, &inodeAttribute, size);
+        ERROR_GOTO_IF_ERROR(0);
+        entryFSnode = NULL;
+        
+        currentPointer += entriesLength;
     }
+
+    memory_free(clusterBuffer);
+    memory_free(entriesBuffer);
+
+    string_clearStruct(&entryName);
     
     return currentPointer + sizeof(FAT32DirectoryEntry);
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
         memory_free(clusterBuffer);
+    }
+
+    if (entriesBuffer != NULL) {
+        memory_free(entriesBuffer);
+    }
+
+    if (entryFSnode != NULL) {
+        fsNode_release(entryFSnode);
+    }
+
+    if (string_isAvailable(&entryName)) {
+        string_clearStruct(&entryName);
     }
 
     return 0;
@@ -359,7 +411,7 @@ static void __fat32_iNode_resize(iNode* inode, Size newSizeInByte) {
     }
 }
 
-static fsNode* __fat32_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
+static void __fat32_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret) {
     void* clusterBuffer = NULL, * entriesBuffer = NULL;
     
     SuperBlock* superBlock = inode->superBlock;
@@ -381,9 +433,6 @@ static fsNode* __fat32_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring nam
         ERROR_GOTO(0);
     }
 
-    fsNode* ret = NULL;
-
-    bool found = false;
     String entryName;
     string_initStruct(&entryName);
     ERROR_GOTO_IF_ERROR(0);
@@ -393,7 +442,8 @@ static fsNode* __fat32_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring nam
     Size size = 0;
     Index64 currentPointer = 0;
     Size entriesLength = 0;
-    while (!found) {
+    DirectoryEntry directoryEntry;
+    while (true) {
         __fat32_iNode_doReadData(inode, currentPointer, entriesBuffer, sizeof(FAT32UnknownTypeEntry), clusterBuffer);
         ERROR_GOTO_IF_ERROR(0);
         if (fat32_directoryEntry_isEnd(entriesBuffer)) {
@@ -405,32 +455,32 @@ static fsNode* __fat32_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring nam
         ERROR_GOTO_IF_ERROR(0);
         
         fat32_directoryEntry_parse(entriesBuffer, &entryName, &attribute, &inodeAttribute, &firstCluster, &size);
-        if (cstring_strcmp(name, entryName.data) == 0 && isDirectory == TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
-            ret = fsNode_create(entryName.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, inode->fsNode);
-            if (ret == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
-            
-            found = true;
-            break;
+        fsEntryType type = TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
+
+        FAT32NodeMetadata* metadata = fat32SuperBlock_getMetadataFromFirstCluster(fat32SuperBlock, firstCluster);
+        if (metadata == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_CLEAR();
         }
 
-        currentPointer += entriesLength;
-    }
+        directoryEntry.name = entryName.data;
+        directoryEntry.type = type;
+        directoryEntry.inodeID = FAT32_NODE_METADATA_GET_INODE_ID(metadata);
+        directoryEntry.size = size;
+        directoryEntry.deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY;
 
-    if (ret != NULL) {
-        DEBUG_ASSERT_SILENT(!ret->isInodeActive);
-
-        ID inodeID = fsNode_getInodeID(ret, superBlock);
-        fat32SuperBlock_registerInodeID(fat32SuperBlock, inodeID, ret, &inodeAttribute, firstCluster, size);
+        if (func(&directoryEntry, arg, ret)) {
+            break;
+        }
         ERROR_GOTO_IF_ERROR(0);
+
+        currentPointer += entriesLength;
     }
 
     memory_free(clusterBuffer);
     memory_free(entriesBuffer);
 
-    return ret;
+    return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
         memory_free(clusterBuffer);
@@ -439,7 +489,7 @@ static fsNode* __fat32_iNode_lookupDirectoryEntry(iNode* inode, ConstCstring nam
     if (entriesBuffer != NULL) {
         memory_free(entriesBuffer);
     }
-    return NULL;
+    return;
 }
 
 static void __fat32_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID) {
@@ -591,6 +641,11 @@ static void __fat32_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
     if (!found) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
+
+    fat32SuperBlock_unregisterMetadata(fat32SuperBlock, firstCluster);
+    ERROR_GOTO_IF_ERROR(0);
+
+    //TODO: unregister metadata here
 
     DEBUG_ASSERT_SILENT(entriesLength > 0);
     DEBUG_ASSERT_SILENT(currentPointer + entriesLength < inode->sizeInByte);

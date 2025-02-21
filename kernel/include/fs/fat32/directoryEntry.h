@@ -1,5 +1,5 @@
-#if !defined(FS_FAT32_DIRECTORYENTRY_H)
-#define FS_FAT32_DIRECTORYENTRY_H
+#if !defined(__FS_FAT32_DIRECTORYENTRY_H)
+#define __FS_FAT32_DIRECTORYENTRY_H
 
 typedef struct FAT32DirectoryEntry FAT32DirectoryEntry;
 typedef struct FAT32LongNameEntry FAT32LongNameEntry;
@@ -91,4 +91,4 @@ void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nam
 
 Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, ConstCstring name, fsEntryType type, iNodeAttribute* inodeAttribute, Index32 firstCluster, Size size);
 
-#endif // FS_FAT32_DIRECTORYENTRY_H
+#endif // __FS_FAT32_DIRECTORYENTRY_H

@@ -22,18 +22,24 @@ typedef struct FAT32SuperBlock {
 
     Index32             firstFreeCluster;
 
-    HashTable           inodeIDtable;
-#define FAT32_SUPERBLOCK_INODE_TABLE_CHAIN_NUM  31
-    SinglyLinkedList    inodeIDtableChains[FAT32_SUPERBLOCK_INODE_TABLE_CHAIN_NUM];
+    HashTable           metadataTableInodeID;
+    #define FAT32_SUPERBLOCK_INODE_TABLE_CHAIN_NUM  31
+    SinglyLinkedList    metadataTableChainsInodeID[FAT32_SUPERBLOCK_INODE_TABLE_CHAIN_NUM];
+    HashTable           metadataTableFirstCluster;
+    SinglyLinkedList    metadataTableChainsFirstCluster[FAT32_SUPERBLOCK_INODE_TABLE_CHAIN_NUM];
 } FAT32SuperBlock;
 
-typedef struct FAT32InodeIDtableNode {
-    HashChainNode   hashNode;
+typedef struct FAT32NodeMetadata {
+    HashChainNode   hashNodeInodeID;
+    HashChainNode   hashNodeFirstCluster;
     fsNode*         node;
     iNodeAttribute  inodeAttribute;
-    Index64         firstCluster;
     Size            sizeInByte;
-} FAT32InodeIDtableNode;
+    bool            isTouched;
+} FAT32NodeMetadata;
+
+#define FAT32_NODE_METADATA_GET_INODE_ID(__METADATA)        ((__METADATA)->hashNodeInodeID.key)
+#define FAT32_NODE_METADATA_GET_FIRST_CLUSTER(__METADATA)   ((__METADATA)->hashNodeFirstCluster.key)
 
 typedef struct FAT32BPB {
     Uint8   jump[3];
@@ -73,9 +79,13 @@ void fat32_open(FS* fs, BlockDevice* blockDevice);
 
 void fat32_close(FS* fs);
 
-void fat32SuperBlock_registerInodeID(FAT32SuperBlock* superBlock, ID inodeID, fsNode* node, iNodeAttribute* inodeAttribute, Index64 firstCluster, Size sizeInByte);
+void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, Index64 firstCluster, ID inodeID, fsNode* node, iNodeAttribute* inodeAttribute, Size sizeInByte);
 
-void fat32SuperBlock_unregisterInodeID(FAT32SuperBlock* superBlock, ID inodeID);
+void fat32SuperBlock_unregisterMetadata(FAT32SuperBlock* superBlock, Index64 firstCluster);
+
+FAT32NodeMetadata* fat32SuperBlock_getMetadataFromInodeID(FAT32SuperBlock* superBlock, ID inodeID);
+
+FAT32NodeMetadata* fat32SuperBlock_getMetadataFromFirstCluster(FAT32SuperBlock* superBlock, Index64 firstCluster);
 
 Index32 fat32SuperBlock_createFirstCluster(FAT32SuperBlock* superBlock);
 

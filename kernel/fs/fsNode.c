@@ -89,7 +89,7 @@ void fsNode_release(fsNode* node) {
     fsNode* currentNode = node;
 
     while (true) {  //Node is not supposed to be released when its being accessed(e.g. lookup), for it should be refered by a iNode
-        if (!refCounter_derefer(&currentNode->refCounter)) {
+        if (!(refCounter_check(&currentNode->refCounter, 0) || refCounter_derefer(&currentNode->refCounter))) {
             break;
         }
 

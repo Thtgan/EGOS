@@ -78,7 +78,7 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     DevfsBlockChains* blockChains = &devfsSuperBlock->blockChains;
     devfs_blockChain_initStruct(blockChains);
 
-    hashTable_initStruct(&devfsSuperBlock->inodeIDtable, DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM, devfsSuperBlock->inodeIDtableChains, hashTable_defaultHashFunc);
+    hashTable_initStruct(&devfsSuperBlock->metadataTable, DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM, devfsSuperBlock->metadataTableChains, hashTable_defaultHashFunc);
 
     SuperBlockInitArgs args = {
         .blockDevice        = blockDevice,
@@ -107,46 +107,61 @@ void devfs_close(FS* fs) {
     memory_free(fs->superBlock);
 }
 
-void devfsSuperBlock_registerInodeID(DevfsSuperBlock* superBlock, ID inodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
-    DevfsInodeIDtableNode* iNodeIDtableNode = NULL;
-    iNodeIDtableNode = memory_allocate(sizeof(DevfsInodeIDtableNode));
-    if (iNodeIDtableNode == NULL) {
+void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
+    DevfsNodeMetadata* metadata = NULL;
+    metadata = memory_allocate(sizeof(DevfsNodeMetadata));
+    if (metadata == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    iNodeIDtableNode->node = node;
-    iNodeIDtableNode->sizeInByte = sizeInByte ;
-    iNodeIDtableNode->pointsTo = pointsTo;
+    metadata->node = node;
+    metadata->sizeInByte = sizeInByte ;
+    metadata->pointsTo = pointsTo;
 
-    hashTable_insert(&superBlock->inodeIDtable, inodeID, &iNodeIDtableNode->hashNode);
+    fsNode_refer(node);
+
+    hashTable_insert(&superBlock->metadataTable, inodeID, &metadata->hashNode);
     ERROR_CHECKPOINT({ 
             ERROR_GOTO(0);
         },
         (ERROR_ID_ALREADY_EXIST, {
             ERROR_CLEAR();
-            memory_free(iNodeIDtableNode);
+            memory_free(metadata);
         })
     );
 
     return;
     ERROR_FINAL_BEGIN(0);
-    if (iNodeIDtableNode != NULL) {
-        memory_free(iNodeIDtableNode);
+    if (metadata != NULL) {
+        memory_free(metadata);
     }
 }
 
-void devfsSuperBlock_unregisterInodeID(DevfsSuperBlock* superBlock, ID inodeID) {
-    HashChainNode* deleted = hashTable_delete(&superBlock->inodeIDtable, inodeID);
+void devfsSuperBlock_unregisterMetadata(DevfsSuperBlock* superBlock, ID inodeID) {
+    HashChainNode* deleted = hashTable_delete(&superBlock->metadataTable, inodeID);
     if (deleted == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    DevfsInodeIDtableNode* node = HOST_POINTER(deleted, DevfsInodeIDtableNode, hashNode);
+    DevfsNodeMetadata* node = HOST_POINTER(deleted, DevfsNodeMetadata, hashNode);
+
+    fsNode_release(node->node);
     memory_free(node);
 
     return;
     ERROR_FINAL_BEGIN(0);
+}
+
+DevfsNodeMetadata* devfsSuperBlock_getMetadata(DevfsSuperBlock* superBlock, ID inodeID) {
+    HashChainNode* found = hashTable_find(&superBlock->metadataTable, inodeID);
+    if (found == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    return HOST_POINTER(found, DevfsNodeMetadata, hashNode);
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
@@ -159,21 +174,21 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     }
 
     DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
-    HashChainNode* found = hashTable_find(&devfsSuperBlock->inodeIDtable, inodeID);
+    HashChainNode* found = hashTable_find(&devfsSuperBlock->metadataTable, inodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
     iNode* inode = &devfsInode->inode;
-    DevfsInodeIDtableNode* iNodeIDtableNode = HOST_POINTER(found, DevfsInodeIDtableNode, hashNode);
-    if (iNodeIDtableNode->node->type == FS_ENTRY_TYPE_DEVICE) {
+    DevfsNodeMetadata* metadata = HOST_POINTER(found, DevfsNodeMetadata, hashNode);
+    if (metadata->node->type == FS_ENTRY_TYPE_DEVICE) {
         inode->sizeInByte       = INFINITE;
         inode->sizeInBlock      = INFINITE;
-        inode->deviceID         = (ID)iNodeIDtableNode->pointsTo;
+        inode->deviceID         = (ID)metadata->pointsTo;
     } else {
         DevfsBlockChains* chains = &devfsSuperBlock->blockChains;
-        devfsInode->firstBlock  = (Index8)iNodeIDtableNode->pointsTo;
-        inode->sizeInByte       = iNodeIDtableNode->sizeInByte;
+        devfsInode->firstBlock  = (Index8)metadata->pointsTo;
+        inode->sizeInByte       = metadata->sizeInByte;
         Uint64 sizeInBlock      = devfs_blockChain_getChainLength(chains, devfsInode->firstBlock);
         inode->sizeInBlock      = sizeInBlock;
 
@@ -197,7 +212,7 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
         .lastModifyTime = 0
     };
 
-    inode->fsNode = iNodeIDtableNode->node;
+    inode->fsNode           = metadata->node;
     fsNode_refer(inode->fsNode);
     inode->lock             = SPINLOCK_UNLOCKED;
 

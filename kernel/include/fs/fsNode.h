@@ -38,10 +38,6 @@ static inline void fsNode_refer(fsNode* node) {    //Only for inode openging
     refCounter_refer(&node->refCounter);
 }
 
-static inline bool fsNode_isAlone(fsNode* node) {
-    return refCounter_check(&node->refCounter, 0);
-}
-
 ID fsNode_getInodeID(fsNode* node, SuperBlock* superBlock);
 
 iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock);

@@ -4,7 +4,6 @@
 typedef enum {
     FS_ENTRY_TYPE_DUMMY,
     FS_ENTRY_TYPE_FILE,
-    FS_ENTRY_TYPE_NOT_DIRECTORY,
     FS_ENTRY_TYPE_DIRECTORY,
     FS_ENTRY_TYPE_DEVICE
 } fsEntryType;
@@ -25,7 +24,6 @@ typedef fsEntry File;
 #include<kit/types.h>
 #include<structs/string.h>
 #include<structs/hashTable.h>
-
 #include<structs/refCounter.h>
 
 //Real fs entry for process
@@ -44,6 +42,10 @@ typedef struct fsEntryOperations {
 
     void (*write)(fsEntry* entry, const void* buffer, Size n);
 } fsEntryOperations;
+
+static inline bool fsEntryType_isDevice(fsEntryType type) {
+    return type == FS_ENTRY_TYPE_DEVICE;
+}
 
 static inline Index64 fsEntry_rawSeek(fsEntry* entry, Size seekTo) {
     return entry->operations->seek(entry, seekTo);
