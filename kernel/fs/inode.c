@@ -13,6 +13,13 @@
 #include<debug.h>
 #include<error.h>
 
+typedef struct __iNode_lookupIterateFuncArg {
+    ConstCstring name;
+    bool isDirectory;
+} __iNode_lookupIterateFuncArg;
+
+static bool __iNode_lookupIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);
+
 fsNode* iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) { //TODO: Shouldn't assume node has known its all children
     fsNode* thisNode = inode->fsNode, * ret = NULL;
     DEBUG_ASSERT_SILENT(thisNode->isInodeActive);
@@ -21,10 +28,29 @@ fsNode* iNode_lookupDirectoryEntry(iNode* inode, ConstCstring name, bool isDirec
 
     spinlock_lock(&inode->lock);
 
-    ret = fsNode_lookup(thisNode, name, isDirectory);    //Refer 'ret' once
+    ret = fsNode_lookup(thisNode, name, isDirectory);    //Refer 'ret' once (If found)
+    if (ret != NULL) {
+        spinlock_unlock(&inode->lock);
+        return ret;
+    }
+
+    __iNode_lookupIterateFuncArg arg = (__iNode_lookupIterateFuncArg) {
+        .name = name,
+        .isDirectory = isDirectory
+    };
+
+    iNode_rawIterateDirectoryEntries(inode, __iNode_lookupIterateFunc, (Object)&arg, &ret); //Refer 'ret' once
+    ERROR_GOTO_IF_ERROR(0);
+
+    if (ret == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
 
     spinlock_unlock(&inode->lock);
     return ret;
+    ERROR_FINAL_BEGIN(0);
+    spinlock_unlock(&inode->lock);
+    return NULL;
 }
 
 void iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, bool isDirectory) {
@@ -63,4 +89,32 @@ void iNode_genericReadAttr(iNode* inode, iNodeAttribute* attribute) {
 
 void iNode_genericWriteAttr(iNode* inode, iNodeAttribute* attribute) {
     memory_memcpy(&inode->attribute, attribute, sizeof(iNodeAttribute));
+}
+
+static bool __iNode_lookupIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret) {
+    fsNode** nodeRet = (fsNode**)ret;
+    
+    __iNode_lookupIterateFuncArg* lookupArg = (__iNode_lookupIterateFuncArg*)arg;
+    DirectoryEntry entryToMatch = (DirectoryEntry) {
+        .name = lookupArg->name,
+        .type = DIRECTORY_ENTRY_TYPE_ANY,
+        .inodeID = DIRECTORY_ENTRY_INDOE_ID_ANY,
+        .size = DIRECTORY_ENTRY_SIZE_ANY,
+        .mode = DIRECTORY_ENTRY_MODE_ANY,
+        .deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY
+    };
+
+    if (!directoryEntry_isMatch(entry, &entryToMatch, lookupArg->isDirectory)) {
+        return false;
+    }
+
+    *nodeRet = superBlock_getFSnode(inode->superBlock, entry->inodeID); //Refer '*nodeRet' once
+    if (*nodeRet == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    return true;
+    ERROR_FINAL_BEGIN(0);
+    return true;
 }

@@ -26,7 +26,7 @@ static inline void __fsNode_removeChildNode(fsNode* child) {
 
 static void __fsNode_doGetAbsolutePath(fsNode* node, String* pathOut);
 
-fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent) {
+fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID inodeID) {
     DEBUG_ASSERT_SILENT(type != FS_ENTRY_TYPE_DUMMY);
     
     fsNode* ret = memory_allocate(sizeof(fsNode));
@@ -34,7 +34,7 @@ fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-
+    
     string_initStructStr(&ret->name, name);
     ERROR_GOTO_IF_ERROR(0);
     ret->type = type;
@@ -49,7 +49,7 @@ fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent) {
     }
 
     ret->parent = parent;
-    ret->inodeID = INVALID_ID;
+    ret->inodeID = inodeID;
     ret->isInodeActive = false;
 
     ret->lock = SPINLOCK_UNLOCKED;
@@ -110,20 +110,12 @@ void fsNode_release(fsNode* node) {
     }
 }
 
-ID fsNode_getInodeID(fsNode* node, SuperBlock* superBlock) {
-    if (node->inodeID == INVALID_ID) {
-        node->inodeID = superBlock_allocateInodeID(superBlock);
-    }
-
-    return node->inodeID;
-}
-
 iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock) {
     if (node->mountOverwrite != NULL) {
         return node->mountOverwrite;
     }
 
-    iNode* ret = superBlock_openInode(superBlock, fsNode_getInodeID(node, superBlock));
+    iNode* ret = superBlock_openInode(superBlock, node->inodeID);
     ERROR_GOTO_IF_ERROR(0);
     
     return ret;

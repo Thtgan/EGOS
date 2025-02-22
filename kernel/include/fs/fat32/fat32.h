@@ -5,7 +5,9 @@ typedef struct FAT32SuperBlock FAT32SuperBlock;
 typedef struct FAT32BPB FAT32BPB;
 
 #include<devices/block/blockDevice.h>
+#include<fs/directoryEntry.h>
 #include<fs/fs.h>
+#include<fs/fsNode.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
 
@@ -32,9 +34,12 @@ typedef struct FAT32SuperBlock {
 typedef struct FAT32NodeMetadata {
     HashChainNode   hashNodeInodeID;
     HashChainNode   hashNodeFirstCluster;
+    String          name;
+    fsEntryType     type;
     fsNode*         node;
+    fsNode*         belongTo;
     iNodeAttribute  inodeAttribute;
-    Size            sizeInByte;
+    Size            size;
     bool            isTouched;
 } FAT32NodeMetadata;
 
@@ -79,7 +84,7 @@ void fat32_open(FS* fs, BlockDevice* blockDevice);
 
 void fat32_close(FS* fs);
 
-void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, Index64 firstCluster, ID inodeID, fsNode* node, iNodeAttribute* inodeAttribute, Size sizeInByte);
+void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, DirectoryEntry* entry, fsNode* belongTo, Index64 firstCluster, iNodeAttribute* inodeAttribute);
 
 void fat32SuperBlock_unregisterMetadata(FAT32SuperBlock* superBlock, Index64 firstCluster);
 

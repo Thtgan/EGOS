@@ -36,19 +36,16 @@ static void __fat32_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
 static void __fat32_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNode* moveTo, ConstCstring newName);
 
 static iNodeOperations _fat32_iNodeOperations = {
-    .readData               = __fat32_iNode_readData,
-    .writeData              = __fat32_iNode_writeData,
-    .resize                 = __fat32_iNode_resize,
-    .readAttr               = iNode_genericReadAttr,
-    .writeAttr              = iNode_genericWriteAttr,
-    .addDirectoryEntry      = __fat32_iNode_addDirectoryEntry,
-    .removeDirectoryEntry   = __fat32_iNode_removeDirectoryEntry,
-    .renameDirectoryEntry   = __fat32_iNode_renameDirectoryEntry
+    .readData                   = __fat32_iNode_readData,
+    .writeData                  = __fat32_iNode_writeData,
+    .resize                     = __fat32_iNode_resize,
+    .readAttr                   = iNode_genericReadAttr,
+    .writeAttr                  = iNode_genericWriteAttr,
+    .iterateDirectoryEntries    = __fat32_iNode_iterateDirectoryEntries,
+    .addDirectoryEntry          = __fat32_iNode_addDirectoryEntry,
+    .removeDirectoryEntry       = __fat32_iNode_removeDirectoryEntry,
+    .renameDirectoryEntry       = __fat32_iNode_renameDirectoryEntry
 };
-
-typedef struct {
-    Index64 firstCluster;
-} __FAT32iNodeInfo;
 
 static FAT32DirectoryEntry _fat32_iNode_directoryTail;
 
@@ -64,7 +61,6 @@ Size fat32_iNode_touchDirectory(iNode* inode) {
     DEBUG_ASSERT_SILENT(inode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY && !HOST_POINTER(inode, FAT32Inode, inode)->isTouched);
     
     void* clusterBuffer = NULL, * entriesBuffer = NULL;
-    fsNode* entryFSnode = NULL;
     
     SuperBlock* superBlock = inode->superBlock;
     FAT32SuperBlock* fat32SuperBlock = HOST_POINTER(superBlock, FAT32SuperBlock, superBlock);
@@ -106,19 +102,19 @@ Size fat32_iNode_touchDirectory(iNode* inode) {
         
         fat32_directoryEntry_parse(entriesBuffer, &entryName, &attribute, &inodeAttribute, &firstCluster, &size);
 
-        fsEntryType type = TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
-        entryFSnode = fsNode_create(entryName.data, type, inode->fsNode);
-        if (entryFSnode == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-
+        fsEntryType entryType = TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
         ID entryInodeID = superBlock_allocateInodeID(superBlock);
-        entryFSnode->inodeID = entryInodeID;    //TODO: Ugly code
+        DirectoryEntry entry = (DirectoryEntry) {
+            .name = entryName.data,
+            .type = entryType,
+            .inodeID = entryInodeID,
+            .size = size,
+            .mode = DIRECTORY_ENTRY_MODE_ANY,
+            .deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY
+        };
 
-        fat32SuperBlock_registerMetadata(fat32SuperBlock, firstCluster, entryInodeID, entryFSnode, &inodeAttribute, size);
+        fat32SuperBlock_registerMetadata(fat32SuperBlock, &entry, inode->fsNode, firstCluster, &inodeAttribute);
         ERROR_GOTO_IF_ERROR(0);
-        entryFSnode = NULL;
         
         currentPointer += entriesLength;
     }
@@ -136,10 +132,6 @@ Size fat32_iNode_touchDirectory(iNode* inode) {
 
     if (entriesBuffer != NULL) {
         memory_free(entriesBuffer);
-    }
-
-    if (entryFSnode != NULL) {
-        fsNode_release(entryFSnode);
     }
 
     if (string_isAvailable(&entryName)) {
@@ -467,9 +459,10 @@ static void __fat32_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
         directoryEntry.type = type;
         directoryEntry.inodeID = FAT32_NODE_METADATA_GET_INODE_ID(metadata);
         directoryEntry.size = size;
+        directoryEntry.mode = DIRECTORY_ENTRY_MODE_ANY; //TODO: Support for mode
         directoryEntry.deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY;
 
-        if (func(&directoryEntry, arg, ret)) {
+        if (func(inode, &directoryEntry, arg, ret)) {
             break;
         }
         ERROR_GOTO_IF_ERROR(0);

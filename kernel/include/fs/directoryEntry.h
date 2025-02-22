@@ -22,6 +22,6 @@ typedef struct DirectoryEntry {
     ID deviceID;
 } DirectoryEntry;
 
-bool directoryEntry_isMatch(DirectoryEntry* entry1, DirectoryEntry* entry2);
+bool directoryEntry_isMatch(DirectoryEntry* entry1, DirectoryEntry* entry2, bool isAnyMatchingDirectory);
 
 #endif // __FS_DIRECTORYENTRY_H

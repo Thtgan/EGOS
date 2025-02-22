@@ -26,7 +26,7 @@ typedef struct fsNode {
     iNode*          mountOverwrite;
 } fsNode;
 
-fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent);
+fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID inodeID);
 
 fsNode* fsNode_lookup(fsNode* node, ConstCstring name, bool isDirectory);
 
@@ -37,8 +37,6 @@ void fsNode_release(fsNode* node);
 static inline void fsNode_refer(fsNode* node) {    //Only for inode openging
     refCounter_refer(&node->refCounter);
 }
-
-ID fsNode_getInodeID(fsNode* node, SuperBlock* superBlock);
 
 iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock);
 

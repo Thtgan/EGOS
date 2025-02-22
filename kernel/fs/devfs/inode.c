@@ -39,14 +39,15 @@ static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
 static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry* devfsDirectoryEntry);
 
 static iNodeOperations _devfs_iNodeOperations = {
-    .readData               = __devfs_iNode_readData,
-    .writeData              = __devfs_iNode_writeData,
-    .resize                 = __devfs_iNode_resize,
-    .readAttr               = iNode_genericReadAttr,
-    .writeAttr              = iNode_genericWriteAttr,
-    .addDirectoryEntry      = __devfs_iNode_addDirectoryEntry,
-    .removeDirectoryEntry   = __devfs_iNode_removeDirectoryEntry,
-    .renameDirectoryEntry   = __devfs_iNode_renameDirectoryEntry
+    .readData                   = __devfs_iNode_readData,
+    .writeData                  = __devfs_iNode_writeData,
+    .resize                     = __devfs_iNode_resize,
+    .readAttr                   = iNode_genericReadAttr,
+    .writeAttr                  = iNode_genericWriteAttr,
+    .iterateDirectoryEntries    = __devfs_iNode_iterateDirectoryEntries,
+    .addDirectoryEntry          = __devfs_iNode_addDirectoryEntry,
+    .removeDirectoryEntry       = __devfs_iNode_removeDirectoryEntry,
+    .renameDirectoryEntry       = __devfs_iNode_renameDirectoryEntry
 };
 
 void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, SuperBlock* superBlock, ConstCstring name, fsEntryType type, ID deviceID) {
@@ -402,6 +403,7 @@ static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
         directoryEntry.name = devfsDirectoryEntry.name;
         directoryEntry.type = __devfs_iNode_getDirectoryEntryType(&devfsDirectoryEntry);
         directoryEntry.inodeID = devfsDirectoryEntry.inodeID;
+        directoryEntry.mode = DIRECTORY_ENTRY_MODE_ANY; //TODO: Support for mode
         if (fsEntryType_isDevice(directoryEntry.type)) {
             directoryEntry.size = DIRECTORY_ENTRY_SIZE_ANY;
             directoryEntry.deviceID = devfsDirectoryEntry.device;
@@ -410,7 +412,7 @@ static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
             directoryEntry.deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY;
         }
 
-        if (func(&directoryEntry, arg, ret)) {
+        if (func(inode, &directoryEntry, arg, ret)) {
             break;
         }
         ERROR_GOTO_IF_ERROR(0);
@@ -679,19 +681,17 @@ static fsNode* __devfs_directoryEntryToFSnode(iNode* inode, DevfsDirectoryEntry*
 
     Uint8 attribute = devfsDirectoryEntry->attribute;
     if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_FILE)) {
-        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode);
+        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode, devfsDirectoryEntry->inodeID);
     } else if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {
-        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode);
+        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_DIRECTORY, inode->fsNode, devfsDirectoryEntry->inodeID);
     } else if (TEST_FLAGS(attribute, __DEVFS_DIRECTORY_ENTRY_ATTRIBUTE_DEVICE)) {
-        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode);
+        ret = fsNode_create(devfsDirectoryEntry->name, FS_ENTRY_TYPE_FILE, inode->fsNode, devfsDirectoryEntry->inodeID);
     }
 
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-
-    ret->inodeID = devfsDirectoryEntry->inodeID;    //TODO: Ugly code
 
     return ret;
     ERROR_FINAL_BEGIN(0);

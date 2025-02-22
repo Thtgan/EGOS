@@ -33,7 +33,7 @@ typedef enum __FsSyscallDirentType {
 
 static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n);
 
-static bool __fsSyscall_getdentsIterateFunc(DirectoryEntry* entry, Object arg, void* ret);
+static bool __fsSyscall_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);
 
 static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n);
 
@@ -88,7 +88,7 @@ static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n) {
     return -1;
 }
 
-static bool __fsSyscall_getdentsIterateFunc(DirectoryEntry* entry, Object arg, void* ret) {
+static bool __fsSyscall_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret) {
     Size nameLength = cstring_strlen(entry->name);
     Size entryLength = sizeof(__FsSyscallDirectoryEntry) + 2 + nameLength;
     Range* remainingBuffer = (Range*)arg;
@@ -112,7 +112,7 @@ static bool __fsSyscall_getdentsIterateFunc(DirectoryEntry* entry, Object arg, v
             *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_DIRECTORY;
             break;
         }
-        case FS_ENTRY_TYPE_DEVICE: {
+        case FS_ENTRY_TYPE_DEVICE: {    //TODO: Support for block device
             *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_CHARACTER;
             break;
         }

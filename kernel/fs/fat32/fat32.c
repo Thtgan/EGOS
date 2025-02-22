@@ -5,8 +5,10 @@
 #include<fs/fat32/cluster.h>
 #include<fs/fat32/directoryEntry.h>
 #include<fs/fat32/inode.h>
+#include<fs/directoryEntry.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
+#include<fs/fsNode.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -14,8 +16,11 @@
 #include<memory/paging.h>
 #include<multitask/locks/spinlock.h>
 #include<structs/hashTable.h>
+#include<structs/string.h>
 #include<system/pageTable.h>
 #include<error.h>
+
+static fsNode* __fat32_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID);
 
 static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID);
 
@@ -29,6 +34,7 @@ static fsEntry* __fat32_superBlock_openFSentry(SuperBlock* superBlock, iNode* in
 
 static ConstCstring __fat32_name = "FAT32";
 static SuperBlockOperations __fat32_superBlockOperations = {
+    .getFSnode      = __fat32_superBlock_getFSnode,
     .openInode      = __fat32_superBlock_openInode,
     .openRootInode  = __fat32_superBlock_openRootInode,
     .closeInode     = __fat32_superBlock_closeInode,
@@ -209,18 +215,23 @@ void fat32_close(FS* fs) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, Index64 firstCluster, ID inodeID, fsNode* node, iNodeAttribute* inodeAttribute, Size sizeInByte) {
+void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, DirectoryEntry* entry, fsNode* belongTo, Index64 firstCluster, iNodeAttribute* inodeAttribute) {
     FAT32NodeMetadata* metadata = NULL;
     metadata = memory_allocate(sizeof(FAT32NodeMetadata));
     if (metadata == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    metadata->node = node;
-    memory_memcpy(&metadata->inodeAttribute, inodeAttribute, sizeof(iNodeAttribute));
-    metadata->sizeInByte = sizeInByte;
 
-    hashTable_insert(&superBlock->metadataTableInodeID, inodeID, &metadata->hashNodeInodeID);
+    string_initStructStr(&metadata->name, entry->name);
+    ERROR_GOTO_IF_ERROR(0);
+    metadata->type = entry->type;
+    metadata->node = NULL;
+    metadata->belongTo = belongTo;
+    memory_memcpy(&metadata->inodeAttribute, inodeAttribute, sizeof(iNodeAttribute));
+    metadata->size = entry->size;
+
+    hashTable_insert(&superBlock->metadataTableInodeID, entry->inodeID, &metadata->hashNodeInodeID);
     hashTable_insert(&superBlock->metadataTableFirstCluster, firstCluster, &metadata->hashNodeFirstCluster);
     ERROR_CHECKPOINT({ 
             ERROR_GOTO(0);
@@ -308,6 +319,40 @@ Index32 fat32SuperBlock_createFirstCluster(FAT32SuperBlock* superBlock) {
     return INVALID_INDEX;
 }
 
+static fsNode* __fat32_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) {
+    fsNode* node = NULL;
+
+    FAT32SuperBlock* fat32SuperBlock = HOST_POINTER(superBlock, FAT32SuperBlock, superBlock);
+    FAT32NodeMetadata* metadata = fat32SuperBlock_getMetadataFromInodeID(fat32SuperBlock, inodeID);
+    if (metadata == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    DEBUG_ASSERT_SILENT(inodeID == FAT32_NODE_METADATA_GET_INODE_ID(metadata));
+    
+    if (metadata->node != NULL) {
+        fsNode_refer(metadata->node);
+        return metadata->node;
+    }
+
+    node = fsNode_create(metadata->name.data, metadata->type, metadata->belongTo, inodeID);
+    if (node == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    fsNode_refer(node);
+    metadata->node = node;
+
+    return node;
+    ERROR_FINAL_BEGIN(0);
+    if (node != NULL) {
+        fsNode_release(node);
+    }
+    
+    return NULL;
+}
+
 static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     FAT32Inode* fat32Inode = NULL;
 
@@ -330,7 +375,7 @@ static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     fat32Inode->isTouched       = metadata->isTouched;
 
     iNode* inode = &fat32Inode->inode;
-    inode->sizeInByte       = metadata->sizeInByte;
+    inode->sizeInByte       = metadata->size;
     inode->sizeInBlock      = fat32_getClusterChainLength(fat32SuperBlock, fat32Inode->firstCluster) * BPB->sectorPerCluster;
     BlockDevice* superBlockBlockDevice = superBlock->blockDevice;
     DEBUG_ASSERT_SILENT(inode->sizeInByte <= inode->sizeInBlock * POWER_2(superBlockBlockDevice->device.granularity));
@@ -343,8 +388,11 @@ static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     refCounter_initStruct(&inode->refCounter);
     hashChainNode_initStruct(&inode->openedNode);
 
-    inode->fsNode = metadata->node;
-    fsNode_refer(inode->fsNode);
+    inode->fsNode = superBlock_getFSnode(superBlock, inodeID);
+    if (inode->fsNode == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
     
     memory_memcpy(&inode->attribute, &metadata->inodeAttribute, sizeof(iNodeAttribute));
 
@@ -372,8 +420,8 @@ static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
 static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     FAT32Inode* fat32Inode = NULL;
     
-    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL);
-    ID inodeID = fsNode_getInodeID(rootNode, superBlock);
+    ID inodeID = superBlock_allocateInodeID(superBlock);
+    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, inodeID);
 
     fat32Inode = memory_allocate(sizeof(FAT32Inode));
     if (fat32Inode == NULL) {
@@ -430,6 +478,10 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
 }
 
 static void __fat32_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
+    if (!refCounter_derefer(&inode->refCounter)) {
+        return;
+    }
+    
     FAT32Inode* fat32Inode = HOST_POINTER(inode, FAT32Inode, inode);
     fsNode_release(inode->fsNode);
 

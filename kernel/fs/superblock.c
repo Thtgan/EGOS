@@ -44,6 +44,22 @@ ID superBlock_allocateInodeID(SuperBlock* superBlock) {
     return ret;
 }
 
+fsNode* superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) {
+    fsNode* ret = NULL;
+    HashChainNode* found = hashTable_find(&superBlock->openedInode, (Object)inodeID);
+    if (found != NULL) {
+        ret = HOST_POINTER(found, iNode, openedNode)->fsNode;
+        fsNode_refer(ret);  //Refer 'ret' once
+    } else {
+        ret = superBlock_rawGetFSnode(superBlock, inodeID); //Refer 'ret' once
+        ERROR_GOTO_IF_ERROR(0);
+    }
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
 iNode* superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     //TODO: Lock
     iNode* ret = NULL;

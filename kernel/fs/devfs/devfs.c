@@ -15,6 +15,8 @@
 #include<structs/refCounter.h>
 #include<error.h>
 
+static fsNode* __devfs_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID);
+
 static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID);
 
 static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock);
@@ -27,6 +29,7 @@ static fsEntry* __devfs_superBlock_openFSentry(SuperBlock* superBlock, iNode* in
 
 static ConstCstring __devfs_name = "DEVFS";
 static SuperBlockOperations __devfs_superBlockOperations = {
+    .getFSnode      = __devfs_superBlock_getFSnode,
     .openInode      = __devfs_superBlock_openInode,
     .openRootInode  = __devfs_superBlock_openRootInode,
     .closeInode     = __devfs_superBlock_closeInode,
@@ -164,6 +167,21 @@ DevfsNodeMetadata* devfsSuperBlock_getMetadata(DevfsSuperBlock* superBlock, ID i
     return NULL;
 }
 
+static fsNode* __devfs_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) {
+    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
+    HashChainNode* found = hashTable_find(&devfsSuperBlock->metadataTable, inodeID);
+    if (found == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    DevfsNodeMetadata* metadata = HOST_POINTER(found, DevfsNodeMetadata, hashNode);
+    DEBUG_ASSERT_SILENT(metadata->node != NULL);
+    
+    return metadata->node;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
 static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     DevfsInode* devfsInode = NULL;
 
@@ -181,6 +199,7 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
 
     iNode* inode = &devfsInode->inode;
     DevfsNodeMetadata* metadata = HOST_POINTER(found, DevfsNodeMetadata, hashNode);
+    DEBUG_ASSERT_SILENT(metadata->node != NULL);
     if (metadata->node->type == FS_ENTRY_TYPE_DEVICE) {
         inode->sizeInByte       = INFINITE;
         inode->sizeInBlock      = INFINITE;
@@ -228,8 +247,8 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
 static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
     DevfsInode* devfsInode = NULL;
     
-    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL);
-    ID inodeID = fsNode_getInodeID(rootNode, superBlock);
+    ID inodeID = superBlock_allocateInodeID(superBlock);
+    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, inodeID);
 
     devfsInode = memory_allocate(sizeof(DevfsInode));
     if (devfsInode == NULL) {
@@ -294,9 +313,11 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
 }
 
 static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
-    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
-    fsNode_release(inode->fsNode);
+    if (!refCounter_derefer(&inode->refCounter)) {
+        return;
+    }
 
+    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
     memory_free(devfsInode);
 }
 

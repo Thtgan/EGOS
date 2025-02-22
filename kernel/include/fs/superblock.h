@@ -31,6 +31,8 @@ typedef struct SuperBlock {
 } SuperBlock;
 
 typedef struct SuperBlockOperations {
+    fsNode* (*getFSnode)(SuperBlock* superBlock, ID inodeID);
+
     iNode* (*openInode)(SuperBlock* superBlock, ID inodeID);
     iNode* (*openRootInode)(SuperBlock* superBlock);
     void (*closeInode)(SuperBlock* superBlock, iNode* inode);
@@ -57,6 +59,10 @@ typedef struct Mount {
     LinkedListNode  node;
     iNode*          mountedInode;
 } Mount;
+
+static inline fsNode* superBlock_rawGetFSnode(SuperBlock* superBlock, ID inodeID) {
+    return superBlock->operations->getFSnode(superBlock, inodeID);
+}
 
 static inline iNode* superBlock_rawOpenInode(SuperBlock* superBlock, ID inodeID) {
     return superBlock->operations->openInode(superBlock, inodeID);
@@ -93,6 +99,8 @@ static inline void superBlock_rawUnmount(SuperBlock* superBlock, fsIdentifier* m
 void superBlock_initStruct(SuperBlock* superBlock, SuperBlockInitArgs* args);
 
 ID superBlock_allocateInodeID(SuperBlock* superBlock);
+
+fsNode* superBlock_getFSnode(SuperBlock* superBlock, ID inodeID);
 
 iNode* superBlock_openInode(SuperBlock* superBlock, ID inodeID);
 

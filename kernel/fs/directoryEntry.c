@@ -4,13 +4,19 @@
 #include<kit/types.h>
 #include<cstring.h>
 
-bool directoryEntry_isMatch(DirectoryEntry* entry1, DirectoryEntry* entry2) {
+bool directoryEntry_isMatch(DirectoryEntry* entry1, DirectoryEntry* entry2, bool isAnyMatchingDirectory) {
     if (entry1->name != DIRECTORY_ENTRY_NAME_ANY && entry2->name != DIRECTORY_ENTRY_NAME_ANY && cstring_strcmp(entry1->name, entry2->name) != 0) {
         return false;
     }
 
-    if (entry1->type != DIRECTORY_ENTRY_TYPE_ANY && entry2->type != DIRECTORY_ENTRY_TYPE_ANY && entry1->type != entry2->type) {
-        return false;
+    if (entry1->type == DIRECTORY_ENTRY_TYPE_ANY || entry2->type == DIRECTORY_ENTRY_TYPE_ANY) {
+        if (entry1->type != DIRECTORY_ENTRY_TYPE_ANY && entry2->type != DIRECTORY_ENTRY_TYPE_ANY && entry1->type != entry2->type) {
+            return false;
+        } else if (entry1->type == DIRECTORY_ENTRY_TYPE_ANY && (isAnyMatchingDirectory != (entry2->type == FS_ENTRY_TYPE_DIRECTORY))) {
+            return false;
+        } else if (entry2->type == DIRECTORY_ENTRY_TYPE_ANY && (isAnyMatchingDirectory != (entry1->type == FS_ENTRY_TYPE_DIRECTORY))) {
+            return false;
+        }
     }
 
     if (entry1->inodeID != DIRECTORY_ENTRY_INDOE_ID_ANY && entry2->inodeID != DIRECTORY_ENTRY_INDOE_ID_ANY && entry1->inodeID != entry2->inodeID) {

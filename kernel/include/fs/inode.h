@@ -43,7 +43,7 @@ typedef struct iNode {
     Spinlock                lock;   //TODO: Use mutex?
 } iNode;
 
-typedef bool (*iNodeOperationIterateDirectoryEntryFunc)(DirectoryEntry* entry, Object arg, void* ret);  //TODO: Add mode
+typedef bool (*iNodeOperationIterateDirectoryEntryFunc)(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);  //TODO: Add mode
 
 typedef struct iNodeOperations {
     void (*readData)(iNode* inode, Index64 begin, void* buffer, Size byteN);
