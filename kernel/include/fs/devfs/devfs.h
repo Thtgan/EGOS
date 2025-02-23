@@ -7,7 +7,6 @@ typedef struct DevfsNodeMetadata DevfsNodeMetadata;
 #include<devices/block/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsNode.h>
-#include<fs/devfs/blockChain.h>
 #include<fs/devfs/inode.h>
 #include<fs/superblock.h>
 #include<kit/types.h>
@@ -15,7 +14,6 @@ typedef struct DevfsNodeMetadata DevfsNodeMetadata;
 
 typedef struct DevfsSuperBlock {
     SuperBlock          superBlock;
-    DevfsBlockChains    blockChains;
     HashTable           metadataTable;
 #define DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM  31
     SinglyLinkedList    metadataTableChains[DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM];

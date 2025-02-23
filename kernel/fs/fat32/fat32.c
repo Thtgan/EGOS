@@ -59,6 +59,10 @@ void fat32_init() {
 #define __FS_FAT32_MINIMUM_CLUSTER_NUM  65525
 
 bool fat32_checkType(BlockDevice* blockDevice) {
+    if (blockDevice == NULL) {
+        return false;
+    }
+
     void* BPBbuffer = NULL;
 
     Device* device = &blockDevice->device;

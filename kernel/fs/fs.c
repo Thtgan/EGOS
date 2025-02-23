@@ -18,7 +18,6 @@
 #include<fs/path.h>
 
 FS* rootFS = NULL, * devFS = NULL;
-BlockDevice devfsBlockDevice;
 
 typedef struct {
     void  (*init)();
@@ -65,16 +64,6 @@ void fs_init() {
 
     fs_open(rootFS, firstBootablePartition);
     ERROR_GOTO_IF_ERROR(0);
-    
-    region = memory_allocateFrame(DEVFS_BLOCK_CHAIN_CAPACITY * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE / PAGE_SIZE);
-    if (region == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-    region = paging_convertAddressP2V(region);
-
-    memoryBlockDevice_initStruct(&devfsBlockDevice, region, DEVFS_BLOCK_CHAIN_CAPACITY * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE, "DEVFS_BLKDEVICE");
-    ERROR_GOTO_IF_ERROR(0);
 
     _supports[FS_TYPE_DEVFS].init();
     ERROR_GOTO_IF_ERROR(0);
@@ -85,7 +74,7 @@ void fs_init() {
         ERROR_GOTO(0);
     }
 
-    fs_open(devFS, &devfsBlockDevice);
+    fs_open(devFS, NULL);
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;

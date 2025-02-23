@@ -211,7 +211,9 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     for (Uintptr i = PAGE_SIZE; i <= initedStackSize; i += PAGE_SIZE) {
         void* frame = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
         ERROR_ASSERT_NONE();
-        DEBUG_ASSERT_SILENT(frame == NULL);
+        if (frame == NULL) {
+            continue;
+        }
 
         extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
         ERROR_ASSERT_NONE();
