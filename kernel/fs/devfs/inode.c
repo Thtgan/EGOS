@@ -1,7 +1,7 @@
 #include<fs/devfs/inode.h>
 
-#include<devices/block/blockDevice.h>
-#include<devices/char/charDevice.h>
+#include<devices/blockDevice.h>
+#include<devices/charDevice.h>
 #include<fs/devfs/devfs.h>
 #include<fs/directoryEntry.h>
 #include<fs/inode.h>

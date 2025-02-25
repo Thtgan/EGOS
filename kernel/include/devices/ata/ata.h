@@ -14,6 +14,7 @@ typedef struct ATAcommand ATAcommand;
 
 #include<devices/ata/channel.h>
 #include<devices/ata/identifyDevice.h>
+#include<devices/blockDevice.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -65,6 +66,7 @@ typedef struct ATAcommand ATAcommand;
 #define ATA_COMMAND_WRITE_SECTORS                           0x30
 
 typedef struct ATAdevice {
+    BlockDevice blockDevice;
     char name[8];
     ATAdeviceType type;
     Uint8 deviceNumber;

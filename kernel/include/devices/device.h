@@ -50,8 +50,6 @@ typedef struct Device {
     RBtreeNode                  deviceTreeNode;
 
     DeviceOperations*           operations;
-
-    Object                      specificInfo;
 } Device;
 
 static inline bool device_isBlockDevice(Device* device) {
@@ -66,7 +64,6 @@ typedef struct DeviceInitArgs {
     Size                capacity;
     Flags8              flags;
     DeviceOperations*   operations;
-    Object              specificInfo;
 } DeviceInitArgs;
 
 void device_initStruct(Device* device, DeviceInitArgs* args);
@@ -81,20 +78,24 @@ MajorDeviceID device_iterateMajor(MajorDeviceID current);
 
 Device* device_iterateMinor(MajorDeviceID major, MinorDeviceID current);
 
-typedef struct DeviceOperations {
-    void (*read)(Device* device, Index64 index, void* buffer, Size n);
+void device_read(Device* device, Index64 begin, void* buffer, Size n);
 
-    void (*write)(Device* device, Index64 index, const void* buffer, Size n);
+void device_write(Device* device, Index64 begin, const void* buffer, Size n);
+
+typedef struct DeviceOperations {
+    void (*readUnits)(Device* device, Index64 unitIndex, void* buffer, Size unitN);
+
+    void (*writeUnits)(Device* device, Index64 unitIndex, const void* buffer, Size unitN);
 
     void (*flush)(Device* device);
 } DeviceOperations;
 
-static inline void device_rawRead(Device* device, Index64 index, void* buffer, Size n) {
-    device->operations->read(device, index, buffer, n);
+static inline void device_rawReadUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {
+    device->operations->readUnits(device, unitIndex, buffer, unitN);
 }
 
-static inline void device_rawWrite(Device* device, Index64 index, const void* buffer, Size n) {
-    device->operations->write(device, index, buffer, n);
+static inline void device_rawWriteUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN) {
+    device->operations->writeUnits(device, unitIndex, buffer, unitN);
 }
 
 static inline void device_rawFlush(Device* device) {

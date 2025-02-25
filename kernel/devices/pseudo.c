@@ -1,6 +1,6 @@
 #include<devices/pseudo.h>
 
-#include<devices/char/charDevice.h>
+#include<devices/charDevice.h>
 #include<devices/device.h>
 #include<print.h>
 #include<kit/bit.h>
@@ -8,28 +8,28 @@
 #include<kit/util.h>
 #include<error.h>
 
-static void __pseudo_nullDevice_operations_read(Device* device, Index64 index, void* buffer, Size n);
+static void __pseudo_nullDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN);
 
-static void __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n);
+static void __pseudo_nullDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN);
 
 static void __pseudo_nullDevice_operations_flush(Device* device);
 
 static DeviceOperations __pseudo_nullDevice_operations = (DeviceOperations) {
-    .read   = __pseudo_nullDevice_operations_read,
-    .write  = __pseudo_nullDevice_operations_write,
-    .flush  = __pseudo_nullDevice_operations_flush
+    .readUnits  = __pseudo_nullDevice_operations_readUnits,
+    .writeUnits = __pseudo_nullDevice_operations_writeUnits,
+    .flush      = __pseudo_nullDevice_operations_flush
 };
 
-static void __pseudo_stdoutDevice_operations_read(Device* device, Index64 index, void* buffer, Size n);
+static void __pseudo_stdoutDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN);
 
-static void __pseudo_stdoutDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n);
+static void __pseudo_stdoutDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN);
 
 static void __pseudo_stdoutDevice_operations_flush(Device* device);
 
 static DeviceOperations __pseudo_stdoutDevice_operations = (DeviceOperations) {
-    .read   = __pseudo_stdoutDevice_operations_read,
-    .write  = __pseudo_stdoutDevice_operations_write,
-    .flush  = __pseudo_stdoutDevice_operations_flush
+    .readUnits  = __pseudo_stdoutDevice_operations_readUnits,
+    .writeUnits = __pseudo_stdoutDevice_operations_writeUnits,
+    .flush      = __pseudo_stdoutDevice_operations_flush
 };
 
 static CharDevice _pseudo_nullDevice;
@@ -56,8 +56,7 @@ void pseudoDevice_init() {
             .granularity    = 0,
             .capacity       = INFINITE,
             .flags          = EMPTY_FLAGS,
-            .operations     = &__pseudo_nullDevice_operations,
-            .specificInfo   = OBJECT_NULL
+            .operations     = &__pseudo_nullDevice_operations
         },
     };
 
@@ -79,8 +78,7 @@ void pseudoDevice_init() {
             .granularity    = 0,
             .capacity       = INFINITE,
             .operations     = &__pseudo_stdoutDevice_operations,
-            .flags          = EMPTY_FLAGS,
-            .specificInfo   = OBJECT_NULL
+            .flags          = EMPTY_FLAGS
         },
     };
 
@@ -92,20 +90,20 @@ void pseudoDevice_init() {
     ERROR_FINAL_BEGIN(0);
 }
 
-static void __pseudo_nullDevice_operations_read(Device* device, Index64 index, void* buffer, Size n) {
+static void __pseudo_nullDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {
     PTR_TO_VALUE(8, buffer) = 0;
 }
 
-static void __pseudo_nullDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
+static void __pseudo_nullDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN) {
 }
 
 static void __pseudo_nullDevice_operations_flush(Device* device) {
 }
 
-static void __pseudo_stdoutDevice_operations_read(Device* device, Index64 index, void* buffer, Size n) {
+static void __pseudo_stdoutDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {
 }
 
-static void __pseudo_stdoutDevice_operations_write(Device* device, Index64 index, const void* buffer, Size n) {
+static void __pseudo_stdoutDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN) {
     print_printf(TERMINAL_LEVEL_OUTPUT, buffer);
 }
 

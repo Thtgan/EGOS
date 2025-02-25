@@ -1,4 +1,4 @@
-#include<devices/char/charDevice.h>
+#include<devices/charDevice.h>
 
 #include<devices/device.h>
 #include<kit/oop.h>
@@ -11,11 +11,11 @@ void charDevice_initStruct(CharDevice* device, CharDeviceInitArgs* args) {
 }
 
 void charDevice_read(CharDevice* device, Index64 index, void* buffer, Size n) {
-    device_rawRead(&device->device, index, buffer, n);
+    device_rawReadUnits(&device->device, index, buffer, n);
 }
 
 void charDevice_write(CharDevice* device, Index64 index, const void* buffer, Size n) {
-    device_rawWrite(&device->device, index, buffer, n);
+    device_rawWriteUnits(&device->device, index, buffer, n);
 }
 
 void charDevice_flush(CharDevice* device) {

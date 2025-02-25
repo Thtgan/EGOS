@@ -1,5 +1,5 @@
-#if !defined(__DEVICES_CHAR_CHARDEVICE_H)
-#define __DEVICES_CHAR_CHARDEVICE_H
+#if !defined(__DEVICES_CHARDEVICE_H)
+#define __DEVICES_CHARDEVICE_H
 
 typedef struct CharDeviceInitArgs CharDeviceInitArgs;
 typedef struct CharDevice CharDevice;
@@ -24,4 +24,4 @@ void charDevice_write(CharDevice* device, Index64 index, const void* buffer, Siz
 
 void charDevice_flush(CharDevice* device);
 
-#endif // __DEVICES_CHAR_CHARDEVICE_H
+#endif // __DEVICES_CHARDEVICE_H

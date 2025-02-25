@@ -1,6 +1,6 @@
 #include<fs/devfs/devfs.h>
 
-#include<devices/block/blockDevice.h>
+#include<devices/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<fs/fsNode.h>

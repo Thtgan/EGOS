@@ -1,7 +1,7 @@
 #include<fs/fs.h>
 
-#include<devices/block/blockDevice.h>
-#include<devices/block/memoryBlockDevice.h>
+#include<devices/blockDevice.h>
+#include<devices/memoryBlockDevice.h>
 #include<devices/terminal/terminalSwitch.h>
 #include<fs/devfs/devfs.h>
 #include<fs/fat32/fat32.h>

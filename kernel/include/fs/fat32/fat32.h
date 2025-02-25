@@ -4,7 +4,7 @@
 typedef struct FAT32SuperBlock FAT32SuperBlock;
 typedef struct FAT32BPB FAT32BPB;
 
-#include<devices/block/blockDevice.h>
+#include<devices/blockDevice.h>
 #include<fs/directoryEntry.h>
 #include<fs/fs.h>
 #include<fs/fsNode.h>

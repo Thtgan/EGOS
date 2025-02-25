@@ -1,6 +1,6 @@
 #include<fs/fat32/inode.h>
 
-#include<devices/char/charDevice.h>
+#include<devices/charDevice.h>
 #include<fs/directoryEntry.h>
 #include<fs/fat32/cluster.h>
 #include<fs/fat32/directoryEntry.h>

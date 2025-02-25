@@ -1,11 +1,11 @@
-#if !defined(__DEVICES_BLOCK_BLOCKDEVICE_H)
-#define __DEVICES_BLOCK_BLOCKDEVICE_H
+#if !defined(__DEVICES_BLOCKDEVICE_H)
+#define __DEVICES_BLOCKDEVICE_H
 
 typedef struct BlockDeviceInitArgs BlockDeviceInitArgs;
 typedef struct BlockDevice BlockDevice;
 
 #include<devices/device.h>
-#include<devices/block/blockBuffer.h>
+#include<devices/blockBuffer.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 
@@ -29,6 +29,4 @@ void blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const
 
 void blockDevice_flush(BlockDevice* blockDevice);
 
-void blockDevice_probePartitions(BlockDevice* blockDevice);
-
-#endif // __DEVICES_BLOCK_BLOCKDEVICE_H
+#endif // __DEVICES_BLOCKDEVICE_H

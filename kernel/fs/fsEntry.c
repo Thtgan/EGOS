@@ -2,8 +2,8 @@
 
 #include<algorithms.h>
 #include<cstring.h>
-#include<devices/block/blockDevice.h>
-#include<devices/char/charDevice.h>
+#include<devices/blockDevice.h>
+#include<devices/charDevice.h>
 #include<fs/fs.h>
 #include<kernel.h>
 #include<kit/bit.h>

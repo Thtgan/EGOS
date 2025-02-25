@@ -1,16 +1,18 @@
 #include<devices/device.h>
 
-#include<cstring.h>
+#include<devices/charDevice.h>
 #include<devices/pseudo.h>
-#include<kernel.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<structs/RBtree.h>
 #include<structs/singlyLinkedList.h>
+#include<algorithms.h>
+#include<cstring.h>
 #include<error.h>
+#include<kernel.h>
 
-RBtree _device_majorDeviceTree;
+static RBtree _device_majorDeviceTree;
 
 typedef struct {
     MajorDeviceID   major;
@@ -19,11 +21,11 @@ typedef struct {
     RBtreeNode      majorTreeNode;
 } __DeviceMajorTreeNode;
 
-int __device_deviceMajorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
-int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key);
+static int __device_deviceMajorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
+static int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key);
 
-int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
-int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
+static int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2);
+static int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 
 void device_init() {
     RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
@@ -142,8 +144,6 @@ void device_initStruct(Device* device, DeviceInitArgs* args) {
     }
 
     device->operations      = args->operations;
-
-    device->specificInfo    = args->specificInfo;
 }
 
 void device_registerDevice(Device* device) {
@@ -252,18 +252,128 @@ Device* device_iterateMinor(MajorDeviceID major, MinorDeviceID current) {
     return HOST_POINTER(next, Device, deviceTreeNode);
 }
 
-int __device_deviceMajorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2) {
+void device_read(Device* device, Index64 begin, void* buffer, Size n) {
+    if (!device_isBlockDevice(device)) {
+        CharDevice* charDevice = HOST_POINTER(device, CharDevice, device);
+        charDevice_read(charDevice, begin, buffer, n);
+        return; //Error passthrough
+    }
+
+    BlockDevice* blockDevice = HOST_POINTER(device, BlockDevice, device);
+    Size blockSize = POWER_2(device->granularity);
+    char tmpBlock[blockSize];
+
+    Index64 currentBlockIndex = begin / blockSize;
+    void* currentBuffer = buffer;
+    Size remaingByteNum = n;
+
+    if (begin % blockSize != 0) {
+        Index64 offsetInBlock = begin % blockSize;
+        blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Size byteReadN = algorithms_umin64(remaingByteNum, blockSize - offsetInBlock);
+        memory_memcpy(buffer, tmpBlock + offsetInBlock, byteReadN);
+
+        currentBlockIndex += 1;
+        currentBuffer += byteReadN;
+        remaingByteNum -= byteReadN;
+    }
+
+    if (remaingByteNum >= blockSize) {
+        Size remainingFullBlockNum = remaingByteNum / blockSize;
+        blockDevice_readBlocks(blockDevice, currentBlockIndex, currentBuffer, remainingFullBlockNum);
+        ERROR_GOTO_IF_ERROR(0);
+
+        currentBlockIndex += remainingFullBlockNum;
+        currentBuffer += remainingFullBlockNum * blockSize;
+        remaingByteNum %= blockSize;
+    }
+
+    if (remaingByteNum != 0) {
+        blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        memory_memcpy(currentBuffer, tmpBlock, remaingByteNum);
+        
+        remaingByteNum = 0;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
+}
+
+void device_write(Device* device, Index64 begin, const void* buffer, Size n) {
+    if (!device_isBlockDevice(device)) {
+        CharDevice* charDevice = HOST_POINTER(device, CharDevice, device);
+        charDevice_write(charDevice, begin, buffer, n);
+        return; //Error passthrough
+    }
+
+    BlockDevice* blockDevice = HOST_POINTER(device, BlockDevice, device);
+    Size blockSize = POWER_2(device->granularity);
+    char tmpBlock[blockSize];
+
+    Index64 currentBlockIndex = begin / blockSize;
+    const void* currentBuffer = buffer;
+    Size remaingByteNum = n;
+
+    if (begin % blockSize != 0) {
+        Index64 offsetInBlock = begin % blockSize;
+        blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        Size byteWriteN = algorithms_umin64(remaingByteNum, blockSize - offsetInBlock);
+        memory_memcpy(tmpBlock + offsetInBlock, buffer, byteWriteN);
+
+        blockDevice_writeBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
+        ERROR_GOTO_IF_ERROR(0);
+
+        currentBlockIndex += 1;
+        currentBuffer += byteWriteN;
+        remaingByteNum -= byteWriteN;
+    }
+
+    if (remaingByteNum >= blockSize) {
+        Size remainingFullBlockNum = remaingByteNum / blockSize;
+        blockDevice_writeBlocks(blockDevice, currentBlockIndex, currentBuffer, remainingFullBlockNum);
+        ERROR_GOTO_IF_ERROR(0);
+
+        currentBlockIndex += remainingFullBlockNum;
+        currentBuffer += remainingFullBlockNum * blockSize;
+        remaingByteNum %= blockSize;
+    }
+
+    if (remaingByteNum != 0) {
+        blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        memory_memcpy(tmpBlock, currentBuffer, remaingByteNum);
+
+        blockDevice_writeBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
+        ERROR_GOTO_IF_ERROR(0);
+        
+        remaingByteNum = 0;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
+}
+
+static int __device_deviceMajorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2) {
     return (int)HOST_POINTER(node1, __DeviceMajorTreeNode, majorTreeNode)->major - (int)HOST_POINTER(node2, __DeviceMajorTreeNode, majorTreeNode)->major;
 }
 
-int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key) {
+static int __device_deviceMajorTreeSearchFunc(RBtreeNode* node, Object key) {
     return (int)HOST_POINTER(node, __DeviceMajorTreeNode, majorTreeNode)->major - (int)key;
 }
 
-int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2) {
+static int __device_deviceMinorTreeCmpFunc(RBtreeNode* node1, RBtreeNode* node2) {
     return (int)DEVICE_MINOR_FROM_ID(HOST_POINTER(node1, Device, deviceTreeNode)->id) - (int)DEVICE_MINOR_FROM_ID(HOST_POINTER(node2, Device, deviceTreeNode)->id);
 }
 
-int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key) {
+static int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key) {
     return (int)DEVICE_MINOR_FROM_ID(HOST_POINTER(node, Device, deviceTreeNode)->id) - (int)key;
 }

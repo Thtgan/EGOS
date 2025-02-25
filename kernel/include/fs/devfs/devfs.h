@@ -4,7 +4,7 @@
 typedef struct DevfsSuperBlock DevfsSuperBlock;
 typedef struct DevfsNodeMetadata DevfsNodeMetadata;
 
-#include<devices/block/blockDevice.h>
+#include<devices/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsNode.h>
 #include<fs/devfs/inode.h>

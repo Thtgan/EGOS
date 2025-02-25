@@ -1,5 +1,5 @@
-#if !defined(__DEVICES_BLOCK_BLOCKBUFFER_H)
-#define __DEVICES_BLOCK_BLOCKBUFFER_H
+#if !defined(__DEVICES_BLOCKBUFFER_H)
+#define __DEVICES_BLOCKBUFFER_H
 
 typedef struct BlockBufferBlock BlockBufferBlock;
 typedef struct BlockBuffer BlockBuffer;
@@ -40,4 +40,4 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex);
 
 void blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block);
 
-#endif // __DEVICES_BLOCK_BLOCKBUFFER_H
+#endif // __DEVICES_BLOCKBUFFER_H

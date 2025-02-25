@@ -6,7 +6,7 @@ typedef struct SuperBlockOperations SuperBlockOperations;
 typedef struct SuperBlockInitArgs SuperBlockInitArgs;
 typedef struct Mount Mount;
 
-#include<devices/block/blockDevice.h>
+#include<devices/blockDevice.h>
 #include<fs/fcntl.h>
 #include<fs/fsEntry.h>
 #include<fs/inode.h>

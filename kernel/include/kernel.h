@@ -1,7 +1,7 @@
 #if !defined(__KERNEL_H)
 #define __KERNEL_H
 
-#include<devices/block/blockDevice.h>
+#include<devices/blockDevice.h>
 #include<fs/fs.h>
 #include<kit/types.h>
 #include<memory/mm.h>

@@ -11,7 +11,7 @@ typedef enum {
 typedef struct FS FS;
 typedef struct FS_fileStat FS_fileStat;
 
-#include<devices/block/blockDevice.h>
+#include<devices/blockDevice.h>
 #include<fs/inode.h>
 #include<fs/superblock.h>
 #include<kit/oop.h>

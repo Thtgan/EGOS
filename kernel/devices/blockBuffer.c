@@ -1,4 +1,4 @@
-#include<devices/block/blockBuffer.h>
+#include<devices/blockBuffer.h>
 
 #include<algorithms.h>
 #include<kit/bit.h>
