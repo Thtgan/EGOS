@@ -1,7 +1,6 @@
 #include<fs/devfs/inode.h>
 
-#include<devices/blockDevice.h>
-#include<devices/charDevice.h>
+#include<devices/device.h>
 #include<fs/devfs/devfs.h>
 #include<fs/directoryEntry.h>
 #include<fs/inode.h>
@@ -69,19 +68,15 @@ static void __devfs_iNode_readData(iNode* inode, Index64 begin, void* buffer, Si
         return;
     }
 
-    Device* targetDevice = device_getDevice(inode->deviceID);
-    if (targetDevice == NULL) {
+    Device* device = device_getDevice(inode->deviceID);
+    if (device == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    if (device_isBlockDevice(targetDevice)) {
-        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);   //TODO: IO to block device not supported yet
-    } else {
-        charDevice_read(HOST_POINTER(targetDevice, CharDevice, device), begin, buffer, byteN);
-        ERROR_GOTO_IF_ERROR(0);
-    }
-
+    device_read(device, begin, buffer, byteN);
+    ERROR_GOTO_IF_ERROR(0);
+    
     return;
     ERROR_FINAL_BEGIN(0);
 }
@@ -95,19 +90,15 @@ static void __devfs_iNode_writeData(iNode* inode, Index64 begin, const void* buf
         memory_memcpy(devfsInode->data + begin, buffer, byteN);
         return;
     }
-
-    Device* targetDevice = device_getDevice(inode->deviceID);
-    if (targetDevice == NULL) {
+    
+    Device* device = device_getDevice(inode->deviceID);
+    if (device == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-
-    if (device_isBlockDevice(targetDevice)) {
-        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);   //TODO: IO to block device not supported yet
-    } else {
-        charDevice_write(HOST_POINTER(targetDevice, CharDevice, device), begin, buffer, byteN);
-        ERROR_GOTO_IF_ERROR(0);
-    }
+    
+    device_write(device, begin, buffer, byteN);
+    ERROR_GOTO_IF_ERROR(0);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -166,8 +157,8 @@ static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
     SuperBlock* superBlock = inode->superBlock;
     DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
-    Device* targetDevice = &targetBlockDevice->device;
-    Size blockSize = POWER_2(targetDevice->granularity);
+    Device* device = &targetBlockDevice->device;
+    Size blockSize = POWER_2(device->granularity);
     
     blockBuffer = memory_allocate(blockSize);
     if (blockBuffer == NULL) {
