@@ -38,8 +38,6 @@ static int __usermode_doExecute(ConstCstring path, File* file);
 
 void usermode_init() {
     syscall_init();
-
-    syscall_registerHandler(SYSCALL_EXIT, __usermode_syscallHandlerExit);
 }
 
 int usermode_execute(ConstCstring path) {  //TODO: Unstable code
@@ -236,3 +234,5 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
 
     return -1;
 }
+
+SYSCALL_TABLE_REGISTER(0xFE, __usermode_syscallHandlerExit);    //TODO: Move to process handler

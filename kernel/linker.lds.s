@@ -12,24 +12,36 @@ SECTIONS {
         *(.init.pageTables)
     }
 
+    . = ALIGN(0x1000);
+    pKernelRangeBegin = .;
     . += MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN;
-    pKernelRangeBegin = LOADADDR(.text);
 
-    .text ALIGN(0x1000) : AT (ALIGN(ADDR(.text) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, 0x1000)) {
+    .text : AT (ADDR(.text) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN) {
         *(.text)
     }
+    . = ALIGN(0x1000);
 
-    .data ALIGN(0x1000) : AT (ALIGN(ADDR(.data) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, 0x1000)) {
+    .syscallTable : AT (ADDR(.syscallTable) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN) {
+        syscallTableBegin = .;
+        *(.syscallTable)
+        syscallTableEnd = .;
+    }
+    . = ALIGN(0x1000);
+
+    .data ALIGN(0x1000) : AT (ADDR(.data) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN) {
         *(.data)
     }
+    . = ALIGN(0x1000);
 
-    .rodata ALIGN(0x1000) : AT (ALIGN(ADDR(.rodata) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, 0x1000)) {
+    .rodata ALIGN(0x1000) : AT (ADDR(.rodata) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN) {
         *(.rodata)
     }
+    . = ALIGN(0x1000);
 
-    .bss ALIGN(0x1000) : AT (ALIGN(ADDR(.bss) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, 0x1000)) {
+    .bss ALIGN(0x1000) : AT (ADDR(.bss) - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN) {
         *(.bss)
     }
+    . = ALIGN(0x1000);
 
-    pKernelRangeEnd = LOADADDR(.bss) + SIZEOF(.bss);
+    pKernelRangeEnd = . - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN;
 }

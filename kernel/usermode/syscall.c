@@ -18,8 +18,8 @@ static int __syscall_testSyscall(int arg1, int arg2, int arg3, int arg4, int arg
 __attribute__((naked))
 static void __syscall_syscallHandler();
 
-static void* _syscallHandlers[SYSCALL_NUM] = {
-    [0 ... SYSCALL_NUM - 1] = NULL
+static void* _syscallHandlers[SYSCALL_MAX_INDEX + 1] = {
+    [0 ... SYSCALL_MAX_INDEX] = NULL
 };
 
 void syscall_init() {
@@ -31,11 +31,10 @@ void syscall_init() {
     SET_FLAG_BACK(flags, MSR_EFER_SCE);
     wrmsrl(MSR_ADDR_EFER, flags);
 
-    syscall_registerHandler(SYSCALL_TEST, __syscall_testSyscall);
-}
-
-void syscall_registerHandler(SyscallType type, void* handler) {                                                                                        
-    _syscallHandlers[type] = handler;
+    for (SyscallUnit* unit = SYSCALL_TABLE_BEGIN; unit < SYSCALL_TABLE_END; ++unit) {
+        DEBUG_ASSERT_SILENT(_syscallHandlers[unit->index] == NULL);
+        _syscallHandlers[unit->index] = unit->func;
+    }
 }
 
 static int __syscall_testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
@@ -79,3 +78,5 @@ static void __syscall_syscallHandler() {
         "sysretq;"
     );
 }
+
+SYSCALL_TABLE_REGISTER(0xFF, __syscall_testSyscall);    //TODO: Move to process handler

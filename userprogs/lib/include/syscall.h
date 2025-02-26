@@ -9,8 +9,8 @@ typedef enum {
     SYSCALL_OPEN    = 0x02,
     SYSCALL_CLOSE   = 0x03,
     SYSCALL_STAT    = 0x04,
-    SYSCALL_EXIT    = 0xFD,
-    SYSCALL_TEST    = 0xFE,
+    SYSCALL_EXIT    = 0xFE,
+    SYSCALL_TEST    = 0xFF,
     SYSCALL_NUM
 } SyscallType;
 
