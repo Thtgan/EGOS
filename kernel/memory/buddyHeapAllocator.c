@@ -232,16 +232,16 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
 
     void* base = NULL;
     if (realSize > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) { //Required size is greater than maximum size
-        realSize = DIVIDE_ROUND_UP(realSize, PAGE_SIZE);
+        Size pageNum = DIVIDE_ROUND_UP(realSize, PAGE_SIZE);
 
-        void* page = frameAllocator_allocateFrame(allocator->frameAllocator, n);    //Specially allocated
+        void* page = frameAllocator_allocateFrame(allocator->frameAllocator, pageNum);    //Specially allocated
         if (page == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
 
         base = heapAllocator_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
-        extendedPageTableRoot_draw(mm->extendedTable, base, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID));
+        extendedPageTableRoot_draw(mm->extendedTable, base, page, pageNum, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID));
         ERROR_GOTO_IF_ERROR(0);
     } else {
         Int8 order = -1;
@@ -300,6 +300,7 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     memory_memset(header, 0, sizeof(__BuddyHeader)); //TODO: When free the COW area not handled by page fault
 
     if (size > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) {
+        DEBUG_ASSERT_SILENT(IS_ALIGNED((Uintptr)base, PAGE_SIZE));
         extendedPageTableRoot_erase(mm->extendedTable, base, DIVIDE_ROUND_UP(size, PAGE_SIZE));
         ERROR_GOTO_IF_ERROR(0);
 
