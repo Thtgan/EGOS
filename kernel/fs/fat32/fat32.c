@@ -443,18 +443,16 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     Size blockSize = POWER_2(superBlockBlockDevice->device.granularity);
     inode->sizeInBlock          = fat32_getClusterChainLength(fat32SuperBlock, BPB->rootDirectoryClusterIndex) * BPB->sectorPerCluster;
 
-    DEBUG_ASSERT_SILENT(inode->sizeInByte <= inode->sizeInBlock * blockSize);
-
     inode->signature            = INODE_SIGNATURE;
     inode->inodeID              = inodeID;
     inode->superBlock           = superBlock;
     inode->operations           = fat32_iNode_getOperations();
-
+    
     refCounter_initStruct(&inode->refCounter);
     hashChainNode_initStruct(&inode->openedNode);
     inode->fsNode = rootNode;
     fsNode_refer(inode->fsNode);
-
+    
     inode->attribute = (iNodeAttribute) {   //TODO: Ugly code
         .uid = 0,
         .gid = 0,
@@ -462,15 +460,17 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
         .lastAccessTime = 0,
         .lastModifyTime = 0
     };
-
+    
     inode->deviceID             = INVALID_ID;
     inode->lock                 = SPINLOCK_UNLOCKED;
     refCounter_refer(&inode->refCounter);
-
+    
     rootNode->isInodeActive = true; //TODO: Ugly code
-
+    
     inode->sizeInByte           = fat32_iNode_touchDirectory(inode);
     ERROR_GOTO_IF_ERROR(0);
+
+    DEBUG_ASSERT_SILENT(inode->sizeInByte <= inode->sizeInBlock * blockSize);
 
     return inode;
     ERROR_FINAL_BEGIN(0);
