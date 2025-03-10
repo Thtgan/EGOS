@@ -104,7 +104,7 @@ static void __pseudo_stdoutDevice_operations_readUnits(Device* device, Index64 u
 }
 
 static void __pseudo_stdoutDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN) {
-    print_printf(TERMINAL_LEVEL_OUTPUT, buffer);
+    print_printf(buffer);
 }
 
 static void __pseudo_stdoutDevice_operations_flush(Device* device) {

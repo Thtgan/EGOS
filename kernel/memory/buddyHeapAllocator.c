@@ -325,10 +325,10 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     return;
 
     ERROR_FINAL_BEGIN(1);
-    print_printf(TERMINAL_LEVEL_DEBUG, "%p: Memory header %p magic not match!\n", ptr, header);
+    print_printf("%p: Memory header %p magic not match!\n", ptr, header);
     ERROR_GOTO(0);
 
     ERROR_FINAL_BEGIN(2);
-    print_printf(TERMINAL_LEVEL_DEBUG, "%p: Memory tail %p magic not match!\n", ptr, tail);
+    print_printf("%p: Memory tail %p magic not match!\n", ptr, tail);
     ERROR_GOTO(0);
 }

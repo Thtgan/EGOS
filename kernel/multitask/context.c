@@ -1,6 +1,5 @@
 #include<multitask/context.h>
 
-#include<devices/terminal/terminalSwitch.h>
 #include<memory/paging.h>
 #include<print.h>
 

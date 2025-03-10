@@ -5,13 +5,21 @@
 #include<memory/memory.h>
 #include<error.h>
 
-#define __VECTOR_INIT_STORAGE_SIZE  48
+#define __VECTOR_INIT_STORAGE_SIZE  48  //TODO: Ugly codes assuming memory header size
 
 void vector_initStruct(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
     vector->storage = memory_allocate(__VECTOR_INIT_STORAGE_SIZE);
+    if (vector->storage == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
     memory_memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void vector_clearStruct(Vector* vector) {
@@ -69,8 +77,20 @@ void vector_erease(Vector* vector, Index64 index) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    memory_memmove(vector->storage + index, vector->storage + index + 1, (vector->capacity - index - 1) * sizeof(Object));
+    memory_memmove(vector->storage + index, vector->storage + index + 1, (vector->size - index - 1) * sizeof(Object));
     --vector->size;
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+void vector_ereaseN(Vector* vector, Index64 index, Size n) {
+    if (index >= vector->size || index + n - 1 >= vector->size) {
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+    }
+
+    memory_memmove(vector->storage + index, vector->storage + index + n, (vector->size - index - n) * sizeof(Object));
+    vector->size -= n;
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -88,11 +108,9 @@ Object vector_back(Vector* vector) {
 
 void vector_push(Vector* vector, Object item) {
     if (vector->size == vector->capacity) {
-        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
+        vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object));    //TODO: Ugly codes assuming memory header size
+        ERROR_GOTO_IF_ERROR(0);
     }
-
-    vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object));
-    ERROR_GOTO_IF_ERROR(0);
 
     vector->storage[vector->size++] = item;
     return;

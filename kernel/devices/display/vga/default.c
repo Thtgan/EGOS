@@ -119,8 +119,8 @@ static void __vgaDefault_fill(DisplayPosition* p1, DisplayPosition* p2, RGBA col
     for (int i = x1; i <= x2; ++i) {
         position.x = i;
         VGAtextModeCell* cellBuffer = __VGA_DEFAULT_POSITION_TO_PTR(&position);
-        for (int i = 0; i < width; ++i) {
-            cellBuffer[i] = cell;
+        for (int j = 0; j < width; ++j) {
+            cellBuffer[j] = cell;
         }
     }
 }

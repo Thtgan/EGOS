@@ -34,7 +34,7 @@ void inputBuffer_inputChar(InputBuffer* buffer, char ch);
  * @param buffer Input buffer
  * @return int char returned
  */
-int inputBuffer_getChar(InputBuffer* buffer);
+char inputBuffer_getChar(InputBuffer* buffer);
 
 /**
  * @brief Get a string from input buffer, strings in buffer ends with '\n', and replaced with '\0' after read
@@ -43,6 +43,6 @@ int inputBuffer_getChar(InputBuffer* buffer);
  * @param writeTo String buffer
  * @return int Num of character read
  */
-int inputBuffer_getLine(InputBuffer* buffer, Cstring writeTo);
+Size inputBuffer_getLine(InputBuffer* buffer, Cstring writeTo, Size n);
 
 #endif // __DEVICES_TERMINAL_INPUTBUFFER_H

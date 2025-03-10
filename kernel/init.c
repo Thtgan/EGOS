@@ -5,7 +5,7 @@
 #include<devices/device.h>
 #include<devices/display/display.h>
 #include<devices/keyboard/keyboard.h>
-#include<devices/terminal/terminalSwitch.h>
+#include<devices/terminal/tty.h>
 #include<fs/fs.h>
 #include<interrupt/IDT.h>
 #include<interrupt/TSS.h>
@@ -35,10 +35,11 @@ static void __init_initVideo();         //TODO: Maybe remove these
 static __InitFunc _initFuncs[] = {
     { error_init                ,   "Error"         },
     { display_init              ,   "Display"       },
-    { terminalSwitch_init       ,   "Terminal"      },
+    { tty_init                  ,   "Boot TTY"      },
     { __init_printBootSlogan    ,   NULL            },  //TODO: May crash after print slogan
     { idt_init                  ,   "Interrupt"     },
     { mm_init                   ,   "Memory"        },
+    { tty_initVirtTTY           ,   "Virtual TTY"   },
     { tss_init                  ,   "TSS"           },
     { keyboard_init             ,   "Keyboard"      },
     { device_init               ,   "Device"        },
@@ -62,20 +63,20 @@ void init_initKernel() {
 
         ERROR_CHECKPOINT({
             if (_initFuncs[i].name != NULL) {
-                print_printf(TERMINAL_LEVEL_DEBUG, "Initialization of %s failed\n", _initFuncs[i].name);
+                print_printf("Initialization of %s failed\n", _initFuncs[i].name);
             } else {
-                print_printf(TERMINAL_LEVEL_DEBUG, "Initialization failed");
+                print_printf("Initialization failed");
             }
             error_unhandledRecord(error_getCurrentRecord());
         });
     }
 
-    print_printf(TERMINAL_LEVEL_DEBUG, "All Initializations passed\n");
+    print_printf("All Initializations passed\n");
     return;
 }
 
 static void __init_printBootSlogan() {
-    print_printf(TERMINAL_LEVEL_OUTPUT, "EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
+    print_printf("EGOS starts booting...\n");  //FACE THE SELF, MAKE THE EGOS
 }
 
 static void __init_enableInterrupt() {

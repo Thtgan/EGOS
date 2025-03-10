@@ -1,7 +1,6 @@
 #include<usermode/elf.h>
 
 #include<algorithms.h>
-#include<devices/terminal/terminalSwitch.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<kit/bit.h>
@@ -27,26 +26,26 @@ void elf_readELF64Header(File* file, ELF64Header* header) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void elf_printELF64Header(TerminalLevel level, ELF64Header* header) {
-    print_printf(level, "ELF File Header:\n");
-    print_printf(level, "MAGIC:                       %X\n", header->identification.magic);
-    print_printf(level, "CLASS:                       %u\n", header->identification.class);
-    print_printf(level, "ENDIAN:                      %u\n", header->identification.endian);
-    print_printf(level, "VERSION:                     %u\n", header->identification.version);
-    print_printf(level, "OSABI:                       %u\n", header->identification.osABI);
-    print_printf(level, "TYPE:                        %u\n", header->type);
-    print_printf(level, "MACHINE:                     %u\n", header->machine);
-    print_printf(level, "ELF VERSION:                 %u\n", header->elfVersion);
-    print_printf(level, "ENTRY:                       %#018llX\n", header->entryVaddr);
-    print_printf(level, "PROGRAM HEADER BEGIN:        %#018llX\n", header->programHeadersBegin);
-    print_printf(level, "SECTION HEADER BEGIN:        %#018llX\n", header->sectionHeadersBegin);
-    print_printf(level, "FLAGS:                       %#018llX\n", header->flags);
-    print_printf(level, "HEADER SIZE:                 %u\n", header->headerSize);
-    print_printf(level, "PROGRAM HEADER SIZE:         %u\n", header->programHeaderEntrySize);
-    print_printf(level, "PROGRAM HEADER NUM:          %u\n", header->programHeaderEntryNum);
-    print_printf(level, "SECTION HEADER SIZE:         %u\n", header->sectionHeaderEntrySize);
-    print_printf(level, "SECTION HEADER NUM:          %u\n", header->sectionHeaderEntryNum);
-    print_printf(level, "NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
+void elf_printELF64Header(ELF64Header* header) {
+    print_printf("ELF File Header:\n");
+    print_printf("MAGIC:                       %X\n", header->identification.magic);
+    print_printf("CLASS:                       %u\n", header->identification.class);
+    print_printf("ENDIAN:                      %u\n", header->identification.endian);
+    print_printf("VERSION:                     %u\n", header->identification.version);
+    print_printf("OSABI:                       %u\n", header->identification.osABI);
+    print_printf("TYPE:                        %u\n", header->type);
+    print_printf("MACHINE:                     %u\n", header->machine);
+    print_printf("ELF VERSION:                 %u\n", header->elfVersion);
+    print_printf("ENTRY:                       %#018llX\n", header->entryVaddr);
+    print_printf("PROGRAM HEADER BEGIN:        %#018llX\n", header->programHeadersBegin);
+    print_printf("SECTION HEADER BEGIN:        %#018llX\n", header->sectionHeadersBegin);
+    print_printf("FLAGS:                       %#018llX\n", header->flags);
+    print_printf("HEADER SIZE:                 %u\n", header->headerSize);
+    print_printf("PROGRAM HEADER SIZE:         %u\n", header->programHeaderEntrySize);
+    print_printf("PROGRAM HEADER NUM:          %u\n", header->programHeaderEntryNum);
+    print_printf("SECTION HEADER SIZE:         %u\n", header->sectionHeaderEntrySize);
+    print_printf("SECTION HEADER NUM:          %u\n", header->sectionHeaderEntryNum);
+    print_printf("NANE SECTION HEADER INDEX:   %u\n", header->nameSectionHeaderEntryIndex);
 }
 
 void elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64ProgramHeader* programHeader, Index16 index) {
@@ -67,16 +66,16 @@ void elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64Program
     ERROR_FINAL_BEGIN(0);
 }
 
-void elf_printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header) {
-    print_printf(level, "ELF File Program Header:\n");
-    print_printf(level, "TYPE:        %u\n", header->type);
-    print_printf(level, "FLAGS:       %u\n", header->flags);
-    print_printf(level, "OFFSET:      %#018llX\n", header->offset);
-    print_printf(level, "VADDR:       %#018llX\n", header->vAddr);
-    print_printf(level, "PADDR:       %#018llX\n", header->pAddr);
-    print_printf(level, "MEMORY SIZE: %#018llX\n", header->segmentSizeInMemory);
-    print_printf(level, "FILE SIZE:   %#018llX\n", header->segmentSizeInFile);
-    print_printf(level, "ALIGN:       %#018llX\n", header->align);
+void elf_printELF64ProgramHeader(ELF64ProgramHeader* header) {
+    print_printf("ELF File Program Header:\n");
+    print_printf("TYPE:        %u\n", header->type);
+    print_printf("FLAGS:       %u\n", header->flags);
+    print_printf("OFFSET:      %#018llX\n", header->offset);
+    print_printf("VADDR:       %#018llX\n", header->vAddr);
+    print_printf("PADDR:       %#018llX\n", header->pAddr);
+    print_printf("MEMORY SIZE: %#018llX\n", header->segmentSizeInMemory);
+    print_printf("FILE SIZE:   %#018llX\n", header->segmentSizeInFile);
+    print_printf("ALIGN:       %#018llX\n", header->align);
 }
 
 bool elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {

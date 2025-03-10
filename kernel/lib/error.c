@@ -113,5 +113,5 @@ void errorRecord_initStruct(ErrorRecord* record, ID errorID) {
 void errorRecord_print(ErrorRecord* record) {
     ID id = record->errorID;
     DEBUG_ASSERT_SILENT(_error_errors[id].desc != NULL);
-    print_printf(TERMINAL_LEVEL_DEBUG, "RIP: %#018lX RSP: %#018lX-%lu(%s)\n", record->rip, record->rsp, id, _error_errors[id].desc);
+    print_printf("RIP: %#018lX RSP: %#018lX-%lu(%s)\n", record->rip, record->rsp, id, _error_errors[id].desc);
 }

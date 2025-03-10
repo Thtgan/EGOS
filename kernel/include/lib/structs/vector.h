@@ -74,6 +74,8 @@ void vector_set(Vector* vector, Index64 index, Object item);
  */
 void vector_erease(Vector* vector, Index64 index);
 
+void vector_ereaseN(Vector* vector, Index64 index, Size n);
+
 /**
  * @brief Get last object of vector
  * 

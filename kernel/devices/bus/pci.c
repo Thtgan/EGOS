@@ -27,7 +27,7 @@ void pci_init() {
     if (pci_checkExist()) {
         __pci_probe();
     } else {
-        print_printf(TERMINAL_LEVEL_DEBUG, "PCI not supported\n");
+        print_printf("PCI not supported\n");
     }
 }
 

@@ -18,7 +18,7 @@ typedef struct Semaphore {
  * @param sema Semaphore struct
  * @param count Initial count value of semaphore
  */
-void initSemaphore(Semaphore* sema, int count);
+void semaphore_initStruct(Semaphore* sema, int count);
 
 /**
  * @brief Perform down to semaphore, may block current process

@@ -1,12 +1,12 @@
 #include<print.h>
 
-#include<algorithms.h>
-#include<cstring.h>
-#include<devices/terminal/terminal.h>
+#include<devices/terminal/tty.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<algorithms.h>
+#include<cstring.h>
 
 #define __PRINT_FLAGS_LEFT_JUSTIFY  FLAG8(0)
 #define __PRINT_FLAGS_EXPLICIT_SIGN FLAG8(1)
@@ -93,11 +93,11 @@ static int __print_printCharacter(char* buffer, Size bufferSize, char ch, int wi
  */
 static int __print_printString(char* buffer, Size bufferSize, const char* str, int width, int precision, Uint8 flags);
 
-int print_printf(TerminalLevel level, const char* format, ...) {
+int print_printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
 
-    int ret = print_vprintf(level, format, args);
+    int ret = print_vprintf(format, args);
 
     va_end(args);
 
@@ -118,16 +118,17 @@ int print_sprintf(char* buffer, const char* format, ...) {
 
 #define __PRINT_BUFFER_SIZE 1024
 
-int print_vprintf(TerminalLevel level, const char* format, va_list args) {
+int print_vprintf(const char* format, va_list args) {
     char buffer[__PRINT_BUFFER_SIZE];
     memory_memset(buffer, 0, __PRINT_BUFFER_SIZE);
     int ret = __print_handlePrintf(buffer, (Size)__PRINT_BUFFER_SIZE - 1, format, args);
 
-    Terminal* terminal = terminalSwitch_getLevel(level);
-    terminal_outputString(terminal, buffer);
-    if (terminal == terminal_getCurrentTerminal()) {
-        terminal_flushDisplay();
-    }
+    Teletype* tty = tty_getCurrentTTY();
+    teletype_rawWrite(tty, buffer, ret);
+    ERROR_CHECKPOINT(); //Print function is not supposed to throw error
+    teletype_rawFlush(tty);
+    ERROR_CHECKPOINT();
+
     return ret;
 }
 
@@ -135,13 +136,12 @@ int print_vsprintf(char* buffer, const char* format, va_list args) {
     return __print_handlePrintf(buffer, (Size)-1, format, args);
 }
 
-int print_putchar(TerminalLevel level, int ch) {
-    Terminal* terminal = terminalSwitch_getLevel(level);
-    terminal_outputChar(terminal, ch);
-
-    if (terminal == terminal_getCurrentTerminal()) {
-        terminal_flushDisplay();
-    }
+int print_putchar(int ch) {
+    Teletype* tty = tty_getCurrentTTY();
+    teletype_rawWrite(tty, &ch, 1);
+    ERROR_CHECKPOINT(); //Print function is not supposed to throw error
+    teletype_rawFlush(tty);
+    ERROR_CHECKPOINT();
 
     return ch;
 }

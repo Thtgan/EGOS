@@ -1,7 +1,6 @@
 #if !defined(__LIB_PRINT_H)
 #define __LIB_PRINT_H
 
-#include<devices/terminal/terminalSwitch.h>
 #include<kit/types.h>
 
 //Reference: https://en.cppreference.com/w/c/io
@@ -15,7 +14,7 @@
  * @param ... Data
  * @return The length of final string printed
  */
-int print_printf(TerminalLevel level, const char* format, ...);
+int print_printf(const char* format, ...);
 
 /**
  * @brief Write the string to buffer with given data in format
@@ -35,7 +34,7 @@ int print_sprintf(char* buffer, const char* format, ...);
  * @param args Data
  * @return The length of final string printed
  */
-int print_vprintf(TerminalLevel level, const char* format, va_list args);
+int print_vprintf(const char* format, va_list args);
 
 /**
  * @brief Write the string to buffer with given data in format
@@ -54,6 +53,6 @@ int print_vsprintf(char* buffer, const char* format, va_list args);
  * @param ch Character
  * @return int The character
  */
-int print_putchar(TerminalLevel level, int ch);
+int print_putchar(int ch);
 
 #endif // __LIB_PRINT_H

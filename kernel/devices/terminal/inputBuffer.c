@@ -34,8 +34,8 @@ static void __inputBufferNode_freeNode(__InputBufferNode* node);
 void inputBuffer_initStruct(InputBuffer* buffer) {
     queue_initStruct(&buffer->bufferQueue);
     buffer->bufferSize = 0;
-    initSemaphore(&buffer->queueLock, 1);
-    initSemaphore(&buffer->lineNumSema, 0);
+    semaphore_initStruct(&buffer->queueLock, 1);
+    semaphore_initStruct(&buffer->lineNumSema, 0);
 }
 
 void inputBuffer_inputChar(InputBuffer* buffer, char ch) {
@@ -74,44 +74,60 @@ void inputBuffer_inputChar(InputBuffer* buffer, char ch) {
     semaphore_up(&buffer->queueLock);
 }
 
-int inputBuffer_getChar(InputBuffer* buffer) {
-    semaphore_down(&buffer->queueLock);
+char inputBuffer_getChar(InputBuffer* buffer) {
     semaphore_down(&buffer->lineNumSema);
+    semaphore_down(&buffer->queueLock);
 
     __InputBufferNode* firstNode = HOST_POINTER(queue_front(&buffer->bufferQueue), __InputBufferNode, node);
-    int ret = (int)firstNode->buffer[firstNode->begin++];
+    char ret = (char)firstNode->buffer[firstNode->begin++];
     if (firstNode->begin == firstNode->end) {
         queue_pop(&buffer->bufferQueue);
         __inputBufferNode_freeNode(firstNode);
     }
     --buffer->bufferSize;
 
+    semaphore_up(&buffer->queueLock);
     if (ret != '\n') {
         semaphore_up(&buffer->lineNumSema);
     }
 
-    semaphore_up(&buffer->queueLock);
     return ret;
 }
 
-int inputBuffer_getLine(InputBuffer* buffer, char* writeTo) {
+Size inputBuffer_getLine(InputBuffer* buffer, char* writeTo, Size n) {
     semaphore_down(&buffer->lineNumSema);
     semaphore_down(&buffer->queueLock);
 
-    int ret = 0;
+    Size ret = 0;
     __InputBufferNode* node = HOST_POINTER(queue_front(&buffer->bufferQueue), __InputBufferNode, node);
-    while (!queue_isEmpty(&buffer->bufferQueue) && node->buffer[node->begin] != '\n') {
-        writeTo[ret++] = node->buffer[node->begin++];
+    
+    bool breakedByNewLine = false;
+    while (ret < n && !queue_isEmpty(&buffer->bufferQueue)) {
+        DEBUG_ASSERT_SILENT(node != NULL && node->begin < node->end);
+        
+        char ch = node->buffer[node->begin++];
+        if (ch == '\n') {
+            breakedByNewLine = true;
+            break;
+        }
+        
+        writeTo[ret++] = ch;
         if (node->begin == node->end) {
             queue_pop(&buffer->bufferQueue);
             __inputBufferNode_freeNode(node);
             node = HOST_POINTER(queue_front(&buffer->bufferQueue), __InputBufferNode, node);
         }
     }
-    ++node->begin;
     writeTo[ret] = '\0';
+    buffer->bufferSize -= ret;
 
     semaphore_up(&buffer->queueLock);
+    if (breakedByNewLine) {
+        --buffer->bufferSize;
+    } else {
+        semaphore_up(&buffer->lineNumSema);
+    }
+
     return ret;
 }
 

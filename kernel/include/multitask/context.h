@@ -4,7 +4,6 @@
 typedef struct Context Context;
 typedef struct Registers Registers;
 
-#include<devices/terminal/terminalSwitch.h>
 #include<kit/macro.h>
 #include<kit/types.h>
 

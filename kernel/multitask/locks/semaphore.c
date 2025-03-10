@@ -21,7 +21,7 @@ __attribute__((regparm(1)))
  */
 void __semaphore_up_handler(Semaphore* sema);
 
-void initSemaphore(Semaphore* sema, int count) {
+void semaphore_initStruct(Semaphore* sema, int count) {
     sema->counter = count;
     sema->queueLock = SPINLOCK_UNLOCKED;
     queue_initStruct(&sema->waitQueue);

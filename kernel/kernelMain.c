@@ -43,12 +43,14 @@ static void printLOGO();
 #include<multitask/simpleSchedule.h>
 #include<error.h>
 
+#include<devices/terminal/tty.h>
+
 static void __timerFunc1(Timer* timer) {
-    print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER1\n");
+    print_printf("HANDLER CALL FROM TIMER1\n");
 }
 
 static void __timerFunc2(Timer* timer) {
-    print_printf(TERMINAL_LEVEL_OUTPUT, "HANDLER CALL FROM TIMER2\n");
+    print_printf("HANDLER CALL FROM TIMER2\n");
     if (--timer->data == 0) {
         CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
     }
@@ -61,9 +63,10 @@ void kernelMain(SystemInfo* info) {
     }
 
     init_initKernel();
+    ERROR_CHECKPOINT();
 
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
-    terminalSwitch_switchDisplayMode(DISPLAY_MODE_VGA);
+    tty_switchDisplayMode(DISPLAY_MODE_VGA);
 
     VGAmodeHeader* mode = vga_getCurrentMode();
     DisplayPosition p1 = {0, 0};
@@ -97,13 +100,12 @@ void kernelMain(SystemInfo* info) {
     // fs_fileClose(&file);
 
     Uint32 pciDeviceNum = pci_getDeviceNum();
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%u PCI devices found\n", pciDeviceNum);
+    print_printf("%u PCI devices found\n", pciDeviceNum);
     if (pciDeviceNum != 0) {
-        print_printf(TERMINAL_LEVEL_OUTPUT, "Bus Dev Func Vendor Device Class SubClass\n");
+        print_printf("Bus Dev Func Vendor Device Class SubClass\n");
         for (int i = 0; i < pciDeviceNum; ++i) {
             PCIdevice* device = pci_getDevice(i);
             print_printf(
-                TERMINAL_LEVEL_OUTPUT,
                 "%02X  %02X  %02X   %04X   %04X   %02X    %02X\n",
                 PCI_BUS_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_DEVICE_NUMBER_FROM_ADDR(device->baseAddr),
@@ -116,18 +118,18 @@ void kernelMain(SystemInfo* info) {
         }
     }
 
-    initSemaphore(&sema1, 0);
-    initSemaphore(&sema2, -1);
+    semaphore_initStruct(&sema1, 0);
+    semaphore_initStruct(&sema2, -1);
 
     arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW));
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%p %p\n", arr1, arr2);
+    print_printf("%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
     if (process_fork("Forked") != NULL) {
         Scheduler* scheduler = schedule_getCurrentScheduler();
-        print_printf(TERMINAL_LEVEL_OUTPUT, "This is main process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
+        print_printf("This is main process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
     } else {
         Scheduler* scheduler = schedule_getCurrentScheduler();
-        print_printf(TERMINAL_LEVEL_OUTPUT, "This is child process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
+        print_printf("This is child process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
     }
 
     Scheduler* scheduler = schedule_getCurrentScheduler();
@@ -135,20 +137,21 @@ void kernelMain(SystemInfo* info) {
         arr1[0] = 3;
         semaphore_up(&sema1);
         semaphore_down(&sema2);
-        print_printf(TERMINAL_LEVEL_OUTPUT, "DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
+        print_printf("DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
     } else {
         semaphore_down(&sema1);
         arr1[0] = 2, arr2[0] = 1919810;
-        print_printf(TERMINAL_LEVEL_OUTPUT, "DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
+        print_printf("DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
         semaphore_up(&sema2);
         while (true) {
-            print_printf(TERMINAL_LEVEL_OUTPUT, "Waiting for input: ");
-            int len = terminal_getline(terminalSwitch_getLevel(TERMINAL_LEVEL_OUTPUT), str);
+            print_printf("Waiting for input: ");
+            int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE);
+            ERROR_CHECKPOINT();
 
             if (cstring_strcmp(str, "PASS") == 0 || len == 0) {
                 break;
             }
-            print_printf(TERMINAL_LEVEL_OUTPUT, "%s-%d\n", str, len);
+            print_printf("%s-%d\n", str, len);
         }
 
         //TODO: Calling userprogram goes wrong here
@@ -158,12 +161,12 @@ void kernelMain(SystemInfo* info) {
     }
 
     int ret = usermode_execute("/bin/test");    //FIXME: It may stucks
-    print_printf(TERMINAL_LEVEL_OUTPUT, "USER PROGRAM RETURNED %d\n", ret);
+    print_printf("USER PROGRAM RETURNED %d\n", ret);
 
     memory_free(arr1);
     memory_free(arr2);
 
-    print_printf(TERMINAL_LEVEL_OUTPUT, "FINAL %s\n", scheduler_getCurrentProcess(scheduler)->name);
+    print_printf("FINAL %s\n", scheduler_getCurrentProcess(scheduler)->name);
 
     {
         File* file = fs_fileOpen("/dev/null", FCNTL_OPEN_READ_WRITE);
@@ -189,7 +192,7 @@ void kernelMain(SystemInfo* info) {
     ERROR_CHECKPOINT();
     fs_close(rootFS); //TODO: Move to better place
 
-    print_printf(TERMINAL_LEVEL_OUTPUT, "DEAD\n");
+    print_printf("DEAD\n");
 
     die();
 }
@@ -207,11 +210,11 @@ static void printLOGO() {
     fs_fileRead(file, buffer, stat.size);
     ERROR_CHECKPOINT();
     buffer[stat.size] = '\0';
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%s\n", buffer);
+    print_printf("%s\n", buffer);
 
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.createTime.second);
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.accessTime.second);
-    print_printf(TERMINAL_LEVEL_OUTPUT, "%lu\n", stat.modifyTime.second);
+    print_printf("%lu\n", stat.createTime.second);
+    print_printf("%lu\n", stat.accessTime.second);
+    print_printf("%lu\n", stat.modifyTime.second);
 
     BlockDevice* device = file->inode->superBlock->blockDevice;
     fs_fileClose(file);

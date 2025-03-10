@@ -9,7 +9,6 @@ typedef struct ELF64REL ELF64REL;
 typedef struct ELF64RELA ELF64RELA;
 typedef struct ELF64ProgramHeader ELF64ProgramHeader;
 
-#include<devices/terminal/terminalSwitch.h>
 #include<fs/fsEntry.h>
 #include<kit/types.h>
 
@@ -203,7 +202,7 @@ void elf_readELF64Header(File* file, ELF64Header* header);
  * @param level Terminal level to print to
  * @param header ELF header to print
  */
-void elf_printELF64Header(TerminalLevel level, ELF64Header* header);
+void elf_printELF64Header(ELF64Header* header);
 
 /**
  * @brief Read ELF program header from file, sets errorcode to indicate error
@@ -221,7 +220,7 @@ void elf_readELF64ProgramHeader(File* file, ELF64Header* elfHeader, ELF64Program
  * @param level Terminal level to print to
  * @param header ELF program header to print
  */
-void elf_printELF64ProgramHeader(TerminalLevel level, ELF64ProgramHeader* header);
+void elf_printELF64ProgramHeader(ELF64ProgramHeader* header);
 
 /**
  * @brief Check is ELF program header leagel?

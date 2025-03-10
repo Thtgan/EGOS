@@ -1,5 +1,3 @@
-#include<devices/terminal/terminal.h>
-#include<devices/terminal/terminalSwitch.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<real/simpleAsmLines.h>

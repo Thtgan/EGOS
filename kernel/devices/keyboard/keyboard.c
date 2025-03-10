@@ -1,13 +1,15 @@
 #include<devices/keyboard/keyboard.h>
 
-#include<devices/terminal/terminal.h>
-#include<devices/terminal/terminalSwitch.h>
+#include<devices/terminal/tty.h>
+#include<devices/terminal/virtualTTY.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<real/ports/keyboard.h>
 #include<real/simpleAsmLines.h>
+#include<error.h>
 
 __attribute__((aligned(4)))
 static KeyboardKeyEntry _keyboard_keyEntries[128] = {
@@ -129,40 +131,34 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
     if (_keyboard_pressed[KEYBOARD_KEY_CAPSLOCK] && key == KEYBOARD_KEY_CAPSLOCK) {
         _keyboard_capslock ^= true;
     } else if (_keyboard_pressed[key]) {
-        Terminal* terminal = terminal_getCurrentTerminal();
+        Teletype* tty = tty_getCurrentTTY();
+        VirtualTeletype* virtualTTY = HOST_POINTER(tty, VirtualTeletype, tty);
         if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, ASCII)) {
-            terminal_inputChar(terminal, __keyboard_keyToASCII(key));
+            char ch = __keyboard_keyToASCII(key);
+            virtualTeletype_collectData(virtualTTY, &ch, 1);
+            ERROR_CHECKPOINT();
+
+            teletype_rawFlush(tty);
+            ERROR_CHECKPOINT();
         } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, KEYPAD)) {
             switch (key) {
                 case KEYBOARD_KEY_KEYPAD_3: {
-                    terminal_scrollDown(terminal);
+                    virtualTeletype_scroll(virtualTTY, 1);
                     break;
                 }
                 case KEYBOARD_KEY_KEYPAD_9: {
-                    terminal_scrollUp(terminal);
+                    virtualTeletype_scroll(virtualTTY, -1);
                     break;
                 }
                 default: {
                     break;
                 }
             }
-        } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, FUNCTION)) {
-            switch (key) {
-                case KEYBOARD_KEY_F1: {
-                    terminalSwitch_setLevel(TERMINAL_LEVEL_OUTPUT);
-                    break;
-                }
-                case KEYBOARD_KEY_F2: {
-                    terminalSwitch_setLevel(TERMINAL_LEVEL_DEBUG);
-                    break;
-                }
-                default: {
-                    break;
-                }
-            }
+            ERROR_CHECKPOINT();
+            
+            teletype_rawFlush(tty);
+            ERROR_CHECKPOINT();
         }
-
-        terminal_flushDisplay();
     }
 }
 
