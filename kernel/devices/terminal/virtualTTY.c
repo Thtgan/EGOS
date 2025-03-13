@@ -22,6 +22,20 @@ static void __virtualTTY_switchCursor(VirtualTeletype* tty, bool enable);
 
 static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch);
 
+static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size n);
+
+static Size __virtualTTY_countStringSameTypeCharacterLength(ConstCstring str, Size n);
+
+static inline bool __virtualTTY_isCharacterPrintable(char ch) {
+    return !(ch == '\n' || ch == '\r' || ch == '\t' || ch == '\b');
+}
+
+static void __virtualTTY_calculateCursorPositionPrintable(VirtualTeletype* tty, Size n);
+
+static void __virtualTTY_calculateCursorPositionNewLine(VirtualTeletype* tty, Size n);
+
+static void __virtualTTY_calculateCursorPositionBackspace(VirtualTeletype* tty, Size n);
+
 static inline bool __virtualTTY_isRowInWindow(VirtualTeletype* tty, Index16 rowIndex) {
     return VALUE_WITHIN(tty->windowLineBegin, tty->windowLineBegin + tty->displayContext->height, rowIndex, <=, <);
 }
@@ -126,19 +140,30 @@ static Size __virtualTTY_read(Teletype* tty, void* buffer, Size n) {
 }
 
 static Size __virtualTTY_write(Teletype* tty, const void* buffer, Size n) {
+    if (n == 0) {
+        return 0;
+    }
+    
     VirtualTeletype* virtualTeletype = HOST_POINTER(tty, VirtualTeletype, tty);
     semaphore_down(&virtualTeletype->inputLock); //In input mode, this function will be stuck here
     semaphore_down(&virtualTeletype->outputLock);
 
-    ConstCstring str = (ConstCstring)buffer;
-    for (int i = 0; i < n; ++i) {
-        __virtualTTY_putCharacter(virtualTeletype, str[i]);
+    if (n == 1) {
+        __virtualTTY_putCharacter(virtualTeletype, *((ConstCstring)buffer));
+    } else {
+        __virtualTTY_putString(virtualTeletype, (ConstCstring)buffer, n);
     }
+    ERROR_GOTO_IF_ERROR(0);
 
     semaphore_up(&virtualTeletype->outputLock);
     semaphore_up(&virtualTeletype->inputLock);
 
     return n;
+    ERROR_FINAL_BEGIN(0);
+
+    semaphore_up(&virtualTeletype->outputLock);
+    semaphore_up(&virtualTeletype->inputLock);
+    return 0;
 }
 
 static void __virtualTTY_flush(Teletype* tty) {
@@ -196,9 +221,8 @@ static void __virtualTTY_switchCursor(VirtualTeletype* tty, bool enable) {
 }
 
 static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
-    Index16 currentCursorPosX = tty->cursorPosX, currentCursorPosY = tty->cursorPosY;
     if (ch == '\b') {
-        if(currentCursorPosX == 0 && currentCursorPosY == 0) {
+        if(tty->cursorPosX == 0 && tty->cursorPosY == 0) {
             return;
         }
 
@@ -206,19 +230,15 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
             return;
         }
     }
-
-    Index16 nextCursorPosX = -1, nextCursorPosY = -1;
-
     int dInputLength = 0;
     bool partRemoved = false;
     switch (ch) {   //TODO: Not considering input mode
         //The character that control the the write position will work to ensure the screen will not print the sharacter should not print 
         case '\n': {
-            tty->fullLineWaitting = false;
-            nextCursorPosX = currentCursorPosX + 1, nextCursorPosY = 0;
-            dInputLength = 0;
             partRemoved |= textBuffer_finishPart(&tty->textBuffer);
             ERROR_GOTO_IF_ERROR(0);
+            dInputLength = 0;
+            __virtualTTY_calculateCursorPositionNewLine(tty, 1);
             break;
         }
         case '\r': {
@@ -228,102 +248,63 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
         case '\t': {
             Size lastLength = textBuffer_getPartLength(&tty->textBuffer, textBuffer_getPartNum(&tty->textBuffer) - 1);
             ERROR_GOTO_IF_ERROR(0);
-            if (lastLength == tty->textBuffer.maxPartLen) {
-                DEBUG_ASSERT_SILENT(tty->fullLineWaitting);
-                nextCursorPosX = currentCursorPosX + 1, nextCursorPosY = tty->tabStride;
-                dInputLength = tty->tabStride;
-                tty->fullLineWaitting = false;
-            } else {
-                nextCursorPosX = currentCursorPosX, nextCursorPosY = algorithms_umin16(tty->displayContext->width, ALIGN_DOWN(currentCursorPosY + tty->tabStride, tty->tabStride));
-                dInputLength = nextCursorPosY - currentCursorPosY;
-                if (nextCursorPosY == tty->displayContext->width) {
-                    tty->fullLineWaitting = true;
-                    nextCursorPosY = tty->displayContext->width - 1;
-                }
-            }
+            Uint8 tabLength = 
+                lastLength == tty->textBuffer.maxPartLen ?
+                tty->tabStride :
+                algorithms_umin16(
+                    tty->displayContext->width,
+                    ALIGN_DOWN(lastLength + tty->tabStride, tty->tabStride)
+                ) - lastLength;
 
             char ch = ' ';
-            for (int i = 0; i < dInputLength; ++i) {
+            for (int i = 0; i < tabLength; ++i) {
                 partRemoved |= textBuffer_pushChar(&tty->textBuffer, ch);
                 ERROR_GOTO_IF_ERROR(0);
             }
+
+            __virtualTTY_calculateCursorPositionPrintable(tty, tabLength);
+            dInputLength = tabLength;
             break;
         }
         case '\b': {
-            if (tty->fullLineWaitting) {
-                Size lastLength = textBuffer_getPartLength(&tty->textBuffer, textBuffer_getPartNum(&tty->textBuffer) - 1);
-                ERROR_GOTO_IF_ERROR(0);
-                DEBUG_ASSERT(lastLength == tty->textBuffer.maxPartLen, "%u\n", lastLength);
-                tty->fullLineWaitting = false;
-                //Cursor position not changed
-                nextCursorPosX = currentCursorPosX;
-                nextCursorPosY = currentCursorPosY;
-            } else {
-                if (currentCursorPosX == 0 && currentCursorPosY == 0) {
-                    nextCursorPosX = nextCursorPosY = 0;    //TODO: Remove? (Not supposed to reach here)
-                    dInputLength = 0;
-                } else if (currentCursorPosY <= 1) {
-                    nextCursorPosX = currentCursorPosX - 1, nextCursorPosY = textBuffer_getPartLength(&tty->textBuffer, nextCursorPosX) - 1;
-                    if (nextCursorPosY + 1 == tty->displayContext->width) {
-                        tty->fullLineWaitting = true;
-                    }
-                    
-                    dInputLength = -1;
-                } else {
-                    nextCursorPosX = currentCursorPosX, nextCursorPosY = currentCursorPosY - 1;
-                    dInputLength = -1;
-                }
+            if (tty->textBuffer.totalByteNum == 0 || (tty->inputMode && tty->inputLength == 0)) {
+                break;
             }
 
+            dInputLength = -1;
+            __virtualTTY_calculateCursorPositionBackspace(tty, 1);
             textBuffer_popData(&tty->textBuffer, 1);
             ERROR_GOTO_IF_ERROR(0);
 
             break;
         }
         default: {
-            if (tty->fullLineWaitting) {
-                Size lastLength = textBuffer_getPartLength(&tty->textBuffer, textBuffer_getPartNum(&tty->textBuffer) - 1);
-                ERROR_GOTO_IF_ERROR(0);
-                DEBUG_ASSERT(lastLength == tty->textBuffer.maxPartLen, "%u\n", lastLength);
-                nextCursorPosY = 1;
-                nextCursorPosX = currentCursorPosX + 1;
-                tty->fullLineWaitting = false;
-            } else {
-                if (currentCursorPosY + 1 == tty->displayContext->width) {
-                    tty->fullLineWaitting = true;
-                    nextCursorPosX = currentCursorPosX, nextCursorPosY = currentCursorPosY;
-                } else {
-                    nextCursorPosX = currentCursorPosX, nextCursorPosY = currentCursorPosY + 1;
-                }
-            }
-            dInputLength = 1;
-
             partRemoved |= textBuffer_pushChar(&tty->textBuffer, ch);
             ERROR_GOTO_IF_ERROR(0);
+
+            dInputLength = 1;
+            __virtualTTY_calculateCursorPositionPrintable(tty, 1);
             break;
         }
     }
 
     if (partRemoved) {
-        --nextCursorPosX;
+        --tty->cursorPosX;
     }
 
-    tty->cursorPosX = nextCursorPosX;
-    tty->cursorPosY = nextCursorPosY;
-
     DEBUG_ASSERT(
-        nextCursorPosX < textBuffer_getPartNum(&tty->textBuffer) && nextCursorPosY < tty->displayContext->width,
-        "Invalid next posX or posY: %u, %u %u %u",
-        nextCursorPosX, nextCursorPosY, textBuffer_getPartNum(&tty->textBuffer), ch
+        tty->cursorPosX < textBuffer_getPartNum(&tty->textBuffer) && tty->cursorPosY < tty->displayContext->width,
+        "Invalid next posX or posY: %u, %u",
+        tty->cursorPosX, tty->cursorPosY
     );
 
     if (tty->inputMode) {
         tty->inputLength += dInputLength;
     }
 
-    __virtualTTY_scrollWindowToRow(tty, nextCursorPosX);
+    __virtualTTY_scrollWindowToRow(tty, tty->cursorPosX);
 
-    Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = nextCursorPosY;
+    Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = tty->cursorPosY;
     DEBUG_ASSERT(
         windowCursorPosX < tty->displayContext->height && windowCursorPosY < tty->displayContext->width,
         "Invalid window cursor posX or posY: %u, %u",
@@ -335,6 +316,190 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
         windowCursorPosY
     };
     display_setCursorPosition(&cursorPosition);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size n) {
+    ConstCstring currentString = str;
+    Size removedPartNum = 0;
+    int dInputLength = 0;
+    
+    Size remainN = n;
+    while (remainN > 0) {
+        Size sameTypeLength = __virtualTTY_countStringSameTypeCharacterLength(currentString, remainN);
+
+        char ch = currentString[0];
+        if (__virtualTTY_isCharacterPrintable(ch)) {
+            removedPartNum += textBuffer_pushText(&tty->textBuffer, currentString, sameTypeLength);
+            ERROR_GOTO_IF_ERROR(0);
+            __virtualTTY_calculateCursorPositionPrintable(tty, sameTypeLength);
+        } else if (ch == '\n') {
+            for (int i = 0; i < sameTypeLength; ++i) {
+                removedPartNum += textBuffer_finishPart(&tty->textBuffer) ? 1 : 0;
+                ERROR_GOTO_IF_ERROR(0);
+            }
+            __virtualTTY_calculateCursorPositionNewLine(tty, sameTypeLength);
+        } else if (ch == '\r') {
+            debug_blowup("Not supported yet");
+        } else if (ch == '\t') {
+            char tmpBuffer[tty->tabStride];
+            for (int i = 0; i < tty->tabStride; ++i) {
+                tmpBuffer[i] = ' ';
+            }
+
+            Size printCharacterSum = 0;
+            for (int i = 0; i < sameTypeLength; ++i) {
+                Size lastLength = textBuffer_getPartLength(&tty->textBuffer, textBuffer_getPartNum(&tty->textBuffer) - 1);
+                ERROR_GOTO_IF_ERROR(0);
+                Uint8 tabLength = 
+                    lastLength == tty->textBuffer.maxPartLen ?
+                    tty->tabStride :
+                    algorithms_umin16(
+                        tty->displayContext->width,
+                        ALIGN_DOWN(lastLength + tty->tabStride, tty->tabStride)
+                    ) - lastLength;
+
+                removedPartNum += textBuffer_pushText(&tty->textBuffer, tmpBuffer, tabLength);
+                ERROR_GOTO_IF_ERROR(0);
+
+                printCharacterSum += tabLength;
+                dInputLength += tabLength;
+            }
+
+            __virtualTTY_calculateCursorPositionPrintable(tty, printCharacterSum);
+        } else if (ch == '\b') {
+            Size maxBackspaceN = algorithms_umin64(sameTypeLength, tty->textBuffer.totalByteNum);
+            if (tty->inputMode) {
+                maxBackspaceN = algorithms_umin64(maxBackspaceN, tty->inputLength);
+            }
+            dInputLength -= maxBackspaceN;
+            __virtualTTY_calculateCursorPositionBackspace(tty, maxBackspaceN);
+            textBuffer_popData(&tty->textBuffer, maxBackspaceN);
+            ERROR_GOTO_IF_ERROR(0);
+        }
+        
+        currentString += sameTypeLength;
+        remainN -= sameTypeLength;
+    }
+
+    tty->cursorPosX -= removedPartNum;
+    DEBUG_ASSERT(
+        tty->cursorPosX < textBuffer_getPartNum(&tty->textBuffer) && tty->cursorPosY < tty->displayContext->width,
+        "Invalid next posX or posY: %u, %u",
+        tty->cursorPosX, tty->cursorPosY
+    );
+
+    if (tty->inputMode) {
+        tty->inputLength += dInputLength;
+    }
+
+    __virtualTTY_scrollWindowToRow(tty, tty->cursorPosX);
+
+    Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = tty->cursorPosY;
+    DEBUG_ASSERT(
+        windowCursorPosX < tty->displayContext->height && windowCursorPosY < tty->displayContext->width,
+        "Invalid window cursor posX or posY: %u, %u",
+        windowCursorPosX, windowCursorPosY
+    );
+
+    DisplayPosition cursorPosition = {
+        windowCursorPosX,
+        windowCursorPosY
+    };
+    display_setCursorPosition(&cursorPosition);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static Size __virtualTTY_countStringSameTypeCharacterLength(ConstCstring str, Size n) {
+    Size ret = 1;
+    if (__virtualTTY_isCharacterPrintable(str[0])) {
+        while (ret < n && __virtualTTY_isCharacterPrintable(str[ret])) {
+            ++ret;
+        }
+    } else {
+        char matchCharacter = str[0];
+        while (ret < n && str[ret] == matchCharacter) {
+            ++ret;
+        }
+    }
+
+    return ret;
+}
+
+static void __virtualTTY_calculateCursorPositionPrintable(VirtualTeletype* tty, Size n) {
+    Index16 currentCursorPosX = tty->cursorPosX, currentCursorPosY = tty->cursorPosY;
+    bool currentFullLineWaiting = tty->fullLineWaitting;
+
+    Size remainN = n;
+    while (remainN > 0) {
+        Uint16 cursorMoveN = 1;
+        if (currentFullLineWaiting) {
+            currentCursorPosX = currentCursorPosX + 1;
+            currentCursorPosY = 1;
+            currentFullLineWaiting = false;
+        } else if (currentCursorPosY == tty->displayContext->width - 1) {
+            currentFullLineWaiting = true;
+            //Cursor position not changed
+        } else {
+            cursorMoveN = (Uint16)algorithms_umin64(tty->displayContext->width - 1 - currentCursorPosX, remainN);
+            currentCursorPosY = currentCursorPosY + cursorMoveN;
+        }
+        remainN -= cursorMoveN;
+    }
+
+    tty->cursorPosX = currentCursorPosX;
+    tty->cursorPosY = currentCursorPosY;
+    tty->fullLineWaitting = currentFullLineWaiting;
+}
+
+static void __virtualTTY_calculateCursorPositionNewLine(VirtualTeletype* tty, Size n) {
+    tty->fullLineWaitting = false;
+    tty->cursorPosX = tty->cursorPosX + n, tty->cursorPosY = 0;
+}
+
+static void __virtualTTY_calculateCursorPositionBackspace(VirtualTeletype* tty, Size n) {
+    Index16 currentCursorPosX = tty->cursorPosX, currentCursorPosY = tty->cursorPosY;
+    bool currentFullLineWaiting = tty->fullLineWaitting;
+
+    Size remainN = n;
+    while (remainN > 0) {
+        if (currentCursorPosX == 0 && currentCursorPosY == 0) {
+            break;
+        }
+
+        Uint16 cursorMoveN = 1;
+        if (currentFullLineWaiting) {
+            currentFullLineWaiting = false;
+            //Cursor position not changed
+        } else if (currentCursorPosY <= 1) {
+            if (currentCursorPosX > 0) {
+                currentCursorPosX = currentCursorPosX - 1;
+                currentCursorPosY = textBuffer_getPartLength(&tty->textBuffer, currentCursorPosX) - 1;
+                ERROR_GOTO_IF_ERROR(0);
+                if (currentCursorPosY == tty->displayContext->width - 1) {
+                    currentFullLineWaiting = true;
+                }
+            } else {
+                DEBUG_ASSERT_SILENT(currentCursorPosY == 1);
+                currentCursorPosY = 0;
+            }
+        } else {
+            Size partLength = textBuffer_getPartLength(&tty->textBuffer, currentCursorPosX);
+            ERROR_GOTO_IF_ERROR(0);
+            cursorMoveN = (Uint16)algorithms_umin16(partLength, remainN);
+            currentCursorPosY = partLength - cursorMoveN;
+        }
+
+        remainN -= cursorMoveN;
+    }
+
+    tty->cursorPosX = currentCursorPosX;
+    tty->cursorPosY = currentCursorPosY;
+    tty->fullLineWaitting = currentFullLineWaiting;
 
     return;
     ERROR_FINAL_BEGIN(0);

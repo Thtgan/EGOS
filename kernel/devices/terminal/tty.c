@@ -14,7 +14,7 @@ void teletype_initStruct(Teletype* tty, TeletypeOperations* operations) {
 static Teletype* _currentTTY;
 static BootTeletype _bootTTY;
 static VirtualTeletype _mainTTY;
-static bool _isMainTTYinitialized;
+static bool _isMainTTYinitialized;  //TODO: Remove this?
 
 void tty_init() {
     _isMainTTYinitialized = false;
