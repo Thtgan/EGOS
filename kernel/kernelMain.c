@@ -100,12 +100,12 @@ void kernelMain(SystemInfo* info) {
     // fs_fileClose(&file);
 
     Uint32 pciDeviceNum = pci_getDeviceNum();
-    print_printf("%u PCI devices found\n", pciDeviceNum);
+    print_debugPrintf("%u PCI devices found\n", pciDeviceNum);
     if (pciDeviceNum != 0) {
-        print_printf("Bus Dev Func Vendor Device Class SubClass\n");
+        print_debugPrintf("Bus Dev Func Vendor Device Class SubClass\n");
         for (int i = 0; i < pciDeviceNum; ++i) {
             PCIdevice* device = pci_getDevice(i);
-            print_printf(
+            print_debugPrintf(
                 "%02X  %02X  %02X   %04X   %04X   %02X    %02X\n",
                 PCI_BUS_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_DEVICE_NUMBER_FROM_ADDR(device->baseAddr),

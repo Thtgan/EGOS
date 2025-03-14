@@ -64,15 +64,15 @@ void init_initKernel() {
 
         ERROR_CHECKPOINT({
             if (_initFuncs[i].name != NULL) {
-                print_printf("Initialization of %s failed\n", _initFuncs[i].name);
+                print_debugPrintf("Initialization of %s failed\n", _initFuncs[i].name);
             } else {
-                print_printf("Initialization failed");
+                print_debugPrintf("Initialization failed");
             }
             error_unhandledRecord(error_getCurrentRecord());
         });
     }
 
-    print_printf("All Initializations passed\n");
+    print_debugPrintf("All Initializations passed\n");
     return;
 }
 

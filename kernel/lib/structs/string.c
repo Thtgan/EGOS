@@ -41,7 +41,7 @@ void string_initStructStrN(String* str, ConstCstring cstr, Size n) {
 
 void string_clearStruct(String* str) {
     if (!string_isAvailable(str)) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
@@ -54,7 +54,7 @@ void string_clearStruct(String* str) {
 
 void string_concat(String* des, String* str1, String* str2) {
     if (!(string_isAvailable(des) && string_isAvailable(str1) && string_isAvailable(str2))) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
@@ -83,7 +83,7 @@ void string_concat(String* des, String* str1, String* str2) {
 
 void string_cconcat(String* des, String* str1, Cstring str2) {
     if (!(string_isAvailable(des) && string_isAvailable(str1))) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
@@ -109,7 +109,7 @@ void string_cconcat(String* des, String* str1, Cstring str2) {
 
 void string_append(String* des, String* str, int ch) {
     if (!(string_isAvailable(des) && string_isAvailable(str))) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
@@ -134,7 +134,7 @@ void string_append(String* des, String* str, int ch) {
 
 void string_slice(String* des, String* src, Index64 from, Index64 to) {
     if (!(string_isAvailable(des) && string_isAvailable(src))) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
@@ -175,7 +175,7 @@ void string_resize(String* str, Size newCapacity) {
 
 void string_copy(String* des, String* src) {
     if (!(string_isAvailable(des) && string_isAvailable(src))) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
@@ -202,7 +202,7 @@ void string_clear(String* str) {
 
 static void __string_doResize(String* str, Size newCapacity, bool reset) {
     if (!string_isAvailable(str)) {
-        print_printf("Bad String %d\n", __LINE__);
+        print_debugPrintf("Bad String %d\n", __LINE__);
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
