@@ -158,6 +158,10 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
             
             teletype_rawFlush(tty);
             ERROR_CHECKPOINT();
+        } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, FUNCTION)) {
+            if (key == KEYBOARD_KEY_F12) {
+                debug_blowup("Manually triggered crash");
+            }
         }
     }
 }

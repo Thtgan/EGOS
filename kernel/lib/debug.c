@@ -1,6 +1,7 @@
 #include<debug.h>
 
 #include<algorithms.h>
+#include<devices/display/display.h>
 #include<devices/terminal/virtualTTY.h>
 #include<devices/terminal/textBuffer.h>
 #include<devices/terminal/tty.h>
@@ -29,8 +30,6 @@ void debug_init() {
     _debug_dumpTo = paging_convertAddressP2V(_debug_dumpTo);
     memory_memset(_debug_dumpTo, ' ', __TTY_DUMP_SIZE);
 
-    print_printf("%p\n", _debug_dumpTo);
-
     return;
     ERROR_FINAL_BEGIN(0);
 }
@@ -44,11 +43,31 @@ void debug_blowup(ConstCstring format, ...) {
     va_list args;
     va_start(args, format);
 
-    print_debugVprintf(format, args);
+    char lastWordBuffer[1024];
+    int lastWordLength = print_vsprintf(lastWordBuffer, format, args);
 
     va_end(args);
 
     textBuffer_dump(&_debug_tty.textBuffer, _debug_dumpTo, __TTY_DUMP_SIZE);
+
+    DisplayContext* context = display_getCurrentContext();
+    DisplayPosition pos1 = (DisplayPosition) {
+        .x = 0,
+        .y = 0
+    };
+    DisplayPosition pos2 = (DisplayPosition) {
+        .x = context->height - 1,
+        .y = context->width - 1
+    };
+
+    display_fill(&pos1, &pos2, 0x0000FF);
+
+    display_printString(&pos1, "CRASHED", 7, 0xFFFFFF);
+    pos1.x = 1;
+    display_printString(&pos1, lastWordBuffer, lastWordLength, 0xFFFFFF);
+    pos1.x = 2;
+    lastWordLength = print_sprintf(lastWordBuffer, "Debug data dumped to %p", _debug_dumpTo);
+    display_printString(&pos1, lastWordBuffer, lastWordLength, 0xFFFFFF);
 
     cli();
     die();
