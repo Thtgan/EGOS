@@ -37,7 +37,7 @@ void textBuffer_popData(TextBuffer* textBuffer, Size n);
 
 bool textBuffer_finishPart(TextBuffer* textBuffer);
 
-void textBuffer_dump(TextBuffer* textBuffer, Size dumpPartNum);
+void textBuffer_dump(TextBuffer* textBuffer, void* dumpTo, Size dumpByteNum);
 
 void textBuffer_resize(TextBuffer* textBuffer, Size newMaxPartNum, Uint16 newMaxPartLen);
 

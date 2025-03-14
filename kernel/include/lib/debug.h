@@ -1,11 +1,16 @@
 #if !defined(__LIB_DEBUG_H)
 #define __LIB_DEBUG_H
 
+#include<devices/terminal/tty.h>
 #include<multitask/context.h>
 #include<kit/macro.h>
 #include<kit/types.h>
 #include<print.h>
 #include<structs/singlyLinkedList.h>
+
+void debug_init();
+
+Teletype* debug_getTTY();
 
 __attribute__((noreturn))
 /**
@@ -23,7 +28,7 @@ void debug_dump_stack(void* rbp, Size maxDepth);
 
 Uintptr debug_getCurrentRIP();  //TODO: IDK where this should go
 
-#define DEBUG_MARK_PRINT(__FORMAT, ...)                 print_printf("[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+#define DEBUG_MARK_PRINT(__FORMAT, ...)                 print_debugPrintf("[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
 #define DEBUG_ASSERT_SILENT(__EXPRESSION)               do { if (!(__EXPRESSION)) debug_blowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
 

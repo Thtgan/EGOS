@@ -16,6 +16,8 @@
  */
 int print_printf(const char* format, ...);
 
+int print_debugPrintf(const char* format, ...);
+
 /**
  * @brief Write the string to buffer with given data in format
  * 
@@ -36,6 +38,8 @@ int print_sprintf(char* buffer, const char* format, ...);
  */
 int print_vprintf(const char* format, va_list args);
 
+int print_debugVprintf(const char* format, va_list args);
+
 /**
  * @brief Write the string to buffer with given data in format
  * 
@@ -54,5 +58,7 @@ int print_vsprintf(char* buffer, const char* format, va_list args);
  * @return int The character
  */
 int print_putchar(int ch);
+
+int print_debugPutchar(int ch);
 
 #endif // __LIB_PRINT_H

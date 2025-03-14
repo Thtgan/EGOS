@@ -259,8 +259,70 @@ bool textBuffer_finishPart(TextBuffer* textBuffer) {
     return false;
 }
 
-void textBuffer_dump(TextBuffer* textBuffer, Size dumpPartNum) {
+void textBuffer_dump(TextBuffer* textBuffer, void* dumpTo, Size dumpByteNum) {
+    Size remainDumpByteNum = dumpByteNum;
+    Size partNum = textBuffer_getPartNum(textBuffer);
+    DEBUG_ASSERT_SILENT(partNum > 0);
+    Index32 currentPartIndex = partNum - 1;
+    Uint16 currentPartOffset = 0;
 
+    while (remainDumpByteNum > 0) {
+        Object currentPartEntry = loopArray_get(&textBuffer->partEntries, currentPartIndex);
+        ERROR_GOTO_IF_ERROR(0);
+        if (TEST_FLAGS(currentPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL)) {
+            --remainDumpByteNum;
+        }
+
+        Uint16 partLength = textBuffer_getPartLength(textBuffer, currentPartIndex);
+        ERROR_GOTO_IF_ERROR(0);
+        if (remainDumpByteNum < partLength) {
+            currentPartOffset = partLength - remainDumpByteNum;
+            remainDumpByteNum = 0;
+        } else {
+            if (currentPartIndex == 0) {
+                break;
+            }
+            remainDumpByteNum -= partLength;
+            --currentPartIndex;
+        }
+    }
+
+    Cstring currentBuffer = (Cstring)dumpTo;
+    for (; currentPartIndex < partNum; ++currentPartIndex) {
+        Object currentPartEntry = loopArray_get(&textBuffer->partEntries, currentPartIndex);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Index64 currentPartPosition = __TEXT_BUFFER_PART_GET_POSITION(currentPartEntry);
+        ConstCstring readBegin = (ConstCstring)__textBuffer_getDataPage(textBuffer, currentPartPosition, true) + __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_OFFSET(currentPartPosition);
+        ERROR_GOTO_IF_ERROR(0);
+
+        Uint16 partLength = textBuffer_getPartLength(textBuffer, currentPartIndex);
+        ERROR_GOTO_IF_ERROR(0);
+
+        if (currentPartOffset != 0) {
+            Uint16 readByteNum = partLength - currentPartOffset;
+            DEBUG_ASSERT_SILENT(remainDumpByteNum > readByteNum);
+            memory_memcpy(currentBuffer, readBegin + currentPartOffset, readByteNum);
+            currentBuffer += readByteNum;
+            remainDumpByteNum -= readByteNum;
+            currentPartOffset = 0;
+        } else {
+            DEBUG_ASSERT_SILENT(remainDumpByteNum > partLength);
+            memory_memcpy(currentBuffer, readBegin, partLength);
+            currentBuffer += partLength;
+            remainDumpByteNum -= partLength;
+        }
+
+        if (TEST_FLAGS(currentPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL)) {
+            DEBUG_ASSERT_SILENT(remainDumpByteNum > 0);
+            --remainDumpByteNum;
+            *currentBuffer = '\n';
+            ++currentBuffer;
+        }
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void textBuffer_resize(TextBuffer* textBuffer, Size newMaxPartNum, Uint16 newMaxPartLen) {

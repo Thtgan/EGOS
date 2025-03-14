@@ -40,6 +40,7 @@ static __InitFunc _initFuncs[] = {
     { idt_init                  ,   "Interrupt"     },
     { mm_init                   ,   "Memory"        },
     { tty_initVirtTTY           ,   "Virtual TTY"   },
+    { debug_init                ,   "Debug"         },
     { tss_init                  ,   "TSS"           },
     { keyboard_init             ,   "Keyboard"      },
     { device_init               ,   "Device"        },

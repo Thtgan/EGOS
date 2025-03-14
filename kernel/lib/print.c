@@ -7,6 +7,7 @@
 #include<memory/memory.h>
 #include<algorithms.h>
 #include<cstring.h>
+#include<debug.h>
 
 #define __PRINT_FLAGS_LEFT_JUSTIFY  FLAG8(0)
 #define __PRINT_FLAGS_EXPLICIT_SIGN FLAG8(1)
@@ -104,6 +105,17 @@ int print_printf(const char* format, ...) {
     return ret;
 }
 
+int print_debugPrintf(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    int ret = print_debugVprintf(format, args);
+
+    va_end(args);
+
+    return ret;
+}
+
 //TODO: BUG: printed string doesn't end well
 int print_sprintf(char* buffer, const char* format, ...) {
     va_list args;
@@ -132,12 +144,44 @@ int print_vprintf(const char* format, va_list args) {
     return ret;
 }
 
+int print_debugVprintf(const char* format, va_list args) {
+    Teletype* tty = debug_getTTY();
+    if (tty == NULL) {
+        return 0;
+    }
+
+    char buffer[__PRINT_BUFFER_SIZE];
+    memory_memset(buffer, 0, __PRINT_BUFFER_SIZE);
+    int ret = __print_handlePrintf(buffer, (Size)__PRINT_BUFFER_SIZE - 1, format, args);
+
+    teletype_rawWrite(tty, buffer, ret);
+    ERROR_CHECKPOINT(); //Print function is not supposed to throw error
+    teletype_rawFlush(tty);
+    ERROR_CHECKPOINT();
+
+    return ret;
+}
+
 int print_vsprintf(char* buffer, const char* format, va_list args) {
     return __print_handlePrintf(buffer, (Size)-1, format, args);
 }
 
 int print_putchar(int ch) {
     Teletype* tty = tty_getCurrentTTY();
+    teletype_rawWrite(tty, &ch, 1);
+    ERROR_CHECKPOINT(); //Print function is not supposed to throw error
+    teletype_rawFlush(tty);
+    ERROR_CHECKPOINT();
+
+    return ch;
+}
+
+int print_debugPutchar(int ch) {
+    Teletype* tty = debug_getTTY();
+    if (tty == NULL) {
+        return 0;
+    }
+
     teletype_rawWrite(tty, &ch, 1);
     ERROR_CHECKPOINT(); //Print function is not supposed to throw error
     teletype_rawFlush(tty);

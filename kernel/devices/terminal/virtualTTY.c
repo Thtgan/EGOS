@@ -167,6 +167,10 @@ static Size __virtualTTY_write(Teletype* tty, const void* buffer, Size n) {
 }
 
 static void __virtualTTY_flush(Teletype* tty) {
+    if (tty != tty_getCurrentTTY()) {
+        return;
+    }
+
     VirtualTeletype* virtualTeletype = HOST_POINTER(tty, VirtualTeletype, tty);
     semaphore_down(&virtualTeletype->outputLock);
     
@@ -206,7 +210,7 @@ static void __virtualTTY_switchCursor(VirtualTeletype* tty, bool enable) {
     semaphore_down(&tty->outputLock);
     Index16 cursorRow = tty->cursorPosX, cursorCol = tty->cursorPosY;
     tty->cursorShouldBePrinted = enable && __virtualTTY_isRowInWindow(tty, cursorRow);
-    if (tty->cursorShouldBePrinted) {
+    if (&tty->tty == tty_getCurrentTTY() && tty->cursorShouldBePrinted) {
         DisplayPosition cursorPosition = {
             cursorRow - tty->windowLineBegin,
             cursorCol
@@ -216,7 +220,9 @@ static void __virtualTTY_switchCursor(VirtualTeletype* tty, bool enable) {
 
     tty->cursorEnabled = enable;
 
-    display_switchCursor(tty->cursorShouldBePrinted);
+    if (&tty->tty == tty_getCurrentTTY()) {
+        display_switchCursor(tty->cursorShouldBePrinted);
+    }
     semaphore_up(&tty->outputLock);
 }
 
@@ -304,18 +310,20 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
 
     __virtualTTY_scrollWindowToRow(tty, tty->cursorPosX);
 
-    Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = tty->cursorPosY;
-    DEBUG_ASSERT(
-        windowCursorPosX < tty->displayContext->height && windowCursorPosY < tty->displayContext->width,
-        "Invalid window cursor posX or posY: %u, %u",
-        windowCursorPosX, windowCursorPosY
-    );
-
-    DisplayPosition cursorPosition = {
-        windowCursorPosX,
-        windowCursorPosY
-    };
-    display_setCursorPosition(&cursorPosition);
+    if (&tty->tty == tty_getCurrentTTY()) {
+        Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = tty->cursorPosY;
+        DEBUG_ASSERT(
+            windowCursorPosX < tty->displayContext->height && windowCursorPosY < tty->displayContext->width,
+            "Invalid window cursor posX or posY: %u, %u",
+            windowCursorPosX, windowCursorPosY
+        );
+    
+        DisplayPosition cursorPosition = {
+            windowCursorPosX,
+            windowCursorPosY
+        };
+        display_setCursorPosition(&cursorPosition);
+    }
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -397,18 +405,20 @@ static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size 
 
     __virtualTTY_scrollWindowToRow(tty, tty->cursorPosX);
 
-    Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = tty->cursorPosY;
-    DEBUG_ASSERT(
-        windowCursorPosX < tty->displayContext->height && windowCursorPosY < tty->displayContext->width,
-        "Invalid window cursor posX or posY: %u, %u",
-        windowCursorPosX, windowCursorPosY
-    );
-
-    DisplayPosition cursorPosition = {
-        windowCursorPosX,
-        windowCursorPosY
-    };
-    display_setCursorPosition(&cursorPosition);
+    if (&tty->tty == tty_getCurrentTTY()) {
+        Index16 windowCursorPosX = tty->cursorPosX - tty->windowLineBegin, windowCursorPosY = tty->cursorPosY;
+        DEBUG_ASSERT(
+            windowCursorPosX < tty->displayContext->height && windowCursorPosY < tty->displayContext->width,
+            "Invalid window cursor posX or posY: %u, %u",
+            windowCursorPosX, windowCursorPosY
+        );
+    
+        DisplayPosition cursorPosition = {
+            windowCursorPosX,
+            windowCursorPosY
+        };
+        display_setCursorPosition(&cursorPosition);
+    }
 
     return;
     ERROR_FINAL_BEGIN(0);
