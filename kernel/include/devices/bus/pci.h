@@ -6,6 +6,8 @@ typedef struct PCIHeaderType0 PCIHeaderType0;
 typedef struct PCIHeaderType1 PCIHeaderType1;
 typedef struct PCIHeaderType2 PCIHeaderType2;
 typedef struct PCIdevice PCIdevice;
+typedef struct pciMSIXtableEntry pciMSIXtableEntry;
+typedef struct pciMSIX pciMSIX;
 
 #include<debug.h>
 #include<kit/bit.h>
@@ -25,11 +27,53 @@ typedef struct PCIcommonHeader {
 #define PCI_COMMON_HEADER_INVALID_VENDOR_ID 0xFFFF
     Uint16 deviceID;
     Uint16 command;
+#define PCI_COMMON_HEADER_COMMAND_FLAG_IO_SPACE                         FLAG16(0)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_MEMORY_SPACE                     FLAG16(1)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_BUS_MASTER                       FLAG16(2)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_SPECIAL_CYCLES                   FLAG16(3)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_MEMORY_WRITE_AND_INVALITE_ENABLE FLAG16(4)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_VGA_PALETTE_SNOOP                FLAG16(5)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_PARITY_ERROR_RESPONSE            FLAG16(6)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_SERR_ENABLE                      FLAG16(8)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_FAST_BACK_TO_BACK_ENABLE         FLAG16(9)
+#define PCI_COMMON_HEADER_COMMAND_FLAG_INTERRUPT_DISABLE                FLAG16(10)
     Uint16 status;
+#define PCI_COMMON_HEADER_STATUS_FLAG_INTERRUPT                         FLAG16(3)
+#define PCI_COMMON_HEADER_STATUS_FLAG_CAPABILITIES_LIST                 FLAG16(4)
+#define PCI_COMMON_HEADER_STATUS_FLAG_66MHZ_CAPABLE                     FLAG16(5)
+#define PCI_COMMON_HEADER_STATUS_FLAG_FAST_BACK_TO_BACK_CAPABLE         FLAG16(6)
+#define PCI_COMMON_HEADER_STATUS_FLAG_MASTER_DATA_PARITY_ERROR          FLAG16(7)
+#define PCI_COMMON_HEADER_STATUS_DEVSEL_TIMING_FAST                     VAL_LEFT_SHIFT(0, 8)
+#define PCI_COMMON_HEADER_STATUS_DEVSEL_TIMING_MEDIUM                   VAL_LEFT_SHIFT(1, 8)
+#define PCI_COMMON_HEADER_STATUS_DEVSEL_TIMING_SLOW                     VAL_LEFT_SHIFT(2, 8)
+#define PCI_COMMON_HEADER_STATUS_FLAG_SIGNALED_TARGET_ABORT             FLAG16(11)
+#define PCI_COMMON_HEADER_STATUS_FLAG_RECEIVED_TARGET_ABORT             FLAG16(12)
+#define PCI_COMMON_HEADER_STATUS_FLAG_RECEIVED_MASTER_ABORT             FLAG16(13)
+#define PCI_COMMON_HEADER_STATUS_FLAG_SIGNALED_SYSTEM_ERROR             FLAG16(14)
+#define PCI_COMMON_HEADER_STATUS_FLAG_DETECTDE_PARITY_ERROR             FLAG16(15)
     Uint8 revisionID;
     Uint8 progIF;       //Programming Interface Byte
     Uint8 subclass;     //Specifies the specific function the device performs
     Uint8 classCode;    //Specifies the type of function the device performs
+#define PCI_COMMON_HEADER_CLASS_CODE_DEVICE_BUILT_BEFORE_CLASS_DEFINITIONS_FINALIZED    0x00
+#define PCI_COMMON_HEADER_CLASS_CODE_MASS_STORAGE_CONTROLLER                            0x01
+#define PCI_COMMON_HEADER_CLASS_CODE_NETWORK_CONTROLLER                                 0x02
+#define PCI_COMMON_HEADER_CLASS_CODE_DISPLAY_CONTROLLER                                 0x03
+#define PCI_COMMON_HEADER_CLASS_CODE_MULTIMEDIA_DEVICE                                  0x04
+#define PCI_COMMON_HEADER_CLASS_CODE_MEMORY_CONTROLLER                                  0x05
+#define PCI_COMMON_HEADER_CLASS_CODE_BRIDGE_CONTROLLER                                  0x06
+#define PCI_COMMON_HEADER_CLASS_CODE_SIMPLE_COMMUNICATION_CONTROLLER                    0x07
+#define PCI_COMMON_HEADER_CLASS_CODE_BASE_SYSTEM_PERIPHERALS                            0x08
+#define PCI_COMMON_HEADER_CLASS_CODE_INPUT_DEVICE                                       0x09
+#define PCI_COMMON_HEADER_CLASS_CODE_DOCKING_STATION                                    0x0A
+#define PCI_COMMON_HEADER_CLASS_CODE_PROCESSORS                                         0x0B
+#define PCI_COMMON_HEADER_CLASS_CODE_SERIAL_BUS_CONTROLLERS                             0x0C
+#define PCI_COMMON_HEADER_CLASS_CODE_WIRELESS_CONTROLLER                                0x0D
+#define PCI_COMMON_HEADER_CLASS_CODE_INTELLIGENT_IO_CONTROLLERS                         0x0E
+#define PCI_COMMON_HEADER_CLASS_CODE_SATELLITE_COMMUNICATION_CONTROLLERS                0x0F
+#define PCI_COMMON_HEADER_CLASS_CODE_EN_DECRYPTION_CONTROLLERS                          0x10
+#define PCI_COMMON_HEADER_CLASS_CODE_DATA_ACQUISITION_AND_SIGNAL_PROCESSING_CONTROLLERS 0x11
+#define PCI_COMMON_HEADER_CLASS_CODE_DEVICE_NOT_FIT_ANY_CLASS                           0xFF
     Uint8 cacheLineSize;
     Uint8 latencyTimer;
     Uint8 headerType;
@@ -57,6 +101,24 @@ typedef struct PCIHeaderType0 {
     Uint16 subsystemID;
     Uint32 expansionROMbaseAddr;
     Uint8 capabilitiesPtr;
+#define PCI_CAPABILITY_ID_RESERVED                              0x00
+#define PCI_CAPABILITY_ID_PCI_POWER_MANAGEMENT_INTERFACE        0x01
+#define PCI_CAPABILITY_ID_AGP                                   0x02
+#define PCI_CAPABILITY_ID_VPD                                   0x03
+#define PCI_CAPABILITY_ID_SLOT_IDENTIFICATION                   0x04
+#define PCI_CAPABILITY_ID_MESSAGE_SIGNALED_INTERRUPTS           0x05
+#define PCI_CAPABILITY_ID_COMPACT_PCI_HOT_SWAP                  0x06
+#define PCI_CAPABILITY_ID_PCIX                                  0x07
+#define PCI_CAPABILITY_ID_HYPER_TRANSPORT                       0x08
+#define PCI_CAPABILITY_ID_VENDOR_SPECIFIC                       0x09
+#define PCI_CAPABILITY_ID_DEBUG_PORT                            0x0A
+#define PCI_CAPABILITY_ID_COMPACT_PCI_CENTRAL_RESOURCE_CONTROL  0x0B
+#define PCI_CAPABILITY_ID_PCI_HOT_PLUG                          0x0C
+#define PCI_CAPABILITY_ID_PCI_BRIDGE_SUBSYSTEM_VENDOR_ID        0x0D
+#define PCI_CAPABILITY_ID_AGP_8X                                0x0E
+#define PCI_CAPABILITY_ID_SECURE_DEVICE                         0x0F
+#define PCI_CAPABILITY_ID_PCI_EXPRESS                           0x10
+#define PCI_CAPABILITY_ID_MSIX                                  0x11
     Uint8 reserved1[3];
     Uint32 reserved2;
     Uint8 interruptLine;
@@ -202,6 +264,8 @@ static inline void pci_write(Uint32 addr, Uint32 value) {
     )                                                                                       \
 )
 
+#define PCI_GET_BAR_ADDR(__BASE_ADDR, __BAR_INDEX)  (PCI_HEADER_FIELD_TO_ADDR(__BASE_ADDR, PCIHeaderType0, bar0) + sizeof(Uint32) * (__BAR_INDEX))
+
 void pci_init();
 
 bool pci_checkExist();
@@ -217,5 +281,33 @@ typedef struct PCIdevice {
 Uint32 pci_getDeviceNum();
 
 PCIdevice* pci_getDevice(Index32 index);
+
+Uint32 pci_getBARaddr(Uint32 baseAddr, Uint8 barIndex);
+
+Uint32 pci_readBAR(Uint32 baseAddr, Uint8 barIndex);
+
+Uint32 pci_readBARspaceLength(Uint32 baseAddr, Uint8 barIndex);
+
+Uint8 pci_findCapacityOffset(Uint32 baseAddr, Uint8 targetCapabilityID);
+
+typedef struct pciMSIXtableEntry {
+    Uint32 messageAddrLow;
+    Uint32 messageAddrHigh;
+    Uint32 messageData;
+    Uint32 vectorControl;
+} pciMSIXtableEntry;
+
+typedef struct pciMSIX {
+    Uint8 offset;
+    Uint16 capacity;
+    pciMSIXtableEntry* msixTable;
+    Uint64* msixPBA;
+} pciMSIX;
+
+void pciMSIX_initStruct(pciMSIX* msix, Uint32 baseAddr);
+
+void pciMSIX_addEntry(pciMSIX* msix, Index16 msixVec, int cpuID, int interruptVec, bool edgetrigger, bool deassert);
+
+void pciMSIX_setMasked(pciMSIX* msix, Uint32 baseAddr, bool masked);
 
 #endif // __DEVICES_BUS_PCI_H
