@@ -30,12 +30,10 @@ void loopArray_clearStruct(LoopArray* array) {
 
 void loopArray_pushBack(LoopArray* array, Object val) {
     if (array->size < array->capacity) {
-        // DEBUG_MARK_PRINT("MAKR\n");
         Index64 realIndex = __loopArray_getRealIndex(array, array->size);
         array->data[realIndex] = val;
         ++array->size;
     } else {
-        // DEBUG_MARK_PRINT("OVERWRITING %lu to %lu\n", array->data[array->loopBegin], val);
         array->data[array->loopBegin] = val;
         array->loopBegin = (array->loopBegin + 1) % array->capacity;
     }
@@ -57,7 +55,6 @@ Object loopArray_popBack(LoopArray* array) {
 }
 
 Object loopArray_get(LoopArray* array, Index64 index) {
-    // DEBUG_MARK_PRINT("%p %p\n", index, array->size);
     if (index >= array->size) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }

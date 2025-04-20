@@ -128,11 +128,9 @@ void kernelMain(SystemInfo* info) {
     if (schedule_fork() != NULL) {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is main thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
-        DEBUG_MARK_PRINT("MARK\n");
     } else {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is child thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
-        DEBUG_MARK_PRINT("MARK\n");
     }
 
     Thread* currentThread = schedule_getCurrentThread();

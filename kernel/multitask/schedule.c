@@ -123,7 +123,6 @@ void schedule_tick() {
     }
 
     if (--_schedule_currentThread->remainTick == 0) {
-        // DEBUG_MARK_PRINT("Tick yield\n");
         _schedule_currentThread->remainTick = THREAD_TICK;
         schedule_yield();
     }
