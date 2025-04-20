@@ -69,4 +69,6 @@ void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n);
 
 void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n);
 
+fsEntry* fsEntry_copy(fsEntry* entry);
+
 #endif // __FS_FSENTRY_H

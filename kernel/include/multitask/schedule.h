@@ -1,122 +1,50 @@
 #if !defined(__MULTITASK_SCHEDULE_H)
 #define __MULTITASK_SCHEDULE_H
 
-typedef struct Scheduler Scheduler;
-
-#include<kit/atomic.h>
 #include<kit/types.h>
-#include<kit/oop.h>
 #include<multitask/process.h>
-
-typedef struct Scheduler {
-    void (*start)(Scheduler* this, Process* initProcess);
-    bool started;
-
-    void (*tick)(Scheduler* this);
-    Uint64 tickCnt;
-
-    void (*yield)(Scheduler* this);
-    void (*addProcess)(Scheduler* this, Process* process);
-    void (*terminateProcess)(Scheduler* this, Process* process);
-    void (*blockProcess)(Scheduler* this, Process* process);
-    void (*wakeProcess)(Scheduler* this, Process* process);
-
-    Process* currentProcess;
-
-    bool isrDelayYield;
-    Uint32 criticalCount;
-} Scheduler;
+#include<multitask/thread.h>
 
 void schedule_init();
 
-/**
- * @brief Get current scheduler
- *
- * @return Current scheduler in use
- */
-Scheduler* schedule_getCurrentScheduler();
+Uint16 schedule_allocateNewID();
 
-/**
- * @brief Wrapper function of scheduler start
- *
- * @param initProcess Initial process
- */
-static inline void scheduler_start(Scheduler* scheduler, Process* initProcess) {
-    scheduler->start(scheduler, initProcess);
-}
+void schedule_releaseID(Uint16 id);
 
-/**
- * @brief Wrapper function of scheduler tick
- */
-static inline void scheduler_tick(Scheduler* scheduler) {
-    scheduler->tick(scheduler);
-}
+void schedule_tick();
 
-/**
- * @brief Wrapper function of scheduler yield
- */
-static inline void scheduler_yield(Scheduler* scheduler) {
-    scheduler->yield(scheduler);
-}
+bool schedule_yield();
 
-/**
- * @brief Wrapper function of scheduler add process
- *
- * @param process Process
- */
-static inline void scheduler_addProcess(Scheduler* scheduler, Process* process) {
-    scheduler->addProcess(scheduler, process);
-}
+void schedule_isrDelayYield();
 
-/**
- * @brief Wrapper function of scheduler terminate process
- *
- * @param process Process
- */
-static inline void scheduler_terminateProcess(Scheduler* scheduler, Process* process) {
-    scheduler->terminateProcess(scheduler, process);
-}
+void schedule_addProcess(Process* process);
 
-/**
- * @brief Wrapper function of scheduler block process
- *
- * @param process Process
- */
-static inline void scheduler_blockProcess(Scheduler* scheduler, Process* process) {
-    scheduler->blockProcess(scheduler, process);
-}
+void schedule_removeProcess(Process* process);
 
-/**
- * @brief Wrapper function of scheduler wake process
- *
- * @param process Process
- */
-static inline void scheduler_wakeProcess(Scheduler* scheduler, Process* process) {
-    scheduler->wakeProcess(scheduler, process);
-}
+void schedule_addThread(Thread* thread);
 
-/**
- * @brief Wrapper function of scheduler get current process
- *
- * @return Process* current process running
- */
-static inline Process* scheduler_getCurrentProcess(Scheduler* scheduler) {
-    return scheduler->currentProcess;
-}
+void schedule_removeThread(Thread* thread);
 
-void scheduler_tryYield(Scheduler* scheduler);
+void schedule_threadJoinSchedule(Thread* thread);
 
-void scheduler_isrDelayYield(Scheduler* scheduler);
+void schedule_threadQuitSchedule(Thread* thread);
 
-static inline void scheduler_enterCritical(Scheduler* scheduler) {
-    cli();
-    ATOMIC_INC_FETCH(&scheduler->criticalCount);
-}
+Process* schedule_getCurrentProcess();
 
-static inline void scheduler_leaveCritical(Scheduler* scheduler) {
-    if (ATOMIC_DEC_FETCH(&scheduler->criticalCount) == 0) {
-        sti();
-    }
-}
+Process* schedule_getProcessFromPID(Uint16 pid);
+
+Thread* schedule_getCurrentThread();
+
+Thread* schedule_getThreadFromTID(Uint16 tid);
+
+void schedule_enterCritical();
+
+void schedule_leaveCritical();
+
+void schedule_yieldIfStopped();
+
+Process* schedule_fork();
+
+void schedule_collectOrphans(Process* process);
 
 #endif // __MULTITASK_SCHEDULE_H

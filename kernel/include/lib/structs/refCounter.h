@@ -22,8 +22,12 @@ static inline bool refCounter_derefer(RefCounter* counter) {
     return ATOMIC_DEC_FETCH(&counter->cnt) == 0;
 }
 
+static inline Uint32 refCounter_getCount(RefCounter* counter) {
+    return ATOMIC_LOAD(&counter->cnt);
+}
+
 static inline bool refCounter_check(RefCounter* counter, Uint32 val) {
-    return ATOMIC_BARRIER_READ(counter->cnt) == val;
+    return refCounter_getCount(counter) == val;
 }
 
 #endif // __LIB_STRUCTS_REFCOUNTER_H

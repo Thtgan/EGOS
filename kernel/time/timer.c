@@ -40,18 +40,21 @@ void timer_start(Timer* timer) {
     }
 
     timer->until    = rawClockSourceReadTick(_timer_vlockSource) + timer->tick;
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
+    // Scheduler* scheduler = schedule_getCurrentScheduler();
+    // Process* process = scheduler_getCurrentProcess(scheduler);
 
-    mutex_acquire(&_timer_heapMutex, (Object)process);
+    // mutex_acquire(&_timer_heapMutex, (Object)process);
+    mutex_acquire(&_timer_heapMutex);
     heap_push(&_timer_waitHeap, (Object)timer);
-    mutex_release(&_timer_heapMutex, (Object)process);
+    // mutex_release(&_timer_heapMutex, (Object)process);
+    mutex_release(&_timer_heapMutex);
     ERROR_GOTO_IF_ERROR(0);
     SET_FLAG_BACK(timer->flags, TIMER_FLAGS_PRESENT);
     
     if (TEST_FLAGS(timer->flags, TIMER_FLAGS_SYNCHRONIZE)) {
         while (TEST_FLAGS(timer->flags, TIMER_FLAGS_PRESENT)) { //TODO: Lock?
-            scheduler_tryYield(schedule_getCurrentScheduler());
+            // scheduler_tryYield(schedule_getCurrentScheduler());
+            schedule_yield();
         }
     }
 
@@ -72,23 +75,27 @@ void timer_stop(Timer* timer) {
 void timer_updateTimers() {
     Timer* topTimer;
     Uint64 currentTick = rawClockSourceReadTick(_timer_vlockSource);
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
+    // Scheduler* scheduler = schedule_getCurrentScheduler();
+    // Process* process = scheduler_getCurrentProcess(scheduler);
     while (_timer_waitHeap.size > 0) {
-        mutex_acquire(&_timer_heapMutex, (Object)process);
+        // mutex_acquire(&_timer_heapMutex, (Object)process);
+        mutex_acquire(&_timer_heapMutex);
         heap_top(&_timer_waitHeap, (Object*)&topTimer);
         ERROR_GOTO_IF_ERROR(0);
         if (topTimer->until > currentTick) {
-            mutex_release(&_timer_heapMutex, (Object)process);
+            // mutex_release(&_timer_heapMutex, (Object)process);
+            mutex_release(&_timer_heapMutex);
             break;
         }
         
         if (TEST_FLAGS(topTimer->flags, TIMER_FLAGS_PRESENT)) {
             CLEAR_FLAG_BACK(topTimer->flags, TIMER_FLAGS_PRESENT);
             if (topTimer->handler != NULL) {
-                mutex_release(&_timer_heapMutex, (Object)process);
+                // mutex_release(&_timer_heapMutex, (Object)process);
+                mutex_release(&_timer_heapMutex);
                 topTimer->handler(topTimer);
-                mutex_acquire(&_timer_heapMutex, (Object)process);
+                // mutex_acquire(&_timer_heapMutex, (Object)process);
+                mutex_acquire(&_timer_heapMutex);
             }
             
             heap_pop(&_timer_waitHeap);
@@ -105,13 +112,15 @@ void timer_updateTimers() {
             ERROR_GOTO_IF_ERROR(0);
         }
 
-        mutex_release(&_timer_heapMutex, (Object)process);
+        // mutex_release(&_timer_heapMutex, (Object)process);
+        mutex_release(&_timer_heapMutex);
     }
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (mutex_isLocked(&_timer_heapMutex)) {
-        mutex_release(&_timer_heapMutex, (Object)scheduler);
+        // mutex_release(&_timer_heapMutex, (Object)scheduler);
+        mutex_release(&_timer_heapMutex);
     }
 }
 

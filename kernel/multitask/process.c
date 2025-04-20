@@ -1,219 +1,266 @@
 #include<multitask/process.h>
 
-#include<debug.h>
 #include<fs/fcntl.h>
 #include<fs/fs.h>
-#include<fs/fsSyscall.h>
-#include<kit/bit.h>
+#include<fs/fsEntry.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
-#include<memory/paging.h>
-#include<multitask/context.h>
 #include<multitask/schedule.h>
-#include<cstring.h>
-#include<structs/bitmap.h>
-#include<structs/queue.h>
+#include<multitask/state.h>
+#include<multitask/thread.h>
+#include<structs/linkedList.h>
+#include<structs/string.h>
 #include<structs/vector.h>
-#include<system/memoryMap.h>
 #include<system/pageTable.h>
-#include<real/simpleAsmLines.h>
 #include<error.h>
 
-/**
- * @brief Create  process with basic initialization
- * 
- * @param pid PID of process
- * @param name Name of process
- * @return Process* Created process
- */
-static Process* __process_create(Uint16 pid, ConstCstring name, void* kernelStackTop);
+void process_initStruct(Process* process, Uint16 pid, ConstCstring name, ExtendedPageTableRoot* extendedTable) {
+    process->pid = pid;
+    process->ppid = 0;
 
-/**
- * @brief Allocate a PID
- * 
- * @return Uint16 PID allocated
- */
-static Uint16 __process_allocatePID();
-
-/**
- * @brief Release a PID
- * 
- * @param pid PID to release
- */
-static void __process_releasePID(Uint16 pid);
-
-static Uint16 _process_lastGeneratePID = 0;
-static Bitmap _process_pidBitmap;
-static Uint8 _process_pidBitmapBits[PROCESS_MAXIMUM_PROCESS_NUM / 8];
-
-__attribute__((aligned(PAGE_SIZE)))
-char process_initKernelStack[PROCESS_KERNEL_STACK_SIZE];
-
-static File* _process_stdoutFile;
-
-Process* process_init() {
-    memory_memset(&_process_pidBitmapBits, 0, sizeof(_process_pidBitmapBits));
-    bitmap_initStruct(&_process_pidBitmap, PROCESS_MAXIMUM_PROCESS_NUM, &_process_pidBitmap);
-    bitmap_setBit(&_process_pidBitmap, PROCESS_MAIN_PROCESS_RESERVE_PID);
-
-    _process_stdoutFile = fs_fileOpen("/dev/stdout", FCNTL_OPEN_WRITE_ONLY);
+    string_initStructStr(&process->name, name);
     ERROR_GOTO_IF_ERROR(0);
 
-    Process* mainProcess = __process_create(PROCESS_MAIN_PROCESS_RESERVE_PID, "Init", process_initKernelStack + PROCESS_KERNEL_STACK_SIZE);
-    mainProcess->ppid = PROCESS_MAIN_PROCESS_RESERVE_PID;
-    mainProcess->context.extendedTable = mm->extendedTable;
+    process->state = STATE_RUNNING;
 
-    return mainProcess;
+    process->extendedTable = extendedTable;
+
+    process->lastActiveThread = NULL;
+    linkedList_initStruct(&process->threads);
+
+    vector_initStruct(&process->fsEntries);
+    ERROR_GOTO_IF_ERROR(0);
+
+    File* stdout = fs_fileOpen("/dev/stdout", FCNTL_OPEN_WRITE_ONLY);
+    ERROR_GOTO_IF_ERROR(1);
+    
+    vector_push(&process->fsEntries, (Object)stdout);
+    ERROR_GOTO_IF_ERROR(2);
+
+    linkedList_initStruct(&process->childProcesses);
+    linkedListNode_initStruct(&process->childProcessNode);
+
+    linkedListNode_initStruct(&process->scheduleNode);
+    
+    process->isProcessActive = false;
+
+    return;
+    ERROR_FINAL_BEGIN(2);
+    fs_fileClose(stdout);
+
+    ERROR_FINAL_BEGIN(1);
+    vector_clearStruct(&process->fsEntries);
+
+    ERROR_FINAL_BEGIN(0);
+
+    if (string_isAvailable(&process->name)) {
+        string_clearStruct(&process->name);
+    }
+}
+
+void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
+    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->extendedTable);
+    ERROR_GOTO_IF_ERROR(0);
+
+    process_initStruct(process, pid, cloneFrom->name.data, newTable);
+    ERROR_GOTO_IF_ERROR(0);
+
+    //TODO: Copy fsEntries here
+
+    if (cloneFrom->lastActiveThread != NULL) {
+        DEBUG_ASSERT_SILENT(cloneFrom->lastActiveThread->state == STATE_RUNNING);
+    
+        Thread* newThread = memory_allocate(sizeof(Thread));
+        if (newThread == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
+    
+        Uint16 tid = schedule_allocateNewID();
+        thread_clone(newThread, cloneFrom->lastActiveThread, tid);
+        ERROR_GOTO_IF_ERROR(0);
+
+        if (schedule_getCurrentThread()->tid != tid) {
+            process_addThread(process, newThread);
+    
+            process->lastActiveThread = newThread;
+        }
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+void process_clearStruct(Process* process) {
+    DEBUG_ASSERT_SILENT(process != schedule_getCurrentProcess());
+    DEBUG_ASSERT_SILENT(linkedList_isEmpty(&process->threads));
+
+    Size fsEntryNum = process->fsEntries.size;
+    for (int i = 0; i < fsEntryNum; ++i) {
+        fsEntry* entry = (File*)vector_get(&process->fsEntries, i);
+        ERROR_GOTO_IF_ERROR(0);
+
+        if (entry == NULL) {
+            continue;
+        }
+        
+        fs_fileClose(entry);
+        ERROR_GOTO_IF_ERROR(0);
+    }
+
+    vector_clearStruct(&process->fsEntries);
+
+    string_clearStruct(&process->name);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+void proesss_stop(Process* process, int signal) {   //TODO: signal not used yet
+    Thread* currentThread = schedule_getCurrentThread();
+    thread_refer(currentThread);    //To prevent yielding when stopping current thread
+    for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
+        Thread* thread = HOST_POINTER(node, Thread, processNode);
+        
+        thread_stop(thread);
+    }
+    thread_derefer(currentThread);
+}
+
+void process_kill(Process* process, int signal) {   //TODO: signal not used yet
+    Thread* currentThread = schedule_getCurrentThread();
+    thread_refer(currentThread);    //To prevent yielding when stopping current thread
+    for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
+        Thread* thread = HOST_POINTER(node, Thread, processNode);
+        
+        thread_die(thread);
+    }
+
+    thread_derefer(currentThread);
+}
+
+void process_addThread(Process* process, Thread* thread) {
+    if (process->lastActiveThread == NULL) {
+        process->lastActiveThread = thread;
+    }
+    linkedListNode_insertFront(&process->threads, &thread->processNode);
+
+    if (process->isProcessActive) {
+        schedule_addThread(thread);
+    }
+}
+
+Thread* process_getThreadFromTID(Process* process, Uint16 tid) {
+    for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
+        Thread* thread = HOST_POINTER(node, Thread, processNode);
+        if (thread->tid == tid) {
+            return thread;
+        }
+    }
+
+    return NULL;
+}
+
+void process_removeThread(Process* process, Thread* thread) {
+    DEBUG_ASSERT_SILENT(thread->process == process);
+    DEBUG_ASSERT_SILENT(thread != schedule_getCurrentThread());
+    linkedListNode_delete(&thread->processNode);
+    if (process->lastActiveThread == thread) {
+        process->lastActiveThread = NULL;
+    }
+
+    if (process->isProcessActive) {
+        schedule_removeThread(thread);
+    }
+}
+
+Thread* process_createThread(Process* process, ThreadEntryPoint entry) {
+    Thread* newThread = memory_allocate(sizeof(Thread));
+    if (newThread == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Uint16 tid = schedule_allocateNewID();
+    thread_initStruct(newThread, tid, process, entry, NULL);
+    ERROR_GOTO_IF_ERROR(0);
+
+    process_addThread(process, newThread);
+
+    return newThread;
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
-void process_switch(Process* from, Process* to) {
-    REGISTERS_SAVE();
-
-    from->registers = (Registers*)readRegister_RSP_64();
+void process_notifyThreadDead(Process* process, Thread* thread) {
+    DEBUG_ASSERT_SILENT(thread->process == process);
+    DEBUG_ASSERT_SILENT(thread != schedule_getCurrentThread());
+    DEBUG_ASSERT_SILENT(!linkedList_isEmpty(&process->threads));
     
-    context_switch(&from->context, &to->context);
-
-    REGISTERS_RESTORE();
-}
-
-extern void* __fork_return;
-
-Process* process_fork(ConstCstring name) {
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
-
-    Uint32 oldPID = process->pid, newPID = __process_allocatePID();
-
-    if (newPID == PROCESS_INVALID_PID) {
-        return NULL;
+    process_removeThread(process, thread);
+    if (!linkedList_isEmpty(&process->threads)) {
+        return;
     }
     
-    void* newStack = paging_convertAddressP2V(memory_allocateFrame(DIVIDE_ROUND_UP(PROCESS_KERNEL_STACK_SIZE, PAGE_SIZE)));
-
-    Process* newProcess = __process_create(newPID, name, newStack + PROCESS_KERNEL_STACK_SIZE);
-    newProcess->ppid = oldPID;
-    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(process->context.extendedTable);
-    Uintptr currentStackTop = process->kernelStackTop;
-
-    REGISTERS_SAVE();
-    memory_memcpy(newStack, (void*)(currentStackTop - PROCESS_KERNEL_STACK_SIZE), PROCESS_KERNEL_STACK_SIZE);
-
-    newProcess->context.extendedTable = newTable;
-    newProcess->context.rip = (Uint64)&__fork_return;
-    newProcess->context.rsp = newProcess->kernelStackTop - (currentStackTop - readRegister_RSP_64());
-
-    scheduler_addProcess(scheduler, newProcess);
-
-    asm volatile("__fork_return:");
-    //New process starts from here
-
-    REGISTERS_RESTORE();
-
-    return scheduler_getCurrentProcess(scheduler)->pid == oldPID ? newProcess : NULL;
-}
-
-void process_exit() {
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
-    scheduler_terminateProcess(scheduler, process);
-
-    debug_blowup("Func process_exit is trying to return\n");
-}
-
-void process_release(Process* process) {
-    void* stackBottom = (void*)process->kernelStackTop - PROCESS_KERNEL_STACK_SIZE;
-    memory_memset(stackBottom, 0, PROCESS_KERNEL_STACK_SIZE);
-    memory_freeFrame(paging_convertAddressV2P(stackBottom));
-
-    //TODO: What if user program is running
-    extendedPageTableRoot_releaseTable(process->context.extendedTable);
-
-    __process_releasePID(process->pid);
-
-    //TODO: Check these codes again
-    for (int i = 1; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
-        if (process->fileSlots[i] != NULL) {
-            fs_fileClose(process->fileSlots[i]);
-        }
+    DEBUG_ASSERT_SILENT(process != schedule_getCurrentProcess());
+    if (!linkedList_isEmpty(&process->childProcesses)) {
+        schedule_collectOrphans(process);
     }
-    Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
-    memory_memset(process->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-    memory_freeFrame(paging_convertAddressV2P(process->fileSlots));
 
-    memory_memset(process, 0, PAGE_SIZE);
-    memory_freeFrame(paging_convertAddressV2P(process));
+    // process_clearStruct(process);
+    // memory_free(process);
 }
 
-static Process* __process_create(Uint16 pid, ConstCstring name, void* kernelStackTop) {
-    Process* ret = paging_convertAddressP2V(memory_allocateFrame(1));
-    memory_memset(ret, 0, PAGE_SIZE);
+void process_setParent(Process* process, Process* parent) {
+    schedule_enterCritical();
+    if (parent == NULL) {
+        DEBUG_ASSERT_SILENT(process->ppid != 0);
+        process->ppid = 0;
+        linkedListNode_delete(&process->childProcessNode);
+    } else {
+        DEBUG_ASSERT_SILENT(process->ppid == 0);
+        process->ppid = parent->pid;
+        linkedListNode_insertFront(&parent->childProcesses, &process->childProcessNode);
+    }
+    schedule_leaveCritical();
+}
 
-    ret->pid = pid, ret->ppid = 0;
-    memory_memcpy(ret->name, name, cstring_strlen(name));
-
-    ret->remainTick = PROCESS_TICK;
-    ret->status = PROCESS_STATUS_UNKNOWN;
-
-    ret->kernelStackTop = (Uintptr)kernelStackTop;
-    memory_memset(&ret->context, 0, sizeof(Context));
-    ret->registers = NULL;
-                  
-    queueNode_initStruct(&ret->statusQueueNode);
-    queueNode_initStruct(&ret->semaWaitQueueNode);
-
-    //TODO: Check these codes again
-    Size openedFilePageSize = DIVIDE_ROUND_UP(PROCESS_MAX_OPENED_FILE_NUM * sizeof(File*), PAGE_SIZE);
-    ret->fileSlots = paging_convertAddressP2V(frameAllocator_allocateFrame(mm->frameAllocator, openedFilePageSize));
-    memory_memset(ret->fileSlots, 0, openedFilePageSize * PAGE_SIZE);
-
-    ret->fileSlots[FSSYSCALL_STANDARD_OUTPUT_FILE_DESCRIPTOR] = _process_stdoutFile;
-
+fsEntry* process_getFSentry(Process* process, int fd) {
+    schedule_enterCritical();
+    Vector* entries = &process->fsEntries;
+    fsEntry* ret = entries->size <= fd ? NULL : (fsEntry*)vector_get(entries, fd);
+    schedule_leaveCritical();
     return ret;
 }
 
-int process_allocateFileSlot(Process* process, File* file) {
-    for (int i = 0; i < PROCESS_MAX_OPENED_FILE_NUM; ++i) {
-        if (process->fileSlots[i] == NULL) {
-            process->fileSlots[i] = file;
-            return i;
-        }
-    }
+int process_addFSentry(Process* process, fsEntry* entry) {
+    schedule_enterCritical();
+    Vector* entries = &process->fsEntries;
+    int ret = entries->size - 1;
 
-    return INVALID_INDEX;
+    vector_push(entries, (Object)entry);
+    ERROR_GOTO_IF_ERROR(0);
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    schedule_leaveCritical();
+    return -1;
 }
 
-File* process_getFileFromSlot(Process* process, int index) {
-    if (index >= PROCESS_MAX_OPENED_FILE_NUM) {
-        return NULL;
-    }
+fsEntry* process_removeFSentry(Process* process, int fd) {
+    schedule_enterCritical();
+    Vector* entries = &process->fsEntries;
 
-    return process->fileSlots[index];
-}
+    fsEntry* ret = (fsEntry*)vector_get(entries, fd);
+    ERROR_GOTO_IF_ERROR(0);
+    vector_set(entries, fd, OBJECT_NULL);
 
-File* process_releaseFileSlot(Process* process, int index) {
-    if (index >= PROCESS_MAX_OPENED_FILE_NUM) {
-        return NULL;
-    }
-
-    File* ret =  process->fileSlots[index];
-    process->fileSlots[index] = NULL;
+    schedule_leaveCritical();
     
     return ret;
-}
-
-static Uint16 __process_allocatePID() {
-    Uint16 pid = bitmap_findFirstClear(&_process_pidBitmap, _process_lastGeneratePID);
-    if (pid != PROCESS_INVALID_PID) {
-        bitmap_setBit(&_process_pidBitmap, pid);
-        _process_lastGeneratePID = pid;
-    }
-    return pid;
-}
-
-static void __process_releasePID(Uint16 pid) {
-    bitmap_clearBit(&_process_pidBitmap, pid);
+    ERROR_FINAL_BEGIN(0);
+    schedule_leaveCritical();
+    return NULL;
 }

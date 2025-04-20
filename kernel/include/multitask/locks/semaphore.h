@@ -4,12 +4,12 @@
 typedef struct Semaphore Semaphore;
 
 #include<multitask/locks/spinlock.h>
-#include<structs/queue.h>
+#include<multitask/wait.h>
 
 typedef struct Semaphore {
     volatile int counter;
     Spinlock queueLock;
-    Queue waitQueue;
+    Wait wait;
 } Semaphore;
 
 /**

@@ -90,7 +90,7 @@ void __usermode_syscallHandlerExit(int ret) {
         "mov %0, %%eax;"
         "iretq;"
         :
-        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(scheduler_getCurrentProcess(schedule_getCurrentScheduler())->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
+        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedule_getCurrentThread()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
     );
 }
 
@@ -124,43 +124,43 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    ExtendedPageTableRoot* extendedTable = mm->extendedTable;
+    // ExtendedPageTableRoot* extendedTable = mm->extendedTable;
 
-#define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
-    for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
-        void* translated = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-        ERROR_GOTO_IF_ERROR(0);
-        DEBUG_ASSERT_SILENT(translated == NULL);
+// #define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
+//     for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
+//         void* translated = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
+//         ERROR_GOTO_IF_ERROR(0);
+//         DEBUG_ASSERT_SILENT(translated == NULL);
 
-        frame = memory_allocateFrame(1);
-        if (frame == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+//         frame = memory_allocateFrame(1);
+//         if (frame == NULL) {
+//             ERROR_ASSERT_ANY();
+//             ERROR_GOTO(0);
+//         }
 
-        extendedPageTableRoot_draw(
-            extendedTable,
-            (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i,
-            frame,
-            1,
-            extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
-        );
-        ERROR_GOTO_IF_ERROR(0);
+//         extendedPageTableRoot_draw(
+//             extendedTable,
+//             (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i,
+//             frame,
+//             1,
+//             extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
+//         );
+//         ERROR_GOTO_IF_ERROR(0);
 
-        frame = NULL;
+//         frame = NULL;
 
-        initedStackSize = i;
-    }
+//         initedStackSize = i;
+//     }
+    Thread* currentThread = schedule_getCurrentThread();
+    thread_setupForUserProgram(currentThread);
 
     barrier();
     pushq(0);   //Reserved for return value
     
     REGISTERS_SAVE();
     
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
-    process->userExitStackTop = (void*)readRegister_RSP_64();
-    __usermode_jumpToUserMode((void*)header.entryVaddr, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM);
+    currentThread->userExitStackTop = (void*)readRegister_RSP_64();
+    __usermode_jumpToUserMode((void*)header.entryVaddr, (void*)currentThread->userStack.begin + currentThread->userStack.length);
     asm volatile (
         "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :
@@ -184,16 +184,16 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
-        void* translated = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-        ERROR_GOTO_IF_ERROR(0);
-        DEBUG_ASSERT_SILENT(translated != NULL);
+    // for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
+    //     void* translated = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
+    //     ERROR_GOTO_IF_ERROR(0);
+    //     DEBUG_ASSERT_SILENT(translated != NULL);
 
-        extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
-        ERROR_GOTO_IF_ERROR(0);
+    //     extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
+    //     ERROR_GOTO_IF_ERROR(0);
 
-        memory_freeFrame(translated);
-    }
+    //     memory_freeFrame(translated);
+    // }
 
     //TODO: Drop page entries about user program
 
@@ -206,18 +206,18 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     ErrorRecord tmp;
     error_readRecord(&tmp);
     ERROR_CLEAR();  //TODO: Ugly solution
-    for (Uintptr i = PAGE_SIZE; i <= initedStackSize; i += PAGE_SIZE) {
-        void* frame = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-        ERROR_ASSERT_NONE();
-        if (frame == NULL) {
-            continue;
-        }
+    // for (Uintptr i = PAGE_SIZE; i <= initedStackSize; i += PAGE_SIZE) {
+    //     void* frame = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
+    //     ERROR_ASSERT_NONE();
+    //     if (frame == NULL) {
+    //         continue;
+    //     }
 
-        extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
-        ERROR_ASSERT_NONE();
+    //     extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
+    //     ERROR_ASSERT_NONE();
 
-        memory_freeFrame(frame);
-    }
+    //     memory_freeFrame(frame);
+    // }
 
     for (int i = 0; i < loadedHeaderNum; ++i) {
         elf_readELF64ProgramHeader(file, &header, &programHeader, i);

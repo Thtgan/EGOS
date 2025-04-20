@@ -8,6 +8,7 @@
 #include<memory/memory.h>
 #include<memory/paging.h>
 #include<multitask/schedule.h>
+#include<multitask/process.h>
 #include<print.h>
 #include<system/pageTable.h>
 #include<error.h>
@@ -105,8 +106,10 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         readRemain = programHeader->segmentSizeInFile,
         memoryRemain = programHeader->segmentSizeInMemory;
 
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
+    // Scheduler* scheduler = schedule_getCurrentScheduler();
+    Process* currentProcess = schedule_getCurrentProcess();
+    // ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
+    ExtendedPageTableRoot* extendedTable = currentProcess->extendedTable;
     fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN);
 
     Uint64 flags = PAGING_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGING_ENTRY_FLAG_RW : 0) | PAGING_ENTRY_FLAG_PRESENT;
@@ -175,8 +178,10 @@ void elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     Size memoryRemain = programHeader->segmentSizeInMemory;
 
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
+    // Scheduler* scheduler = schedule_getCurrentScheduler();
+    Process* currentProcess = schedule_getCurrentProcess();
+    // ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
+    ExtendedPageTableRoot* extendedTable = currentProcess->extendedTable;
     Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {

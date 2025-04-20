@@ -1,93 +1,79 @@
 #include<multitask/locks/semaphore.h>
 
 #include<kit/util.h>
+#include<kit/atomic.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
-#include<structs/queue.h>
+#include<multitask/wait.h>
+#include<structs/linkedList.h>
 
-__attribute__((regparm(1)))
-/**
- * @brief Do down handling, may block current process
- * 
- * @param sema Semaphore
- */
-void __semaphore_down_handler(Semaphore* sema);
+static bool __semaphore_waitOperations_requestWait(Wait* wait);
 
-__attribute__((regparm(1)))
-/**
- * @brief Do up handling, may wake the process blocked
- * 
- * @param sema Semaphore
- */
-void __semaphore_up_handler(Semaphore* sema);
+static bool __semaphore_waitOperations_wait(Wait* wait, Thread* thread);
+
+static void __semaphore_waitOperations_quitWaitting(Wait* wait, Thread* thread);
+
+static WaitOperations _semaphore_waitOperations = {
+    .requestWait    = __semaphore_waitOperations_requestWait,
+    .wait           = __semaphore_waitOperations_wait,
+    .quitWaitting   = __semaphore_waitOperations_quitWaitting
+};
 
 void semaphore_initStruct(Semaphore* sema, int count) {
     sema->counter = count;
     sema->queueLock = SPINLOCK_UNLOCKED;
-    queue_initStruct(&sema->waitQueue);
+    wait_initStruct(&sema->wait, &_semaphore_waitOperations);
 }
 
 void semaphore_down(Semaphore* sema) {
-    asm volatile(
-        "pushq %%rbp;"
-        "movq %%rsp, %%rbp;"
-        "lock;"
-        "decl %0;"
-        "jns 1f;"
-        "pushq %%rax;"
-        "pushq %%rdx;"
-        "pushq %%rcx;"
-        "call __semaphore_down_handler;"
-        "popq %%rcx;"
-        "popq %%rdx;"
-        "popq %%rax;"
-        "1:"
-        "popq %%rbp;"
-        : "=m"(sema->counter)
-        : "D"(sema)
-        : "memory"
-    );
+    // Thread* currentThread = schedule_getCurrentThread();
+    // thread_trySleep(currentThread, &sema->wait);
+    // wait_tryWait(&sema->wait);
+    Wait* wait = &sema->wait;
+    if (wait_rawRequestWait(wait)) {
+        Thread* currentThread = schedule_getCurrentThread();
+        thread_forceSleep(currentThread, wait);
+    }
 }
 
 void semaphore_up(Semaphore* sema) {
-    asm volatile(
-        "pushq %%rbp;"
-        "movq %%rsp, %%rbp;"
-        "lock;"
-        "incl %0;"
-        "jg 1f;"
-        "pushq %%rax;"
-        "pushq %%rdx;"
-        "pushq %%rcx;"
-        "call __semaphore_up_handler;"
-        "popq %%rcx;"
-        "popq %%rdx;"
-        "popq %%rax;"
-        "1:"
-        "popq %%rbp;"
-        : "=m"(sema->counter)
-        : "D"(sema)
-        : "memory"
-    );
-}
-
-__attribute__((regparm(1)))
-void __semaphore_down_handler(Semaphore* sema) {
-    spinlock_lock(&sema->queueLock);
-
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
-
-    QueueNode* node = &process->semaWaitQueueNode;
-    queueNode_initStruct(node);
-
-    bool loop = true;
-    do {
-        //Add current process to wait list
-        queue_push(&sema->waitQueue, node);
+    if (ATOMIC_INC_FETCH(&sema->counter) <= 0) {
+        spinlock_lock(&sema->queueLock);
+        
+        Wait* wait = &sema->wait;
+        if (!linkedList_isEmpty(&wait->waitList)) {
+            Thread* thread = HOST_POINTER(linkedListNode_getNext(&wait->waitList), Thread, waitNode);
+            linkedListNode_delete(&thread->waitNode);
+            thread_wakeup(thread);
+        }
 
         spinlock_unlock(&sema->queueLock);
-        scheduler_blockProcess(scheduler, process);
+    }
+}
+
+static bool __semaphore_waitOperations_requestWait(Wait* wait) {
+    Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
+    if (ATOMIC_DEC_FETCH(&sema->counter) < 0) {
+        spinlock_lock(&sema->queueLock);    //To prevent semaphore_up called right after request, must call __semaphore_waitOperations_wait as soon as possible
+        return true;
+    }
+
+    return false;
+}
+
+static bool __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {
+    DEBUG_ASSERT_SILENT(thread->waittingFor == wait);
+    
+    Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
+    DEBUG_ASSERT_SILENT(ATOMIC_LOAD(&sema->counter) < 0);
+    DEBUG_ASSERT_SILENT(spinlock_isLocked(&sema->queueLock));   // Must be locked by __semaphore_waitOperations_requestWait
+
+    linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
+    bool loop = true;
+    do {
+        //Add current thread to wait list
+        spinlock_unlock(&sema->queueLock);
+        schedule_yield();
         spinlock_lock(&sema->queueLock);
 
         asm volatile(
@@ -101,24 +87,17 @@ void __semaphore_down_handler(Semaphore* sema) {
     } while (loop);
 
     spinlock_unlock(&sema->queueLock);
+
+    return true;
 }
 
-__attribute__((regparm(1)))
-void __semaphore_up_handler(Semaphore* sema) {
+static void __semaphore_waitOperations_quitWaitting(Wait* wait, Thread* thread) {
+    Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
     spinlock_lock(&sema->queueLock);
-
-    if (!queue_isEmpty(&sema->waitQueue)) {
-        Process* p = HOST_POINTER(queue_front(&sema->waitQueue), Process, semaWaitQueueNode);
-        queue_pop(&sema->waitQueue);
-
-        queueNode_initStruct(&p->semaWaitQueueNode);
-        Scheduler* scheduler = schedule_getCurrentScheduler();
-        scheduler_wakeProcess(scheduler, p);
-
-        spinlock_unlock(&sema->queueLock);
-        scheduler_tryYield(scheduler);
-        spinlock_lock(&sema->queueLock);
+    if (thread->waittingFor != NULL) {
+        DEBUG_ASSERT_SILENT(thread->waittingFor == wait);
+        linkedListNode_delete(&thread->waitNode);
+        ATOMIC_INC_FETCH(&sema->counter);
     }
-
     spinlock_unlock(&sema->queueLock);
 }

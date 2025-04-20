@@ -7,6 +7,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<multitask/process.h>
 #include<multitask/schedule.h>
 #include<usermode/syscall.h>
 #include<error.h>
@@ -25,7 +26,7 @@ typedef struct __FsSyscallDirectoryEntry {
     unsigned long inodeID;
     unsigned long off;
     unsigned short length;
-    char    name[0];
+    char            name[0];
 } __FsSyscallDirectoryEntry;
 
 typedef enum __FsSyscallDirentType {
@@ -44,12 +45,13 @@ static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n);
 static bool __fsSyscall_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);
 
 static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
+    Process* currentProcess = schedule_getCurrentProcess();
+    File* file = process_getFSentry(currentProcess, fileDescriptor);
     if (file == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
+    DEBUG_ASSERT_SILENT(file->inode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
 
     fs_fileRead(file, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
@@ -60,12 +62,13 @@ static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
 }
 
 static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
+    Process* currentProcess = schedule_getCurrentProcess();
+    File* file = process_getFSentry(currentProcess, fileDescriptor);
     if (file == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
+    DEBUG_ASSERT_SILENT(file->inode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
 
     fs_fileWrite(file, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
@@ -76,13 +79,14 @@ static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
 }
 
 static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
-    File* file = NULL;
+    File* file = fs_fileOpen(filename, flags);
+    if (file == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
 
-    file = fs_fileOpen(filename, flags);
-    ERROR_GOTO_IF_ERROR(0);
-
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    int ret = process_allocateFileSlot(scheduler_getCurrentProcess(scheduler), file);
+    Process* currentProcess = schedule_getCurrentProcess();
+    int ret = process_addFSentry(currentProcess, file);
     if (ret == INVALID_INDEX) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -97,19 +101,17 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
 }
 
 static int __fsSyscall_close(int fileDescriptor) {
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    Process* process = scheduler_getCurrentProcess(scheduler);
-    File* file = process_getFileFromSlot(process, fileDescriptor);
+    Process* currentProcess = schedule_getCurrentProcess();
+    File* file = process_removeFSentry(currentProcess, fileDescriptor);
     if (file == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-
-    process_releaseFileSlot(process, fileDescriptor);
-
-    fs_fileClose(file);
-    ERROR_GOTO_IF_ERROR(0);
-    // memory_free(file);
+    
+    if (iNode_getReferenceCount(file->inode) == 1) {
+        fs_fileClose(file);
+        ERROR_GOTO_IF_ERROR(0);
+    } 
 
     return 0;
     ERROR_FINAL_BEGIN(0);
@@ -137,19 +139,21 @@ static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat) {
 }
 
 static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n) {
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    File* file = process_getFileFromSlot(scheduler_getCurrentProcess(scheduler), fileDescriptor);
-    if (file == NULL) {
+    Process* currentProcess = schedule_getCurrentProcess();
+    Directory* directory = process_getFSentry(currentProcess, fileDescriptor);
+    if (directory == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
+    DEBUG_ASSERT_SILENT(directory->inode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
 
     Range range = (Range) {     //TODO: Ugly code
         .begin = (Uintptr)buffer,
         .length = (Uintptr)n
     };
     bool notEnoughSpace = false;
-    iNode_rawIterateDirectoryEntries(file->inode, __fsSyscall_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
+    iNode_rawIterateDirectoryEntries(directory->inode, __fsSyscall_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
+    ERROR_GOTO_IF_ERROR(0);
 
     return 0;
     ERROR_FINAL_BEGIN(0);

@@ -22,6 +22,8 @@ int* arr1, * arr2;
 
 static void printLOGO();
 
+Uint16 rootTID = 0;
+
 #include<kit/util.h>
 #include<system/memoryLayout.h>
 #include<memory/paging.h>
@@ -39,8 +41,6 @@ static void printLOGO();
 #include<devices/display/vga/dac.h>
 #include<devices/display/vga/vga.h>
 #include<devices/display/vga/memory.h>
-
-#include<multitask/simpleSchedule.h>
 #include<error.h>
 
 #include<devices/terminal/tty.h>
@@ -124,16 +124,19 @@ void kernelMain(SystemInfo* info) {
     arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW));
     print_printf("%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
-    if (process_fork("Forked") != NULL) {
-        Scheduler* scheduler = schedule_getCurrentScheduler();
-        print_printf("This is main process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
+    rootTID = schedule_getCurrentThread()->tid;
+    if (schedule_fork() != NULL) {
+        Thread* currentThread = schedule_getCurrentThread();
+        print_printf("This is main thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
+        DEBUG_MARK_PRINT("MARK\n");
     } else {
-        Scheduler* scheduler = schedule_getCurrentScheduler();
-        print_printf("This is child process, name: %s\n", scheduler_getCurrentProcess(scheduler)->name);
+        Thread* currentThread = schedule_getCurrentThread();
+        print_printf("This is child thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
+        DEBUG_MARK_PRINT("MARK\n");
     }
 
-    Scheduler* scheduler = schedule_getCurrentScheduler();
-    if (cstring_strcmp(scheduler_getCurrentProcess(scheduler)->name, "Init") == 0) {
+    Thread* currentThread = schedule_getCurrentThread();
+    if (rootTID == currentThread->tid) {
         arr1[0] = 3;
         semaphore_up(&sema1);
         semaphore_down(&sema2);
@@ -157,7 +160,7 @@ void kernelMain(SystemInfo* info) {
         //TODO: Calling userprogram goes wrong here
 
         semaphore_up(&sema2);
-        process_exit();
+        thread_die(schedule_getCurrentThread());
     }
 
     int ret = usermode_execute("/bin/test");    //FIXME: It may stucks
@@ -166,7 +169,7 @@ void kernelMain(SystemInfo* info) {
     memory_free(arr1);
     memory_free(arr2);
 
-    print_printf("FINAL %s\n", scheduler_getCurrentProcess(scheduler)->name);
+    print_printf("FINAL %u\n", schedule_getCurrentThread()->tid);
 
     {
         File* file = fs_fileOpen("/dev/null", FCNTL_OPEN_READ_WRITE);

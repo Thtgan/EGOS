@@ -42,7 +42,7 @@ void __STUB_NAME(__NUMBER) () {                                                 
     idt_leaveISR();                                                                                         \
     EOI(__NUMBER);                                                                                          \
     sti();                                                                                                  \
-    scheduler_isrDelayYield(schedule_getCurrentScheduler());                                                \
+    schedule_isrDelayYield();                                                                               \
     cli();                                                                                                  \
     REGISTERS_RESTORE();                                                                                    \
     asm volatile(                                                                                           \

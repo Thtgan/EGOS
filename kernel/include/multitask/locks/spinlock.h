@@ -14,7 +14,7 @@ typedef struct Spinlock {
 #define SPINLOCK_LOCKED     (Spinlock) {0}
 
 static inline bool spinlock_isLocked(Spinlock* lock) {
-    return ATOMIC_BARRIER_READ(lock->counter) == 0;
+    return ATOMIC_LOAD(&lock->counter) == 0;
 }
 
 /**
@@ -24,20 +24,20 @@ static inline bool spinlock_isLocked(Spinlock* lock) {
  */
 
 static inline void spinlock_lock(Spinlock* lock) {
-    register Uint8 locked = 0;
     asm volatile(
         "1:"
         "mov %0, %%eax;"
+        "xor %%dl, %%dl;"
         "2:"
         "lock;"
-        "cmpxchgb %1, %0;"
+        "cmpxchgb %%dl, %0;"
         "jz 3f;"
         "pause;"
         "jmp 2b;"
         "3:"
-        : "=m" (lock->counter), "=r" (locked)
+        : "=m" (lock->counter)
         :
-        : "memory", "eax"
+        : "memory", "eax", "edx"
     );
 }
 
