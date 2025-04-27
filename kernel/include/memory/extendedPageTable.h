@@ -110,7 +110,10 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
 
 void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table);
 
-void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset);
+#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE    FLAG8(0)
+#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE FLAG8(1)
+
+void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset, Flags8 flags);
 
 void extendedPageTableRoot_erase(ExtendedPageTableRoot* root, void* v, Size n);
 

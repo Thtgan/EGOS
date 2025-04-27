@@ -128,7 +128,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         }
 
         //TODO: Set to USER_CODE when code load complete
-        extendedPageTableRoot_draw(extendedTable, base, frame, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]);
+        extendedPageTableRoot_draw(extendedTable, base, frame, 1, extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)], EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE);
         ERROR_GOTO_IF_ERROR(0);
 
         frame = NULL;

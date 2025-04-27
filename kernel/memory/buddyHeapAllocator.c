@@ -198,7 +198,7 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
     }
 
     void* v = heapAllocator_convertAddressP2V(page);
-    extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID));
+    extendedPageTableRoot_draw(mm->extendedTable, v, page, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID), EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
     __buddyHeapAllocatorBuddyList_recycleMemory(allocator, v, PAGE_SIZE);
@@ -241,7 +241,7 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
         }
 
         base = heapAllocator_convertAddressP2V(page); //TODO: Not good, set up a standalone heap region
-        extendedPageTableRoot_draw(mm->extendedTable, base, page, pageNum, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID));
+        extendedPageTableRoot_draw(mm->extendedTable, base, page, pageNum, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->presetID), EMPTY_FLAGS);
         ERROR_GOTO_IF_ERROR(0);
     } else {
         Int8 order = -1;

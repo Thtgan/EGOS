@@ -268,7 +268,8 @@ void thread_setupForUserProgram(Thread* thread) {
         (void*)thread->userStack.begin,
         newUserStack,
         DIVIDE_ROUND_UP(__THREAD_DEFAULT_USER_STACK_SIZE, PAGE_SIZE),
-        extendedTableRoot->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
+        extendedTableRoot->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)],
+        EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE
     );
 
     return;

@@ -75,7 +75,8 @@ void paging_init() {
         &_extendedPageTableRoot,
         (void*)MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE,
         DIVIDE_ROUND_UP(algorithms_umin64(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, (Uintptr)PHYSICAL_KERNEL_RANGE_END), PAGE_SIZE) - 1, //TODO: Maybe PHYSICAL_KERNEL_RANGE_END - PHYSICAL_KERNEL_RANGE_BEGIN?
-        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL))
+        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL)),
+        EMPTY_FLAGS
     );
     ERROR_GOTO_IF_ERROR(0);
 
@@ -83,7 +84,8 @@ void paging_init() {
         &_extendedPageTableRoot,
         (void*)MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
         algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_END - MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
-        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE))
+        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)),
+        EMPTY_FLAGS
     );
     ERROR_GOTO_IF_ERROR(0);
 

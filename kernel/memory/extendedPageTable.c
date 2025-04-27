@@ -95,11 +95,9 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void  __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset);
+void  __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset, Flags8 flags);
 
-void* __extendedPageTableRoot_getEntryMapTo(PagingEntry entry, PagingLevel level, Uintptr currentP);
-
-void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset) {
+void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset, Flags8 flags) {
     DEBUG_ASSERT_SILENT(extraPageTableContext_getPreset(root->context, preset->id) == preset);
 
     if (root->extendedTable == NULL) {
@@ -112,35 +110,38 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
         root->pPageTable = paging_convertAddressV2P(&root->extendedTable->table);
     }
 
-    __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset);
+    __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset, flags);
     return;
     ERROR_FINAL_BEGIN(0);
 }
 
-void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset) {
+void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset, Flags8 flags) {
     Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
     Index16 begin = PAGING_INDEX(level, currentV), end = begin + DIVIDE_ROUND_UP(subN << PAGE_SIZE_SHIFT, span);
     DEBUG_ASSERT(end <= PAGING_TABLE_SIZE, "");
 
     Size remainingN = subN;
+    MemoryPreset* mixedPreset = extraPageTableContext_getDefaultPreset(root->context, MEMORY_DEFAULT_PRESETS_TYPE_MIXED);
     for (int i = begin; i < end; ++i) {
         Size subSubN = algorithms_umin64(remainingN, (ALIGN_UP((Uintptr)currentV + 1, span) - (Uintptr)currentV) >> PAGE_SIZE_SHIFT);
         
         PagingEntry* entry = &currentTable->table.tableEntries[i];
         ExtraPageTableEntry* extraEntry = &currentTable->extraTable.tableEntries[i];
+        void* mapTo = pageTable_getNextLevelPage(level, *entry);
 
-        void* mapTo = __extendedPageTableRoot_getEntryMapTo(*entry, level, currentP);
-        if (mapTo == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-
-        *entry = BUILD_ENTRY_PAGING_TABLE(mapTo, preset->blankEntry);
-
-        MemoryPreset* realPreset = preset, * mixedPreset = extraPageTableContext_getDefaultPreset(root->context, MEMORY_DEFAULT_PRESETS_TYPE_MIXED);
+        MemoryPreset* realPreset = NULL;
         if (level > PAGING_LEVEL_PAGE_TABLE) {
-            ExtendedPageTable* nextExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-            __extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset);
+            if (mapTo == NULL) {
+                mapTo = extendedPageTable_allocateFrame();
+                if (mapTo == NULL) {
+                    ERROR_ASSERT_ANY();
+                    ERROR_GOTO(0);
+                }
+            }
+            realPreset = preset;
+            
+            ExtendedPageTable* nextExtendedTable = (ExtendedPageTable*)paging_convertAddressP2V(mapTo);
+            __extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset, flags);
             ERROR_GOTO_IF_ERROR(0);
 
             Uint16 entryNum = 0;    //TODO: Rework these logic
@@ -166,8 +167,22 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             }
 
             extraEntry->tableEntryNum = entryNum;
+        } else {
+            if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE)) {
+                mapTo = (void*)currentP;
+            }
+            
+            if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE)) {
+                realPreset = preset;
+            } else {
+                realPreset = extraPageTableContext_getPreset(root->context, extraEntry->presetID);
+            }
         }
-        
+
+        DEBUG_ASSERT_SILENT(mapTo != NULL);
+        DEBUG_ASSERT_SILENT(realPreset != NULL);
+
+        *entry = BUILD_ENTRY_PAGING_TABLE(mapTo, realPreset->blankEntry);   //TODO: Not considering the case of COW
         extraEntry->presetID = realPreset->id;
 
         currentV += (subSubN << PAGE_SIZE_SHIFT);
@@ -179,25 +194,6 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
 
     return;
     ERROR_FINAL_BEGIN(0);
-}
-
-void* __extendedPageTableRoot_getEntryMapTo(PagingEntry entry, PagingLevel level, Uintptr currentP) {
-    if (TEST_FLAGS(entry, PAGING_ENTRY_FLAG_PRESENT)) {
-        return pageTable_getNextLevelPage(level, entry);
-    } else if (level == PAGING_LEVEL_PAGE_TABLE) {
-        return (void*)currentP;
-    }
-
-    void* allocated = extendedPageTable_allocateFrame();
-    if (allocated == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    return &((ExtendedPageTable*)allocated)->table;
-    
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
 }
 
 void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Size subN);
