@@ -10,37 +10,37 @@
 #include<error.h>
 #include<print.h>
 
-static void* __buddyFrameAllocator_allocateFrame(FrameAllocator* allocator, Size n);
+static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n, bool chunk);
 
-static void __buddyFrameAllocator_freeFrame(FrameAllocator* allocator, void* p, Size n);
+static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* frames, Size n);
 
-static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n);
+static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* frames, Size n);
 
 static FrameAllocatorOperations _buddyFrameAllocatorOperations = {
-    .allocateFrame = __buddyFrameAllocator_allocateFrame,
-    .freeFrame = __buddyFrameAllocator_freeFrame,
-    .addFrames = __buddyFrameAllocator_addFrames
+    .allocateFrames = __buddyFrameAllocator_allocateFrames,
+    .freeFrames     = __buddyFrameAllocator_freeFrames,
+    .addFrames      = __buddyFrameAllocator_addFrames
 };
 
 static int __buddyFrameList_compareBlock(const SinglyLinkedListNode* node1, const SinglyLinkedListNode* node2);
 
 static void __buddyFrameList_initStruct(FrameBuddyList* list, int order);
 
-static void* __buddyFrameList_getPages(FrameBuddyList* list);
+static void* __buddyFrameList_getFrames(FrameBuddyList* list);
 
-static void __buddyFrameList_addPages(FrameBuddyList* list, void* page);
+static void __buddyFrameList_addFrames(FrameBuddyList* list, void* frames);
 
-static void* __buddyFrameList_recursivelyGetPages(FrameBuddyList* list);
+static void* __buddyFrameList_recursivelyGetFrames(FrameBuddyList* list);
 
 static void __buddyFrameList_tidyup(BuddyFrameAllocator* alloctor, FrameBuddyList* list);
 
-static void __buddyFrameList_recyclePages(BuddyFrameAllocator* alloctor, void* p, Size n);
+static void __buddyFrameList_recycleFrames(BuddyFrameAllocator* alloctor, void* frames, Size n);
 
 #define __FRAME_BUDDY_LIST_MIN_KEEP_NUM        8
 #define __FRAME_BUDDY_LIST_FREE_BEFORE_TIDY_UP 32
 
-void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator) {
-    frameAllocator_initStruct(&allocator->allocator, &_buddyFrameAllocatorOperations);
+void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator, FrameMetadata* metadata) {
+    frameAllocator_initStruct(&allocator->allocator, &_buddyFrameAllocatorOperations, metadata);
     for (int i = 0; i < BUDDY_FRAME_ALLOCATOR_BUDDY_LIST_NUM; ++i) {
         __buddyFrameList_initStruct(&allocator->lists[i], i);
     }
@@ -57,7 +57,7 @@ static void __buddyFrameList_initStruct(FrameBuddyList* list, int order) {
     list->freeCnt   = 0;
 }
 
-static void* __buddyFrameList_getPages(FrameBuddyList* list) {
+static void* __buddyFrameList_getFrames(FrameBuddyList* list) {
     if (list->remaining == 0) {
         ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
     }
@@ -67,36 +67,36 @@ static void* __buddyFrameList_getPages(FrameBuddyList* list) {
     singlyLinkedListNode_initStruct(node);
     --list->remaining;
 
-    return paging_convertAddressV2P(node);
+    return PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(node);
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
-static void __buddyFrameList_addPages(FrameBuddyList* list, void* page) {
-    SinglyLinkedListNode* node = (SinglyLinkedListNode*)paging_convertAddressP2V(page);
+static void __buddyFrameList_addFrames(FrameBuddyList* list, void* frames) {
+    SinglyLinkedListNode* node = (SinglyLinkedListNode*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
     singlyLinkedListNode_initStruct(node);
 
     singlyLinkedList_insertNext(&list->list, node);
     ++list->remaining;
 }
 
-static void* __buddyFrameList_recursivelyGetPages(FrameBuddyList* list) {
+static void* __buddyFrameList_recursivelyGetFrames(FrameBuddyList* list) {
     if (list->remaining == 0) {
         if (list->order == BUDDY_FRAME_ALLOCATOR_MAX_ORDER) {
             ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
         }
 
-        void* largePages = __buddyFrameList_recursivelyGetPages(list + 1);
-        if (largePages == NULL) {
+        void* framesPair = __buddyFrameList_recursivelyGetFrames(list + 1);
+        if (framesPair == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
 
-        __buddyFrameList_addPages(list, largePages + BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(list->order) * PAGE_SIZE);
-        __buddyFrameList_addPages(list, largePages);
+        __buddyFrameList_addFrames(list, framesPair + BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(list->order) * PAGE_SIZE);
+        __buddyFrameList_addFrames(list, framesPair);
     }
 
-    return __buddyFrameList_getPages(list);
+    return __buddyFrameList_getFrames(list);
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
@@ -121,7 +121,7 @@ static void __buddyFrameList_tidyup(BuddyFrameAllocator* allocator, FrameBuddyLi
             singlyLinkedList_deleteNext(prev);
             list->remaining -= 2;
 
-            __buddyFrameList_addPages(list + 1, (void*)node);
+            __buddyFrameList_addFrames(list + 1, (void*)node);
         } else {
             prev = node;
         }
@@ -129,7 +129,7 @@ static void __buddyFrameList_tidyup(BuddyFrameAllocator* allocator, FrameBuddyLi
     }
 }
 
-static void __buddyFrameList_recyclePages(BuddyFrameAllocator* alloctor, void* p, Size n) {
+static void __buddyFrameList_recycleFrames(BuddyFrameAllocator* alloctor, void* frames, Size n) {
     Int8 order;
     Size orderLen, orderPageLen;
     for (
@@ -138,20 +138,20 @@ static void __buddyFrameList_recyclePages(BuddyFrameAllocator* alloctor, void* p
         ++order, orderLen <<= 1, orderPageLen <<= 1
         ) {
 
-        if (VAL_AND((Uintptr)p, orderPageLen) == 0) {
+        if (VAL_AND((Uintptr)frames, orderPageLen) == 0) {
             continue;
         }
 
-        __buddyFrameList_addPages(&alloctor->lists[order], p);
+        __buddyFrameList_addFrames(&alloctor->lists[order], frames);
 
-        p += orderPageLen;
+        frames += orderPageLen;
         n -= orderLen;
     }
 
     while (n >= BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(BUDDY_FRAME_ALLOCATOR_MAX_ORDER)) {
-        __buddyFrameList_addPages(&alloctor->lists[BUDDY_FRAME_ALLOCATOR_MAX_ORDER], p);
+        __buddyFrameList_addFrames(&alloctor->lists[BUDDY_FRAME_ALLOCATOR_MAX_ORDER], frames);
 
-        p += BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(BUDDY_FRAME_ALLOCATOR_MAX_ORDER) * PAGE_SIZE;
+        frames += BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(BUDDY_FRAME_ALLOCATOR_MAX_ORDER) * PAGE_SIZE;
         n -= BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(BUDDY_FRAME_ALLOCATOR_MAX_ORDER);
     }
 
@@ -165,14 +165,14 @@ static void __buddyFrameList_recyclePages(BuddyFrameAllocator* alloctor, void* p
             continue;
         }
 
-        __buddyFrameList_addPages(&alloctor->lists[order], p);
+        __buddyFrameList_addFrames(&alloctor->lists[order], frames);
 
-        p += orderPageLen;
+        frames += orderPageLen;
         n -= orderLen;
     }
 }
 
-static void* __buddyFrameAllocator_allocateFrame(FrameAllocator* allocator, Size n) {
+static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n, bool chunk) {
     if (n == 0) {
         return NULL;
     }
@@ -182,27 +182,54 @@ static void* __buddyFrameAllocator_allocateFrame(FrameAllocator* allocator, Size
     Int8 order = -1;
     for (order = 0; order <= BUDDY_FRAME_ALLOCATOR_MAX_ORDER && BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) < n; ++order);
 
-    void* ret = __buddyFrameList_recursivelyGetPages(&buddyAllocator->lists[order]);
+    void* ret = __buddyFrameList_recursivelyGetFrames(&buddyAllocator->lists[order]);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
     if (BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) > n) {
-        __buddyFrameList_recyclePages(buddyAllocator, ret + n * PAGE_SIZE, BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) - n);
+        __buddyFrameList_recycleFrames(buddyAllocator, ret + n * PAGE_SIZE, BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) - n);
     }
 
     allocator->remaining -= n;
+
+    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(allocator->metadata, ret);
+    FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, ret);
+    DEBUG_ASSERT_SILENT(
+        RANGE_WITHIN(
+            (Uintptr)&header->units, (Uintptr)&header->units[header->frameNum],
+            (Uintptr)unit, (Uintptr)&unit[n],
+            <=, <=
+        )
+    );
+    
+    if (chunk) {
+        frameMetadataUnit_markAllocatedChunk(unit, n);
+    } else {
+        frameMetadataUnit_markAllocatedShard(unit, n);
+    }
 
     return ret;
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
-static void __buddyFrameAllocator_freeFrame(FrameAllocator* allocator, void* p, Size n) {
+static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* frames, Size n) {
     BuddyFrameAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyFrameAllocator, allocator);
 
-    __buddyFrameList_recyclePages(buddyAllocator, p, n);
+    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(allocator->metadata, frames);
+    FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, frames);
+    DEBUG_ASSERT_SILENT(
+        RANGE_WITHIN(
+            (Uintptr)&header->units, (Uintptr)&header->units[header->frameNum],
+            (Uintptr)unit, (Uintptr)&unit[n],
+            <=, <=
+        )
+    );
+    frameMetadataUnit_unmarkAllocated(unit, n);
+
+    __buddyFrameList_recycleFrames(buddyAllocator, frames, n);
 
     Int8 order = -1;
     for (order = 0; order <= BUDDY_FRAME_ALLOCATOR_MAX_ORDER && BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) < n; ++order);
@@ -215,13 +242,13 @@ static void __buddyFrameAllocator_freeFrame(FrameAllocator* allocator, void* p, 
     allocator->remaining += n;
 }
 
-static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* p, Size n) {
-    if ((Uintptr)p % PAGE_SIZE != 0) {
+static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* frames, Size n) {
+    if ((Uintptr)frames % PAGE_SIZE != 0) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
     
     BuddyFrameAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyFrameAllocator, allocator);
-    __buddyFrameList_recyclePages(buddyAllocator, p, n);
+    __buddyFrameList_recycleFrames(buddyAllocator, frames, n);
 
     allocator->total += n;
     allocator->remaining += n;

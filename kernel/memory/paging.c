@@ -35,7 +35,7 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         }
 
         if (!PAGING_IS_LEAF(level, entry)) {
-            extendedPageTable = paging_convertAddressP2V(HOST_POINTER(PAGING_TABLE_FROM_PAGING_ENTRY(entry), ExtendedPageTable, table));
+            extendedPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(HOST_POINTER(PAGING_TABLE_FROM_PAGING_ENTRY(entry), ExtendedPageTable, table));
             continue;
         }
 

@@ -76,7 +76,7 @@ void realmode_init() {
 
     _realMode_stack = _realMode_stack + stackPageNum * PAGE_SIZE;
 
-    void* pageTableFrames = memory_allocateFrame(3);    //TODO: Make sure it allocates fromn lower 4GB
+    void* pageTableFrames = memory_allocateFrames(3);    //TODO: Make sure it allocates fromn lower 4GB
     if (pageTableFrames == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -128,7 +128,7 @@ void realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata**
         ERROR_GOTO(0);
     }
 
-    carrier_carry(codeBegin, paging_convertAddressP2V(copyTo), codeSize, carrierList);
+    carrier_carry(codeBegin, PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(copyTo), codeSize, carrierList);
     ERROR_GOTO_IF_ERROR(0);
 
     for (int i = 0; i < funcNum; ++i, ++_realMode_funcNum) {
@@ -178,16 +178,16 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n) {
 }
 
 void __realmode_setupPageTables(void* pageTableFrames) {
-    Uint32* protectedModePageDirectory = (Uint32*)paging_convertAddressP2V(pageTableFrames);
+    Uint32* protectedModePageDirectory = (Uint32*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(pageTableFrames);
     memory_memset(protectedModePageDirectory, 0, PAGE_SIZE);
 
     for (int i = 0; i < 1024; ++i) {
         protectedModePageDirectory[i] = ((Uint32)i * 0x400000) | 0x83;
     }
 
-    Uint64* compatabilityModePML4 = (Uint64*)paging_convertAddressP2V((void*)protectedModePageDirectory + PAGE_SIZE);
+    Uint64* compatabilityModePML4 = (Uint64*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)protectedModePageDirectory + PAGE_SIZE);
     memory_memset(compatabilityModePML4, 0, PAGE_SIZE);
-    Uint64* compatabilityModePDPT = (Uint64*)paging_convertAddressP2V((void*)compatabilityModePML4 + PAGE_SIZE);
+    Uint64* compatabilityModePDPT = (Uint64*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)compatabilityModePML4 + PAGE_SIZE);
     memory_memset(compatabilityModePDPT, 0, PAGE_SIZE);
 
 
@@ -195,8 +195,8 @@ void __realmode_setupPageTables(void* pageTableFrames) {
         compatabilityModePDPT[i] = ((Uint64)i * 0x40000000) | 0x83;
     }
 
-    compatabilityModePML4[0] = (Uint64)paging_convertAddressV2P(compatabilityModePDPT) | 0x3;
+    compatabilityModePML4[0] = (Uint64)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePDPT) | 0x3;
 
-    realmode_protectedModePageDirectory = (Uint32)paging_convertAddressV2P(protectedModePageDirectory);
-    realmode_compatabilityModePML4 = (Uint32)paging_convertAddressV2P(compatabilityModePML4);
+    realmode_protectedModePageDirectory = (Uint32)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(protectedModePageDirectory);
+    realmode_compatabilityModePML4 = (Uint32)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePML4);
 }

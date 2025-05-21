@@ -25,14 +25,14 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
     memory_memset(&thread->context, 0, sizeof(Context));
     
     if (kernelStack == NULL) {
-        void* newKernelStack = memory_allocateFrame(DIVIDE_ROUND_UP(__THREAD_DEFAULT_KERNEL_STACK_SIZE, PAGE_SIZE));
+        void* newKernelStack = memory_allocate(__THREAD_DEFAULT_KERNEL_STACK_SIZE);
         if (newKernelStack == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
         
         thread->kernelStack = (Range) {
-            .begin = (Uintptr)paging_convertAddressP2V(newKernelStack),
+            .begin = (Uintptr)newKernelStack,
             .length = __THREAD_DEFAULT_KERNEL_STACK_SIZE
         };
         memory_memset((void*)thread->kernelStack.begin, 0, thread->kernelStack.length);
@@ -74,12 +74,12 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
 
 void thread_clearStruct(Thread* thread) {
     if ((void*)thread->userStack.begin != NULL) {
-        memory_freeFrame((void*)thread->userStack.begin);
+        memory_free((void*)thread->userStack.begin);
     }
 
     DEBUG_ASSERT_SILENT((void*)thread->kernelStack.begin != NULL);
     if (!thread->isStackFromOutside) {
-        memory_freeFrame((void*)thread->kernelStack.begin);
+        memory_free((void*)thread->kernelStack.begin);
     }
 }
 
@@ -126,14 +126,14 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid) {
     if (cloneFrom == currentThread) {
         REGISTERS_SAVE();
         
-        void* newKernelStack = memory_allocateFrame(DIVIDE_ROUND_UP(cloneFrom->kernelStack.length, PAGE_SIZE));
+        void* newKernelStack = memory_allocate(cloneFrom->kernelStack.length);
         if (newKernelStack == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
         
         thread->kernelStack = (Range) {
-            .begin = (Uintptr)paging_convertAddressP2V(newKernelStack),
+            .begin = (Uintptr)newKernelStack,
             .length = cloneFrom->kernelStack.length
         };
         memory_memcpy((void*)thread->kernelStack.begin, (void*)cloneFrom->kernelStack.begin, cloneFrom->kernelStack.length);
@@ -147,14 +147,14 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid) {
 
         REGISTERS_RESTORE();
     } else {
-        void* newKernelStack = memory_allocateFrame(DIVIDE_ROUND_UP(cloneFrom->kernelStack.length, PAGE_SIZE));
+        void* newKernelStack = memory_allocate(cloneFrom->kernelStack.length);
         if (newKernelStack == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
         
         thread->kernelStack = (Range) {
-            .begin = (Uintptr)paging_convertAddressP2V(newKernelStack),
+            .begin = (Uintptr)newKernelStack,
             .length = cloneFrom->kernelStack.length
         };
         memory_memcpy((void*)thread->kernelStack.begin, (void*)cloneFrom->kernelStack.begin, cloneFrom->kernelStack.length);
@@ -250,27 +250,24 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
 }
 
 void thread_setupForUserProgram(Thread* thread) {
-    void* newUserStack = memory_allocateFrame(DIVIDE_ROUND_UP(__THREAD_DEFAULT_USER_STACK_SIZE, PAGE_SIZE));
+    ExtendedPageTableRoot* extendedTableRoot = thread->process->extendedTable;
+
+    void* newUserStack = memory_allocateDetailed(
+        __THREAD_DEFAULT_USER_STACK_SIZE,
+        EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)
+    );
+
     if (newUserStack == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
     
     thread->userStack = (Range) {
-        .begin = (Uintptr)paging_convertAddressP2V(newUserStack),
+        .begin = (Uintptr)newUserStack,
         .length = __THREAD_DEFAULT_USER_STACK_SIZE
     };
+    
     memory_memset((void*)thread->userStack.begin, 0, thread->userStack.length);
-
-    ExtendedPageTableRoot* extendedTableRoot = thread->process->extendedTable;
-    extendedPageTableRoot_draw(
-        extendedTableRoot,
-        (void*)thread->userStack.begin,
-        newUserStack,
-        DIVIDE_ROUND_UP(__THREAD_DEFAULT_USER_STACK_SIZE, PAGE_SIZE),
-        extendedTableRoot->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)],
-        EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE
-    );
 
     return;
     ERROR_FINAL_BEGIN(0);

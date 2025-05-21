@@ -151,7 +151,7 @@ void pciMSIX_addEntry(pciMSIX* msix, Index16 msixVec, int cpuID, int interruptVe
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    pciMSIXtableEntry* entry = (pciMSIXtableEntry*)paging_convertAddressP2V(msix->msixTable + msixVec);
+    pciMSIXtableEntry* entry = (pciMSIXtableEntry*)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(msix->msixTable + msixVec);
 
     Uint64 msixTableEntryAddr = 0xFEE00000 | VAL_LEFT_SHIFT(cpuID, 12);
     Uint32 msixTableEntryData = interruptVec + 32;

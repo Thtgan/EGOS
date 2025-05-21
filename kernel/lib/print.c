@@ -1,5 +1,6 @@
 #include<print.h>
 
+#include<error.h>
 #include<devices/terminal/tty.h>
 #include<kit/bit.h>
 #include<kit/oop.h>

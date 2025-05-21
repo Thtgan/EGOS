@@ -123,34 +123,7 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         elf_loadELF64Program(file, &programHeader);
         ERROR_GOTO_IF_ERROR(0);
     }
-
-    // ExtendedPageTableRoot* extendedTable = mm->extendedTable;
-
-// #define __USERMODE_USER_STACK_FRAME_NUM DIVIDE_ROUND_UP(USER_STACK_SIZE, PAGE_SIZE)
-//     for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
-//         void* translated = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-//         ERROR_GOTO_IF_ERROR(0);
-//         DEBUG_ASSERT_SILENT(translated == NULL);
-
-//         frame = memory_allocateFrame(1);
-//         if (frame == NULL) {
-//             ERROR_ASSERT_ANY();
-//             ERROR_GOTO(0);
-//         }
-
-//         extendedPageTableRoot_draw(
-//             extendedTable,
-//             (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i,
-//             frame,
-//             1,
-//             extendedTable->context->presets[EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)]
-//         );
-//         ERROR_GOTO_IF_ERROR(0);
-
-//         frame = NULL;
-
-//         initedStackSize = i;
-//     }
+    
     Thread* currentThread = schedule_getCurrentThread();
     thread_setupForUserProgram(currentThread);
 
@@ -175,49 +148,26 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     for (int i = 0; i < header.programHeaderEntryNum; ++i) {
         elf_readELF64ProgramHeader(file, &header, &programHeader, i);
         ERROR_GOTO_IF_ERROR(0);
-
+        
         if (programHeader.type != ELF64_PROGRAM_HEADER_TYPE_LOAD) {
             continue;
         }
-
+        
         elf_unloadELF64Program(&programHeader);
         ERROR_GOTO_IF_ERROR(0);
     }
-
-    // for (Uintptr i = PAGE_SIZE; i <= __USERMODE_STACK_SIZE; i += PAGE_SIZE) {
-    //     void* translated = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-    //     ERROR_GOTO_IF_ERROR(0);
-    //     DEBUG_ASSERT_SILENT(translated != NULL);
-
-    //     extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
-    //     ERROR_GOTO_IF_ERROR(0);
-
-    //     memory_freeFrame(translated);
-    // }
 
     //TODO: Drop page entries about user program
 
     return (int)ret;
     ERROR_FINAL_BEGIN(0);
     if (frame != NULL) {
-        memory_freeFrame(frame);
+        memory_freeFrames(frame);
     }
 
     ErrorRecord tmp;
     error_readRecord(&tmp);
     ERROR_CLEAR();  //TODO: Ugly solution
-    // for (Uintptr i = PAGE_SIZE; i <= initedStackSize; i += PAGE_SIZE) {
-    //     void* frame = extendedPageTableRoot_translate(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i);
-    //     ERROR_ASSERT_NONE();
-    //     if (frame == NULL) {
-    //         continue;
-    //     }
-
-    //     extendedPageTableRoot_erase(extendedTable, (void*)MEMORY_LAYOUT_USER_STACK_BOTTOM - i, 1);
-    //     ERROR_ASSERT_NONE();
-
-    //     memory_freeFrame(frame);
-    // }
 
     for (int i = 0; i < loadedHeaderNum; ++i) {
         elf_readELF64ProgramHeader(file, &header, &programHeader, i);

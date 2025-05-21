@@ -12,25 +12,25 @@
 #include<debug.h>
 
 void* extendedPageTable_allocateFrame() {
-    void* ret = memory_allocateFrame(EXTENDED_PAGE_TABLE_FRAME_SIZE);
+    void* ret = memory_allocateFrames(EXTENDED_PAGE_TABLE_FRAME_SIZE);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    memory_memset(paging_convertAddressP2V(ret), 0, sizeof(ExtendedPageTable));
+    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(ret), 0, sizeof(ExtendedPageTable));
 
     return ret;
     ERROR_FINAL_BEGIN(0);
 }
 
 void extendedPageTable_freeFrame(void* frame) {
-    memory_memset(paging_convertAddressP2V(frame), 0, sizeof(ExtendedPageTable));
-    memory_freeFrame(frame);
+    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frame), 0, sizeof(ExtendedPageTable));
+    memory_freeFrames(frame);
 }
 
 ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry) {
     void* pageTable = PAGING_TABLE_FROM_PAGING_ENTRY(entry);
-    return paging_convertAddressP2V(HOST_POINTER(pageTable, ExtendedPageTable, table));
+    return PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(HOST_POINTER(pageTable, ExtendedPageTable, table));
 }
 
 void extraPageTableContext_initStruct(ExtraPageTableContext* context) {
@@ -67,8 +67,8 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
     }
 
     ret->context = source->context;
-    ret->extendedTable = paging_convertAddressP2V(frames);
-    ret->pPageTable = paging_convertAddressV2P(&ret->extendedTable->table);
+    ret->extendedTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
+    ret->pPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(&ret->extendedTable->table);
 
     for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
         if (TEST_FLAGS_FAIL(source->extendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
@@ -88,7 +88,7 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
     extendedPageTableRoot_erase(table, 0, 1ull << 36);
     ERROR_GOTO_IF_ERROR(0);
     
-    extendedPageTable_freeFrame(paging_convertAddressV2P(table->extendedTable));
+    extendedPageTable_freeFrame(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(table->extendedTable));
     memory_free(table);
 
     return;
@@ -106,8 +106,8 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
-        root->extendedTable = paging_convertAddressP2V(frames);
-        root->pPageTable = paging_convertAddressV2P(&root->extendedTable->table);
+        root->extendedTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
+        root->pPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(&root->extendedTable->table);
     }
 
     __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset, flags);
@@ -142,16 +142,16 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             }
             realPreset = preset;
             
-            ExtendedPageTable* nextExtendedTable = (ExtendedPageTable*)paging_convertAddressP2V(mapTo);
+            ExtendedPageTable* nextExtendedTable = (ExtendedPageTable*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(mapTo);
             __extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset, flags);
             ERROR_GOTO_IF_ERROR(0);
 
             Uint16 entryNum = 0;    //TODO: Rework these logic
             Uint8 lastPresetID = EXTRA_PAGE_TABLE_OPERATION_INVALID_PRESET_ID;
             bool isMixed = false;
-            for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-                PagingEntry* nextEntry = &nextExtendedTable->table.tableEntries[i];
-                ExtraPageTableEntry* nextExtraEntry = &nextExtendedTable->extraTable.tableEntries[i];
+            for (int j = 0; j < PAGING_TABLE_SIZE; ++j) {
+                PagingEntry* nextEntry = &nextExtendedTable->table.tableEntries[j];
+                ExtraPageTableEntry* nextExtraEntry = &nextExtendedTable->extraTable.tableEntries[j];
                 if (TEST_FLAGS_FAIL(*nextEntry, PAGING_ENTRY_FLAG_PRESENT)) {
                     continue;
                 }
@@ -178,6 +178,10 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
                 realPreset = preset;
             } else {
                 realPreset = extraPageTableContext_getPreset(root->context, extraEntry->presetID);
+            }
+
+            if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE)) {
+                mapTo = (void*)currentP;
             }
         }
 
@@ -234,9 +238,9 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 Uint16 entryNum = 0;    //TODO: Rework these logic
                 Uint8 lastPresetID = EXTRA_PAGE_TABLE_OPERATION_INVALID_PRESET_ID, mixedPresetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(root->context, MEMORY_DEFAULT_PRESETS_TYPE_MIXED);
                 bool isMixed = false;
-                for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-                    PagingEntry* nextEntry = &nextExtendedTable->table.tableEntries[i];
-                    ExtraPageTableEntry* nextExtraEntry = &nextExtendedTable->extraTable.tableEntries[i];
+                for (int j = 0; j < PAGING_TABLE_SIZE; ++j) {
+                    PagingEntry* nextEntry = &nextExtendedTable->table.tableEntries[j];
+                    ExtraPageTableEntry* nextExtraEntry = &nextExtendedTable->extraTable.tableEntries[j];
                     if (TEST_FLAGS_FAIL(*nextEntry, PAGING_ENTRY_FLAG_PRESENT)) {
                         continue;
                     }
@@ -310,7 +314,7 @@ void* extendedPageTableRoot_translate(ExtendedPageTableRoot* root, void* v) {
             return ADDR_FROM_ENTRY_PS(level, v, entry);
         }
 
-        table = paging_convertAddressP2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
+        table = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
     //Not supposed to reach here

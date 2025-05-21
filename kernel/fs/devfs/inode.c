@@ -116,12 +116,11 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
     
     if (newPageNum != oldPageNum) {
         if (newPageNum != 0) {
-            newPages = memory_allocateFrame(newPageNum);
+            newPages = memory_allocatePages(newPageNum);
             if (newPages == NULL) {
                 ERROR_ASSERT_ANY();
                 ERROR_GOTO(0);
             }
-            newPages = paging_convertAddressP2V(newPages);
             
             if (newPageNum < oldPageNum) {
                 memory_memcpy(newPages, devfsInode->data, newSizeInByte);
@@ -133,7 +132,7 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
         }
         
         if (oldPageNum != 0) {
-            memory_freeFrame(paging_convertAddressV2P(devfsInode->data));
+            memory_freePages(devfsInode->data);
         }
 
         devfsInode->data = newPages;
@@ -144,7 +143,7 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (newPages != NULL) {
-        memory_freeFrame(paging_convertAddressV2P(newPages));
+        memory_freePages(newPages);
     }
     return;
 }

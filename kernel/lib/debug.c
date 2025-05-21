@@ -22,12 +22,11 @@ void debug_init() {
     virtualTeletype_initStruct(&_debug_tty, display_getCurrentContext(), 500);
     ERROR_GOTO_IF_ERROR(0);
     
-    _debug_dumpTo = memory_allocateFrame(DIVIDE_ROUND_UP(__TTY_DUMP_SIZE, PAGE_SIZE));
+    _debug_dumpTo = memory_allocate(__TTY_DUMP_SIZE);
     if (_debug_dumpTo == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    _debug_dumpTo = paging_convertAddressP2V(_debug_dumpTo);
     memory_memset(_debug_dumpTo, ' ', __TTY_DUMP_SIZE);
 
     return;
@@ -39,7 +38,7 @@ Teletype* debug_getTTY() {
 }
 
 __attribute__((noreturn))
-void debug_blowup(ConstCstring format, ...) {
+void debug_blowup(ConstCstring format, ...) {   //TODO: Cannot print long sentence, and it prints escape literally
     va_list args;
     va_start(args, format);
 

@@ -132,16 +132,22 @@ Size inputBuffer_getLine(InputBuffer* buffer, char* writeTo, Size n) {
 }
 
 static __InputBufferNode* __inputBufferNode_allocateNode() {
-    __InputBufferNode* ret = paging_convertAddressP2V(memory_allocateFrame(1));
+    __InputBufferNode* ret = memory_allocate(sizeof(__InputBufferNode));
+    if (ret == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
 
     queueNode_initStruct(&ret->node);
     ret->begin = ret->end = 0;
     memory_memset(ret->buffer, '\0', __INPUT_BUFFER_NODE_BUFFER_SIZE);
     
     return ret;
+    
+    ERROR_FINAL_BEGIN(0);
 }
 
 static void __inputBufferNode_freeNode(__InputBufferNode* node) {
     memory_memset(node, 0, PAGE_SIZE);
-    memory_freeFrame(paging_convertAddressV2P(node));
+    memory_free(node);
 }

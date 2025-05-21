@@ -11,42 +11,58 @@
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<debug.h>
 #include<error.h>
+#include<debug.h>
 #include<kernel.h>
 
-void frameMetadataUnit_markChunk(FrameMetadataUnit* unit, Size n) {
-    SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_CHUNK_HEAD);
+void frameMetadataUnit_markAllocatedChunk(FrameMetadataUnit* unit, Size n) {
+    SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK);
     unit->chunkLength = n;
 }
 
-Uint32 frameMetadataUnit_unmarkChunk(FrameMetadataUnit* unit) {
-    Uint32 ret = unit->chunkLength;
-    CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_CHUNK_HEAD);
-    unit->chunkLength = 0;
+void frameMetadataUnit_markAllocatedShard(FrameMetadataUnit* unit, Size n) {
+    for (int i = 0; i < n; ++i) {
+        FrameMetadataUnit* u = &unit[i];
+        SET_FLAG_BACK(u->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS);
+        u->chunkLength = 1;
+    }
+}
 
-    return ret;
+void frameMetadataUnit_unmarkAllocated(FrameMetadataUnit* unit, Size n) {
+    DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK | FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS));
+    DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK | FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS));
+
+    if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK)) {
+        DEBUG_ASSERT_SILENT(n == unit->chunkLength);
+        CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK);
+        unit->chunkLength = 0;
+    } else {
+        for (int i = 0; i < n; ++i) {
+            FrameMetadataUnit* u = &unit[i];
+            SET_FLAG_BACK(u->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS);
+            u->chunkLength = 1;
+        }
+    }
 }
 
 #define __FRAME_METADATA_PAGE_N(__N)    DIVIDE_ROUND_UP((sizeof(FrameMetadataHeader) + sizeof(FrameMetadata) * (__N)), PAGE_SIZE)
-#define __FRAME_METADATA_BASE(__HEADER) ((FrameMetadataUnit*)((void*)(__HEADER) + sizeof(FrameMetadataHeader)))
 
-void frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* p, Size n) {
+void frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* frames, Size n) {
+    DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(frames));
+    
     Size metadataPageNum = __FRAME_METADATA_PAGE_N(n);
-    if (metadataPageNum >= n) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    DEBUG_ASSERT_SILENT(metadataPageNum < n);
 
     linkedListNode_initStruct(&header->node);
-    header->frameBase = p + metadataPageNum * PAGE_SIZE;
+    header->frameBase = frames + metadataPageNum * PAGE_SIZE;
     header->frameNum = n - metadataPageNum;
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
-FrameMetadataUnit* frameMetadataHeader_getMetadataUnit(FrameMetadataHeader* header, void* p) {
-    return __FRAME_METADATA_BASE(header) + DIVIDE_ROUND_DOWN(p - header->frameBase, PAGE_SIZE);
+FrameMetadataUnit* frameMetadataHeader_getMetadataUnit(FrameMetadataHeader* header, void* frame) {
+    DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(frame));
+    Index64 index = DIVIDE_ROUND_DOWN(frame - header->frameBase, PAGE_SIZE);
+    DEBUG_ASSERT_SILENT(index < header->frameNum);
+    return &header->units[index];
 }
 
 void frameMetadata_initStruct(FrameMetadata* metadata) {
@@ -55,42 +71,52 @@ void frameMetadata_initStruct(FrameMetadata* metadata) {
     metadata->lastAccessed = NULL;
 }
 
-FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* p, Size n) {
-    FrameMetadataHeader* newHeader = paging_convertAddressP2V(p);
+FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* frames, Size n) {
+    DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(frames));
+    FrameMetadataHeader* newHeader = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
 
     LinkedListNode* insertBefore = metadata->headerList.next;
     for (; insertBefore != &metadata->headerList; insertBefore = insertBefore->next) {
         FrameMetadataHeader* header = HOST_POINTER(insertBefore, FrameMetadataHeader, node);
 
-        DEBUG_ASSERT_SILENT(VALUE_WITHIN((Uintptr)header, (Uintptr)(header->frameBase + header->frameNum * PAGE_SIZE), (Uintptr)newHeader, <=, <));
+        DEBUG_ASSERT_SILENT(
+            VALUE_WITHIN(
+                (Uintptr)header, (Uintptr)(header->frameBase + header->frameNum * PAGE_SIZE),
+                (Uintptr)newHeader,
+                <=, <
+            )
+        );
 
         if ((Uintptr)header->frameBase > (Uintptr)newHeader->frameBase) {
             break;
         }
     }
 
-    frameMetadataHeader_initStruct(newHeader, p, n);
-    ERROR_GOTO_IF_ERROR(0);
+    frameMetadataHeader_initStruct(newHeader, frames, n);
 
-    memory_memset(__FRAME_METADATA_BASE(newHeader), 0, newHeader->frameNum * sizeof(FrameMetadata));
+    memory_memset(newHeader->units, 0, newHeader->frameNum * sizeof(FrameMetadata));
 
     linkedListNode_insertFront(insertBefore, &newHeader->node);
 
     metadata->frameNum += newHeader->frameNum;
     return newHeader;
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
 }
 
-FrameMetadataHeader* frameMetadata_getFrameMetadataHeader(FrameMetadata* metadata, void* p) {
+FrameMetadataHeader* frameMetadata_getFrameMetadataHeader(FrameMetadata* metadata, void* frame) {
     FrameMetadataHeader* lastAccessed = metadata->lastAccessed;
-    if (lastAccessed != NULL && VALUE_WITHIN((Uintptr)lastAccessed->frameBase, (Uintptr)(lastAccessed->frameBase + lastAccessed->frameNum * PAGE_SIZE), (Uintptr)p, <=, <)) {
+    if (lastAccessed != NULL && VALUE_WITHIN((Uintptr)lastAccessed->frameBase, (Uintptr)(lastAccessed->frameBase + lastAccessed->frameNum * PAGE_SIZE), (Uintptr)frame, <=, <)) {
         return lastAccessed;
     }
     
     for (LinkedListNode* node = metadata->headerList.next; node != &metadata->headerList; node = node->next) {
         FrameMetadataHeader* header = HOST_POINTER(node, FrameMetadataHeader, node);
-        if (!VALUE_WITHIN((Uintptr)header->frameBase, (Uintptr)(header->frameBase + header->frameNum * PAGE_SIZE), (Uintptr)p, <=, <)) {
+        if (
+            !VALUE_WITHIN(
+                (Uintptr)header->frameBase, (Uintptr)(header->frameBase + header->frameNum * PAGE_SIZE),
+                (Uintptr)frame,
+                <=, <
+            )
+        ) {
             continue;
         }
 

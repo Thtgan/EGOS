@@ -106,9 +106,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         readRemain = programHeader->segmentSizeInFile,
         memoryRemain = programHeader->segmentSizeInMemory;
 
-    // Scheduler* scheduler = schedule_getCurrentScheduler();
     Process* currentProcess = schedule_getCurrentProcess();
-    // ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
     ExtendedPageTableRoot* extendedTable = currentProcess->extendedTable;
     fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN);
 
@@ -121,7 +119,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         ERROR_GOTO_IF_ERROR(0);
         DEBUG_ASSERT_SILENT(translated == NULL);
 
-        frame = memory_allocateFrame(1);
+        frame = memory_allocateFrames(1);
         if (frame == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -155,7 +153,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (frame != NULL) {
-        memory_freeFrame(frame);
+        memory_freeFrames(frame);
     }
 
     void* releaseBase = (void*)pageBegin;
@@ -178,9 +176,7 @@ void elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
     Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
     Size memoryRemain = programHeader->segmentSizeInMemory;
 
-    // Scheduler* scheduler = schedule_getCurrentScheduler();
     Process* currentProcess = schedule_getCurrentProcess();
-    // ExtendedPageTableRoot* extendedTable = scheduler_getCurrentProcess(scheduler)->context.extendedTable;
     ExtendedPageTableRoot* extendedTable = currentProcess->extendedTable;
     Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, pageBegin + PAGE_SIZE);
     void* base = (void*)pageBegin;
@@ -192,7 +188,7 @@ void elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
         extendedPageTableRoot_erase(extendedTable, base, 1);
         ERROR_GOTO_IF_ERROR(0);
 
-        memory_freeFrame(frame);
+        memory_freeFrames(frame);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 

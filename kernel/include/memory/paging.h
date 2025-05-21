@@ -3,6 +3,7 @@
 
 #include<kit/bit.h>
 #include<kit/types.h>
+#include<kit/util.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
@@ -32,12 +33,32 @@ do {                                                                \
 //Flush the TLB, If page table update not working, try this
 #define PAGING_FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
-static inline void* paging_convertAddressV2P(void* v) {
-    return (void*)CLEAR_VAL((Uintptr)v, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN);
+static inline void* paging_convertAddressV2P(void* v, Uintptr base) {
+    return (void*)CLEAR_VAL((Uintptr)v, base);
 }
 
-static inline void* paging_convertAddressP2V(void* p) {
-    return (void*)FILL_VAL((Uintptr)p, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN);
+static inline void* paging_convertAddressP2V(void* p, Uintptr base) {
+    return (void*)FILL_VAL((Uintptr)p, base);
 }
+
+static inline bool paging_isBasedAddress(void* v, Uintptr base) {
+    return VAL_AND((Uintptr)v, base) == base;
+}
+
+#define PAGING_CONVERT_HEAP_ADDRESS_V2P(__V)        paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN)
+
+#define PAGING_CONVERT_HEAP_ADDRESS_P2V(__P)        paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN)
+
+#define PAGING_IS_BASED_ADDRESS_HEAP(__V)           paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN)
+
+#define PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(__V)   paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
+
+#define PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(__P)   paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
+
+#define PAGING_IS_BASED_ADDRESS_IDENTICAL(__V)      paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
+
+#define PAGING_PAGE_ALIGN(__P)                      (void*)ALIGN_DOWN_SHIFT((Uintptr)__P, PAGE_SIZE_SHIFT)
+
+#define PAGING_IS_PAGE_ALIGNED(__P)                 IS_ALIGNED((Uintptr)__P, PAGE_SIZE)
 
 #endif // __MEMORY_PAGING_H

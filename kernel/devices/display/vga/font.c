@@ -545,7 +545,7 @@ void vgaFont_loadFont(VGAfont* font, VGAhardwareRegisters* registers) {
     vgaHardwareRegisters_getFontAccess(registers);
 
     void* fontDataSrc = font->fontData;
-    void* fontDataDes = paging_convertAddressP2V((void*)0xA0000);
+    void* fontDataDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)0xA0000);
     for (int i = 0; i < 256; ++i) {
         memory_memcpy(fontDataDes, fontDataSrc, font->characterHeight);
         fontDataSrc = fontDataSrc + font->characterHeight;

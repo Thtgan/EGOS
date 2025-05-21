@@ -5,6 +5,7 @@ typedef struct FrameBuddyList FrameBuddyList;
 typedef struct BuddyFrameAllocator BuddyFrameAllocator;
 
 #include<memory/allocator.h>
+#include<memory/frameMetadata.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<structs/singlyLinkedList.h>
@@ -25,6 +26,6 @@ typedef struct BuddyFrameAllocator {
     FrameBuddyList lists[BUDDY_FRAME_ALLOCATOR_BUDDY_LIST_NUM];
 } BuddyFrameAllocator;
 
-void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator);
+void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator, FrameMetadata* metadata);
 
 #endif // __MEMORY_BUDDYFRAMEALLOCATOR_H

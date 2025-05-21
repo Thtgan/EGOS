@@ -2,10 +2,11 @@
 
 #include<kit/types.h>
 
-void frameAllocator_initStruct(FrameAllocator* allocator, FrameAllocatorOperations* opeartions) {
+void frameAllocator_initStruct(FrameAllocator* allocator, FrameAllocatorOperations* opeartions, FrameMetadata* metadata) {
     allocator->total = 0;
     allocator->remaining = 0;
     allocator->operations = opeartions;
+    allocator->metadata = metadata;
 }
 
 void allocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID) {

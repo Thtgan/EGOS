@@ -4,7 +4,7 @@
 #include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
-#include<memory/allocator.h>
+#include<memory/allocator.h> //TODO: Compile fails if remove this
 
 /**
  * @brief Copy data from source to destination, overlap not handled
@@ -57,11 +57,17 @@ void* memory_memchr(const void* ptr, int val, Size n);
  */
 void* memory_memmove(void* des, const void* src, Size n);
 
-void* memory_allocateFrameDetailed(Size n, Flags16 flags);
+void* memory_allocateFramesDetailed(Size n, Flags16 flags);
 
-void* memory_allocateFrame(Size n);
+void* memory_allocateFrames(Size n);
 
-void memory_freeFrame(void* p);
+void memory_freeFrames(void* p);
+
+void* memory_allocatePagesDetailed(Size n, Uint8 presetID);
+
+void* memory_allocatePages(Size n);
+
+void memory_freePages(void* p);
 
 void* memory_allocateDetailed(Size n, Uint8 presetID);
 

@@ -41,8 +41,6 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
 };
 
 void fs_init() {
-    void* region = NULL;
-
     if (firstBootablePartition == NULL) {
         ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
@@ -87,10 +85,6 @@ void fs_init() {
     ERROR_FINAL_BEGIN(0);
     if (rootFS != NULL) {
         memory_free(rootFS);
-    }
-
-    if (region != NULL) {
-        memory_freeFrame(paging_convertAddressV2P(region));
     }
 
     if (devFS != NULL) {

@@ -288,11 +288,11 @@ static void __vga_printCharacter(DisplayPosition* position, Uint8 ch, RGBA color
 static void __vga_printString(DisplayPosition* position, ConstCstring str, Size n, RGBA color) {
     VGAcolor vgaColor = vga_approximateColor(color);
     if (_vga_currentMode->memoryMode == VGA_MEMORY_MODE_TEXT) {
-        VGAtextModeCell* tmpCells = memory_allocateFrame(DIVIDE_ROUND_UP(n * sizeof(VGAtextModeCell), PAGE_SIZE));
+        VGAtextModeCell* tmpCells = memory_allocate(n * sizeof(VGAtextModeCell));
         if (tmpCells == NULL) {
-            ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
         }
-        tmpCells = paging_convertAddressP2V(tmpCells);
 
         VGAtextMode* textMode = HOST_POINTER(_vga_currentMode, VGAtextMode, header);
 
@@ -303,8 +303,7 @@ static void __vga_printString(DisplayPosition* position, ConstCstring str, Size 
         }
         vgaTextMode_writeCell(textMode, position, tmpCells, n);
 
-        tmpCells = paging_convertAddressV2P(tmpCells);
-        memory_freeFrame(tmpCells);
+        memory_free(tmpCells);
     } else {
         //TODO: Graphic mode string print
         ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);

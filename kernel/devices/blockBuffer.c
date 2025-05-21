@@ -15,13 +15,13 @@ static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64
 
 void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
-    void* pBlockData = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT((blockNum << bytePerBlockShift), PAGE_SIZE_SHIFT));
-    if (pBlockData == NULL) {
+    void* blockData = memory_allocate(blockNum << bytePerBlockShift);
+    if (blockData == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
+    blockBuffer->blockData          = blockData;
 
-    blockBuffer->blockData          = paging_convertAddressP2V(pBlockData);
     linkedList_initStruct(&blockBuffer->LRU);
 
     BlockBufferBlock* blocks = memory_allocate(sizeof(BlockBufferBlock) * blockNum);
@@ -49,8 +49,8 @@ void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockN
     return;
     ERROR_FINAL_BEGIN(0);
 
-    if (pBlockData != NULL) {
-        memory_freeFrame(pBlockData);
+    if (blockData != NULL) {
+        memory_free(blockData);
     }
 
     if (blocks != NULL) {
@@ -72,7 +72,7 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
 
     memory_free((void*)minOldBlockPtr);
     memory_free(blockBuffer->hashTable.chains);
-    memory_freeFrame(paging_convertAddressV2P(blockBuffer->blockData));
+    memory_free(blockBuffer->blockData);
 
     memory_memset(blockBuffer, 0, sizeof(BlockBuffer));
 }

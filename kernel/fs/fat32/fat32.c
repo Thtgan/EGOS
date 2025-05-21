@@ -93,7 +93,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
 #define __FS_FAT32_BATCH_ALLOCATE_SIZE      BATCH_ALLOCATE_SIZE((FAT32SuperBlock, 1), (FAT32BPB, 1), (SinglyLinkedList, __FS_FAT32_SUPERBLOCK_HASH_BUCKET))
 
 void fat32_open(FS* fs, BlockDevice* blockDevice) {
-    void* batchAllocated = NULL, * buffer = NULL, * pFAT = NULL;
+    void* batchAllocated = NULL, * buffer = NULL;
     batchAllocated = memory_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
     if (batchAllocated == NULL) {
         ERROR_ASSERT_ANY();
@@ -137,13 +137,13 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     fat32SuperBlock->BPB                = BPB;
 
     Size FATsizeInByte                  = BPB->sectorPerFAT * POWER_2(device->granularity);
-    pFAT = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
-    if (pFAT == NULL) {
+
+    Index32* FAT = memory_allocate(FATsizeInByte);
+    if (FAT == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    Index32* FAT                        = paging_convertAddressP2V(pFAT);
     blockDevice_readBlocks(blockDevice, fat32SuperBlock->FATrange.begin, FAT, fat32SuperBlock->FATrange.length);
     ERROR_GOTO_IF_ERROR(0);
 
@@ -185,8 +185,8 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
 
     return;
     ERROR_FINAL_BEGIN(0);
-    if (pFAT != NULL) {
-        memory_freeFrame(pFAT);
+    if (FAT != NULL) {
+        memory_free(FAT);
     }
 
     if (buffer != NULL) {
@@ -209,7 +209,8 @@ void fat32_close(FS* fs) {
     Device* superBlockDevice = &superBlockBlockDevice->device;
     Size FATsizeInByte = fat32SuperBlock->FATrange.length * POWER_2(superBlockDevice->granularity);
     memory_memset(fat32SuperBlock->FAT, 0, FATsizeInByte);
-    memory_freeFrame(paging_convertAddressV2P(fat32SuperBlock->FAT));
+    // memory_freeFrames(paging_convertAddressV2P(fat32SuperBlock->FAT));
+    memory_free(fat32SuperBlock->FAT);
 
     void* batchAllocated = fat32SuperBlock; //TODO: Ugly code
     memory_memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);
@@ -503,12 +504,11 @@ static void __fat32_superBlock_sync(SuperBlock* superBlock) {
 
     RangeN* fatRange = &fat32SuperBlock->FATrange;
     Size FATsizeInByte = fatRange->length * POWER_2(superBlockDevice->granularity);
-    FATcopy = memory_allocateFrame(DIVIDE_ROUND_UP_SHIFT(FATsizeInByte, PAGE_SIZE_SHIFT));
+    FATcopy = memory_allocate(FATsizeInByte);
     if (FATcopy == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    FATcopy = paging_convertAddressP2V(FATcopy);
     memory_memcpy(FATcopy, fat32SuperBlock->FAT, FATsizeInByte);
 
     for (int i = fat32SuperBlock->firstFreeCluster, next; i != FAT32_CLSUTER_END_OF_CHAIN; i = next) {
@@ -521,7 +521,7 @@ static void __fat32_superBlock_sync(SuperBlock* superBlock) {
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    memory_freeFrame(paging_convertAddressV2P(FATcopy));
+    memory_free(FATcopy);
     FATcopy = NULL;
 
     blockDevice_flush(superBlockBlockDevice);
@@ -530,7 +530,7 @@ static void __fat32_superBlock_sync(SuperBlock* superBlock) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (FATcopy != NULL) {
-        memory_freeFrame(paging_convertAddressV2P(FATcopy));
+        memory_free(FATcopy);
     }
     return;
 }

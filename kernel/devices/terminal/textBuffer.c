@@ -64,8 +64,7 @@ void textBuffer_clearStruct(TextBuffer* textBuffer) {
         void* dataPage = (void*)vector_get(&textBuffer->partDataPages, i);
         ERROR_GOTO_IF_ERROR(0);
 
-        dataPage = paging_convertAddressV2P(dataPage);
-        memory_freeFrame(dataPage);
+        memory_freePages(dataPage);
     }
     
     vector_clearStruct(&textBuffer->partDataPages);
@@ -354,13 +353,12 @@ static void* __textBuffer_getDataPage(TextBuffer* textBuffer, Index64 position, 
 }
 
 static void __textBuffer_enqueueDataPage(TextBuffer* textBuffer) {
-    void* newPage = memory_allocateFrame(1);
+    void* newPage = memory_allocatePages(1);
     if (newPage == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    newPage = paging_convertAddressP2V(newPage);
     memory_memset(newPage, 0, PAGE_SIZE);
 
     vector_push(&textBuffer->partDataPages, (Object)newPage);
@@ -378,8 +376,7 @@ static void __textBuffer_dequeueDataPageFront(TextBuffer* textBuffer, Size relea
     for (int i = 0; i < releasePageNum; ++i) {
         void* page = (void*)vector_get(&textBuffer->partDataPages, i);
         ERROR_GOTO_IF_ERROR(0);
-        page = paging_convertAddressV2P(page);
-        memory_freeFrame(page);
+        memory_freePages(page);
     }
 
     vector_ereaseN(&textBuffer->partDataPages, 0, releasePageNum);
@@ -399,8 +396,7 @@ static void __textBuffer_dequeueDataPageBack(TextBuffer* textBuffer, Size releas
     for (int i = 0; i < releasePageNum; ++i) {
         void* page = (void*)vector_get(&textBuffer->partDataPages, textBuffer->partDataPages.size - 1);
         ERROR_GOTO_IF_ERROR(0);
-        page = paging_convertAddressV2P(page);
-        memory_freeFrame(page);
+        memory_freePages(page);
         vector_pop(&textBuffer->partDataPages);
         ERROR_GOTO_IF_ERROR(0);
     }

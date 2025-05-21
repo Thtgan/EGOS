@@ -43,7 +43,7 @@ void mm_init() {
         ERROR_GOTO(0);
     }
 
-    buddyFrameAllocator_initStruct(&_buddyFrameAllocator);
+    buddyFrameAllocator_initStruct(&_buddyFrameAllocator, &mm->frameMetadata);
     mm->frameAllocator = &_buddyFrameAllocator.allocator;
 
     frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum);
