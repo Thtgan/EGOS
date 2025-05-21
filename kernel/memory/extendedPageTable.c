@@ -129,9 +129,11 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
         ExtraPageTableEntry* extraEntry = &currentTable->extraTable.tableEntries[i];
         void* mapTo = pageTable_getNextLevelPage(level, *entry);
 
+        bool isMappingNotPresent = (mapTo == NULL);
+
         MemoryPreset* realPreset = NULL;
         if (level > PAGING_LEVEL_PAGE_TABLE) {
-            if (mapTo == NULL) {
+            if (isMappingNotPresent) {
                 mapTo = extendedPageTable_allocateFrame();
                 if (mapTo == NULL) {
                     ERROR_ASSERT_ANY();
@@ -168,11 +170,11 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
 
             extraEntry->tableEntryNum = entryNum;
         } else {
-            if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE)) {
+            if (isMappingNotPresent || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE)) {
                 mapTo = (void*)currentP;
             }
             
-            if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE)) {
+            if (isMappingNotPresent || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE)) {
                 realPreset = preset;
             } else {
                 realPreset = extraPageTableContext_getPreset(root->context, extraEntry->presetID);
