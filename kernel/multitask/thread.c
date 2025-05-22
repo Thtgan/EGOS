@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
 #include<multitask/process.h>
@@ -233,7 +234,7 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
     currentThread->registers = (Registers*)readRegister_RSP_64();
 
     if (currentThread->process != nextThread->process) {
-        PAGING_SWITCH_TO_TABLE(nextThread->process->extendedTable);
+        mm_switchPageTable(nextThread->process->extendedTable);
     }
     
     context_switch(&currentThread->context, &nextThread->context);

@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<system/pageTable.h>
 #include<multitask/context.h>
@@ -11,7 +12,6 @@
 #include<algorithms.h>
 #include<debug.h>
 #include<error.h>
-#include<kernel.h>
 
 static void __memoryPresetsOperations_shallowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 

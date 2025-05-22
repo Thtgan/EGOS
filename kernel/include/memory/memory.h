@@ -1,10 +1,7 @@
 #if !defined(__MEMORY_MEMORY_H)
 #define __MEMORY_MEMORY_H
 
-#include<kernel.h>
-#include<kit/bit.h>
 #include<kit/types.h>
-#include<memory/allocator.h> //TODO: Compile fails if remove this
 
 /**
  * @brief Copy data from source to destination, overlap not handled

@@ -4,6 +4,7 @@
 #include<memory/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>

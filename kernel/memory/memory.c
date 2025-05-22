@@ -4,6 +4,7 @@
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<error.h>
 

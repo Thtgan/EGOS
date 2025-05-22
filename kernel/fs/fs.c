@@ -5,7 +5,6 @@
 #include<fs/devfs/devfs.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsEntry.h>
-#include<kernel.h>
 #include<kit/util.h>
 #include<memory/paging.h>
 #include<memory/memory.h>
@@ -16,7 +15,7 @@
 #include<fs/locate.h>
 #include<fs/path.h>
 
-FS* rootFS = NULL, * devFS = NULL;
+FS* fs_rootFS = NULL, * fs_devFS = NULL;
 
 typedef struct {
     void  (*init)();
@@ -41,11 +40,11 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
 };
 
 void fs_init() {
-    if (firstBootablePartition == NULL) {
+    if (blockDevice_bootFromDevice == NULL) {
         ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
-    FStype type = fs_checkType(firstBootablePartition);
+    FStype type = fs_checkType(blockDevice_bootFromDevice);
     if (type == FS_TYPE_UNKNOWN) {
         ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
@@ -53,42 +52,42 @@ void fs_init() {
     _supports[type].init();
     ERROR_GOTO_IF_ERROR(0);
 
-    rootFS = memory_allocate(sizeof(FS));
-    if (rootFS == NULL) {
+    fs_rootFS = memory_allocate(sizeof(FS));
+    if (fs_rootFS == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    fs_open(rootFS, firstBootablePartition);
+    fs_open(fs_rootFS, blockDevice_bootFromDevice);
     ERROR_GOTO_IF_ERROR(0);
 
     _supports[FS_TYPE_DEVFS].init();
     ERROR_GOTO_IF_ERROR(0);
 
-    devFS = memory_allocate(sizeof(FS));
-    if (devFS == NULL) {
+    fs_devFS = memory_allocate(sizeof(FS));
+    if (fs_devFS == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    fs_open(devFS, NULL);
+    fs_open(fs_devFS, NULL);
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;
-    fsIdentifier_initStruct(&devfsMountPoint, rootFS->superBlock->rootInode, "/dev", true);
+    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->superBlock->rootInode, "/dev", true);
     ERROR_GOTO_IF_ERROR(0);
 
-    superBlock_rawMount(rootFS->superBlock, &devfsMountPoint, devFS->superBlock->rootInode, EMPTY_FLAGS);
+    superBlock_rawMount(fs_rootFS->superBlock, &devfsMountPoint, fs_devFS->superBlock->rootInode, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
     ERROR_FINAL_BEGIN(0);
-    if (rootFS != NULL) {
-        memory_free(rootFS);
+    if (fs_rootFS != NULL) {
+        memory_free(fs_rootFS);
     }
 
-    if (devFS != NULL) {
-        memory_free(devFS);
+    if (fs_devFS != NULL) {
+        memory_free(fs_devFS);
     }
 }
 
@@ -119,7 +118,7 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     String basename;
     
     bool isDirectory = TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY);
-    fsIdentifier_initStruct(&identifier, rootFS->superBlock->rootInode, path, isDirectory);
+    fsIdentifier_initStruct(&identifier, fs_rootFS->superBlock->rootInode, path, isDirectory);
     ERROR_GOTO_IF_ERROR(0);
     parentDirNode = locate(&identifier, flags, &parentDirInode, &superBlock);    //Refer 'parentDirNode' once (if found), refer 'parentDirInode->fsNode' once (if iNode opened)
     bool needCreate = false;

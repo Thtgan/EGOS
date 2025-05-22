@@ -1,11 +1,11 @@
 #include<multitask/schedule.h>
 
-#include<kernel.h>
 #include<kit/atomic.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<multitask/locks/mutex.h>
 #include<multitask/locks/spinlock.h>
 #include<multitask/process.h>

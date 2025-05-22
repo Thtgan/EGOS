@@ -1,5 +1,6 @@
 #include<devices/device.h>
 
+#include<devices/blockDevice.h>
 #include<devices/charDevice.h>
 #include<devices/pseudo.h>
 #include<kit/types.h>
@@ -10,7 +11,6 @@
 #include<algorithms.h>
 #include<cstring.h>
 #include<error.h>
-#include<kernel.h>
 
 static RBtree _device_majorDeviceTree;
 

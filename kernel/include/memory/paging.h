@@ -7,7 +7,12 @@
 #include<real/simpleAsmLines.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
-#include<kernel.h>
+
+extern char pKernelRangeBegin;
+#define PAGING_PHYSICAL_KERNEL_RANGE_BEGIN (&pKernelRangeBegin)
+
+extern char pKernelRangeEnd;
+#define PAGING_PHYSICAL_KERNEL_RANGE_END (&pKernelRangeEnd)
 
 #define PAGING_PAGE_FAULT_ERROR_CODE_FLAG_P      FLAG32(0)  //Caused by non-preset(0) or page-level protect violation(1) ?
 #define PAGING_PAGE_FAULT_ERROR_CODE_FLAG_WR     FLAG32(1)  //Caused by read(0) or write(1) ?
@@ -23,12 +28,6 @@
  * @brief Further initialization the paging
  */
 void paging_init();
-
-#define PAGING_SWITCH_TO_TABLE(__EXTENDED_TABLE)                    \
-do {                                                                \
-    mm->extendedTable = (__EXTENDED_TABLE);                         \
-    writeRegister_CR3_64((Uint64)mm->extendedTable->pPageTable);    \
-} while(0)
 
 //Flush the TLB, If page table update not working, try this
 #define PAGING_FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());

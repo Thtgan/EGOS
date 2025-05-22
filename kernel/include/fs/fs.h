@@ -116,4 +116,7 @@ typedef struct FS_fileStat {
 
 void fs_fileStat(File* file, FS_fileStat* stat);
 
+extern FS* fs_rootFS;
+extern FS* fs_devFS;
+
 #endif // __FS_FS_H

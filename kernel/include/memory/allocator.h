@@ -12,6 +12,7 @@ typedef struct AllocatorOperations AllocatorOperations;
 #include<kit/oop.h>
 #include<memory/frameMetadata.h>
 #include<memory/paging.h>
+#include<kit/util.h>
 #include<system/memoryLayout.h>
 
 typedef struct FrameAllocator {

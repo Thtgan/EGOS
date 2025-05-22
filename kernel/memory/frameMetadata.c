@@ -6,6 +6,7 @@
 #include<kit/util.h>
 #include<memory/allocator.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
 #include<structs/linkedList.h>
@@ -13,7 +14,6 @@
 #include<algorithms.h>
 #include<error.h>
 #include<debug.h>
-#include<kernel.h>
 
 void frameMetadataUnit_markAllocatedChunk(FrameMetadataUnit* unit, Size n) {
     SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK);

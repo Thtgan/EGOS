@@ -1,6 +1,7 @@
 #include<devices/blockBuffer.h>
 
 #include<algorithms.h>
+#include<error.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>

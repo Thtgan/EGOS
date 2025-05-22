@@ -29,7 +29,7 @@ static DeviceOperations _partitionBlockDeviceOperations = {
     .flush      = __partitionBlockDevice_flush
 };
 
-BlockDevice* firstBootablePartition;    //TODO: Ugly, figure out a method to know which device we are booting from
+BlockDevice* blockDevice_bootFromDevice;    //TODO: Ugly, figure out a method to know which device we are booting from
 
 void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
     void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
@@ -89,8 +89,8 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
         device_registerDevice(&partitioBlockDevice->blockDevice.device);
         ERROR_GOTO_IF_ERROR(0);
         
-        if (firstBootablePartition == NULL) {
-            firstBootablePartition = &partitioBlockDevice->blockDevice;
+        if (blockDevice_bootFromDevice == NULL) {
+            blockDevice_bootFromDevice = &partitioBlockDevice->blockDevice;
         }
         partitioBlockDevice = NULL;
     }

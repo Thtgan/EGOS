@@ -34,6 +34,7 @@ Uint16 rootTID = 0;
 #include<fs/fsEntry.h>
 
 #include<memory/memory.h>
+#include<memory/mm.h>
 
 #include<realmode.h>
 
@@ -191,7 +192,7 @@ void kernelMain(SystemInfo* info) {
     ERROR_CHECKPOINT();
     timer_start(&timer2);
     ERROR_CHECKPOINT();
-    fs_close(rootFS); //TODO: Move to better place
+    fs_close(fs_rootFS); //TODO: Move to better place
 
     print_printf("DEAD\n");
 

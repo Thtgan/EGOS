@@ -21,6 +21,8 @@ typedef struct BlockDevice {
     BlockBuffer*        blockBuffer;
 } BlockDevice;
 
+extern BlockDevice* blockDevice_bootFromDevice;
+
 void blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args);
 
 void blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n);

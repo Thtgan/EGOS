@@ -5,7 +5,6 @@
 #include<devices/blockDevice.h>
 #include<devices/device.h>
 #include<devices/partitionBlockDevice.h>
-#include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>

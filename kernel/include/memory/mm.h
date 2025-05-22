@@ -23,4 +23,11 @@ typedef struct MemoryManager {
 
 void mm_init();
 
+extern MemoryManager* mm;
+
+static inline void mm_switchPageTable(ExtendedPageTableRoot* extendedTable) {
+    writeRegister_CR3_64((Uint64)extendedTable->pPageTable);
+    mm->extendedTable = extendedTable;
+}
+
 #endif // __MEMORY_MM_H

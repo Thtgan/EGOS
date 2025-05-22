@@ -4,6 +4,7 @@
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/memoryMap.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
 #include<interrupt/IDT.h>
@@ -11,7 +12,6 @@
 #include<algorithms.h>
 #include<carrier.h>
 #include<debug.h>
-#include<kernel.h>
 #include<error.h>
 
 typedef void (*realmodeExecFunc)(Uintptr realmodeCode, Uintptr stack, RealmodeRegs* inRegs, RealmodeRegs* outRegs);

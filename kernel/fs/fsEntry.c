@@ -5,17 +5,16 @@
 #include<devices/blockDevice.h>
 #include<devices/charDevice.h>
 #include<fs/fs.h>
-#include<kernel.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<structs/refCounter.h>
 #include<structs/string.h>
 #include<system/pageTable.h>
 #include<error.h>
 
-#include<structs/refCounter.h>
 
 void fsEntry_initStruct(fsEntry* entry, iNode* inode, fsEntryOperations* operations, FCNTLopenFlags flags) {
     entry->flags = flags;

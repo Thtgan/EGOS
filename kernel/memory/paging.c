@@ -5,7 +5,6 @@
 #include<interrupt/exceptions.h>
 #include<interrupt/IDT.h>
 #include<interrupt/ISR.h>
-#include<kernel.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -74,7 +73,7 @@ void paging_init() {
     extendedPageTableRoot_draw(
         &_extendedPageTableRoot,
         (void*)MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE,
-        DIVIDE_ROUND_UP(algorithms_umin64(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, (Uintptr)PHYSICAL_KERNEL_RANGE_END), PAGE_SIZE) - 1, //TODO: Maybe PHYSICAL_KERNEL_RANGE_END - PHYSICAL_KERNEL_RANGE_BEGIN?
+        DIVIDE_ROUND_UP(algorithms_umin64(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END - MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, (Uintptr)PAGING_PHYSICAL_KERNEL_RANGE_END), PAGE_SIZE) - 1, //TODO: Maybe PHYSICAL_KERNEL_RANGE_END - PHYSICAL_KERNEL_RANGE_BEGIN?
         extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL)),
         EMPTY_FLAGS
     );
@@ -89,7 +88,7 @@ void paging_init() {
     );
     ERROR_GOTO_IF_ERROR(0);
 
-    PAGING_SWITCH_TO_TABLE(&_extendedPageTableRoot);
+    mm_switchPageTable(&_extendedPageTableRoot);
 
     idt_registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
 
