@@ -55,24 +55,6 @@ void path_join(String* des, String* base, String* path) {
     string_concat(des, des, path);
     ERROR_GOTO_IF_ERROR(0);
 
-    // if (path_isAbsolute(path)) {
-    //     string_copy(des, path);
-    //     ERROR_GOTO_IF_ERROR(0);
-    // } else {
-    //     if (des != base) {
-    //         string_copy(des, base);
-    //         ERROR_GOTO_IF_ERROR(0);
-    //     }
-
-    //     if (des->data[des->length - 1] != PATH_SEPERATOR) {
-    //         string_append(des, path, PATH_SEPERATOR);
-    //         ERROR_GOTO_IF_ERROR(0);
-    //     }
-
-    //     string_append(des, des, PATH_SEPERATOR);
-    //     ERROR_GOTO_IF_ERROR(0);
-    // }
-
     return;
     ERROR_FINAL_BEGIN(0);
 }
@@ -93,14 +75,10 @@ Index64 path_walk(String* path, Index64 beginIndex, String* walkedOut) {
     for (; index2 < path->length && path->data[index2] != PATH_SEPERATOR; ++index2);
 
     string_slice(walkedOut, path, index1, index2);
-
-    // if (index2 < path->length && path->data[index2] != PATH_SEPERATOR) {
-    //     ++index2;
-    // }
     
-    return index2 == path->length ? INVALID_INDEX : index2;
+    return index2 == path->length ? INVALID_INDEX64 : index2;
     ERROR_FINAL_BEGIN(0);
-    return INVALID_INDEX;
+    return INVALID_INDEX64;
 }
 
 void path_normalize(String* path) {

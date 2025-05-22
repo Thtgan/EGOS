@@ -30,7 +30,7 @@ void fsEntry_clearStruct(fsEntry* entry) {
 
 Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
     if (seekTo > entry->inode->sizeInByte) {
-        return INVALID_INDEX;
+        return INVALID_INDEX64;
     }
     
     return entry->pointer = seekTo;

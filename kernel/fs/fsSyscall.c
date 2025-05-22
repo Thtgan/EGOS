@@ -86,8 +86,8 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
     }
 
     Process* currentProcess = schedule_getCurrentProcess();
-    int ret = process_addFSentry(currentProcess, file);
-    if (ret == INVALID_INDEX) {
+    Index32 ret = process_addFSentry(currentProcess, file);
+    if (ret == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
@@ -97,7 +97,7 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
     if (file != NULL) {
         fs_fileClose(file);
     }
-    return INVALID_INDEX;
+    return -1;
 }
 
 static int __fsSyscall_close(int fileDescriptor) {

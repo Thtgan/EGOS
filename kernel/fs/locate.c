@@ -123,11 +123,11 @@ static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pa
     ERROR_GOTO_IF_ERROR(0);
 
     iNode* currentInode = baseInode;
-    while (currentIndex != INVALID_INDEX) {
+    while (currentIndex != INVALID_INDEX64) {
         currentIndex = path_walk(pathFromBase, currentIndex, &walked);
         ERROR_GOTO_IF_ERROR(0);
 
-        fsEntryType type = (currentIndex == INVALID_INDEX) ? type : FS_ENTRY_TYPE_DIRECTORY;
+        fsEntryType type = (currentIndex == INVALID_INDEX64) ? type : FS_ENTRY_TYPE_DIRECTORY;
         currentNode = iNode_lookupDirectoryEntry(currentInode, walked.data, type);  //Refer 'currentNode' once
         if (currentNode == NULL) {
             ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
@@ -142,7 +142,7 @@ static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pa
             currentInode = NULL;
         }
 
-        if (currentIndex == INVALID_INDEX) {
+        if (currentIndex == INVALID_INDEX64) {
             break;
         }
 

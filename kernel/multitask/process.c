@@ -235,10 +235,10 @@ fsEntry* process_getFSentry(Process* process, int fd) {
     return ret;
 }
 
-int process_addFSentry(Process* process, fsEntry* entry) {
+Index32 process_addFSentry(Process* process, fsEntry* entry) {
     schedule_enterCritical();
     Vector* entries = &process->fsEntries;
-    int ret = entries->size - 1;
+    Index32 ret = entries->size - 1;
 
     vector_push(entries, (Object)entry);
     ERROR_GOTO_IF_ERROR(0);
@@ -246,7 +246,7 @@ int process_addFSentry(Process* process, fsEntry* entry) {
     return ret;
     ERROR_FINAL_BEGIN(0);
     schedule_leaveCritical();
-    return -1;
+    return INVALID_INDEX32;
 }
 
 fsEntry* process_removeFSentry(Process* process, int fd) {

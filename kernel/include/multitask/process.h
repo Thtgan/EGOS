@@ -59,7 +59,7 @@ void process_setParent(Process* process, Process* parent);
 
 fsEntry* process_getFSentry(Process* process, int fd);
 
-int process_addFSentry(Process* process, fsEntry* entry);
+Index32 process_addFSentry(Process* process, fsEntry* entry);
 
 fsEntry* process_removeFSentry(Process* process, int fd);
 

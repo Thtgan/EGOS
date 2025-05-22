@@ -12,7 +12,7 @@
 #include<system/pageTable.h>
 
 OldResult readELF64Header(FileSystemEntry* file, ELF64Header* header) {
-    if (rawFileSeek(file, 0) == INVALID_INDEX) {
+    if (rawFileSeek(file, 0) == INVALID_INDEX32) {
         return RESULT_ERROR;
     }
 
@@ -58,7 +58,7 @@ OldResult readELF64ProgramHeader(FileSystemEntry* file, ELF64Header* elfHeader, 
         return RESULT_ERROR;
     }
 
-    if (rawFileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader)) == INVALID_INDEX) {
+    if (rawFileSeek(file, elfHeader->programHeadersBegin + index * sizeof(ELF64ProgramHeader)) == INVALID_INDEX32) {
         return RESULT_ERROR;
     }
 
@@ -95,7 +95,7 @@ OldResult checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
 
 OldResult loadELF64Program(FileSystemEntry* file, ELF64ProgramHeader* programHeader) {
     memset((void*)(Uintptr)programHeader->pAddr, 0, (Size)programHeader->segmentSizeInMemory);
-    if (rawFileSeek(file, (Size)programHeader->offset) == INVALID_INDEX) {
+    if (rawFileSeek(file, (Size)programHeader->offset) == INVALID_INDEX32) {
         return RESULT_ERROR;
     }
 

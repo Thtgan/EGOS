@@ -69,7 +69,7 @@ STRUCT_PRIVATE_DEFINE(FileSystemEntry) {
 
 static inline Index32 rawFileSeek(FileSystemEntry* file, Size seekTo) {
     if (file->type != FILE_SYSTEM_ENTRY_TYPE_FILE || file->fileOperations->seek == NULL) {
-        return INVALID_INDEX;
+        return INVALID_INDEX32;
     }
     return file->fileOperations->seek(file, seekTo);
 } 
@@ -83,7 +83,7 @@ static inline OldResult rawFileRead(FileSystemEntry* file, void* buffer, Size n)
 
 static inline Index32 rawDirectoryLookupEntry(FileSystemEntry* directory, ConstCstring name, FileSystemEntryType type, FileSystemEntry* entry, Index32* entryIndex) {
     if (directory->type != FILE_SYSTEM_ENTRY_TYPE_DIRECTOY || directory->directoryOperations->lookupEntry == NULL) {
-        return INVALID_INDEX;
+        return INVALID_INDEX32;
     }
     return directory->directoryOperations->lookupEntry(directory, name, type, entry, entryIndex);
 }

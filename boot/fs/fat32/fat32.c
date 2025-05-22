@@ -245,7 +245,7 @@ static __FAT32ClusterType __FAT32GetClusterType(__FAT32Context* context, Index32
 static Index32 __FAT32GetNextCluster(Volume* v, Index32 cluster) {
     __FAT32Context* context = ((FileSystem*)v->fileSystem)->context;
     if (cluster >= context->clusterNum) {
-        return INVALID_INDEX;
+        return INVALID_INDEX32;
     }
 
     Index32 sector = context->FATrange.begin + cluster * 4 / v->bytePerSector;
@@ -253,10 +253,10 @@ static Index32 __FAT32GetNextCluster(Volume* v, Index32 cluster) {
 
     void* FATbuffer = bMalloc(v->bytePerSector);
     if (FATbuffer == NULL) {
-        return INVALID_INDEX;
+        return INVALID_INDEX32;
     }
 
-    Index32 ret = INVALID_INDEX;
+    Index32 ret = INVALID_INDEX32;
     if (rawVolumeReadSectors(v, FATbuffer, sector, 1) == RESULT_SUCCESS) {
         ret = PTR_TO_VALUE(32, FATbuffer + offset) & 0x0FFFFFFF;
     }
@@ -382,7 +382,7 @@ static void __FAT32FileSystemEntryClose(FileSystemEntry* entry) {
 
 static Index32 __FAT32FileSeek(FileSystemEntry* file, Index32 seekTo) {
     __FAT32FileHandle* handle = file->handle;
-    return handle->pointer = seekTo < handle->size ? seekTo : INVALID_INDEX;
+    return handle->pointer = seekTo < handle->size ? seekTo : INVALID_INDEX32;
 }
 
 static OldResult __FAT32FileRead(FileSystemEntry* file, void* buffer, Size n) {
@@ -426,7 +426,7 @@ OldResult __FAT32DirectoryLookupEntry(FileSystemEntry* directory, ConstCstring n
     Index32 currentCluster = (handle->dataSectorBegin - context->dataRange.begin) / context->sectorPerCluster, currentOffset = ((handle->dataSectorBegin - context->dataRange.begin) % context->sectorPerCluster) * directory->volume->bytePerSector;
 
     FileSystemEntry currentEntry;
-    Index32 index = INVALID_INDEX;
+    Index32 index = INVALID_INDEX32;
     Size entrySizeInDevice;
 
     for (int i = 0;; ++i) {

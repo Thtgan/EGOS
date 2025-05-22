@@ -38,7 +38,7 @@ bool bitmap_testBit(Bitmap* b, Index64 index);
  * @param b Bitmap
  * @param index Index of the bit to set
  */
-void bitmap_setBit(Bitmap* b, Size index);
+void bitmap_setBit(Bitmap* b, Index64 index);
 
 /**
  * @brief Set n bits start from the index
@@ -47,7 +47,7 @@ void bitmap_setBit(Bitmap* b, Size index);
  * @param index Index of the beginning bit
  * @param n Num of bits to set
  */
-void bitmap_setBits(Bitmap* b, Size index, Size n);
+void bitmap_setBits(Bitmap* b, Index64 index, Size n);
 
 /**
  * @brief Clear the bit on the index
@@ -55,7 +55,7 @@ void bitmap_setBits(Bitmap* b, Size index, Size n);
  * @param b Bitmap
  * @param index Index of the bit to clear
  */
-void bitmap_clearBit(Bitmap* b, Size index);
+void bitmap_clearBit(Bitmap* b, Index64 index);
 
 /**
  * @brief Clear n bits start from the index
@@ -64,7 +64,7 @@ void bitmap_clearBit(Bitmap* b, Size index);
  * @param index Index of the beginning bit
  * @param n Num of bits to clear
  */
-void bitmap_clearBits(Bitmap* b, Size index, Size n);
+void bitmap_clearBits(Bitmap* b, Index64 index, Size n);
 
 /**
  * @brief Find first bit set
@@ -73,7 +73,7 @@ void bitmap_clearBits(Bitmap* b, Size index, Size n);
  * @param begin Begin of the search
  * @return Size Index of first bit set, INVALID_INDEX if not exist
  */
-Index64 bitmap_findFirstSet(Bitmap* b, Size begin);
+Index64 bitmap_findFirstSet(Bitmap* b, Index64 begin);
 
 /**
  * @brief Find first bit clear
@@ -82,6 +82,6 @@ Index64 bitmap_findFirstSet(Bitmap* b, Size begin);
  * @param begin Begin of the search
  * @return Size Index of first bit clear, INVALID_INDEX if not exist
  */
-Index64 bitmap_findFirstClear(Bitmap* b, Size begin);
+Index64 bitmap_findFirstClear(Bitmap* b, Index64 begin);
 
 #endif // __LIB_STRUCTS_BITMAP_H

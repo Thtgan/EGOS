@@ -115,7 +115,7 @@ static VGAtextMode _vgaMode_text25x80d4 = {
 
 static VGAtextMode _vgaMode_text50x80d4 = {
     .header = {
-        .legacyMode     = INVALID_INDEX,
+        .legacyMode     = -1,
         .width          = 80,
         .height         = 50,
         .size           = 50 * 80,

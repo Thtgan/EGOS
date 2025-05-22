@@ -322,11 +322,11 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
     base += offset;
 
     if ((Int64)base < 0 || base > file->inode->sizeInByte) {
-        return INVALID_INDEX;
+        return INVALID_INDEX64;
     }
 
-    if (fsEntry_rawSeek(file, base) == INVALID_INDEX) {
-        return INVALID_INDEX;
+    if (fsEntry_rawSeek(file, base) == INVALID_INDEX64) {
+        return INVALID_INDEX64;
     }
 
     return file->pointer;

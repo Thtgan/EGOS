@@ -102,8 +102,8 @@ void schedule_init() {
 
 Uint16 schedule_allocateNewID() {
     spinlock_lock(&__schedule_idBitmapLock);
-    Uint16 ret = bitmap_findFirstClear(&_schedule_idBitmap, _schedule_lastAllocatedID);
-    if (ret != INVALID_INDEX) {
+    Index64 ret = bitmap_findFirstClear(&_schedule_idBitmap, _schedule_lastAllocatedID);
+    if (ret != INVALID_INDEX64) {
         bitmap_setBit(&_schedule_idBitmap, ret);
         _schedule_lastAllocatedID = ret;
     }

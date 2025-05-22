@@ -215,8 +215,8 @@ static void __fat32_iNode_doReadData(iNode* inode, Index64 begin, void* buffer, 
     FAT32BPB* BPB = fat32SuperBlock->BPB;
     Size clusterSize = POWER_2(targetDevice->granularity) * BPB->sectorPerCluster;
 
-    Index64 currentClusterIndex = fat32_getCluster(fat32SuperBlock, fat32Inode->firstCluster, begin / clusterSize);
-    if (currentClusterIndex == (Uint32)INVALID_INDEX) {
+    Index32 currentClusterIndex = fat32_getCluster(fat32SuperBlock, fat32Inode->firstCluster, begin / clusterSize);
+    if (currentClusterIndex == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
@@ -224,7 +224,7 @@ static void __fat32_iNode_doReadData(iNode* inode, Index64 begin, void* buffer, 
     Size remainByteNum = byteN;
     if (begin % clusterSize != 0) {
         Index64 offsetInCluster = begin % clusterSize;
-        blockDevice_readBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
+        blockDevice_readBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
         ERROR_GOTO_IF_ERROR(0);
 
         Size byteReadN = algorithms_umin64(remainByteNum, clusterSize - offsetInCluster);
@@ -239,14 +239,14 @@ static void __fat32_iNode_doReadData(iNode* inode, Index64 begin, void* buffer, 
     if (remainByteNum >= clusterSize) {
         Size remainingFullClusterNum = remainByteNum / clusterSize;
         while (remainingFullClusterNum > 0) {
-            DEBUG_ASSERT_SILENT(currentClusterIndex != (Uint32)INVALID_INDEX);
+            DEBUG_ASSERT_SILENT(currentClusterIndex != INVALID_INDEX32);
 
             Size continousClusterLength = 0;
             Index32 nextClusterIndex = fat32_stepCluster(fat32SuperBlock, currentClusterIndex, remainingFullClusterNum, &continousClusterLength);
             DEBUG_ASSERT_SILENT(VALUE_WITHIN(0, remainingFullClusterNum, continousClusterLength, <, <=));
 
             Size continousBlockLength = continousClusterLength * BPB->sectorPerCluster;
-            blockDevice_readBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, buffer, continousBlockLength);
+            blockDevice_readBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, buffer, continousBlockLength);
             ERROR_GOTO_IF_ERROR(0);
 
             currentClusterIndex = nextClusterIndex;
@@ -259,8 +259,8 @@ static void __fat32_iNode_doReadData(iNode* inode, Index64 begin, void* buffer, 
     }
 
     if (remainByteNum > 0) {
-        DEBUG_ASSERT_SILENT(currentClusterIndex != (Uint32)INVALID_INDEX);
-        blockDevice_readBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
+        DEBUG_ASSERT_SILENT(currentClusterIndex != INVALID_INDEX32);
+        blockDevice_readBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
         ERROR_GOTO_IF_ERROR(0);
 
         memory_memcpy(buffer, clusterBuffer, remainByteNum);
@@ -288,8 +288,8 @@ static void __fat32_iNode_doWriteData(iNode* inode, Index64 begin, const void* b
     FAT32BPB* BPB = fat32SuperBlock->BPB;
     Size clusterSize = POWER_2(targetDevice->granularity) * BPB->sectorPerCluster;
 
-    Index64 currentClusterIndex = fat32_getCluster(fat32SuperBlock, fat32Inode->firstCluster, begin / clusterSize);
-    if (currentClusterIndex == (Uint32)INVALID_INDEX) {
+    Index32 currentClusterIndex = fat32_getCluster(fat32SuperBlock, fat32Inode->firstCluster, begin / clusterSize);
+    if (currentClusterIndex == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
@@ -297,13 +297,13 @@ static void __fat32_iNode_doWriteData(iNode* inode, Index64 begin, const void* b
     Size remainByteNum = byteN;
     if (begin % clusterSize != 0) {
         Index64 offsetInCluster = begin % clusterSize;
-        blockDevice_readBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
+        blockDevice_readBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
         ERROR_GOTO_IF_ERROR(0);
         
         Size byteReadN = algorithms_umin64(remainByteNum, clusterSize - offsetInCluster);
         memory_memcpy(clusterBuffer + offsetInCluster, buffer, byteReadN);
         
-        blockDevice_writeBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
+        blockDevice_writeBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
         ERROR_GOTO_IF_ERROR(0);
 
         currentClusterIndex = fat32_getCluster(fat32SuperBlock, currentClusterIndex, 1);
@@ -315,14 +315,14 @@ static void __fat32_iNode_doWriteData(iNode* inode, Index64 begin, const void* b
     if (remainByteNum >= clusterSize) {
         Size remainingFullClusterNum = remainByteNum / clusterSize;
         while (remainingFullClusterNum > 0) {
-            DEBUG_ASSERT_SILENT(currentClusterIndex != (Uint32)INVALID_INDEX);
+            DEBUG_ASSERT_SILENT(currentClusterIndex != INVALID_INDEX32);
 
             Size continousClusterLength = 0;
             Index32 nextClusterIndex = fat32_stepCluster(fat32SuperBlock, currentClusterIndex, remainingFullClusterNum, &continousClusterLength);
             DEBUG_ASSERT_SILENT(VALUE_WITHIN(0, remainingFullClusterNum, continousClusterLength, <, <=));
 
             Size continousBlockLength = continousClusterLength * BPB->sectorPerCluster;
-            blockDevice_writeBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, buffer, continousBlockLength);
+            blockDevice_writeBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, buffer, continousBlockLength);
             ERROR_GOTO_IF_ERROR(0);
 
             currentClusterIndex = nextClusterIndex;
@@ -335,13 +335,13 @@ static void __fat32_iNode_doWriteData(iNode* inode, Index64 begin, const void* b
     }
 
     if (remainByteNum > 0) {
-        DEBUG_ASSERT_SILENT(currentClusterIndex != (Uint32)INVALID_INDEX);
-        blockDevice_readBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
+        DEBUG_ASSERT_SILENT(currentClusterIndex != INVALID_INDEX32);
+        blockDevice_readBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
         ERROR_GOTO_IF_ERROR(0);
         
         memory_memcpy(clusterBuffer, buffer, remainByteNum);
 
-        blockDevice_writeBlocks(targetBlockDevice, currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
+        blockDevice_writeBlocks(targetBlockDevice, (Index64)currentClusterIndex * BPB->sectorPerCluster + fat32SuperBlock->dataBlockRange.begin, clusterBuffer, BPB->sectorPerCluster);
         ERROR_GOTO_IF_ERROR(0);
         
         remainByteNum = 0;
@@ -357,7 +357,7 @@ static void __fat32_iNode_resize(iNode* inode, Size newSizeInByte) {
         DEBUG_ASSERT_SILENT(inode->sizeInByte == 0);
     }
 
-    Index32 freeClusterChain = INVALID_INDEX;
+    Index32 freeClusterChain = INVALID_INDEX32;
     FAT32SuperBlock* fat32SuperBlock = HOST_POINTER(inode->superBlock, FAT32SuperBlock, superBlock);
     FAT32BPB* BPB = fat32SuperBlock->BPB;
     Device* superBlockDevice = &inode->superBlock->blockDevice->device;
@@ -370,7 +370,7 @@ static void __fat32_iNode_resize(iNode* inode, Size newSizeInByte) {
     
     if (newSizeInCluster < oldSizeInCluster) {
         Index32 tail = fat32_getCluster(fat32SuperBlock, fat32Inode->firstCluster, newSizeInCluster - 1);
-        if (tail == INVALID_INDEX) {
+        if (tail == INVALID_INDEX32) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
@@ -379,13 +379,13 @@ static void __fat32_iNode_resize(iNode* inode, Size newSizeInByte) {
         fat32_freeClusterChain(fat32SuperBlock, cut);
     } else if (newSizeInCluster > oldSizeInCluster) {
         freeClusterChain = fat32_allocateClusterChain(fat32SuperBlock, newSizeInCluster - oldSizeInCluster);
-        if (freeClusterChain == INVALID_INDEX) {
+        if (freeClusterChain == INVALID_INDEX32) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
 
         Index32 tail = fat32_getCluster(fat32SuperBlock, fat32Inode->firstCluster, oldSizeInCluster - 1);
-        if (freeClusterChain == INVALID_INDEX) {
+        if (freeClusterChain == INVALID_INDEX32) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
@@ -398,7 +398,7 @@ static void __fat32_iNode_resize(iNode* inode, Size newSizeInByte) {
 
     return;
     ERROR_FINAL_BEGIN(0);
-    if (freeClusterChain != INVALID_INDEX) {
+    if (freeClusterChain != INVALID_INDEX32) {
         fat32_freeClusterChain(fat32SuperBlock, freeClusterChain);
     }
 }
@@ -545,7 +545,7 @@ static void __fat32_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsE
     }
 
     Index32 newFirstCluster = fat32SuperBlock_createFirstCluster(fat32SuperBlock);
-    if (newFirstCluster == INVALID_INDEX) {
+    if (newFirstCluster == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }

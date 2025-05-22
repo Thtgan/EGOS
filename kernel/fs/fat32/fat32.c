@@ -149,14 +149,14 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
 
     fat32SuperBlock->FAT                = FAT;
 
-    Index32 firstFreeCluster = INVALID_INDEX, last = INVALID_INDEX;
+    Index32 firstFreeCluster = INVALID_INDEX32, last = INVALID_INDEX32;
     for (Index32 i = 0; i < clusterNum; ++i) {
         Index32 nextCluster = PTR_TO_VALUE(32, FAT + i);
         if (fat32_getClusterType(fat32SuperBlock, nextCluster) != FAT32_CLUSTER_TYPE_FREE) {
             continue;
         }
 
-        if (firstFreeCluster == INVALID_INDEX) {
+        if (firstFreeCluster == INVALID_INDEX32) {
             firstFreeCluster = i;
         } else {
             PTR_TO_VALUE(32, FAT + last) = i;
@@ -299,7 +299,7 @@ FAT32NodeMetadata* fat32SuperBlock_getMetadataFromFirstCluster(FAT32SuperBlock* 
 Index32 fat32SuperBlock_createFirstCluster(FAT32SuperBlock* superBlock) {
     void* clusterBuffer = NULL;
     Index32 firstCluster = fat32_allocateClusterChain(superBlock, 1);   //First cluster of new file/directory must be all 0
-    if (firstCluster == INVALID_INDEX) {
+    if (firstCluster == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
@@ -316,12 +316,12 @@ Index32 fat32SuperBlock_createFirstCluster(FAT32SuperBlock* superBlock) {
     }
 
     memory_memset(clusterBuffer, 0, clusterSize);
-    blockDevice_writeBlocks(targetBlockDevice, superBlock->dataBlockRange.begin + firstCluster * BPB->sectorPerCluster, clusterBuffer, BPB->sectorPerCluster);
+    blockDevice_writeBlocks(targetBlockDevice, superBlock->dataBlockRange.begin + (Index64)firstCluster * BPB->sectorPerCluster, clusterBuffer, BPB->sectorPerCluster);
     ERROR_GOTO_IF_ERROR(0);
 
     return firstCluster;
     ERROR_FINAL_BEGIN(0);
-    return INVALID_INDEX;
+    return INVALID_INDEX32;
 }
 
 static fsNode* __fat32_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) {

@@ -133,13 +133,13 @@ void blockDevice_flush(BlockDevice* blockDevice) {
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
         BlockBuffer* blockBuffer = blockDevice->blockBuffer;
         for (int i = 0; i < blockBuffer->blockNum; ++i) {
-            BlockBufferBlock* block = blockBuffer_pop(blockBuffer, INVALID_INDEX);
+            BlockBufferBlock* block = blockBuffer_pop(blockBuffer, INVALID_INDEX64);
             if (block == NULL) {
                 ERROR_ASSERT_ANY();
                 ERROR_GOTO(0);
             }
 
-            if (block->blockIndex != INVALID_INDEX && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
+            if (block->blockIndex != INVALID_INDEX64 && TEST_FLAGS(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_DIRTY)) {
                 device_rawWriteUnits(device, block->blockIndex, block->data, 1);
                 ERROR_GOTO_IF_ERROR(0); //TODO: May be this happens too frequently?
 

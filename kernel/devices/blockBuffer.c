@@ -32,7 +32,7 @@ void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockN
 
     for (int i = 0; i < blockNum; ++i) {
         BlockBufferBlock* block = blocks + i;
-        __blockBuffer_initBlock(block, blockBuffer->blockData + (i << bytePerBlockShift), INVALID_INDEX);
+        __blockBuffer_initBlock(block, blockBuffer->blockData + (i << bytePerBlockShift), INVALID_INDEX64);
 
         linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
     }
@@ -101,7 +101,7 @@ void blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
             if (oldBlock != NULL) {
                 __blockBuffer_initBlock(newBlock, oldBlock->data, oldBlock->blockIndex);
             } else {
-                __blockBuffer_initBlock(newBlock, NULL, INVALID_INDEX);
+                __blockBuffer_initBlock(newBlock, NULL, INVALID_INDEX64);
             }
 
             linkedListNode_insertFront(&blockBuffer->LRU, &newBlock->LRUnode);
@@ -146,7 +146,7 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
         block = HOST_POINTER(found, BlockBufferBlock, hashChainNode);
     }
 
-    if (block->blockIndex != INVALID_INDEX) {
+    if (block->blockIndex != INVALID_INDEX64) {
         HashChainNode* deleted = hashTable_delete(&blockBuffer->hashTable, block->blockIndex);
         if (deleted == NULL) {
             ERROR_ASSERT_ANY();
@@ -169,7 +169,7 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
 }
 
 void blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block) {
-    DEBUG_ASSERT_SILENT(blockIndex != INVALID_INDEX);
+    DEBUG_ASSERT_SILENT(blockIndex != INVALID_INDEX64);
     block->blockIndex = blockIndex;
     hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode);
     ERROR_GOTO_IF_ERROR(0);
