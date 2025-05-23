@@ -208,9 +208,6 @@ void process_notifyThreadDead(Process* process, Thread* thread) {
     if (!linkedList_isEmpty(&process->childProcesses)) {
         schedule_collectOrphans(process);
     }
-
-    // process_clearStruct(process);
-    // memory_free(process);
 }
 
 void process_setParent(Process* process, Process* parent) {

@@ -33,8 +33,6 @@ bool mutex_isLocked(Mutex* mutex) {
 }
 
 bool mutex_acquire(Mutex* mutex) {
-    // Thread* currentThread = schedule_getCurrentThread();
-    // return thread_trySleep(currentThread, &mutex->wait);
     Wait* wait = &mutex->wait;
     if (wait_rawRequestWait(wait)) {
         Thread* currentThread = schedule_getCurrentThread();

@@ -156,14 +156,12 @@ void kernelMain(SystemInfo* info) {
             print_printf("%s-%d\n", str, len);
         }
 
-        //TODO: Calling userprogram goes wrong here
+        int ret = usermode_execute("/bin/test");
+        print_printf("USER PROGRAM RETURNED %d\n", ret);
 
         semaphore_up(&sema2);
         thread_die(schedule_getCurrentThread());
     }
-
-    int ret = usermode_execute("/bin/test");    //FIXME: It may stucks
-    print_printf("USER PROGRAM RETURNED %d\n", ret);
 
     memory_free(arr1);
     memory_free(arr2);

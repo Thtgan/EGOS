@@ -114,7 +114,6 @@ static VGApalette* _vgaPalettes[VGA_PALETTE_TYPE_NUM] = {
     [VGA_PALETTE_TYPE_COLOR_256]    = &_vgaPalette_color256
 };
 
-//TODO: Ugly codes
 static inline Object __vgaPalette_dacColorToKey(VGAcolor vgaColorIndex, VGAdacColor* dacColor) {
     return (Object)dacColor->r | VAL_LEFT_SHIFT((Object)dacColor->g, 8) | VAL_LEFT_SHIFT((Object)dacColor->b, 16) | VAL_LEFT_SHIFT((Object)vgaColorIndex, 24);
 }

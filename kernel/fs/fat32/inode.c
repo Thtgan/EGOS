@@ -81,7 +81,7 @@ Size fat32_iNode_touchDirectory(iNode* inode) {
         ERROR_GOTO(0);
     }
 
-    String entryName;   //TODO: Not necessary
+    String entryName;
     string_initStruct(&entryName);
     ERROR_GOTO_IF_ERROR(0);
     Flags8 attribute = EMPTY_FLAGS;

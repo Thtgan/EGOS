@@ -338,21 +338,6 @@ static void __schedule_idle() {
 }
 
 static Thread* __schedule_selectNextThread() {
-    // mutex_acquire(&_schedule_queueLock);
-    // for (LinkedListNode* node = linkedListNode_getNext(&_schedule_runningThreads); node != &_schedule_runningThreads; node = linkedListNode_getNext(node)) {
-    //     Thread* thread = HOST_POINTER(node, Thread, scheduleRunningNode);
-    //     DEBUG_ASSERT_SILENT(thread->state != STATE_STOPPED);
-    //     if (thread->state == STATE_RUNNING) {
-    //         mutex_release(&_schedule_queueLock);
-    //         return thread;
-    //     }
-    // }
-
-    // DEBUG_ASSERT_SILENT(_schedule_currentThread->state == STATE_RUNNING);
-    // mutex_release(&_schedule_queueLock);
-
-    // return _schedule_currentThread;
-
     mutex_acquire(&_schedule_queueLock);
 
     DEBUG_ASSERT_SILENT(!linkedList_isEmpty(&_schedule_runningThreads));

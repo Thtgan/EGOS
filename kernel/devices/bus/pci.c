@@ -273,5 +273,5 @@ static void __pci_readDevice(Uint32 baseAddr, PCIdevice* device) {
 }
 
 static void __pci_addDevice(PCIdevice* device) {
-    vector_push(&_pci_devices, (Object)device);  //TODO: Error passthrough here
+    vector_push(&_pci_devices, (Object)device);
 }

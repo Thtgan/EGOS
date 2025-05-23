@@ -40,7 +40,7 @@ void usermode_init() {
     syscall_init();
 }
 
-int usermode_execute(ConstCstring path) {  //TODO: Unstable code
+int usermode_execute(ConstCstring path) {
     File* file = fs_fileOpen(path, FCNTL_OPEN_READ_ONLY);
     ERROR_GOTO_IF_ERROR(0);
 

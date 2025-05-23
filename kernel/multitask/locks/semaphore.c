@@ -26,9 +26,6 @@ void semaphore_initStruct(Semaphore* sema, int count) {
 }
 
 void semaphore_down(Semaphore* sema) {
-    // Thread* currentThread = schedule_getCurrentThread();
-    // thread_trySleep(currentThread, &sema->wait);
-    // wait_tryWait(&sema->wait);
     Wait* wait = &sema->wait;
     if (wait_rawRequestWait(wait)) {
         Thread* currentThread = schedule_getCurrentThread();
