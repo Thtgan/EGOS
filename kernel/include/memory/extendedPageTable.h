@@ -97,7 +97,7 @@ static inline MemoryPreset* extraPageTableContext_getPreset(ExtraPageTableContex
 }
 
 static inline MemoryPreset* extraPageTableContext_getDefaultPreset(ExtraPageTableContext* context, MemoryDefaultPresetType presetType) {
-    return extraPageTableContext_getPreset(context, context->presetType2id[presetType]);
+    return extraPageTableContext_getPreset(context, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(context, presetType));
 }
 
 typedef struct ExtendedPageTableRoot {

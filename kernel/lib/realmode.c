@@ -56,7 +56,7 @@ void realmode_init() {
         mm->extendedTable,
         copyTo, copyTo, 
         requiredPageNum,
-        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL)),
+        extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL),
         EMPTY_FLAGS
     );
     ERROR_GOTO_IF_ERROR(0);
@@ -69,7 +69,7 @@ void realmode_init() {
         mm->extendedTable,
         _realMode_stack, _realMode_stack, 
         stackPageNum,
-        extraPageTableContext_getPreset(&mm->extraPageTableContext, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL)),
+        extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL),
         EMPTY_FLAGS
     );
     ERROR_GOTO_IF_ERROR(0);
