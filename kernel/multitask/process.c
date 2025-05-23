@@ -67,7 +67,22 @@ void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
     process_initStruct(process, pid, cloneFrom->name.data, newTable);
     ERROR_GOTO_IF_ERROR(0);
 
-    //TODO: Copy fsEntries here
+    vector_resize(&process->fsEntries, cloneFrom->fsEntries.capacity);
+    Size fsEntryNum = process->fsEntries.size;
+    for (int i = 0; i < fsEntryNum; ++i) {
+        Object entry = vector_get(&process->fsEntries, i);
+        ERROR_GOTO_IF_ERROR(0);
+
+        if (entry == OBJECT_NULL) {
+            vector_push(&process->fsEntries, OBJECT_NULL);
+        } else {
+            fsEntry* newEntry = fsEntry_copy((fsEntry*)entry);
+            DEBUG_ASSERT_SILENT(newEntry != NULL);
+            vector_push(&process->fsEntries, (Object)newEntry);
+        }
+
+        ERROR_GOTO_IF_ERROR(0);
+    }
 
     if (cloneFrom->lastActiveThread != NULL) {
         DEBUG_ASSERT_SILENT(cloneFrom->lastActiveThread->state == STATE_RUNNING);

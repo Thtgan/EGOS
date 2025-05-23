@@ -147,7 +147,7 @@ void kernelMain(SystemInfo* info) {
         semaphore_up(&sema2);
         while (true) {
             print_printf("Waiting for input: ");
-            int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE); //TODO: Delete after input stucks
+            int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE);
             ERROR_CHECKPOINT();
 
             if (cstring_strcmp(str, "PASS") == 0 || len == 0) {

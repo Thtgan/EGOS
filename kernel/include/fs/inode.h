@@ -58,8 +58,6 @@ typedef struct iNodeOperations {
     //=========== Directory Functions ===========
     void (*iterateDirectoryEntries)(iNode* inode, iNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret);
 
-    // fsNode* (*lookupDirectoryEntry)(iNode* inode, ConstCstring name, bool isDirectory);
-
     void (*addDirectoryEntry)(iNode* inode, ConstCstring name, fsEntryType type, iNodeAttribute* attr, ID deviceID);
 
     void (*removeDirectoryEntry)(iNode* inode, ConstCstring name, bool isDirectory);

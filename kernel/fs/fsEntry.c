@@ -63,3 +63,18 @@ void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     return;
     ERROR_FINAL_BEGIN(0);
 }
+
+fsEntry* fsEntry_copy(fsEntry* entry) {
+    fsEntry* ret = memory_allocate(sizeof(fsEntry));
+    if (ret == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    memory_memcpy(ret, entry, sizeof(fsEntry));
+    refCounter_refer(&ret->inode->refCounter);
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
