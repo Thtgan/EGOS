@@ -11,6 +11,9 @@ typedef void (*ThreadEntryPoint)();
 #include<structs/linkedList.h>
 #include<structs/refCounter.h>
 
+#define THREAD_DEFAULT_KERNEL_STACK_SIZE    4 * PAGE_SIZE
+#define THREAD_DEFAULT_USER_STACK_SIZE      4 * PAGE_SIZE
+
 typedef struct Thread {
     Process* process;
 

@@ -15,9 +15,6 @@
 #include<structs/queue.h>
 #include<system/pageTable.h>
 
-#define __THREAD_DEFAULT_KERNEL_STACK_SIZE  4 * PAGE_SIZE
-#define __THREAD_DEFAULT_USER_STACK_SIZE    4 * PAGE_SIZE
-
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry, Range* kernelStack) {
     thread->process = process;
     thread->tid = tid;
@@ -26,7 +23,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
     memory_memset(&thread->context, 0, sizeof(Context));
     
     if (kernelStack == NULL) {
-        void* newKernelStack = memory_allocate(__THREAD_DEFAULT_KERNEL_STACK_SIZE);
+        void* newKernelStack = memory_allocate(THREAD_DEFAULT_KERNEL_STACK_SIZE);
         if (newKernelStack == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -34,7 +31,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
         
         thread->kernelStack = (Range) {
             .begin = (Uintptr)newKernelStack,
-            .length = __THREAD_DEFAULT_KERNEL_STACK_SIZE
+            .length = THREAD_DEFAULT_KERNEL_STACK_SIZE
         };
         memory_memset((void*)thread->kernelStack.begin, 0, thread->kernelStack.length);
     } else {
@@ -254,7 +251,7 @@ void thread_setupForUserProgram(Thread* thread) {
     ExtendedPageTableRoot* extendedTableRoot = thread->process->extendedTable;
 
     void* newUserStack = memory_allocateDetailed(
-        __THREAD_DEFAULT_USER_STACK_SIZE,
+        THREAD_DEFAULT_USER_STACK_SIZE,
         EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)
     );
 
@@ -265,7 +262,7 @@ void thread_setupForUserProgram(Thread* thread) {
     
     thread->userStack = (Range) {
         .begin = (Uintptr)newUserStack,
-        .length = __THREAD_DEFAULT_USER_STACK_SIZE
+        .length = THREAD_DEFAULT_USER_STACK_SIZE
     };
     
     memory_memset((void*)thread->userStack.begin, 0, thread->userStack.length);

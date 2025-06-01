@@ -74,7 +74,7 @@ void fs_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;
-    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->superBlock->rootInode, "/dev", true);
+    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->superBlock->rootInode, "/dev", true);  //TODO: fails if dev not exist
     ERROR_GOTO_IF_ERROR(0);
 
     superBlock_rawMount(fs_rootFS->superBlock, &devfsMountPoint, fs_devFS->superBlock->rootInode, EMPTY_FLAGS);

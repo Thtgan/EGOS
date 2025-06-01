@@ -5,6 +5,8 @@
 #include<multitask/process.h>
 #include<multitask/thread.h>
 
+void schedule_setEarlyStackBottom(void* stackBottom);
+
 void schedule_init();
 
 Uint16 schedule_allocateNewID();

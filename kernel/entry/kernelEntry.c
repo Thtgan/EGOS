@@ -6,20 +6,27 @@
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 #include<system/systemInfo.h> 
+#include<init.h>
 
 extern void kernelMain(SystemInfo* info);
 
 SystemInfo info;
 
-extern char* schedule_initKernelStack;
-
-__attribute__((section(".init")))
+__attribute__((section(".init"), noreturn))
 void kernelEntry_entry(GDTDesc64* desc, MemoryMap* mMap) {
-    writeRegister_RSP_64((Uintptr)&schedule_initKernelStack + 4 * PAGE_SIZE);
-
     info.magic      = SYSTEM_INFO_MAGIC;
     info.mMap       = mMap;
     info.gdtDesc    = desc;
 
-    kernelMain(&info);
+    Uintptr bootStackTop = (Uintptr)init_getBootStackBottom() + INIT_BOOT_STACK_SIZE;
+    asm volatile(
+        "mov %0, %%rsp;"
+        "mov %1, %%rbp;"
+        "jmp kernelMain;"
+        :
+        : "g"(bootStackTop), "i"(INIT_BOOT_STACK_MAGIC), "D"(&info)
+    );
+
+    cli();
+    die();
 }

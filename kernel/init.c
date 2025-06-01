@@ -10,6 +10,7 @@
 #include<interrupt/IDT.h>
 #include<interrupt/TSS.h>
 #include<kit/types.h>
+#include<memory/memory.h>
 #include<memory/mm.h>
 #include<multitask/schedule.h>
 #include<print.h>
@@ -32,13 +33,17 @@ static void __init_disableInterrupt();  //TODO: Maybe remove these
 
 static void __init_initVideo();         //TODO: Maybe remove these
 
-static __InitFunc _initFuncs[] = {
+static __InitFunc _initFuncs1[] = {
     { error_init                ,   "Error"         },
     { display_init              ,   "Display"       },
     { tty_init                  ,   "Boot TTY"      },
     { __init_printBootSlogan    ,   NULL            },  //TODO: May crash after print slogan
     { idt_init                  ,   "Interrupt"     },
     { mm_init                   ,   "Memory"        },
+    { NULL, NULL }
+};
+
+static __InitFunc _initFuncs2[] = {
     { tty_initVirtTTY           ,   "Virtual TTY"   },
     { debug_init                ,   "Debug"         },
     { tss_init                  ,   "TSS"           },
@@ -58,13 +63,36 @@ static __InitFunc _initFuncs[] = {
     { NULL, NULL }
 };
 
-void init_initKernel() {
-    for (int i = 0; _initFuncs[i].func != NULL; ++i) {
-        _initFuncs[i].func();
+__attribute__((aligned(PAGE_SIZE)))
+static char _init_bootStack[INIT_BOOT_STACK_SIZE];
+
+void* init_getBootStackBottom() {
+    return _init_bootStack;
+}
+
+void init_initKernelStage1() {
+    for (int i = 0; _initFuncs1[i].func != NULL; ++i) {
+        _initFuncs1[i].func();
 
         ERROR_CHECKPOINT({
-            if (_initFuncs[i].name != NULL) {
-                print_debugPrintf("Initialization of %s failed\n", _initFuncs[i].name);
+            if (_initFuncs1[i].name != NULL) {
+                print_debugPrintf("Initialization of %s failed\n", _initFuncs1[i].name);
+            } else {
+                print_debugPrintf("Initialization failed");
+            }
+            error_unhandledRecord(error_getCurrentRecord());
+        });
+    }
+    return;
+}
+
+void init_initKernelStage2() {
+    for (int i = 0; _initFuncs2[i].func != NULL; ++i) {
+        _initFuncs2[i].func();
+
+        ERROR_CHECKPOINT({
+            if (_initFuncs2[i].name != NULL) {
+                print_debugPrintf("Initialization of %s failed\n", _initFuncs2[i].name);
             } else {
                 print_debugPrintf("Initialization failed");
             }

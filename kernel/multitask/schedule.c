@@ -46,9 +46,11 @@ static Thread* __schedule_selectNextThread();
 
 static Thread* __schedule_initFirstThread();
 
-#define __SCHEDULE_INIT_KERNEL_STACK_SIZE   (4 * PAGE_SIZE)
-__attribute__((aligned(PAGE_SIZE)))
-char schedule_initKernelStack[__SCHEDULE_INIT_KERNEL_STACK_SIZE];
+static void* __schedule_earlyStackBottom;
+
+void schedule_setEarlyStackBottom(void* stackBottom) {
+    __schedule_earlyStackBottom = stackBottom;
+}
 
 void schedule_init() {
     DEBUG_ASSERT_SILENT(!_schedule_started);
@@ -367,8 +369,8 @@ static Thread* __schedule_initFirstThread() {
     }
 
     Range initKernelStack = {
-        .begin = (Uintptr)schedule_initKernelStack,
-        .length = __SCHEDULE_INIT_KERNEL_STACK_SIZE
+        .begin = (Uintptr)__schedule_earlyStackBottom,
+        .length = THREAD_DEFAULT_KERNEL_STACK_SIZE
     };
 
     Uint16 tid = schedule_allocateNewID();

@@ -63,8 +63,7 @@ void kernelMain(SystemInfo* info) {
         debug_blowup("Boot magic not match");
     }
 
-    init_initKernel();
-    ERROR_CHECKPOINT();
+    INIT_KERNEL();
 
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
     tty_switchDisplayMode(DISPLAY_MODE_VGA);
