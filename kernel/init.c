@@ -53,12 +53,10 @@ static __InitFunc _initFuncs2[] = {
     { __init_enableInterrupt    ,   NULL            },
     { ata_initDevices           ,   "ATA Devices"   },
     { fs_init                   ,   "File System"   },
-    { __init_disableInterrupt   ,   NULL            },
-    { time_init                 ,   "Time"          },
     { schedule_init             ,   "Schedule"      },
+    { time_init                 ,   "Time"          },
     { realmode_init             ,   "Realmode"      },
     { usermode_init             ,   "User Mode"     },
-    { __init_enableInterrupt    ,   NULL            },
     { __init_initVideo          ,   "Video"         },
     { NULL, NULL }
 };

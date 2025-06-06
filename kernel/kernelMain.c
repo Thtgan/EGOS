@@ -46,6 +46,8 @@ Uint16 rootTID = 0;
 
 #include<devices/terminal/tty.h>
 
+Timer timer1, timer2;
+
 static void __timerFunc1(Timer* timer) {
     print_printf("HANDLER CALL FROM TIMER1\n");
 }
@@ -175,7 +177,6 @@ void kernelMain(SystemInfo* info) {
         fs_fileClose(file);
     }
 
-    Timer timer1, timer2;
     timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);
     timer_initStruct(&timer2, 500, TIME_UNIT_MILLISECOND);
     SET_FLAG_BACK(timer2.flags, TIMER_FLAGS_SYNCHRONIZE | TIMER_FLAGS_REPEAT);

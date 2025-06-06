@@ -79,6 +79,8 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
         ERROR_GOTO_IF_ERROR(0);
     }
 
+    PAGING_FLUSH_TLB(); //Even copy may alter the table
+
     return ret;
     ERROR_FINAL_BEGIN(0);
     return NULL;
@@ -111,6 +113,9 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
     }
 
     __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset, flags);
+
+    PAGING_FLUSH_TLB();
+    
     return;
     ERROR_FINAL_BEGIN(0);
 }
@@ -281,13 +286,15 @@ MemoryPreset* extendedPageTableRoot_peek(ExtendedPageTableRoot* root, void* v) {
     for (PagingLevel i = PAGING_LEVEL_PML4; i >= PAGING_LEVEL_PAGE_TABLE; --i) {
         Index16 index = PAGING_INDEX(i, v);
         PagingEntry* entry = &extendedTable->table.tableEntries[index];
-        ExtraPageTableEntry* extreEntry = &extendedTable->extraTable.tableEntries[index];
+        ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
-        if (TEST_FLAGS_FAIL(*entry, PAGING_ENTRY_FLAG_PRESENT)) {
+        Uint8 currentPresetID = extraEntry->presetID;
+        if (TEST_FLAGS_FAIL(*entry, PAGING_ENTRY_FLAG_PRESENT) || currentPresetID == 0) {
             return NULL;
         }
 
-        Uint8 currentPresetID = extreEntry->presetID;
+        DEBUG_ASSERT_SILENT(TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_PRESENT) && currentPresetID != 0);
+    
         if (currentPresetID != mixedTypeID) {
             return extraPageTableContext_getPreset(root->context, currentPresetID);
         }

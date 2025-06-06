@@ -34,7 +34,7 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         }
 
         if (!PAGING_IS_LEAF(level, entry)) {
-            extendedPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(HOST_POINTER(PAGING_TABLE_FROM_PAGING_ENTRY(entry), ExtendedPageTable, table));
+            extendedPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(HOST_POINTER(PAGING_TABLE_FROM_PAGING_ENTRY(entry), ExtendedPageTable, table));
             continue;
         }
 
@@ -42,10 +42,11 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         bool fixed = true;
         ERROR_CHECKPOINT({
             print_printf("Page handler failed at level %u\n", level);
-            fixed = true;
+            fixed = false;
         });
 
         if (fixed) {
+            PAGING_FLUSH_TLB();
             return;
         }
 
@@ -90,7 +91,7 @@ void paging_init() {
 
     mm_switchPageTable(&_extendedPageTableRoot);
 
-    idt_registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler
+    idt_registerISR(EXCEPTION_VEC_PAGE_FAULT, __pageFaultHandler, 1, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_TRAP_GATE32); //Register default page fault handler, IST 1 in case of stack memory triggers error
 
     Uint32 eax, edx;
     rdmsr(MSR_ADDR_EFER, &edx, &eax);

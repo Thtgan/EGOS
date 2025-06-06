@@ -114,15 +114,18 @@ ISR_FUNC_HEADER(__time_timerHandler) {  //TODO: This timer is a little slower th
 
     spinlock_unlock(&_clock.timeLock);
 
+    timer_updateTimers();
+    
     schedule_tick();
 
-    timer_updateTimers();
     return;
     ERROR_FINAL_BEGIN(0);
     ERROR_CHECKPOINT();
 }
 
 void time_init() {
+    bool interruptEnabled = idt_disableInterrupt();
+
     clockSources_init();
 
     ClockSource* CMOSclockSource = clockSource_getSource(CLOCK_SOURCE_TYPE_CMOS), * mainClockSource, * beatClockSource;
@@ -158,9 +161,7 @@ void time_init() {
         ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
     }
 
-    bool interruptEnabled = idt_disableInterrupt();
     idt_registerISR(0x20, __time_timerHandler, 0, IDT_FLAGS_PRESENT | IDT_FLAGS_TYPE_INTERRUPT_GATE32);
-    idt_setInterrupt(interruptEnabled);
 
     _clock.lastMainTick         = rawClockSourceReadTick(mainClockSource);
     _clock.beatTickTime         = TIME_UNIT_SECOND / beatClockSource->hz;
@@ -170,6 +171,8 @@ void time_init() {
 
     rawClockSourceStart(beatClockSource);
     ERROR_GOTO_IF_ERROR(0);
+
+    idt_setInterrupt(interruptEnabled);
 
     return;
     ERROR_FINAL_BEGIN(0);

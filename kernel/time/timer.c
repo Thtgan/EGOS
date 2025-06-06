@@ -43,9 +43,9 @@ void timer_start(Timer* timer) {
 
     mutex_acquire(&_timer_heapMutex);
     heap_push(&_timer_waitHeap, (Object)timer);
+    SET_FLAG_BACK(timer->flags, TIMER_FLAGS_PRESENT);
     mutex_release(&_timer_heapMutex);
     ERROR_GOTO_IF_ERROR(0);
-    SET_FLAG_BACK(timer->flags, TIMER_FLAGS_PRESENT);
     
     if (TEST_FLAGS(timer->flags, TIMER_FLAGS_SYNCHRONIZE)) {
         while (TEST_FLAGS(timer->flags, TIMER_FLAGS_PRESENT)) { //TODO: Lock?

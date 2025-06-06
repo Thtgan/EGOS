@@ -113,7 +113,12 @@ void* memory_allocatePagesDetailed(Size n, Uint8 presetID) {
         ERROR_GOTO(0);
     }
 
-    void* ret = PAGING_CONVERT_HEAP_ADDRESS_P2V(p);
+    void* ret;
+    if (presetID == EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)) {
+        ret = PAGING_CONVERT_SHARED_HEAP_ADDRESS_P2V(p);
+    } else {
+        ret = PAGING_CONVERT_HEAP_ADDRESS_P2V(p);
+    }
 
     extendedPageTableRoot_draw(mm->extendedTable, ret, p, n, EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET(&mm->extraPageTableContext, presetID), EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(1);
@@ -131,7 +136,13 @@ void* memory_allocatePages(Size n) {
 }
 
 void memory_freePages(void* p) {
-    void* frame = PAGING_CONVERT_HEAP_ADDRESS_V2P(PAGING_PAGE_ALIGN(p));
+    void* frame;
+    if (PAGING_IS_BASED_ADDRESS_SHARED_HEAP(p)) {
+        frame = PAGING_CONVERT_SHARED_HEAP_ADDRESS_V2P(PAGING_PAGE_ALIGN(p));
+    } else {
+        frame = PAGING_CONVERT_HEAP_ADDRESS_V2P(PAGING_PAGE_ALIGN(p));
+    }
+
     FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(&mm->frameMetadata, frame);
     FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, frame);
     DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK));
@@ -164,9 +175,14 @@ void* memory_allocate(Size n) {
 }
 
 void memory_free(void* p) {
-    DEBUG_ASSERT_SILENT(PAGING_IS_BASED_ADDRESS_HEAP(p));
+    DEBUG_ASSERT_SILENT(PAGING_IS_BASED_ADDRESS_HEAP(p) || PAGING_IS_BASED_ADDRESS_SHARED_HEAP(p));
 
-    void* frame = PAGING_CONVERT_HEAP_ADDRESS_V2P(PAGING_PAGE_ALIGN(p));
+    void* frame;
+    if (PAGING_IS_BASED_ADDRESS_SHARED_HEAP(p)) {
+        frame = PAGING_CONVERT_SHARED_HEAP_ADDRESS_V2P(PAGING_PAGE_ALIGN(p));
+    } else {
+        frame = PAGING_CONVERT_HEAP_ADDRESS_V2P(PAGING_PAGE_ALIGN(p));
+    }
     FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(&mm->frameMetadata, frame);
     FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, frame);
     if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK)) {

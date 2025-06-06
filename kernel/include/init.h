@@ -2,7 +2,9 @@
 #define __INIT_H
 
 #include<kit/types.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<multitask/schedule.h>
 #include<multitask/thread.h>
 #include<real/simpleAsmLines.h>
@@ -19,7 +21,10 @@ void init_initKernelStage1();
 
 __attribute__((always_inline))
 static inline void init_initKernelStack() {
-    void* newStack = memory_allocate(THREAD_DEFAULT_KERNEL_STACK_SIZE), * oldStack = init_getBootStackBottom();
+    void* newStack = memory_allocateDetailed(
+        THREAD_DEFAULT_KERNEL_STACK_SIZE,
+        EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW)
+    ), * oldStack = init_getBootStackBottom();
     DEBUG_ASSERT_SILENT(newStack != NULL);
     DEBUG_ASSERT_SILENT(*(Uintptr*)readRegister_RBP_64() == INIT_BOOT_STACK_MAGIC);
     

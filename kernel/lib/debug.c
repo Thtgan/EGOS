@@ -42,8 +42,7 @@ void debug_blowup(ConstCstring format, ...) {   //TODO: Cannot print long senten
     va_list args;
     va_start(args, format);
 
-    char lastWordBuffer[1024];
-    int lastWordLength = print_vsprintf(lastWordBuffer, format, args);
+    print_debugVprintf(format, args);
 
     va_end(args);
 
@@ -61,11 +60,8 @@ void debug_blowup(ConstCstring format, ...) {   //TODO: Cannot print long senten
 
     display_fill(&pos1, &pos2, 0x0000FF);
 
-    display_printString(&pos1, "CRASHED", 7, 0xFFFFFF);
-    pos1.x = 1;
-    display_printString(&pos1, lastWordBuffer, lastWordLength, 0xFFFFFF);
-    pos1.x = 2;
-    lastWordLength = print_sprintf(lastWordBuffer, "Debug data dumped to %p", _debug_dumpTo);
+    char lastWordBuffer[64];
+    Size lastWordLength = print_sprintf(lastWordBuffer, "Debug data dumped to %p", _debug_dumpTo);
     display_printString(&pos1, lastWordBuffer, lastWordLength, 0xFFFFFF);
 
     cli();

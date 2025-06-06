@@ -49,7 +49,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
 
 void thread_clearStruct(Thread* thread);
 
-void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid);
+void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newProcess);
 
 void thread_die(Thread* thread);
 

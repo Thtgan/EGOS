@@ -3,6 +3,7 @@
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<kit/util.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
@@ -15,6 +16,9 @@
 #include<structs/queue.h>
 #include<system/pageTable.h>
 
+__attribute__((naked))
+static void __thread_switchContext(Thread* from, Thread* to);
+
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry, Range* kernelStack) {
     thread->process = process;
     thread->tid = tid;
@@ -23,17 +27,30 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
     memory_memset(&thread->context, 0, sizeof(Context));
     
     if (kernelStack == NULL) {
-        void* newKernelStack = memory_allocate(THREAD_DEFAULT_KERNEL_STACK_SIZE);
-        if (newKernelStack == NULL) {
+        Size stackFrameNum = DIVIDE_ROUND_UP(THREAD_DEFAULT_KERNEL_STACK_SIZE, PAGE_SIZE);
+        void* stackFrames = memory_allocateFrames(stackFrameNum);
+        if (stackFrames == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
+        memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, THREAD_DEFAULT_KERNEL_STACK_SIZE);
+
+        void* kernelStackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
+
+        extendedPageTableRoot_draw(
+            process->extendedTable,
+            kernelStackBottom,
+            stackFrames,
+            stackFrameNum,
+            extraPageTableContext_getDefaultPreset(process->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_COW),
+            EMPTY_FLAGS
+        );
+        ERROR_GOTO_IF_ERROR(0);
         
         thread->kernelStack = (Range) {
-            .begin = (Uintptr)newKernelStack,
+            .begin = (Uintptr)kernelStackBottom,
             .length = THREAD_DEFAULT_KERNEL_STACK_SIZE
         };
-        memory_memset((void*)thread->kernelStack.begin, 0, thread->kernelStack.length);
     } else {
         thread->kernelStack = *kernelStack;
     }
@@ -71,23 +88,38 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
 }
 
 void thread_clearStruct(Thread* thread) {
+    Process* process = thread->process;
     if ((void*)thread->userStack.begin != NULL) {
-        memory_free((void*)thread->userStack.begin);
+        void* stackFrames = PAGING_CONVERT_HEAP_ADDRESS_V2P((void*)thread->userStack.begin);
+        Size stackFrameNum = DIVIDE_ROUND_UP(thread->userStack.length, PAGE_SIZE);
+
+        extendedPageTableRoot_erase(
+            process->extendedTable, (void*)thread->userStack.begin, stackFrameNum
+        );
+
+        memory_freeFrames(stackFrames);
     }
 
     DEBUG_ASSERT_SILENT((void*)thread->kernelStack.begin != NULL);
     if (!thread->isStackFromOutside) {
-        memory_free((void*)thread->kernelStack.begin);
+        void* stackFrames = PAGING_CONVERT_HEAP_ADDRESS_V2P((void*)thread->kernelStack.begin);
+        Size stackFrameNum = DIVIDE_ROUND_UP(thread->kernelStack.length, PAGE_SIZE);
+
+        extendedPageTableRoot_erase(
+            process->extendedTable, (void*)thread->kernelStack.begin, stackFrameNum
+        );
+
+        memory_freeFrames(stackFrames);
     }
 }
 
-void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid) {
+void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newProcess) {
     Thread* currentThread = schedule_getCurrentThread();
     if (cloneFrom != currentThread) {
         schedule_enterCritical();
     }
 
-    thread->process = cloneFrom->process;
+    thread->process = newProcess;
 
     thread->tid = tid;
     thread->state = cloneFrom->state;
@@ -123,43 +155,28 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid) {
 
     if (cloneFrom == currentThread) {
         REGISTERS_SAVE();
-        
-        void* newKernelStack = memory_allocate(cloneFrom->kernelStack.length);
-        if (newKernelStack == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-        
-        thread->kernelStack = (Range) {
-            .begin = (Uintptr)newKernelStack,
-            .length = cloneFrom->kernelStack.length
-        };
-        memory_memcpy((void*)thread->kernelStack.begin, (void*)cloneFrom->kernelStack.begin, cloneFrom->kernelStack.length);
 
         extern void* __thread_cloneReturn;
         thread->context.rip = (Uint64)&__thread_cloneReturn;
-        thread->context.rsp = readRegister_RSP_64() - (cloneFrom->kernelStack.begin + cloneFrom->kernelStack.length) + (thread->kernelStack.begin + thread->kernelStack.length);
-        thread->registers = (Registers*)((Uintptr)cloneFrom->registers - (cloneFrom->kernelStack.begin + cloneFrom->kernelStack.length) + (thread->kernelStack.begin + thread->kernelStack.length));
+        thread->context.rsp = readRegister_RSP_64();
+        thread->registers = (Registers*)thread->context.rsp;
 
-        asm volatile("__thread_cloneReturn:");
-
-        REGISTERS_RESTORE();
-    } else {
-        void* newKernelStack = memory_allocate(cloneFrom->kernelStack.length);
-        if (newKernelStack == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->process->extendedTable);   //TODO: Ugly solution
+        DEBUG_ASSERT_SILENT(newTable != NULL);
+        newProcess->extendedTable = newTable;
         
-        thread->kernelStack = (Range) {
-            .begin = (Uintptr)newKernelStack,
-            .length = cloneFrom->kernelStack.length
-        };
-        memory_memcpy((void*)thread->kernelStack.begin, (void*)cloneFrom->kernelStack.begin, cloneFrom->kernelStack.length);
-
+        asm volatile("__thread_cloneReturn:");
+        
+        REGISTERS_RESTORE();
+        ERROR_GOTO_IF_ERROR(0);
+    } else {
         thread->context.rip = cloneFrom->context.rip;
-        thread->context.rsp = readRegister_RSP_64() - (cloneFrom->kernelStack.begin + cloneFrom->kernelStack.length) + (thread->kernelStack.begin + thread->kernelStack.length);
-        thread->registers = (Registers*)((Uintptr)cloneFrom->registers - (cloneFrom->kernelStack.begin + cloneFrom->kernelStack.length) + (thread->kernelStack.begin + thread->kernelStack.length));
+        thread->context.rsp = cloneFrom->context.rsp;
+        thread->registers = cloneFrom->registers;
+
+        ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->process->extendedTable);   //TODO: Ugly solution
+        DEBUG_ASSERT_SILENT(newTable != NULL);
+        newProcess->extendedTable = newTable;
     }
 
     if (cloneFrom != currentThread) {
@@ -182,7 +199,7 @@ bool thread_trySleep(Thread* thread, Wait* wait) {
     if (!wait_rawRequestWait(wait)) {
         return false;
     }
-    
+
     thread_forceSleep(thread, wait);
 
     return true;
@@ -191,9 +208,9 @@ bool thread_trySleep(Thread* thread, Wait* wait) {
 void thread_forceSleep(Thread* thread, Wait* wait) {
     DEBUG_ASSERT_SILENT(thread->state == STATE_RUNNING);
     DEBUG_ASSERT_SILENT(!idt_isInISR());
-
+    
     schedule_threadQuitSchedule(thread);
-
+    
     thread->state = STATE_SLEEP;
     thread->waittingFor = wait;
     
@@ -225,20 +242,8 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
     static Thread* lastThread = NULL;
 
     lastThread = currentThread;
-    
-    REGISTERS_SAVE();
 
-    currentThread->registers = (Registers*)readRegister_RSP_64();
-
-    if (currentThread->process != nextThread->process) {
-        mm_switchPageTable(nextThread->process->extendedTable);
-    }
-    
-    context_switch(&currentThread->context, &nextThread->context);
-
-    REGISTERS_RESTORE();
-
-    barrier();
+    __thread_switchContext(currentThread, nextThread);
 
     currentThread->process->lastActiveThread = currentThread;
 
@@ -249,23 +254,31 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
 
 void thread_setupForUserProgram(Thread* thread) {
     ExtendedPageTableRoot* extendedTableRoot = thread->process->extendedTable;
-
-    void* newUserStack = memory_allocateDetailed(
-        THREAD_DEFAULT_USER_STACK_SIZE,
-        EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA)
-    );
-
-    if (newUserStack == NULL) {
+    Size stackFrameNum = DIVIDE_ROUND_UP(THREAD_DEFAULT_USER_STACK_SIZE, PAGE_SIZE);
+    void* stackFrames = memory_allocateFrames(stackFrameNum);
+    if (stackFrames == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
+    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, THREAD_DEFAULT_USER_STACK_SIZE);
+
+    void* userStackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
+
+    extendedPageTableRoot_draw(
+        extendedTableRoot,
+        userStackBottom,
+        stackFrames,
+        stackFrameNum,
+        extraPageTableContext_getDefaultPreset(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA),
+        EMPTY_FLAGS
+    );
+
+    ERROR_GOTO_IF_ERROR(0);
     
     thread->userStack = (Range) {
-        .begin = (Uintptr)newUserStack,
+        .begin = (Uintptr)userStackBottom,
         .length = THREAD_DEFAULT_USER_STACK_SIZE
     };
-    
-    memory_memset((void*)thread->userStack.begin, 0, thread->userStack.length);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -289,4 +302,43 @@ void thread_derefer(Thread* thread) {
             schedule_yield();
         }
     }
+}
+
+__attribute__((naked))
+static void __thread_switchContext(Thread* from, Thread* to) {
+    REGISTERS_SAVE();
+
+    from->registers = (Registers*)readRegister_RSP_64();
+    
+    Context* fromContext = &from->context;
+
+    asm volatile(
+        "mov %%rsp, 8(%0);"
+        "lea __switch_return(%%rip), %%rax;"
+        "mov %%rax, 0(%0);"
+        :
+        : "D"(fromContext)
+        : "memory", "rax"
+    );
+
+    Uintptr toRIP = to->context.rip;
+    Uintptr toRSP = to->context.rsp;
+
+    mm_switchPageTable(to->process->extendedTable);
+
+    asm volatile(
+        "mov %1, %%rsp;"
+        "pushq %0;"
+        "retq;"
+        "__switch_return:"
+        :
+        : "D"(toRIP), "S"(toRSP)
+        : "memory"
+    );
+    
+    REGISTERS_RESTORE();
+
+    barrier();
+
+    asm volatile("ret");
 }

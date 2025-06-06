@@ -61,10 +61,7 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
 }
 
 void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
-    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->extendedTable);
-    ERROR_GOTO_IF_ERROR(0);
-
-    process_initStruct(process, pid, cloneFrom->name.data, newTable);
+    process_initStruct(process, pid, cloneFrom->name.data, NULL);   //TODO: Temporary NULL, need a new page table copy routine
     ERROR_GOTO_IF_ERROR(0);
 
     vector_resize(&process->fsEntries, cloneFrom->fsEntries.capacity);
@@ -94,7 +91,7 @@ void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
         }
     
         Uint16 tid = schedule_allocateNewID();
-        thread_clone(newThread, cloneFrom->lastActiveThread, tid);
+        thread_clone(newThread, cloneFrom->lastActiveThread, tid, process);
         ERROR_GOTO_IF_ERROR(0);
 
         if (schedule_getCurrentThread()->tid != tid) {

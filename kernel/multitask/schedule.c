@@ -23,7 +23,7 @@ static Process* _schedule_initProcess;
 static Mutex _schedule_lock;
 static Mutex _schedule_queueLock;
 
-static bool _schedule_started = false;
+static bool _schedule_started = false;  //TODO: Remove this?
 static Uint32 _schedule_criticalCount = 0;
 static bool _schedule_delayingYield = false;
 
@@ -46,7 +46,7 @@ static Thread* __schedule_selectNextThread();
 
 static Thread* __schedule_initFirstThread();
 
-static void* __schedule_earlyStackBottom;
+static void* __schedule_earlyStackBottom;   //TODO: Remove this?
 
 void schedule_setEarlyStackBottom(void* stackBottom) {
     __schedule_earlyStackBottom = stackBottom;
@@ -70,12 +70,15 @@ void schedule_init() {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    
-    bitmap_setBit(&_schedule_idBitmap, 0);
-    process_initStruct(_schedule_rootProcess, 0, "root", mm->extendedTable);
+
+    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(mm->extendedTable);
     ERROR_GOTO_IF_ERROR(0);
     
-    process_createThread(_schedule_rootProcess, __schedule_idle);
+    bitmap_setBit(&_schedule_idBitmap, 0);
+    process_initStruct(_schedule_rootProcess, 0, "root", newTable);
+    ERROR_GOTO_IF_ERROR(0);
+    
+    Thread* t = process_createThread(_schedule_rootProcess, __schedule_idle);
     ERROR_GOTO_IF_ERROR(0);
     
     _schedule_initProcess = memory_allocate(sizeof(Process));
@@ -85,13 +88,13 @@ void schedule_init() {
     }
     
     bitmap_setBit(&_schedule_idBitmap, 1);
-    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(mm->extendedTable);
-    ERROR_GOTO_IF_ERROR(0);
-    process_initStruct(_schedule_initProcess, 1, "init", newTable);
+    process_initStruct(_schedule_initProcess, 1, "init", mm->extendedTable);
     ERROR_GOTO_IF_ERROR(0);
     
     _schedule_currentThread = __schedule_initFirstThread();
     ERROR_GOTO_IF_ERROR(0);
+
+    DEBUG_MARK_PRINT("%p-%u %p-%u\n", t, t->tid, _schedule_currentThread, _schedule_currentThread->tid);
     
     _schedule_started = true;
 
@@ -141,7 +144,7 @@ bool schedule_yield() {
 }
 
 void schedule_isrDelayYield() {
-    if (_schedule_delayingYield && !idt_isInISR(false)) {
+    if (_schedule_delayingYield && !idt_isInISR()) {
         _schedule_delayingYield = false;
         __schedule_doYield();
     }
@@ -276,7 +279,7 @@ void schedule_leaveCritical() {
     }
 }
 
-void schedule_yieldIfStopped() {
+void schedule_yieldIfStopped() {    //TODO: Remove this?
     if (schedule_getCurrentThread()->state == STATE_STOPPED) {
         schedule_yield();
     }
@@ -311,21 +314,21 @@ Process* schedule_fork() {
 }
 
 static void __schedule_doYield() {
+    DEBUG_ASSERT_SILENT(!idt_isInISR());
     mutex_acquire(&_schedule_lock);
 
     Thread* currentThread = _schedule_currentThread, * nextThread = __schedule_selectNextThread();
 
     if (currentThread != nextThread) {
-        DEBUG_ASSERT_SILENT(!idt_isInISR());
-        _schedule_currentThread = nextThread;
-        mutex_forceRelease(&_schedule_lock);
+        mutex_release(&_schedule_lock);
+        _schedule_currentThread = nextThread;   //TODO: Not safe
         
         thread_switch(currentThread, nextThread);
 
         mutex_acquire(&_schedule_lock);
     }
 
-    mutex_forceRelease(&_schedule_lock);
+    mutex_release(&_schedule_lock);
 }
 
 static void __schedule_idle() {

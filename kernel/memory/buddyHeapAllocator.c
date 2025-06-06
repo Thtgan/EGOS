@@ -201,7 +201,12 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
         ERROR_GOTO(0);
     }
 
-    void* v = PAGING_CONVERT_HEAP_ADDRESS_P2V(frames);
+    void* v = NULL;
+    if (allocator->allocator.presetID == EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(mm->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)) {
+        v = PAGING_CONVERT_SHARED_HEAP_ADDRESS_P2V(frames);
+    } else {
+        v = PAGING_CONVERT_HEAP_ADDRESS_P2V(frames);
+    }
     extendedPageTableRoot_draw(mm->extendedTable, v, frames, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID), EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
@@ -217,7 +222,13 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page) {
     extendedPageTableRoot_erase(mm->extendedTable, page, 1);
     ERROR_GOTO_IF_ERROR(0);
-    frameAllocator_freeFrames(allocator->allocator.frameAllocator, PAGING_CONVERT_HEAP_ADDRESS_V2P(page), 1);
+    void* p = NULL;
+    if (allocator->allocator.presetID == EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(mm->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)) {
+        p = PAGING_CONVERT_SHARED_HEAP_ADDRESS_V2P(page);
+    } else {
+        p = PAGING_CONVERT_HEAP_ADDRESS_V2P(page);
+    }
+    frameAllocator_freeFrames(allocator->allocator.frameAllocator, p, 1);
 
     allocator->allocator.total -= PAGE_SIZE;
     allocator->allocator.remaining -= PAGE_SIZE;
@@ -272,7 +283,10 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
 }
 
 static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
-    if (!VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_HEAP_BEGIN, MEMORY_LAYOUT_KERNEL_HEAP_END, (Uintptr)ptr, <=, <)) {
+    if (
+        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_HEAP_BEGIN, MEMORY_LAYOUT_KERNEL_HEAP_END, (Uintptr)ptr, <=, <) &&
+        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_SHARED_HEAP_BEGIN, MEMORY_LAYOUT_KERNEL_SHARED_HEAP_END, (Uintptr)ptr, <=, <)
+    ) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 

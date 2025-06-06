@@ -7,16 +7,10 @@ typedef struct Registers Registers;
 #include<kit/macro.h>
 #include<kit/types.h>
 
-// //TODO: Include extendedPageTable causes error somehow
-// typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
-
 typedef struct Context {
-    // ExtendedPageTableRoot* extendedTable;   //Page table placed here to ensure stack safety
     Uint64 rip;
     Uint64 rsp;
 } __attribute__((packed)) Context;
-
-void context_switch(Context* from, Context* to);
 
 typedef struct Registers {
     Uint64 r15;
