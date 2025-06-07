@@ -293,14 +293,9 @@ static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, 
 
 __attribute__((naked))
 static void __process_cloneCurrent(Process* process, Uint16 pid, Process* cloneFrom) {
-    REGISTERS_SAVE();
-    static Context retContext;
+    CONTEXT_SAVE(__process_cloneReturn);
+    Context* retContext = (Context*)readRegister_RSP_64();
+    __process_doClone(process, pid, cloneFrom, retContext);
 
-    extern void* __process_cloneReturn;
-    retContext.rip = (Uintptr)&__process_cloneReturn;
-    retContext.rsp = readRegister_RSP_64();
-    __process_doClone(process, pid, cloneFrom, &retContext);
-    asm volatile("__process_cloneReturn:");
-    REGISTERS_RESTORE();
-    asm volatile("ret");
+    CONTEXT_RESTORE(__process_cloneReturn);
 }

@@ -19,6 +19,10 @@
 __attribute__((naked))
 static void __thread_switchContext(Thread* from, Thread* to);
 
+static void __thread_allocateStackStack(Range* stack, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType memoryType, Size size);
+
+static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry);
+
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry, Range* kernelStack) {
     thread->process = process;
     thread->tid = tid;
@@ -27,44 +31,23 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
     memory_memset(&thread->context, 0, sizeof(Context));
     
     if (kernelStack == NULL) {
-        Size stackFrameNum = DIVIDE_ROUND_UP(THREAD_DEFAULT_KERNEL_STACK_SIZE, PAGE_SIZE);
-        void* stackFrames = memory_allocateFrames(stackFrameNum);
-        if (stackFrames == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-        memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, THREAD_DEFAULT_KERNEL_STACK_SIZE);
-
-        void* kernelStackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
-
-        extendedPageTableRoot_draw(
+        __thread_allocateStackStack(
+            &thread->kernelStack,
             process->extendedTable,
-            kernelStackBottom,
-            stackFrames,
-            stackFrameNum,
-            extraPageTableContext_getDefaultPreset(process->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_COW),
-            EMPTY_FLAGS
+            MEMORY_DEFAULT_PRESETS_TYPE_COW,
+            THREAD_DEFAULT_KERNEL_STACK_SIZE
         );
         ERROR_GOTO_IF_ERROR(0);
-        
-        thread->kernelStack = (Range) {
-            .begin = (Uintptr)kernelStackBottom,
-            .length = THREAD_DEFAULT_KERNEL_STACK_SIZE
-        };
+
+        __thread_setupKernelContext(thread, entry);
     } else {
-        thread->kernelStack = *kernelStack;
+        thread->kernelStack = *kernelStack; //TODO: Remove this routine for init thread
     }
 
     thread->userStack = (Range) {
         .begin = (Uintptr)NULL,
         .length = 0
     };
-
-    thread->context.rip = (Uintptr)entry;
-    thread->context.rsp = thread->kernelStack.begin + thread->kernelStack.length - sizeof(Registers);   //TODO: Registers actually not setup for new threads
-
-    DEBUG_ASSERT_SILENT(thread->kernelStack.length >= sizeof(Registers));
-    thread->registers = (Registers*)thread->context.rsp;
 
     thread->remainTick = THREAD_TICK;
 
@@ -134,16 +117,14 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
             .length = 0
         };
     }
-    
+
     thread->kernelStack = cloneFrom->kernelStack;
 
     if (cloneFrom == currentThread) {
         DEBUG_ASSERT_SILENT(retContext != NULL);
-        thread->context = *retContext;
-        thread->registers = (Registers*)retContext->rsp;
+        thread->context = retContext;
     } else {
         thread->context = cloneFrom->context;
-        thread->registers = cloneFrom->registers;
     }
 
     thread->remainTick = THREAD_TICK;
@@ -238,35 +219,12 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
 }
 
 void thread_setupForUserProgram(Thread* thread) {
-    ExtendedPageTableRoot* extendedTableRoot = thread->process->extendedTable;
-    Size stackFrameNum = DIVIDE_ROUND_UP(THREAD_DEFAULT_USER_STACK_SIZE, PAGE_SIZE);
-    void* stackFrames = memory_allocateFrames(stackFrameNum);
-    if (stackFrames == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, THREAD_DEFAULT_USER_STACK_SIZE);
-
-    void* userStackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
-
-    extendedPageTableRoot_draw(
-        extendedTableRoot,
-        userStackBottom,
-        stackFrames,
-        stackFrameNum,
-        extraPageTableContext_getDefaultPreset(extendedTableRoot->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA),
-        EMPTY_FLAGS
+    __thread_allocateStackStack(
+        &thread->userStack,
+        thread->process->extendedTable,
+        MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA,
+        THREAD_DEFAULT_USER_STACK_SIZE
     );
-
-    ERROR_GOTO_IF_ERROR(0);
-    
-    thread->userStack = (Range) {
-        .begin = (Uintptr)userStackBottom,
-        .length = THREAD_DEFAULT_USER_STACK_SIZE
-    };
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 void thread_stop(Thread* thread) {
@@ -291,39 +249,49 @@ void thread_derefer(Thread* thread) {
 
 __attribute__((naked))
 static void __thread_switchContext(Thread* from, Thread* to) {
-    REGISTERS_SAVE();
-
-    from->registers = (Registers*)readRegister_RSP_64();
-    
-    Context* fromContext = &from->context;
-
-    asm volatile(
-        "mov %%rsp, 8(%0);"
-        "lea __switch_return(%%rip), %%rax;"
-        "mov %%rax, 0(%0);"
-        :
-        : "D"(fromContext)
-        : "memory", "rax"
-    );
-
-    Uintptr toRIP = to->context.rip;
-    Uintptr toRSP = to->context.rsp;
+    CONTEXT_SAVE(__switch_return);
+    from->context = (Context*)readRegister_RSP_64();
 
     mm_switchPageTable(to->process->extendedTable);
 
-    asm volatile(
-        "mov %1, %%rsp;"
-        "pushq %0;"
-        "retq;"
-        "__switch_return:"
-        :
-        : "D"(toRIP), "S"(toRSP)
-        : "memory"
+    writeRegister_RSP_64((Uintptr)to->context);
+    CONTEXT_RESTORE(__switch_return);
+}
+
+static void __thread_allocateStackStack(Range* stack, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType memoryType, Size size) {
+    Size stackFrameNum = DIVIDE_ROUND_UP(size, PAGE_SIZE);
+    void* stackFrames = memory_allocateFrames(stackFrameNum);
+    if (stackFrames == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, THREAD_DEFAULT_KERNEL_STACK_SIZE);
+
+    void* stackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
+
+    extendedPageTableRoot_draw(
+        extendedTable,
+        stackBottom,
+        stackFrames,
+        stackFrameNum,
+        extraPageTableContext_getDefaultPreset(extendedTable->context, memoryType),
+        EMPTY_FLAGS
     );
+    ERROR_GOTO_IF_ERROR(0);
     
-    REGISTERS_RESTORE();
+    stack->begin = (Uintptr)stackBottom;
+    stack->length = size;
 
-    barrier();
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
 
-    asm volatile("ret");
+static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry) {
+    Range* stack = &thread->kernelStack;
+    Context* context = (Context*)(stack->begin + stack->length - sizeof(Context));
+
+    Context* contextWrite = (Context*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_CONVERT_HEAP_ADDRESS_V2P(context));
+
+    contextWrite->rip = (Uintptr)entry;
+    thread->context = context;
 }

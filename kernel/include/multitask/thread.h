@@ -23,8 +23,7 @@ typedef struct Thread {
     Range kernelStack;
     Range userStack;
 
-    Context context;
-    Registers* registers;
+    Context* context;
 
 #define THREAD_TICK 10
     Uint16 remainTick;

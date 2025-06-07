@@ -1,16 +1,11 @@
 #if !defined(__MULTITASK_CONTEXT_H)
 #define __MULTITASK_CONTEXT_H
 
-typedef struct Context Context;
 typedef struct Registers Registers;
+typedef struct Context Context;
 
 #include<kit/macro.h>
 #include<kit/types.h>
-
-typedef struct Context {
-    Uint64 rip;
-    Uint64 rsp;
-} __attribute__((packed)) Context;
 
 typedef struct Registers {
     Uint64 r15;
@@ -39,6 +34,11 @@ typedef struct Registers {
     Uint64 rbp;
     Uint64 eflags;
 } __attribute__((packed)) Registers;
+
+typedef struct Context {
+    Registers regs;
+    Uint64 rip;
+} __attribute__((packed)) Context;
 
 #define REGISTERS_SAVE_WITH_FRAME() \
 asm volatile(                       \
@@ -128,5 +128,20 @@ asm volatile(               \
 #define REGISTER_ARGUMENTS_4_ALT    r10
 #define REGISTER_ARGUMENTS_5        r8
 #define REGISTER_ARGUMENTS_6        r9
+
+#define CONTEXT_SAVE(__JUMP_LABEL) do { \
+    extern void* __JUMP_LABEL;          \
+    pushq(&__JUMP_LABEL);               \
+    REGISTERS_SAVE();                   \
+} while(0)
+
+#define CONTEXT_RESTORE(__JUMP_LABEL) do {  \
+    REGISTERS_RESTORE();                    \
+    asm volatile(                           \
+        "ret;"                              \
+        MACRO_STR(__JUMP_LABEL) ":"         \
+        "ret;"                              \
+    );                                      \
+} while(0)
 
 #endif // __MULTITASK_CONTEXT_H
