@@ -58,4 +58,9 @@
 
 #define SIZE_OF_STRUCT_MEMBER(__TYPE, __MEMBER)                 (sizeof(((__TYPE*)NULL)->__MEMBER))
 
+#define CAST_SIZE8(__X)     (Uint8)(Uintptr)(__X)
+#define CAST_SIZE16(__X)    (Uint16)(Uintptr)(__X)
+#define CAST_SIZE32(__X)    (Uint32)(Uintptr)(__X)
+#define CAST_SIZE64(__X)    (Uint64)(Uintptr)(__X)
+
 #endif // __KIT_UTIL_H

@@ -197,6 +197,6 @@ void __realmode_setupPageTables(void* pageTableFrames) {
 
     compatabilityModePML4[0] = (Uint64)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePDPT) | 0x3;
 
-    realmode_protectedModePageDirectory = (Uint32)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(protectedModePageDirectory);
-    realmode_compatabilityModePML4 = (Uint32)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePML4);
+    realmode_protectedModePageDirectory = CAST_SIZE32(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(protectedModePageDirectory));
+    realmode_compatabilityModePML4 = CAST_SIZE32(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePML4));
 }

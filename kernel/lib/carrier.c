@@ -23,7 +23,7 @@ void carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carry
                     ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
                 }
 
-                PTR_TO_VALUE(16, replacePtr) = (Uint16)(carryTo + metadata->offset);
+                PTR_TO_VALUE(16, replacePtr) = CAST_SIZE16(carryTo + metadata->offset);
                 break;
             }
             case 32: {
@@ -32,7 +32,7 @@ void carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carry
                     ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
                 }
 
-                PTR_TO_VALUE(32, replacePtr) = (Uint32)(carryTo + metadata->offset);
+                PTR_TO_VALUE(32, replacePtr) = CAST_SIZE32(carryTo + metadata->offset);
                 break;
             }
             case 64: {
@@ -41,7 +41,7 @@ void carrier_carry(void* base, void* carryTo, Size n, CarrierMovMetadata** carry
                     ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
                 }
 
-                PTR_TO_VALUE(64, replacePtr) = (Uint64)(carryTo + metadata->offset);
+                PTR_TO_VALUE(64, replacePtr) = CAST_SIZE64(carryTo + metadata->offset);
                 break;
             }
             default: {

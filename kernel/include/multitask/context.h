@@ -131,7 +131,7 @@ asm volatile(               \
 
 #define CONTEXT_SAVE(__JUMP_LABEL) do { \
     extern void* __JUMP_LABEL;          \
-    pushq(&__JUMP_LABEL);               \
+    pushq((Uintptr)&__JUMP_LABEL);      \
     REGISTERS_SAVE();                   \
 } while(0)
 
