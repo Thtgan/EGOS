@@ -16,6 +16,11 @@
 #include<system/pageTable.h>
 #include<error.h>
 
+static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, Context* retContext);
+
+__attribute__((naked))
+static void __process_cloneCurrent(Process* process, Uint16 pid, Process* cloneFrom);
+
 void process_initStruct(Process* process, Uint16 pid, ConstCstring name, ExtendedPageTableRoot* extendedTable) {
     process->pid = pid;
     process->ppid = 0;
@@ -61,48 +66,11 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
 }
 
 void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
-    process_initStruct(process, pid, cloneFrom->name.data, NULL);   //TODO: Temporary NULL, need a new page table copy routine
-    ERROR_GOTO_IF_ERROR(0);
-
-    vector_resize(&process->fsEntries, cloneFrom->fsEntries.capacity);
-    Size fsEntryNum = process->fsEntries.size;
-    for (int i = 0; i < fsEntryNum; ++i) {
-        Object entry = vector_get(&process->fsEntries, i);
-        ERROR_GOTO_IF_ERROR(0);
-
-        if (entry == OBJECT_NULL) {
-            vector_push(&process->fsEntries, OBJECT_NULL);
-        } else {
-            fsEntry* newEntry = fsEntry_copy((fsEntry*)entry);
-            DEBUG_ASSERT_SILENT(newEntry != NULL);
-            vector_push(&process->fsEntries, (Object)newEntry);
-        }
-
-        ERROR_GOTO_IF_ERROR(0);
+    if (cloneFrom == schedule_getCurrentProcess()) {
+        __process_cloneCurrent(process, pid, cloneFrom);
+    } else {
+        __process_doClone(process, pid, cloneFrom, NULL);
     }
-
-    if (cloneFrom->lastActiveThread != NULL) {
-        DEBUG_ASSERT_SILENT(cloneFrom->lastActiveThread->state == STATE_RUNNING);
-    
-        Thread* newThread = memory_allocate(sizeof(Thread));
-        if (newThread == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-    
-        Uint16 tid = schedule_allocateNewID();
-        thread_clone(newThread, cloneFrom->lastActiveThread, tid, process);
-        ERROR_GOTO_IF_ERROR(0);
-
-        if (schedule_getCurrentThread()->tid != tid) {
-            process_addThread(process, newThread);
-    
-            process->lastActiveThread = newThread;
-        }
-    }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 void process_clearStruct(Process* process) {
@@ -272,4 +240,67 @@ fsEntry* process_removeFSentry(Process* process, int fd) {
     ERROR_FINAL_BEGIN(0);
     schedule_leaveCritical();
     return NULL;
+}
+
+static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, Context* retContext) {
+    ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->extendedTable);
+    if (newTable == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    process_initStruct(process, pid, cloneFrom->name.data, newTable);
+    ERROR_GOTO_IF_ERROR(0);
+
+    vector_resize(&process->fsEntries, cloneFrom->fsEntries.capacity);
+    Size fsEntryNum = process->fsEntries.size;
+    for (int i = 0; i < fsEntryNum; ++i) {
+        Object entry = vector_get(&process->fsEntries, i);
+        ERROR_GOTO_IF_ERROR(0);
+
+        if (entry == OBJECT_NULL) {
+            vector_push(&process->fsEntries, OBJECT_NULL);
+        } else {
+            fsEntry* newEntry = fsEntry_copy((fsEntry*)entry);
+            DEBUG_ASSERT_SILENT(newEntry != NULL);
+            vector_push(&process->fsEntries, (Object)newEntry);
+        }
+
+        ERROR_GOTO_IF_ERROR(0);
+    }
+
+    if (cloneFrom->lastActiveThread != NULL) {
+        DEBUG_ASSERT_SILENT(cloneFrom->lastActiveThread->state == STATE_RUNNING);
+    
+        Thread* newThread = memory_allocate(sizeof(Thread));
+        if (newThread == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
+    
+        Uint16 tid = schedule_allocateNewID();
+        thread_clone(newThread, cloneFrom->lastActiveThread, tid, process, retContext);
+        ERROR_GOTO_IF_ERROR(0);
+
+        process_addThread(process, newThread);
+
+        process->lastActiveThread = newThread;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+__attribute__((naked))
+static void __process_cloneCurrent(Process* process, Uint16 pid, Process* cloneFrom) {
+    REGISTERS_SAVE();
+    static Context retContext;
+
+    extern void* __process_cloneReturn;
+    retContext.rip = (Uintptr)&__process_cloneReturn;
+    retContext.rsp = readRegister_RSP_64();
+    __process_doClone(process, pid, cloneFrom, &retContext);
+    asm volatile("__process_cloneReturn:");
+    REGISTERS_RESTORE();
+    asm volatile("ret");
 }

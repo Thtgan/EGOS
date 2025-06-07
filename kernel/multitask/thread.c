@@ -61,7 +61,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
     };
 
     thread->context.rip = (Uintptr)entry;
-    thread->context.rsp = thread->kernelStack.begin + thread->kernelStack.length - sizeof(Registers);
+    thread->context.rsp = thread->kernelStack.begin + thread->kernelStack.length - sizeof(Registers);   //TODO: Registers actually not setup for new threads
 
     DEBUG_ASSERT_SILENT(thread->kernelStack.length >= sizeof(Registers));
     thread->registers = (Registers*)thread->context.rsp;
@@ -113,7 +113,7 @@ void thread_clearStruct(Thread* thread) {
     }
 }
 
-void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newProcess) {
+void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newProcess, Context* retContext) {
     Thread* currentThread = schedule_getCurrentThread();
     if (cloneFrom != currentThread) {
         schedule_enterCritical();
@@ -134,6 +134,17 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
             .length = 0
         };
     }
+    
+    thread->kernelStack = cloneFrom->kernelStack;
+
+    if (cloneFrom == currentThread) {
+        DEBUG_ASSERT_SILENT(retContext != NULL);
+        thread->context = *retContext;
+        thread->registers = (Registers*)retContext->rsp;
+    } else {
+        thread->context = cloneFrom->context;
+        thread->registers = cloneFrom->registers;
+    }
 
     thread->remainTick = THREAD_TICK;
 
@@ -152,32 +163,6 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
     thread->dead = false;
     thread->isStackFromOutside = false;
     thread->isThreadActive = false;
-
-    if (cloneFrom == currentThread) {
-        REGISTERS_SAVE();
-
-        extern void* __thread_cloneReturn;
-        thread->context.rip = (Uint64)&__thread_cloneReturn;
-        thread->context.rsp = readRegister_RSP_64();
-        thread->registers = (Registers*)thread->context.rsp;
-
-        ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->process->extendedTable);   //TODO: Ugly solution
-        DEBUG_ASSERT_SILENT(newTable != NULL);
-        newProcess->extendedTable = newTable;
-        
-        asm volatile("__thread_cloneReturn:");
-        
-        REGISTERS_RESTORE();
-        ERROR_GOTO_IF_ERROR(0);
-    } else {
-        thread->context.rip = cloneFrom->context.rip;
-        thread->context.rsp = cloneFrom->context.rsp;
-        thread->registers = cloneFrom->registers;
-
-        ExtendedPageTableRoot* newTable = extendedPageTableRoot_copyTable(cloneFrom->process->extendedTable);   //TODO: Ugly solution
-        DEBUG_ASSERT_SILENT(newTable != NULL);
-        newProcess->extendedTable = newTable;
-    }
 
     if (cloneFrom != currentThread) {
         schedule_leaveCritical();
