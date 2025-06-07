@@ -46,7 +46,7 @@ static Thread* __schedule_selectNextThread();
 
 static Thread* __schedule_initFirstThread();
 
-static void* __schedule_earlyStackBottom;   //TODO: Remove this?
+static void* __schedule_earlyStackBottom;
 
 void schedule_setEarlyStackBottom(void* stackBottom) {
     __schedule_earlyStackBottom = stackBottom;
@@ -377,7 +377,7 @@ static Thread* __schedule_initFirstThread() {
     };
 
     Uint16 tid = schedule_allocateNewID();
-    thread_initStruct(firstThread, tid, _schedule_initProcess, NULL, &initKernelStack);
+    thread_initFirstThread(firstThread, tid, _schedule_initProcess, &initKernelStack);
     ERROR_GOTO_IF_ERROR(0);
 
     process_addThread(_schedule_initProcess, firstThread);

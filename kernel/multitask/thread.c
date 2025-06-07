@@ -25,26 +25,17 @@ static void __thread_allocateStackStack(Range* stack, ExtendedPageTableRoot* ext
 
 static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry);
 
-void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry, Range* kernelStack) {
+void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
     thread->process = process;
     thread->tid = tid;
     thread->state = STATE_RUNNING;
 
     memory_memset(&thread->context, 0, sizeof(Context));
-    
-    if (kernelStack == NULL) {
-        __thread_allocateStackStack(
-            &thread->kernelStack,
-            process->extendedTable,
-            MEMORY_DEFAULT_PRESETS_TYPE_COW,
-            THREAD_DEFAULT_KERNEL_STACK_SIZE
-        );
-        ERROR_GOTO_IF_ERROR(0);
 
-        __thread_setupKernelContext(thread, entry);
-    } else {
-        thread->kernelStack = *kernelStack; //TODO: Remove this routine for init thread
-    }
+    thread->kernelStack = (Range) {
+        .begin = (Uintptr)NULL,
+        .length = 0
+    };
 
     thread->userStack = (Range) {
         .begin = (Uintptr)NULL,
@@ -65,8 +56,27 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntry
 
     thread->userExitStackTop = NULL;
     thread->dead = false;
-    thread->isStackFromOutside = (kernelStack != NULL);
     thread->isThreadActive = false;
+}
+
+void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, Range* kernelStack) {
+    thread_initStruct(thread, tid, process);
+
+    thread->kernelStack = *kernelStack;
+}
+
+void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry) {
+    thread_initStruct(thread, tid, process);
+
+    __thread_allocateStackStack(
+        &thread->kernelStack,
+        process->extendedTable,
+        MEMORY_DEFAULT_PRESETS_TYPE_COW,
+        THREAD_DEFAULT_KERNEL_STACK_SIZE
+    );
+    ERROR_GOTO_IF_ERROR(0);
+
+    __thread_setupKernelContext(thread, entry);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -86,7 +96,7 @@ void thread_clearStruct(Thread* thread) {
     }
 
     DEBUG_ASSERT_SILENT((void*)thread->kernelStack.begin != NULL);
-    if (!thread->isStackFromOutside) {
+    if (thread->tid != 1) {
         void* stackFrames = PAGING_CONVERT_HEAP_ADDRESS_V2P((void*)thread->kernelStack.begin);
         Size stackFrameNum = DIVIDE_ROUND_UP(thread->kernelStack.length, PAGE_SIZE);
 
@@ -104,9 +114,8 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
         schedule_enterCritical();
     }
 
-    thread->process = newProcess;
+    thread_initStruct(thread, tid, newProcess);
 
-    thread->tid = tid;
     thread->state = cloneFrom->state;
 
     if (cloneFrom->userStack.begin != 0) {
@@ -129,23 +138,7 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
         thread->context = cloneFrom->context;
     }
 
-    thread->remainTick = THREAD_TICK;
-
     thread->userExitStackTop = cloneFrom->userExitStackTop;
-
-    linkedListNode_initStruct(&thread->processNode);
-    linkedListNode_initStruct(&thread->scheduleNode);
-    linkedListNode_initStruct(&thread->scheduleRunningNode);
-
-    linkedListNode_initStruct(&thread->waitNode);
-
-    refCounter_initStruct(&thread->refCounter);
-
-    thread->waittingFor = NULL;
-
-    thread->dead = false;
-    thread->isStackFromOutside = false;
-    thread->isThreadActive = false;
 
     if (cloneFrom != currentThread) {
         schedule_leaveCritical();

@@ -164,7 +164,7 @@ Thread* process_createThread(Process* process, ThreadEntryPoint entry) {
     }
 
     Uint16 tid = schedule_allocateNewID();
-    thread_initStruct(newThread, tid, process, entry, NULL);
+    thread_initNewThread(newThread, tid, process, entry);
     ERROR_GOTO_IF_ERROR(0);
 
     process_addThread(process, newThread);

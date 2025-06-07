@@ -40,11 +40,14 @@ typedef struct Thread {
     void* userExitStackTop; //TODO: Remove this
 
     bool dead;
-    bool isStackFromOutside;
     bool isThreadActive;
 } Thread;
 
-void thread_initStruct(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry, Range* kernelStack);
+void thread_initStruct(Thread* thread, Uint16 tid, Process* process);
+
+void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, Range* kernelStack);
+
+void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry);
 
 void thread_clearStruct(Thread* thread);
 
