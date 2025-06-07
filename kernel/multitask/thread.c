@@ -12,8 +12,10 @@
 #include<multitask/schedule.h>
 #include<multitask/state.h>
 #include<multitask/wait.h>
+#include<real/flags/eflags.h>
 #include<structs/linkedList.h>
 #include<structs/queue.h>
+#include<system/GDT.h>
 #include<system/pageTable.h>
 
 __attribute__((naked))
@@ -293,5 +295,16 @@ static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry) 
     Context* contextWrite = (Context*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_CONVERT_HEAP_ADDRESS_V2P(context));
 
     contextWrite->rip = (Uintptr)entry;
+    Registers* regs = &contextWrite->regs;
+
+    memory_memset(regs, 0, sizeof(regs));
+    regs->cs = SEGMENT_KERNEL_CODE;
+    regs->ds = SEGMENT_KERNEL_DATA;
+    regs->ss = SEGMENT_KERNEL_DATA;
+    regs->es = SEGMENT_KERNEL_DATA;
+    regs->fs = SEGMENT_KERNEL_DATA;
+    regs->gs = SEGMENT_KERNEL_DATA;
+    regs->eflags = EFLAGS_FIXED;
+
     thread->context = context;
 }
