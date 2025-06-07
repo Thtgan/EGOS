@@ -10,6 +10,7 @@
 #include<multitask/context.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
+#include<multitask/signal.h>
 #include<multitask/state.h>
 #include<multitask/wait.h>
 #include<real/flags/eflags.h>
@@ -77,6 +78,8 @@ void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEn
     ERROR_GOTO_IF_ERROR(0);
 
     __thread_setupKernelContext(thread, entry);
+
+    signalQueue_initStruct(&thread->signalQueue);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -153,7 +156,10 @@ void thread_die(Thread* thread) {
     thread->dead = true;
     thread_stop(thread);
     thread_derefer(thread);
-    debug_blowup("Thread dead is still running!\n");
+
+    // if (thread == schedule_getCurrentThread()) {    //If thread is current one, it should not reach here
+    //     debug_blowup("Dead thread is still running!\n");
+    // }
 }
 
 bool thread_trySleep(Thread* thread, Wait* wait) {
@@ -208,9 +214,10 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
 
     currentThread->process->lastActiveThread = currentThread;
 
-    if (lastThread->dead) {
-        process_notifyThreadDead(lastThread->process, lastThread);
-    }
+    // if (lastThread->dead) {
+    //     process_notifyThreadDead(lastThread->process, lastThread);
+    //     thread_clearStruct(thread); //TODO: Clear thread somewhere
+    // }
 }
 
 void thread_setupForUserProgram(Thread* thread) {
@@ -222,11 +229,20 @@ void thread_setupForUserProgram(Thread* thread) {
     );
 }
 
-void thread_stop(Thread* thread) {
+void thread_stop(Thread* thread) {  //TODO: Not designed for SMP
     thread_refer(thread);
     schedule_threadQuitSchedule(thread);
     thread->state = STATE_STOPPED;
     thread_derefer(thread);
+}
+
+void thread_continue(Thread* thread) {  //TODO: Not designed for SMP
+    DEBUG_ASSERT_SILENT(thread->state != STATE_RUNNING);
+    
+    thread->state = STATE_RUNNING;
+    thread->waittingFor = NULL;
+
+    schedule_threadJoinSchedule(thread);
 }
 
 void thread_refer(Thread* thread) {
@@ -235,11 +251,62 @@ void thread_refer(Thread* thread) {
 
 void thread_derefer(Thread* thread) {
     DEBUG_ASSERT_SILENT(!refCounter_check(&thread->refCounter, 0));
-    if (refCounter_derefer(&thread->refCounter)) {
-        if (thread == schedule_getCurrentThread() && thread->state == STATE_STOPPED) {
-            schedule_yield();
-        }
+    if (!refCounter_derefer(&thread->refCounter)) {
+        return;
     }
+
+    bool dead = thread->dead, isCurrent = (thread == schedule_getCurrentThread()), stopped = (thread->state == STATE_STOPPED);
+
+    if (dead) {
+        DEBUG_ASSERT_SILENT(stopped);
+        // process_notifyThreadDead(thread->process, thread);
+        // thread_clearStruct(thread); //TODO: Clear thread somewhere
+    }
+    
+    if (!isCurrent) {
+        return;
+    }
+
+    if (stopped) {
+        schedule_yield();
+    }
+
+    thread_handleSignalIfAny(thread);
+}
+
+void thread_signal(Thread* thread, int signal) {
+    if (thread == schedule_getCurrentThread()) {
+        thread_handleSignal(thread, signal);
+    } else {
+        signalQueue_pend(&thread->signalQueue, signal);
+        //TODO: Interrupt thread from interruptable sleeping
+    }
+}
+
+void thread_handleSignal(Thread* thread, int signal) {
+    //TODO: Add masking support
+    DEBUG_ASSERT_SILENT(
+        signal != SIGNAL_SIGKILL &&
+        signal != SIGNAL_SIGSTOP &&
+        signal != SIGNAL_SIGTSTP
+    );
+
+    DEBUG_ASSERT_SILENT(thread == schedule_getCurrentThread());
+    
+    SignalHandler handler = thread->process->signalHandlers[signal];
+    if (handler == SIGACTION_HANDLER_DFL) {
+        SignalDefaultHandler defaultHandler = signal_defaultHandlers[signal];
+        handler = signalDefaultHandler_funcs[defaultHandler];
+    }
+    handler(signal);    //TODO: Should be in user mode
+}
+
+void thread_handleSignalIfAny(Thread* thread) {
+    int pendingSignal = signalQueue_getPending(&thread->signalQueue);
+    if (pendingSignal == 0) {
+        return;
+    }
+    thread_handleSignal(thread, pendingSignal);
 }
 
 __attribute__((naked))

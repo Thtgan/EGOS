@@ -51,6 +51,8 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
     
     process->isProcessActive = false;
 
+    memory_memset(process->signalHandlers, 0, sizeof(process->signalHandlers));
+
     return;
     ERROR_FINAL_BEGIN(2);
     fs_fileClose(stdout);
@@ -73,7 +75,7 @@ void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
     }
 }
 
-void process_clearStruct(Process* process) {
+void process_clearStruct(Process* process) {    //TODO: Not used
     DEBUG_ASSERT_SILENT(process != schedule_getCurrentProcess());
     DEBUG_ASSERT_SILENT(linkedList_isEmpty(&process->threads));
 
@@ -98,18 +100,7 @@ void process_clearStruct(Process* process) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void proesss_stop(Process* process, int signal) {   //TODO: signal not used yet
-    Thread* currentThread = schedule_getCurrentThread();
-    thread_refer(currentThread);    //To prevent yielding when stopping current thread
-    for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
-        Thread* thread = HOST_POINTER(node, Thread, processNode);
-        
-        thread_stop(thread);
-    }
-    thread_derefer(currentThread);
-}
-
-void process_kill(Process* process, int signal) {   //TODO: signal not used yet
+void process_die(Process* process) {
     Thread* currentThread = schedule_getCurrentThread();
     thread_refer(currentThread);    //To prevent yielding when stopping current thread
     for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
@@ -118,7 +109,83 @@ void process_kill(Process* process, int signal) {   //TODO: signal not used yet
         thread_die(thread);
     }
 
+    //TODO: Clear process somewhere
+
     thread_derefer(currentThread);
+
+    if (process == schedule_getCurrentProcess()) {  //If process is current one, it should not reach here
+        debug_blowup("Dead process is still running!\n");
+    }
+}
+
+void process_signal(Process* process, int signal) {   //TODO: What if dead process receives signal again?
+    switch(signal) {
+        case SIGNAL_SIGKILL: {
+            process_die(process);
+            DEBUG_ASSERT_SILENT(process != schedule_getCurrentProcess());
+            return;
+        }
+        case SIGNAL_SIGCONT: {
+            process_continue(process);
+            break;  //SIGCONT may be captured, but must wake up process
+        }
+        case SIGNAL_SIGSTOP:
+        case SIGNAL_SIGTSTP: {
+            process_stop(process);
+            return;
+        }
+    }
+
+    Thread* currentThread = schedule_getCurrentThread();
+    thread_refer(currentThread);
+
+    if (process == schedule_getCurrentProcess()) {
+        thread_handleSignal(schedule_getCurrentThread(), signal);
+    } else {
+        Thread* threadHandlesSignal = HOST_POINTER(linkedListNode_getNext(&process->threads), Thread, processNode);
+        thread_signal(threadHandlesSignal, signal);
+    }
+
+    thread_derefer(currentThread);
+}
+
+void process_sigaction(Process* process, int signal, Sigaction* newSigaction, Sigaction* oldSigaction) {
+    //TODO: There should be more details
+    
+    if (oldSigaction != NULL) {
+        oldSigaction->handler = process->signalHandlers[signal];
+    }
+
+    if (newSigaction != NULL) {
+        process->signalHandlers[signal] = newSigaction->handler;
+    }
+}
+
+void process_stop(Process* process) {
+    Thread* currentThread = schedule_getCurrentThread();
+    thread_refer(currentThread);    //To prevent yielding if current thread stopped
+    for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
+        Thread* thread = HOST_POINTER(node, Thread, processNode);
+        
+        thread_stop(thread);
+    }
+
+    process->state = STATE_STOPPED;
+    thread_derefer(currentThread);
+}
+
+void process_continue(Process* process) {
+    if (process->state == STATE_RUNNING) {
+        return;
+    }
+
+    for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
+        Thread* thread = HOST_POINTER(node, Thread, processNode);
+        
+        thread_continue(thread);
+    }
+
+    process->state = STATE_RUNNING;
 }
 
 void process_addThread(Process* process, Thread* thread) {
@@ -174,7 +241,7 @@ Thread* process_createThread(Process* process, ThreadEntryPoint entry) {
     return NULL;
 }
 
-void process_notifyThreadDead(Process* process, Thread* thread) {
+void process_notifyThreadDead(Process* process, Thread* thread) {   //TODO: Thread not cleared
     DEBUG_ASSERT_SILENT(thread->process == process);
     DEBUG_ASSERT_SILENT(thread != schedule_getCurrentThread());
     DEBUG_ASSERT_SILENT(!linkedList_isEmpty(&process->threads));
@@ -268,6 +335,8 @@ static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, 
 
         ERROR_GOTO_IF_ERROR(0);
     }
+
+    memory_memcpy(process->signalHandlers, cloneFrom->signalHandlers, sizeof(cloneFrom->signalHandlers));
 
     if (cloneFrom->lastActiveThread != NULL) {
         DEBUG_ASSERT_SILENT(cloneFrom->lastActiveThread->state == STATE_RUNNING);

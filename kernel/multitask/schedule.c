@@ -325,6 +325,8 @@ static void __schedule_doYield() {
         
         thread_switch(currentThread, nextThread);
 
+        thread_handleSignalIfAny(_schedule_currentThread);
+        
         mutex_acquire(&_schedule_lock);
     }
 

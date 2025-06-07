@@ -6,6 +6,7 @@ typedef void (*ThreadEntryPoint)();
 
 #include<kit/types.h>
 #include<multitask/process.h>
+#include<multitask/signal.h>
 #include<multitask/state.h>
 #include<multitask/wait.h>
 #include<structs/linkedList.h>
@@ -41,6 +42,8 @@ typedef struct Thread {
 
     bool dead;
     bool isThreadActive;
+
+    SignalQueue signalQueue;
 } Thread;
 
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process);
@@ -69,8 +72,16 @@ void thread_setupForUserProgram(Thread* thread);
 
 void thread_stop(Thread* thread);
 
+void thread_continue(Thread* thread);
+
 void thread_refer(Thread* thread);
 
 void thread_derefer(Thread* thread);
+
+void thread_signal(Thread* thread, int signal);
+
+void thread_handleSignal(Thread* thread, int signal);
+
+void thread_handleSignalIfAny(Thread* thread);
 
 #endif // __MULTITASK_THREAD_H

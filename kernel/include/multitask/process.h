@@ -6,6 +6,7 @@ typedef struct Process Process;
 #include<fs/fsEntry.h>
 #include<kit/types.h>
 #include<memory/extendedPageTable.h>
+#include<multitask/signal.h>
 #include<multitask/state.h>
 #include<multitask/thread.h>
 #include<structs/linkedList.h>
@@ -33,6 +34,8 @@ typedef struct Process {
     LinkedListNode scheduleNode;
 
     bool isProcessActive;
+
+    SignalHandler signalHandlers[32];
 } Process;
 
 void process_initStruct(Process* process, Uint16 pid, ConstCstring name, ExtendedPageTableRoot* extendedTable);
@@ -41,9 +44,15 @@ void process_clone(Process* process, Uint16 pid, Process* cloneFrom);
 
 void process_clearStruct(Process* process);
 
-void proesss_stop(Process* process, int signal);    //TODO: signal not used yet
+void process_die(Process* process);
 
-void process_kill(Process* process, int signal);    //TODO: signal not used yet
+void process_signal(Process* process, int signal);
+
+void process_sigaction(Process* process, int signal, Sigaction* newSigaction, Sigaction* oldSigaction);
+
+void process_stop(Process* process);
+
+void process_continue(Process* process);
 
 void process_addThread(Process* process, Thread* thread);
 

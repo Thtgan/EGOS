@@ -503,4 +503,25 @@ static inline void barrier() {
     asm volatile("" : : : "memory");
 }
 
+#define __FIRST_BIT_FUNC_HEADER(__LENGTH)                                                \
+static inline Index32 MACRO_CONCENTRATE2(firstBit, __LENGTH) (UINT(__LENGTH) val)
+
+#define __FIRST_BIT_FUNC_INLINE_ASM(__LENGTH)   \
+"bsf %1, %0"                                    \
+: "=r" (ret)                                    \
+: "r" (val)                                     \
+: "memory"
+
+#define __FIRST_BIT_FUNC(__LENGTH)                          \
+__FIRST_BIT_FUNC_HEADER(__LENGTH) {                         \
+    Index32 ret;                                             \
+    asm volatile(__FIRST_BIT_FUNC_INLINE_ASM(__LENGTH));    \
+    return ret;                                             \
+}
+
+__FIRST_BIT_FUNC(8)
+__FIRST_BIT_FUNC(16)
+__FIRST_BIT_FUNC(32)
+__FIRST_BIT_FUNC(64)
+
 #endif // __REAL_SIMPLEASMLINES_H

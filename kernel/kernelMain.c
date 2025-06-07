@@ -46,7 +46,7 @@ Uint16 rootTID = 0;
 
 #include<devices/terminal/tty.h>
 
-Timer timer1, timer2;
+Timer timer1, timer2, timer3;
 
 static void __timerFunc1(Timer* timer) {
     print_printf("HANDLER CALL FROM TIMER1\n");
@@ -57,6 +57,17 @@ static void __timerFunc2(Timer* timer) {
     if (--timer->data == 0) {
         CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
     }
+}
+
+static void __timerFunc3(Timer* timer) {
+    print_printf("HANDLER CALL FROM TIMER3\n");
+    if (--timer->data == 0) {
+        CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
+    }
+}
+
+static void __testSigaction(int signal) {
+    print_printf("Signal %s triggered\n", signal_names[signal]);
 }
 
 void kernelMain(SystemInfo* info) {
@@ -127,7 +138,9 @@ void kernelMain(SystemInfo* info) {
     print_printf("%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
     rootTID = schedule_getCurrentThread()->tid;
-    if (schedule_fork() != NULL) {
+    Process* forked = schedule_fork();
+    DEBUG_MARK_PRINT("%lX\n", readRegister_RSP_64());
+    if (forked != NULL) {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is main thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
     } else {
@@ -142,6 +155,12 @@ void kernelMain(SystemInfo* info) {
         semaphore_down(&sema2);
         print_printf("DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
     } else {
+        Sigaction sigaction = {
+            .handler = __testSigaction
+        };
+        
+        process_sigaction(schedule_getCurrentProcess(), SIGNAL_SIGTRAP, &sigaction, NULL);
+
         semaphore_down(&sema1);
         arr1[0] = 2, arr2[0] = 1919810;
         print_printf("DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
@@ -161,7 +180,16 @@ void kernelMain(SystemInfo* info) {
         print_printf("USER PROGRAM RETURNED %d\n", ret);
 
         semaphore_up(&sema2);
-        thread_die(schedule_getCurrentThread());
+
+        timer_initStruct(&timer3, 500, TIME_UNIT_MILLISECOND);
+        SET_FLAG_BACK(timer3.flags, TIMER_FLAGS_SYNCHRONIZE | TIMER_FLAGS_REPEAT);
+        timer3.data = 5;
+        timer3.handler = __timerFunc3;
+
+        timer_start(&timer3);   //TODO: What if process stopped by signal after starting timer?
+
+        print_printf("Killing self\n");
+        process_signal(schedule_getCurrentProcess(), SIGNAL_SIGKILL);
     }
 
     memory_free(arr1);
@@ -185,11 +213,14 @@ void kernelMain(SystemInfo* info) {
     timer2.data = 5;
     timer2.handler = __timerFunc2;
 
-
+    process_signal(forked, SIGNAL_SIGTRAP);
+    process_signal(forked, SIGNAL_SIGSTOP);
     timer_start(&timer1);
     ERROR_CHECKPOINT();
     timer_start(&timer2);
     ERROR_CHECKPOINT();
+    process_signal(forked, SIGNAL_SIGCONT);
+
     fs_close(fs_rootFS); //TODO: Move to better place
 
     print_printf("DEAD\n");
