@@ -23,7 +23,7 @@ bool mutex_isLocked(Mutex* mutex);
 
 bool mutex_acquire(Mutex* mutex);
 
-void mutex_release(Mutex* mutex);
+bool mutex_release(Mutex* mutex);
 
 void mutex_forceRelease(Mutex* mutex);
 

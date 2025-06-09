@@ -15,7 +15,7 @@ typedef struct Wait {
 } Wait;
 
 typedef struct WaitOperations {
-    bool (*requestWait)(Wait* wait);
+    bool (*tryTake)(Wait* wait, Thread* thread);
     bool (*wait)(Wait* wait, Thread* thread);
     void (*quitWaitting)(Wait* wait, Thread* thread);
 } WaitOperations;
@@ -25,8 +25,8 @@ static inline void wait_initStruct(Wait* wait, WaitOperations* operations) {
     linkedList_initStruct(&wait->waitList);
 }
 
-static inline bool wait_rawRequestWait(Wait* wait) {
-    return wait->operations->requestWait(wait);
+static inline bool wait_rawTryTake(Wait* wait, Thread* thread) {
+    return wait->operations->tryTake(wait, thread);
 }
 
 static inline bool wait_rawWait(Wait* wait, Thread* thread) {
@@ -36,16 +36,5 @@ static inline bool wait_rawWait(Wait* wait, Thread* thread) {
 static inline void wait_rawQuitWaitting(Wait* wait, Thread* thread) {
     wait->operations->quitWaitting(wait, thread);
 }
-
-// static inline bool wait_tryWait(Wait* wait) {
-//     if (wait_rawRequestWait(wait)) {
-//         Thread* currentThread = schedule_getCurrentThread();
-//         thread_forceSleep(currentThread, wait);
-
-//         return true;
-//     }
-
-//     return false;
-// }
 
 #endif // __MULTITASK_WAIT_H

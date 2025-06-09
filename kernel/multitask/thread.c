@@ -156,20 +156,16 @@ void thread_die(Thread* thread) {
     thread->dead = true;
     thread_stop(thread);
     thread_derefer(thread);
-
-    // if (thread == schedule_getCurrentThread()) {    //If thread is current one, it should not reach here
-    //     debug_blowup("Dead thread is still running!\n");
-    // }
 }
 
 bool thread_trySleep(Thread* thread, Wait* wait) {
-    if (!wait_rawRequestWait(wait)) {
-        return false;
+    if (wait_rawTryTake(wait, thread)) {
+        return true;
     }
 
     thread_forceSleep(thread, wait);
 
-    return true;
+    return false;
 }
 
 void thread_forceSleep(Thread* thread, Wait* wait) {

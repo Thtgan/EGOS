@@ -8,14 +8,14 @@
 #include<multitask/schedule.h>
 #include<multitask/wait.h>
 
-static bool __mutex_waitOperations_requestWait(Wait* wait);
+static bool __mutex_waitOperations_tryTake(Wait* wait, Thread* thread);
 
 static bool __mutex_waitOperations_wait(Wait* wait, Thread* thread);
 
 static void __mutex_waitOperations_quitWaitting(Wait* wait, Thread* thread);
 
 static WaitOperations _mutex_waitOperations = {
-    .requestWait    = __mutex_waitOperations_requestWait,
+    .tryTake        = __mutex_waitOperations_tryTake,
     .wait           = __mutex_waitOperations_wait,
     .quitWaitting   = __mutex_waitOperations_quitWaitting
 };
@@ -34,66 +34,77 @@ bool mutex_isLocked(Mutex* mutex) {
 
 bool mutex_acquire(Mutex* mutex) {
     Wait* wait = &mutex->wait;
-    if (wait_rawRequestWait(wait)) {
-        Thread* currentThread = schedule_getCurrentThread();
-        thread_forceSleep(currentThread, wait);
-    }
-}
-
-void mutex_release(Mutex* mutex) {
-    if (mutex->acquiredBy != schedule_getCurrentThread()) {
-        return;
-    }
-
-    mutex_forceRelease(mutex);
-}
-
-void mutex_forceRelease(Mutex* mutex) {
-    if (ATOMIC_DEC_FETCH(&mutex->depth) == 0) {
-        ATOMIC_STORE(&mutex->acquiredBy, OBJECT_NULL);  //Ready for another thread
-
-        Wait* wait = &mutex->wait;
-        if (!linkedList_isEmpty(&wait->waitList)) {
-            Thread* thread = HOST_POINTER(linkedListNode_getNext(&wait->waitList), Thread, waitNode);
-            linkedListNode_delete(&thread->waitNode);
-            thread_wakeup(thread);
-        }
-    }
-    
-    if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
-        schedule_leaveCritical();
-    }
-}
-
-static bool __mutex_waitOperations_requestWait(Wait* wait) {
-    Mutex* mutex = HOST_POINTER(wait, Mutex, wait);
     Thread* currentThread = schedule_getCurrentThread();
+    if (wait_rawTryTake(wait, currentThread)) {
+        return true;
+    }
 
-    Thread* expected = NULL;
-    if (ATOMIC_COMPARE_EXCHANGE_N(&mutex->acquiredBy, &expected, currentThread) || expected == currentThread) { //No need to wait
-        ATOMIC_INC_FETCH(&mutex->depth);
+    thread_forceSleep(currentThread, wait);
+
+    return false;
+}
+
+bool mutex_release(Mutex* mutex) {
+    if (mutex->acquiredBy != schedule_getCurrentThread()) {
         return false;
     }
 
-    return true;
+    DEBUG_ASSERT_SILENT(ATOMIC_LOAD(&mutex->depth) > 0);
+
+    bool ret = false;
+    if (ATOMIC_DEC_FETCH(&mutex->depth) == 0) {
+        mutex_forceRelease(mutex);
+        ret = true;
+    }
+
+    if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
+        schedule_leaveCritical();
+    }
+
+    return ret;
+}
+
+void mutex_forceRelease(Mutex* mutex) {
+    ATOMIC_STORE(&mutex->acquiredBy, OBJECT_NULL);  //Ready for another thread
+
+    Wait* wait = &mutex->wait;
+    if (!linkedList_isEmpty(&wait->waitList)) {
+        Thread* thread = HOST_POINTER(linkedListNode_getNext(&wait->waitList), Thread, waitNode);
+        linkedListNode_delete(&thread->waitNode);
+        thread_wakeup(thread);
+    }
+}
+
+static bool __mutex_waitOperations_tryTake(Wait* wait, Thread* thread) {
+    Mutex* mutex = HOST_POINTER(wait, Mutex, wait);
+
+    if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
+        schedule_enterCritical();
+    }
+
+    Thread* expected = NULL;
+    if (ATOMIC_COMPARE_EXCHANGE_N(&mutex->acquiredBy, &expected, thread) || expected == thread) { //No need to wait
+        ATOMIC_INC_FETCH(&mutex->depth);
+        return true;
+    }
+
+    if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
+        schedule_leaveCritical();
+    }
+
+    return false;
 }
 
 static bool __mutex_waitOperations_wait(Wait* wait, Thread* thread) {
+    DEBUG_ASSERT_SILENT(thread == schedule_getCurrentThread());
+    DEBUG_ASSERT_SILENT(thread->waittingFor == wait);
+
     Mutex* mutex = HOST_POINTER(wait, Mutex, wait);
     
     linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
     while (true) {
-        if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
-            schedule_enterCritical();
-        }
-
-        Thread* expected = NULL;
-        if (ATOMIC_COMPARE_EXCHANGE_N(&mutex->acquiredBy, &expected, thread) || expected == thread) {
+        if (__mutex_waitOperations_tryTake(wait, thread)) {
             break;
-        }
-
-        if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_CRITICAL)) {
-            schedule_leaveCritical();
         }
 
         if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_TRY)) {
@@ -102,8 +113,6 @@ static bool __mutex_waitOperations_wait(Wait* wait, Thread* thread) {
 
         schedule_yield();
     }
-
-    ATOMIC_INC_FETCH(&mutex->depth);
 
     return true;
 }

@@ -7,14 +7,14 @@
 #include<multitask/wait.h>
 #include<structs/linkedList.h>
 
-static bool __semaphore_waitOperations_requestWait(Wait* wait);
+static bool __semaphore_waitOperations_tryTake(Wait* wait, Thread* thread);
 
 static bool __semaphore_waitOperations_wait(Wait* wait, Thread* thread);
 
 static void __semaphore_waitOperations_quitWaitting(Wait* wait, Thread* thread);
 
 static WaitOperations _semaphore_waitOperations = {
-    .requestWait    = __semaphore_waitOperations_requestWait,
+    .tryTake        = __semaphore_waitOperations_tryTake,
     .wait           = __semaphore_waitOperations_wait,
     .quitWaitting   = __semaphore_waitOperations_quitWaitting
 };
@@ -27,10 +27,11 @@ void semaphore_initStruct(Semaphore* sema, int count) {
 
 void semaphore_down(Semaphore* sema) {
     Wait* wait = &sema->wait;
-    if (wait_rawRequestWait(wait)) {
-        Thread* currentThread = schedule_getCurrentThread();
-        thread_forceSleep(currentThread, wait);
+    Thread* currentThread = schedule_getCurrentThread();
+    if (wait_rawTryTake(wait, currentThread)) {
+        return;
     }
+    thread_forceSleep(currentThread, wait);
 }
 
 void semaphore_up(Semaphore* sema) {
@@ -48,14 +49,14 @@ void semaphore_up(Semaphore* sema) {
     }
 }
 
-static bool __semaphore_waitOperations_requestWait(Wait* wait) {
+static bool __semaphore_waitOperations_tryTake(Wait* wait, Thread* thread) {
     Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
     if (ATOMIC_DEC_FETCH(&sema->counter) < 0) {
         spinlock_lock(&sema->queueLock);    //To prevent semaphore_up called right after request, must call __semaphore_waitOperations_wait as soon as possible
-        return true;
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 static bool __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {

@@ -93,8 +93,6 @@ void schedule_init() {
     
     _schedule_currentThread = __schedule_initFirstThread();
     ERROR_GOTO_IF_ERROR(0);
-
-    DEBUG_MARK_PRINT("%p-%u %p-%u\n", t, t->tid, _schedule_currentThread, _schedule_currentThread->tid);
     
     _schedule_started = true;
 
@@ -269,11 +267,13 @@ Thread* schedule_getThreadFromTID(Uint16 tid) {
 }
 
 void schedule_enterCritical() {
-    cli();
-    ATOMIC_INC_FETCH(&_schedule_criticalCount);
+    if (ATOMIC_FETCH_INC(&_schedule_criticalCount) == 0) {
+        cli();
+    }
 }
 
 void schedule_leaveCritical() {
+    DEBUG_ASSERT_SILENT(ATOMIC_LOAD(&_schedule_criticalCount) > 0);
     if (ATOMIC_DEC_FETCH(&_schedule_criticalCount) == 0) {
         sti();
     }
