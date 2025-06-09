@@ -16,7 +16,8 @@ typedef struct Wait {
 
 typedef struct WaitOperations {
     bool (*tryTake)(Wait* wait, Thread* thread);
-    bool (*wait)(Wait* wait, Thread* thread);
+    bool (*shouldWait)(Wait* wait, Thread* thread);
+    void (*wait)(Wait* wait, Thread* thread);
     void (*quitWaitting)(Wait* wait, Thread* thread);
 } WaitOperations;
 
@@ -29,8 +30,12 @@ static inline bool wait_rawTryTake(Wait* wait, Thread* thread) {
     return wait->operations->tryTake(wait, thread);
 }
 
-static inline bool wait_rawWait(Wait* wait, Thread* thread) {
-    return wait->operations->wait(wait, thread);
+static inline bool wait_rawShouldWait(Wait* wait, Thread* thread) {
+    return wait->operations->shouldWait(wait, thread);
+}
+
+static inline void wait_rawWait(Wait* wait, Thread* thread) {
+    wait->operations->wait(wait, thread);
 }
 
 static inline void wait_rawQuitWaitting(Wait* wait, Thread* thread) {

@@ -58,9 +58,7 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
 
 void thread_die(Thread* thread);
 
-bool thread_trySleep(Thread* thread, Wait* wait);
-
-void thread_forceSleep(Thread* thread, Wait* wait);
+void thread_sleep(Thread* thread, Wait* wait);
 
 void thread_wakeup(Thread* thread);
 

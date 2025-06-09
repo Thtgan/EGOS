@@ -9,12 +9,15 @@
 
 static bool __semaphore_waitOperations_tryTake(Wait* wait, Thread* thread);
 
-static bool __semaphore_waitOperations_wait(Wait* wait, Thread* thread);
+static bool __semaphore_waitOperations_shouldWait(Wait* wait, Thread* thread);
+
+static void __semaphore_waitOperations_wait(Wait* wait, Thread* thread);
 
 static void __semaphore_waitOperations_quitWaitting(Wait* wait, Thread* thread);
 
 static WaitOperations _semaphore_waitOperations = {
     .tryTake        = __semaphore_waitOperations_tryTake,
+    .shouldWait     = __semaphore_waitOperations_shouldWait,
     .wait           = __semaphore_waitOperations_wait,
     .quitWaitting   = __semaphore_waitOperations_quitWaitting
 };
@@ -31,7 +34,7 @@ void semaphore_down(Semaphore* sema) {
     if (wait_rawTryTake(wait, currentThread)) {
         return;
     }
-    thread_forceSleep(currentThread, wait);
+    thread_sleep(currentThread, wait);
 }
 
 void semaphore_up(Semaphore* sema) {
@@ -51,42 +54,25 @@ void semaphore_up(Semaphore* sema) {
 
 static bool __semaphore_waitOperations_tryTake(Wait* wait, Thread* thread) {
     Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
-    if (ATOMIC_DEC_FETCH(&sema->counter) < 0) {
-        spinlock_lock(&sema->queueLock);    //To prevent semaphore_up called right after request, must call __semaphore_waitOperations_wait as soon as possible
-        return false;
-    }
-
-    return true;
+    return ATOMIC_DEC_FETCH(&sema->counter) >= 0;
 }
 
-static bool __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {
+static bool __semaphore_waitOperations_shouldWait(Wait* wait, Thread* thread) {
+    Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
+    return ATOMIC_LOAD(&sema->counter) < 0;
+}
+
+static void __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {
     DEBUG_ASSERT_SILENT(thread->waittingFor == wait);
     
     Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
     DEBUG_ASSERT_SILENT(ATOMIC_LOAD(&sema->counter) < 0);
-    DEBUG_ASSERT_SILENT(spinlock_isLocked(&sema->queueLock));   // Must be locked by __semaphore_waitOperations_requestWait
 
+    spinlock_lock(&sema->queueLock);
     linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
-    bool loop = true;
-    do {
-        //Add current thread to wait list
-        spinlock_unlock(&sema->queueLock);
-        schedule_yield();
-        spinlock_lock(&sema->queueLock);
-
-        asm volatile(
-            "lock;"
-            "subl $0, %0;"
-            "sets %1;"
-            : "=m"(sema->counter), "=qm"(loop)
-            :
-            : "memory"
-        );
-    } while (loop);
-
     spinlock_unlock(&sema->queueLock);
 
-    return true;
+    schedule_yield();
 }
 
 static void __semaphore_waitOperations_quitWaitting(Wait* wait, Thread* thread) {

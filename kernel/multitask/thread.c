@@ -158,26 +158,17 @@ void thread_die(Thread* thread) {
     thread_derefer(thread);
 }
 
-bool thread_trySleep(Thread* thread, Wait* wait) {
-    if (wait_rawTryTake(wait, thread)) {
-        return true;
-    }
-
-    thread_forceSleep(thread, wait);
-
-    return false;
-}
-
-void thread_forceSleep(Thread* thread, Wait* wait) {
+void thread_sleep(Thread* thread, Wait* wait) {
     DEBUG_ASSERT_SILENT(thread->state == STATE_RUNNING);
     DEBUG_ASSERT_SILENT(!idt_isInISR());
     
-    schedule_threadQuitSchedule(thread);
-    
-    thread->state = STATE_SLEEP;
-    thread->waittingFor = wait;
-    
-    wait_rawWait(wait, thread);
+    do {
+        schedule_threadQuitSchedule(thread);
+        
+        thread->state = STATE_SLEEP;
+        thread->waittingFor = wait;
+        wait_rawWait(wait, thread);
+    } while (wait_rawShouldWait(wait, thread));
     
     //Thread should rejoined scheduling here (thread_wakeup or forceWakeup called)
     DEBUG_ASSERT_SILENT(thread->state == STATE_RUNNING);

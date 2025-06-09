@@ -10,12 +10,15 @@
 
 static bool __mutex_waitOperations_tryTake(Wait* wait, Thread* thread);
 
-static bool __mutex_waitOperations_wait(Wait* wait, Thread* thread);
+static bool __mutex_waitOperations_shouldWait(Wait* wait, Thread* thread);
+
+static void __mutex_waitOperations_wait(Wait* wait, Thread* thread);
 
 static void __mutex_waitOperations_quitWaitting(Wait* wait, Thread* thread);
 
 static WaitOperations _mutex_waitOperations = {
     .tryTake        = __mutex_waitOperations_tryTake,
+    .shouldWait     = __mutex_waitOperations_shouldWait,
     .wait           = __mutex_waitOperations_wait,
     .quitWaitting   = __mutex_waitOperations_quitWaitting
 };
@@ -39,9 +42,13 @@ bool mutex_acquire(Mutex* mutex) {
         return true;
     }
 
-    thread_forceSleep(currentThread, wait);
+    if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_TRY)) {
+        return false;
+    }
 
-    return false;
+    thread_sleep(currentThread, wait);
+
+    return true;
 }
 
 bool mutex_release(Mutex* mutex) {
@@ -95,26 +102,27 @@ static bool __mutex_waitOperations_tryTake(Wait* wait, Thread* thread) {
     return false;
 }
 
-static bool __mutex_waitOperations_wait(Wait* wait, Thread* thread) {
-    DEBUG_ASSERT_SILENT(thread == schedule_getCurrentThread());
-    DEBUG_ASSERT_SILENT(thread->waittingFor == wait);
-
+static bool __mutex_waitOperations_shouldWait(Wait* wait, Thread* thread) {
     Mutex* mutex = HOST_POINTER(wait, Mutex, wait);
     
-    linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
-    while (true) {
-        if (__mutex_waitOperations_tryTake(wait, thread)) {
-            break;
-        }
-
-        if (TEST_FLAGS(mutex->flags, MUTEX_FLAG_TRY)) {
-            return false;
-        }
-
-        schedule_yield();
+    Thread* expected = NULL;
+    if (ATOMIC_COMPARE_EXCHANGE_N(&mutex->acquiredBy, &expected, thread) || expected == thread) { //No need to wait
+        ATOMIC_INC_FETCH(&mutex->depth);
+        return false;
     }
 
     return true;
+}
+
+static void __mutex_waitOperations_wait(Wait* wait, Thread* thread) {
+    DEBUG_ASSERT_SILENT(thread == schedule_getCurrentThread());
+    DEBUG_ASSERT_SILENT(thread->waittingFor == wait);
+    Mutex* mutex = HOST_POINTER(wait, Mutex, wait);
+    DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(mutex->flags, MUTEX_FLAG_TRY));
+    
+    linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
+
+    schedule_yield();
 }
 
 static void __mutex_waitOperations_quitWaitting(Wait* wait, Thread* thread) {
