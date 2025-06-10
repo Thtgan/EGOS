@@ -8,6 +8,7 @@
 #include<memory/mm.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
+#include<multitask/locks/mutex.h>
 #include<multitask/process.h>
 #include<multitask/reaper.h>
 #include<multitask/schedule.h>
@@ -54,6 +55,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
     linkedListNode_initStruct(&thread->waitNode);
 
     refCounter_initStruct(&thread->refCounter);
+    thread->lock = SPINLOCK_UNLOCKED;
 
     thread->waittingFor = NULL;
 
@@ -114,10 +116,7 @@ void thread_clearStruct(Thread* thread) {
 }
 
 void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newProcess, Context* retContext) {
-    Thread* currentThread = schedule_getCurrentThread();
-    if (cloneFrom != currentThread) {
-        schedule_enterCritical();
-    }
+    thread_lock(cloneFrom);
 
     thread_initStruct(thread, tid, newProcess);
 
@@ -136,7 +135,7 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
 
     thread->kernelStack = cloneFrom->kernelStack;
 
-    if (cloneFrom == currentThread) {
+    if (cloneFrom == schedule_getCurrentThread()) {
         DEBUG_ASSERT_SILENT(retContext != NULL);
         thread->context = retContext;
     } else {
@@ -145,52 +144,61 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
 
     thread->userExitStackTop = cloneFrom->userExitStackTop;
 
-    if (cloneFrom != currentThread) {
-        schedule_leaveCritical();
-    }
+    thread_unlock(cloneFrom);
 
     return;
     ERROR_FINAL_BEGIN(0);
 }
 
 void thread_die(Thread* thread) {
-    thread_refer(thread);
+    thread_lock(thread);
     thread->dead = true;
     thread_stop(thread);
-    thread_derefer(thread);
+    thread_unlock(thread);
 }
 
 void thread_sleep(Thread* thread, Wait* wait) {
+    thread_lock(thread);
+
     DEBUG_ASSERT_SILENT(thread->state == STATE_RUNNING);
     DEBUG_ASSERT_SILENT(!idt_isInISR());
     
     do {
         schedule_threadQuitSchedule(thread);
-        
         thread->state = STATE_SLEEP;
         thread->waittingFor = wait;
+        
+        thread_unlock(thread);
         wait_rawWait(wait, thread);
+        thread_lock(thread);
     } while (wait_rawShouldWait(wait, thread));
     
     //Thread should rejoined scheduling here (thread_wakeup or forceWakeup called)
     DEBUG_ASSERT_SILENT(thread->state == STATE_RUNNING);
+    thread_unlock(thread);
 }
 
 void thread_wakeup(Thread* thread) {
+    thread_lock(thread);
+
     DEBUG_ASSERT_SILENT(thread->state == STATE_SLEEP);
     
     thread->state = STATE_RUNNING;
     thread->waittingFor = NULL;
-
     schedule_threadJoinSchedule(thread);
+
+    thread_unlock(thread);
 }
 
 void thread_forceWakeup(Thread* thread) {
+    thread_lock(thread);
+
     DEBUG_ASSERT_SILENT(thread->state == STATE_SLEEP);
     
     wait_rawQuitWaitting(thread->waittingFor, thread);
-    
     thread_wakeup(thread);
+
+    thread_unlock(thread);
 }
 
 void thread_switch(Thread* currentThread, Thread* nextThread) {
@@ -214,30 +222,41 @@ void thread_setupForUserProgram(Thread* thread) {
 }
 
 void thread_stop(Thread* thread) {  //TODO: Not designed for SMP
-    thread_refer(thread);
+    thread_lock(thread);
     schedule_threadQuitSchedule(thread);
     thread->state = STATE_STOPPED;
-    thread_derefer(thread);
+    thread_unlock(thread);
 }
 
 void thread_continue(Thread* thread) {  //TODO: Not designed for SMP
+    thread_lock(thread);
+    
     DEBUG_ASSERT_SILENT(thread->state != STATE_RUNNING);
     
     thread->state = STATE_RUNNING;
     thread->waittingFor = NULL;
-
     schedule_threadJoinSchedule(thread);
+
+    thread_unlock(thread);
 }
 
-void thread_refer(Thread* thread) {
+void thread_lock(Thread* thread) {
+    if (refCounter_check(&thread->refCounter, 0)) {
+        schedule_enterCritical();
+        spinlock_lock(&thread->lock);
+    }
     refCounter_refer(&thread->refCounter);
 }
 
-void thread_derefer(Thread* thread) {
+void thread_unlock(Thread* thread) {
     DEBUG_ASSERT_SILENT(!refCounter_check(&thread->refCounter, 0));
+    DEBUG_ASSERT_SILENT(spinlock_isLocked(&thread->lock));
     if (!refCounter_derefer(&thread->refCounter)) {
         return;
     }
+
+    spinlock_unlock(&thread->lock);
+    schedule_leaveCritical();
 
     bool dead = thread->dead, isCurrent = (thread == schedule_getCurrentThread()), stopped = (thread->state == STATE_STOPPED);
 

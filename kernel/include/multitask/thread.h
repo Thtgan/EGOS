@@ -36,6 +36,7 @@ typedef struct Thread {
     QueueNode reapNode;
 
     RefCounter refCounter;
+    Spinlock lock;
 
     Wait* waittingFor;
     LinkedListNode waitNode;
@@ -74,9 +75,9 @@ void thread_stop(Thread* thread);
 
 void thread_continue(Thread* thread);
 
-void thread_refer(Thread* thread);
+void thread_lock(Thread* thread);
 
-void thread_derefer(Thread* thread);
+void thread_unlock(Thread* thread);
 
 void thread_signal(Thread* thread, int signal);
 

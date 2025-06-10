@@ -102,7 +102,7 @@ void process_clearStruct(Process* process) {    //TODO: Not used
 
 void process_die(Process* process) {
     Thread* currentThread = schedule_getCurrentThread();
-    thread_refer(currentThread);    //To prevent yielding when stopping current thread
+    thread_lock(currentThread);    //To prevent yielding when stopping current thread
     for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
         Thread* thread = HOST_POINTER(node, Thread, processNode);
         
@@ -111,7 +111,7 @@ void process_die(Process* process) {
 
     //TODO: Clear process somewhere
 
-    thread_derefer(currentThread);
+    thread_unlock(currentThread);
 
     if (process == schedule_getCurrentProcess()) {  //If process is current one, it should not reach here
         debug_blowup("Dead process is still running!\n");
@@ -137,7 +137,7 @@ void process_signal(Process* process, int signal) {   //TODO: What if dead proce
     }
 
     Thread* currentThread = schedule_getCurrentThread();
-    thread_refer(currentThread);
+    thread_lock(currentThread);
 
     if (process == schedule_getCurrentProcess()) {
         thread_handleSignal(schedule_getCurrentThread(), signal);
@@ -146,7 +146,7 @@ void process_signal(Process* process, int signal) {   //TODO: What if dead proce
         thread_signal(threadHandlesSignal, signal);
     }
 
-    thread_derefer(currentThread);
+    thread_unlock(currentThread);
 }
 
 void process_sigaction(Process* process, int signal, Sigaction* newSigaction, Sigaction* oldSigaction) {
@@ -163,7 +163,7 @@ void process_sigaction(Process* process, int signal, Sigaction* newSigaction, Si
 
 void process_stop(Process* process) {
     Thread* currentThread = schedule_getCurrentThread();
-    thread_refer(currentThread);    //To prevent yielding if current thread stopped
+    thread_lock(currentThread);    //To prevent yielding if current thread stopped
     for (LinkedListNode* node = linkedListNode_getNext(&process->threads); node != &process->threads; node = node->next) {
         Thread* thread = HOST_POINTER(node, Thread, processNode);
         
@@ -171,7 +171,7 @@ void process_stop(Process* process) {
     }
 
     process->state = STATE_STOPPED;
-    thread_derefer(currentThread);
+    thread_unlock(currentThread);
 }
 
 void process_continue(Process* process) {
