@@ -139,7 +139,6 @@ void kernelMain(SystemInfo* info) {
     arr1[0] = 1, arr2[0] = 114514;
     rootTID = schedule_getCurrentThread()->tid;
     Process* forked = schedule_fork();
-    DEBUG_MARK_PRINT("%lX\n", readRegister_RSP_64());
     if (forked != NULL) {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is main thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);

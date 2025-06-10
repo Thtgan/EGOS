@@ -10,6 +10,7 @@ typedef void (*ThreadEntryPoint)();
 #include<multitask/state.h>
 #include<multitask/wait.h>
 #include<structs/linkedList.h>
+#include<structs/queue.h>
 #include<structs/refCounter.h>
 
 #define THREAD_DEFAULT_KERNEL_STACK_SIZE    4 * PAGE_SIZE
@@ -32,6 +33,7 @@ typedef struct Thread {
     LinkedListNode processNode;
     LinkedListNode scheduleNode;
     LinkedListNode scheduleRunningNode;
+    QueueNode reapNode;
 
     RefCounter refCounter;
 

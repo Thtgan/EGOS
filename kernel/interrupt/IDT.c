@@ -96,6 +96,10 @@ static void __idt_setEntry(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes)
     };
 }
 
+bool idt_isInterruptEnabled() {
+    return TEST_FLAGS(readEFlags64(), EFLAGS_IF);
+}
+
 bool idt_disableInterrupt() {
     Uint32 eflags = readEFlags64();
     cli();

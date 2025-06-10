@@ -9,6 +9,7 @@
 #include<multitask/locks/mutex.h>
 #include<multitask/locks/spinlock.h>
 #include<multitask/process.h>
+#include<multitask/reaper.h>
 #include<multitask/thread.h>
 #include<real/simpleAsmLines.h>
 #include<real/flags/eflags.h>
@@ -78,7 +79,10 @@ void schedule_init() {
     process_initStruct(_schedule_rootProcess, 0, "root", newTable);
     ERROR_GOTO_IF_ERROR(0);
     
-    Thread* t = process_createThread(_schedule_rootProcess, __schedule_idle);
+    process_createThread(_schedule_rootProcess, __schedule_idle);
+    ERROR_GOTO_IF_ERROR(0);
+    reaper_init();
+    process_createThread(_schedule_rootProcess, reaper_daemon);
     ERROR_GOTO_IF_ERROR(0);
     
     _schedule_initProcess = memory_allocate(sizeof(Process));
@@ -334,7 +338,7 @@ static void __schedule_doYield() {
 }
 
 static void __schedule_idle() {
-    sti();
+    idt_enableInterrupt();
     while (true) {
         hlt();
         // scheduler_yield(schedule_getCurrentScheduler());

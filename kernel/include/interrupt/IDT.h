@@ -65,6 +65,9 @@ void idt_init();
  */
 void idt_registerISR(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes);
 
+
+bool idt_isInterruptEnabled();
+
 /**
  * @brief Disable the interrupt, and return if the interrupt is enabled before
  * 

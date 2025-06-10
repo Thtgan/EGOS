@@ -9,6 +9,7 @@
 #include<memory/paging.h>
 #include<multitask/context.h>
 #include<multitask/process.h>
+#include<multitask/reaper.h>
 #include<multitask/schedule.h>
 #include<multitask/signal.h>
 #include<multitask/state.h>
@@ -48,6 +49,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
     linkedListNode_initStruct(&thread->processNode);
     linkedListNode_initStruct(&thread->scheduleNode);
     linkedListNode_initStruct(&thread->scheduleRunningNode);
+    queueNode_initStruct(&thread->reapNode);
 
     linkedListNode_initStruct(&thread->waitNode);
 
@@ -200,11 +202,6 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
     __thread_switchContext(currentThread, nextThread);
 
     currentThread->process->lastActiveThread = currentThread;
-
-    // if (lastThread->dead) {
-    //     process_notifyThreadDead(lastThread->process, lastThread);
-    //     thread_clearStruct(thread); //TODO: Clear thread somewhere
-    // }
 }
 
 void thread_setupForUserProgram(Thread* thread) {
@@ -244,10 +241,13 @@ void thread_derefer(Thread* thread) {
 
     bool dead = thread->dead, isCurrent = (thread == schedule_getCurrentThread()), stopped = (thread->state == STATE_STOPPED);
 
-    if (dead) {
+    if (thread->dead) {
         DEBUG_ASSERT_SILENT(stopped);
-        // process_notifyThreadDead(thread->process, thread);
-        // thread_clearStruct(thread); //TODO: Clear thread somewhere
+        reaper_submitThread(thread);
+        if (isCurrent) {
+            schedule_yield();
+            debug_blowup("Cleared thread still running\n");
+        }
     }
     
     if (!isCurrent) {
