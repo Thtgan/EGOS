@@ -5,15 +5,14 @@
 #include<fs/devfs/devfs.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsEntry.h>
+#include<fs/fsIdentifier.h>
+#include<fs/locate.h>
+#include<fs/path.h>
 #include<kit/util.h>
 #include<memory/paging.h>
 #include<memory/memory.h>
 #include<structs/hashTable.h>
 #include<error.h>
-
-#include<fs/fsIdentifier.h>
-#include<fs/locate.h>
-#include<fs/path.h>
 
 FS* fs_rootFS = NULL, * fs_devFS = NULL;
 

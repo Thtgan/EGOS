@@ -3,16 +3,17 @@
 
 #include<stdint.h>
 
-typedef enum {
-    SYSCALL_READ    = 0x00,
-    SYSCALL_WRITE   = 0x01,
-    SYSCALL_OPEN    = 0x02,
-    SYSCALL_CLOSE   = 0x03,
-    SYSCALL_STAT    = 0x04,
-    SYSCALL_EXIT    = 0xFE,
-    SYSCALL_TEST    = 0xFF,
-    SYSCALL_NUM
-} SyscallType;
+#define SYSCALL_READ                    0x00
+#define SYSCALL_WRITE                   0x01
+#define SYSCALL_OPEN                    0x02
+#define SYSCALL_CLOSE                   0x03
+#define SYSCALL_STAT                    0x04
+#define SYSCALL_FSTAT                   0x05
+#define SYSCALL_INDEX_SCHED_YIELD       0x18
+#define SYSCALL_INDEX_GETPID            0x27
+#define SYSCALL_INDEX_FORK              0x39
+#define SYSCALL_EXIT                    0x3C
+#define SYSCALL_TEST                    0x1FF
 
 static inline int syscall6(int syscall, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6) {
     asm volatile(

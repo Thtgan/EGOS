@@ -8,7 +8,6 @@
 #include<multitask/process.h>
 #include<real/flags/eflags.h>
 #include<real/flags/msr.h>
-#include<print.h>
 #include<system/GDT.h>
 #include<kit/macro.h>
 
@@ -35,11 +34,6 @@ void syscall_init() {
         DEBUG_ASSERT_SILENT(_syscallHandlers[unit->index] == NULL);
         _syscallHandlers[unit->index] = unit->func;
     }
-}
-
-static int __syscall_testSyscall(int arg1, int arg2, int arg3, int arg4, int arg5, int arg6) {
-    print_printf("TEST SYSCALL-%d %d %d %d %d %d\n", arg1, arg2, arg3, arg4, arg5, arg6);
-    return 114514;
 }
 
 __attribute__((naked))
@@ -78,5 +72,3 @@ static void __syscall_syscallHandler() {
         "sysretq;"
     );
 }
-
-SYSCALL_TABLE_REGISTER(0xFF, __syscall_testSyscall);    //TODO: Move to process handler

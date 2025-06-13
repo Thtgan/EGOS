@@ -13,4 +13,6 @@ void usermode_init();
  */
 int usermode_execute(ConstCstring path);
 
+extern void* usermode_executeReturn;
+
 #endif // __USERMODE_USERMODE_H

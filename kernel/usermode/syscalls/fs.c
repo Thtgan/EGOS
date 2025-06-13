@@ -1,5 +1,3 @@
-#include<fs/fsSyscall.h>
-
 #include<fs/fcntl.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
@@ -12,22 +10,24 @@
 #include<usermode/syscall.h>
 #include<error.h>
 
-static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n);
+static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n);
 
-static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n);
+static int __syscall_fs_write(int fileDescriptor, const void* buffer, Size n);
 
-static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags);
+static int __syscall_fs_open(ConstCstring filename, FCNTLopenFlags flags);
 
-static int __fsSyscall_close(int fileDescriptor);
+static int __syscall_fs_close(int fileDescriptor);
 
-static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat);
+static int __syscall_fs_stat(ConstCstring filename, FS_fileStat* stat);
 
-typedef struct __FsSyscallDirectoryEntry {
-    unsigned long inodeID;
-    unsigned long off;
-    unsigned short length;
+static int __syscall_fs_fstat(int fd, FS_fileStat* stat);
+
+typedef struct __SyscallFSdirectoryEntry {
+    unsigned long   inodeID;
+    unsigned long   off;
+    unsigned short  length;
     char            name[0];
-} __FsSyscallDirectoryEntry;
+} __SyscallFSdirectoryEntry;
 
 typedef enum __FsSyscallDirentType {
     __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_BLOCK,
@@ -40,11 +40,11 @@ typedef enum __FsSyscallDirentType {
     __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_UNKNOWN
 } __FsSyscallDirentType;
 
-static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n);
+static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n);
 
-static bool __fsSyscall_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);
+static bool __syscall_fs_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);
 
-static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
+static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n) {
     Process* currentProcess = schedule_getCurrentProcess();
     File* file = process_getFSentry(currentProcess, fileDescriptor);
     if (file == NULL) {
@@ -61,7 +61,7 @@ static int __fsSyscall_read(int fileDescriptor, void* buffer, Size n) {
     return -1;
 }
 
-static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
+static int __syscall_fs_write(int fileDescriptor, const void* buffer, Size n) {
     Process* currentProcess = schedule_getCurrentProcess();
     File* file = process_getFSentry(currentProcess, fileDescriptor);
     if (file == NULL) {
@@ -78,7 +78,7 @@ static int __fsSyscall_write(int fileDescriptor, const void* buffer, Size n) {
     return -1;
 }
 
-static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
+static int __syscall_fs_open(ConstCstring filename, FCNTLopenFlags flags) {
     File* file = fs_fileOpen(filename, flags);
     if (file == NULL) {
         ERROR_ASSERT_ANY();
@@ -100,7 +100,7 @@ static int __fsSyscall_open(ConstCstring filename, FCNTLopenFlags flags) {
     return -1;
 }
 
-static int __fsSyscall_close(int fileDescriptor) {
+static int __syscall_fs_close(int fileDescriptor) {
     Process* currentProcess = schedule_getCurrentProcess();
     File* file = process_removeFSentry(currentProcess, fileDescriptor);
     if (file == NULL) {
@@ -118,11 +118,12 @@ static int __fsSyscall_close(int fileDescriptor) {
     return -1;
 }
 
-static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat) {
-    File* file = NULL;
-
-    file = fs_fileOpen(filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS);
-    ERROR_GOTO_IF_ERROR(0);
+static int __syscall_fs_stat(ConstCstring filename, FS_fileStat* stat) {
+    File* file = fs_fileOpen(filename, FCNTL_OPEN_FILE_DEFAULT_FLAGS);
+    if (file == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
 
     fs_fileStat(file, stat);
     ERROR_GOTO_IF_ERROR(0);
@@ -138,7 +139,25 @@ static int __fsSyscall_stat(ConstCstring filename, FS_fileStat* stat) {
     return -1;
 }
 
-static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n) {
+static int __syscall_fs_fstat(int fd, FS_fileStat* stat) {
+    File* file = process_getFSentry(schedule_getCurrentProcess(), fd);
+    if (file == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    fs_fileStat(file, stat);
+    ERROR_GOTO_IF_ERROR(0);
+
+    return 0;
+    ERROR_FINAL_BEGIN(0);
+    if (file != NULL) {
+        fs_fileClose(file);
+    }
+    return -1;
+}
+
+static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
     Process* currentProcess = schedule_getCurrentProcess();
     Directory* directory = process_getFSentry(currentProcess, fileDescriptor);
     if (directory == NULL) {
@@ -152,7 +171,7 @@ static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n) {
         .length = (Uintptr)n
     };
     bool notEnoughSpace = false;
-    iNode_rawIterateDirectoryEntries(directory->inode, __fsSyscall_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
+    iNode_rawIterateDirectoryEntries(directory->inode, __syscall_fs_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
     ERROR_GOTO_IF_ERROR(0);
 
     return 0;
@@ -160,21 +179,21 @@ static int __fsSyscall_getdents(int fileDescriptor, void* buffer, Size n) {
     return -1;
 }
 
-static bool __fsSyscall_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret) {
+static bool __syscall_fs_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret) {
     Size nameLength = cstring_strlen(entry->name);
-    Size entryLength = sizeof(__FsSyscallDirectoryEntry) + 2 + nameLength;
+    Size entryLength = sizeof(__SyscallFSdirectoryEntry) + 2 + nameLength;
     Range* remainingBuffer = (Range*)arg;
     if (entryLength > remainingBuffer->length) {
         PTR_TO_VALUE(8, ret) = 1;
         return true;
     }
 
-    __FsSyscallDirectoryEntry* syscallEntry = (__FsSyscallDirectoryEntry*)remainingBuffer->begin;
+    __SyscallFSdirectoryEntry* syscallEntry = (__SyscallFSdirectoryEntry*)remainingBuffer->begin;
     syscallEntry->inodeID = entry->inodeID;
     syscallEntry->off = 0;  //TODO: Not figured out yet
     cstring_strcpy(syscallEntry->name, entry->name);
 
-    char* type = (char*)(remainingBuffer->begin + sizeof(__FsSyscallDirectoryEntry) + 1 + nameLength);
+    char* type = (char*)(remainingBuffer->begin + sizeof(__SyscallFSdirectoryEntry) + 1 + nameLength);
     switch (entry->type) {
         case FS_ENTRY_TYPE_FILE: {
             *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_REGULAR;
@@ -199,9 +218,10 @@ static bool __fsSyscall_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry,
     return false;
 }
 
-SYSCALL_TABLE_REGISTER(0x00, __fsSyscall_read);
-SYSCALL_TABLE_REGISTER(0x01, __fsSyscall_write);
-SYSCALL_TABLE_REGISTER(0x02, __fsSyscall_open);
-SYSCALL_TABLE_REGISTER(0x03, __fsSyscall_close);
-SYSCALL_TABLE_REGISTER(0x04, __fsSyscall_stat);
-SYSCALL_TABLE_REGISTER(0x4E, __fsSyscall_getdents);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_READ,      __syscall_fs_read);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_WRITE,     __syscall_fs_write);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_OPEN,      __syscall_fs_open);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_CLOSE,     __syscall_fs_close);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_STAT,      __syscall_fs_stat);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_FSTAT,     __syscall_fs_fstat);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_GETDENTS,  __syscall_fs_getdents);

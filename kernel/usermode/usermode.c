@@ -74,28 +74,31 @@ void __usermode_jumpToUserMode(void* programBegin, void* stackBottom) {
     );
 }
 
-extern void* __execute_return;
+// extern void* __execute_return;
 
-__attribute__((naked))
-void __usermode_syscallHandlerExit(int ret) {
-    asm volatile(
-        "pushq %1;"         //SS
-        "pushq %2;"         //RSP
-        "pushfq;"           //EFLAGS
-        "pushq %3;"         //CS
-        "lea %4, %%rax;"    //Inline assembly magic
-        "pushq %%rax;"      //RIP
-        "mov 32(%%rsp), %%ds;"
-        "mov 32(%%rsp), %%es;"
-        "mov %0, %%eax;"
-        "iretq;"
-        :
-        : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedule_getCurrentThread()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
-    );
-}
+// __attribute__((naked))
+// void __usermode_syscallHandlerExit(int ret) {
+//     asm volatile(
+//         "pushq %1;"         //SS
+//         "pushq %2;"         //RSP
+//         "pushfq;"           //EFLAGS
+//         "pushq %3;"         //CS
+//         "lea %4, %%rax;"    //Inline assembly magic
+//         "pushq %%rax;"      //RIP
+//         "mov 32(%%rsp), %%ds;"
+//         "mov 32(%%rsp), %%es;"
+//         "mov %0, %%eax;"
+//         "iretq;"
+//         :
+//         : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedule_getCurrentThread()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
+//     );
+// }
 
 #define __USERMODE_STACK_SIZE       (16ull * DATA_UNIT_KB)
 #define __USERMODE_STACK_PAGE_NUM   DIVIDE_ROUND_UP(__USERMODE_STACK_SIZE, PAGE_SIZE)
+
+extern char __usermode_executeReturn;
+void* usermode_executeReturn = &__usermode_executeReturn;
 
 static int __usermode_doExecute(ConstCstring path, File* file) {
     void* frame = NULL;
@@ -135,7 +138,7 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     currentThread->userExitStackTop = (void*)readRegister_RSP_64();
     __usermode_jumpToUserMode((void*)header.entryVaddr, (void*)currentThread->userStack.begin + currentThread->userStack.length);
     asm volatile (
-        "__execute_return: mov %%rax, %P0(%%rsp);"   //Save return value immediately
+        "__usermode_executeReturn: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :
         : "i"(sizeof(Registers))
     );
@@ -185,4 +188,4 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
     return -1;
 }
 
-SYSCALL_TABLE_REGISTER(0xFE, __usermode_syscallHandlerExit);    //TODO: Move to process handler
+// SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_EXIT, __usermode_syscallHandlerExit);    //TODO: Move to process handler
