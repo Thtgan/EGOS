@@ -8,6 +8,7 @@ typedef void (*ThreadEntryPoint)();
 #include<multitask/process.h>
 #include<multitask/signal.h>
 #include<multitask/state.h>
+#include<multitask/threadStack.h>
 #include<multitask/wait.h>
 #include<structs/linkedList.h>
 #include<structs/queue.h>
@@ -22,8 +23,8 @@ typedef struct Thread {
     Uint16 tid;
     State state;
 
-    Range kernelStack;
-    Range userStack;
+    ThreadStack kernelStack;
+    ThreadStack userStack;
 
     Context* context;
 
@@ -51,7 +52,7 @@ typedef struct Thread {
 
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process);
 
-void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, Range* kernelStack);
+void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, void* stackBottom, Size stackSize);
 
 void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry);
 
@@ -68,8 +69,6 @@ void thread_wakeup(Thread* thread);
 void thread_forceWakeup(Thread* thread);
 
 void thread_switch(Thread* currentThread, Thread* nextThread);
-
-void thread_setupForUserProgram(Thread* thread);
 
 void thread_stop(Thread* thread);
 

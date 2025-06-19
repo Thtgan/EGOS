@@ -377,13 +377,8 @@ static Thread* __schedule_initFirstThread() {
         ERROR_GOTO(0);
     }
 
-    Range initKernelStack = {
-        .begin = (Uintptr)__schedule_earlyStackBottom,
-        .length = THREAD_DEFAULT_KERNEL_STACK_SIZE
-    };
-
     Uint16 tid = schedule_allocateNewID();
-    thread_initFirstThread(firstThread, tid, _schedule_initProcess, &initKernelStack);
+    thread_initFirstThread(firstThread, tid, _schedule_initProcess, __schedule_earlyStackBottom, THREAD_DEFAULT_KERNEL_STACK_SIZE);
     ERROR_GOTO_IF_ERROR(0);
 
     process_addThread(_schedule_initProcess, firstThread);

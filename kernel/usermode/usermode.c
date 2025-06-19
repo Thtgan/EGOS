@@ -10,6 +10,7 @@
 #include<memory/paging.h>
 #include<multitask/context.h>
 #include<multitask/schedule.h>
+#include<multitask/threadStack.h>
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
@@ -74,26 +75,6 @@ void __usermode_jumpToUserMode(void* programBegin, void* stackBottom) {
     );
 }
 
-// extern void* __execute_return;
-
-// __attribute__((naked))
-// void __usermode_syscallHandlerExit(int ret) {
-//     asm volatile(
-//         "pushq %1;"         //SS
-//         "pushq %2;"         //RSP
-//         "pushfq;"           //EFLAGS
-//         "pushq %3;"         //CS
-//         "lea %4, %%rax;"    //Inline assembly magic
-//         "pushq %%rax;"      //RIP
-//         "mov 32(%%rsp), %%ds;"
-//         "mov 32(%%rsp), %%es;"
-//         "mov %0, %%eax;"
-//         "iretq;"
-//         :
-//         : "g"(ret), "i"(SEGMENT_KERNEL_DATA), "g"(schedule_getCurrentThread()->userExitStackTop), "i"(SEGMENT_KERNEL_CODE), "g"(__execute_return)
-//     );
-// }
-
 #define __USERMODE_STACK_SIZE       (16ull * DATA_UNIT_KB)
 #define __USERMODE_STACK_PAGE_NUM   DIVIDE_ROUND_UP(__USERMODE_STACK_SIZE, PAGE_SIZE)
 
@@ -127,16 +108,15 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         ERROR_GOTO_IF_ERROR(0);
     }
     
-    Thread* currentThread = schedule_getCurrentThread();
-    thread_setupForUserProgram(currentThread);
-
+    
     barrier();
     pushq(0);   //Reserved for return value
     
     REGISTERS_SAVE();
     
+    Thread* currentThread = schedule_getCurrentThread();
     currentThread->userExitStackTop = (void*)readRegister_RSP_64();
-    __usermode_jumpToUserMode((void*)header.entryVaddr, (void*)currentThread->userStack.begin + currentThread->userStack.length);
+    __usermode_jumpToUserMode((void*)header.entryVaddr, threadStack_getStackTop(&currentThread->userStack));
     asm volatile (
         "__usermode_executeReturn: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :
@@ -187,5 +167,3 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
 
     return -1;
 }
-
-// SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_EXIT, __usermode_syscallHandlerExit);    //TODO: Move to process handler

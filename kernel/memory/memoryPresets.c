@@ -70,9 +70,9 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
         .id = 0,
         .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A,    //TODO: Set not executable
         .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_deepCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_deepReleaseEntry
+            .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
+            .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
+            .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
         }
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_CODE] = (MemoryPreset) {
@@ -246,9 +246,18 @@ static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extende
 
     if (PAGING_IS_LEAF(level, *entry)) {
         void* p = pageTable_getNextLevelPage(level, *entry);
-        if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) {
-            memory_freeFrames(p);
-        } else {
+        // if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) {
+        //     memory_freeFrames(p);
+        // } else {
+        //     FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, p);
+        //     if (unit == NULL) {
+        //         ERROR_ASSERT_ANY();
+        //         ERROR_GOTO(0);
+        //     }
+        //     --unit->cow;
+        // }
+
+        if (TEST_FLAGS_FAIL(*entry, PAGING_ENTRY_FLAG_RW)) {
             FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, p);
             if (unit == NULL) {
                 ERROR_ASSERT_ANY();

@@ -14,6 +14,7 @@
 #include<multitask/schedule.h>
 #include<multitask/signal.h>
 #include<multitask/state.h>
+#include<multitask/threadStack.h>
 #include<multitask/wait.h>
 #include<real/flags/eflags.h>
 #include<structs/linkedList.h>
@@ -24,8 +25,6 @@
 __attribute__((naked))
 static void __thread_switchContext(Thread* from, Thread* to);
 
-static void __thread_allocateStackStack(Range* stack, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType memoryType, Size size);
-
 static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry);
 
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
@@ -35,15 +34,8 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 
     memory_memset(&thread->context, 0, sizeof(Context));
 
-    thread->kernelStack = (Range) {
-        .begin = (Uintptr)NULL,
-        .length = 0
-    };
-
-    thread->userStack = (Range) {
-        .begin = (Uintptr)NULL,
-        .length = 0
-    };
+    threadStack_initStruct(&thread->kernelStack, THREAD_DEFAULT_KERNEL_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW);
+    threadStack_initStruct(&thread->userStack, THREAD_DEFAULT_USER_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA);
 
     thread->remainTick = THREAD_TICK;
 
@@ -64,21 +56,16 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
     thread->isThreadActive = false;
 }
 
-void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, Range* kernelStack) {
+void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, void* stackBottom, Size stackSize){
     thread_initStruct(thread, tid, process);
 
-    thread->kernelStack = *kernelStack;
+    threadStack_initStructFromExisting(&thread->kernelStack, stackBottom, stackSize, thread->process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW);
 }
 
 void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry) {
     thread_initStruct(thread, tid, process);
 
-    __thread_allocateStackStack(
-        &thread->kernelStack,
-        process->extendedTable,
-        MEMORY_DEFAULT_PRESETS_TYPE_COW,
-        THREAD_DEFAULT_KERNEL_STACK_SIZE
-    );
+    threadStack_touch(&thread->kernelStack);
     ERROR_GOTO_IF_ERROR(0);
 
     __thread_setupKernelContext(thread, entry);
@@ -90,29 +77,17 @@ void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEn
 }
 
 void thread_clearStruct(Thread* thread) {
-    Process* process = thread->process;
-    if ((void*)thread->userStack.begin != NULL) {
-        void* stackFrames = PAGING_CONVERT_HEAP_ADDRESS_V2P((void*)thread->userStack.begin);
-        Size stackFrameNum = DIVIDE_ROUND_UP(thread->userStack.length, PAGE_SIZE);
-
-        extendedPageTableRoot_erase(
-            process->extendedTable, (void*)thread->userStack.begin, stackFrameNum
-        );
-
-        memory_freeFrames(stackFrames);
+    DEBUG_ASSERT_SILENT(thread->tid != 1);
+    
+    if (thread->userStack.stackBottom != NULL) {
+        threadStack_clearStruct(&thread->userStack);
+        ERROR_GOTO_IF_ERROR(0);
     }
 
-    DEBUG_ASSERT_SILENT((void*)thread->kernelStack.begin != NULL);
-    if (thread->tid != 1) {
-        void* stackFrames = PAGING_CONVERT_HEAP_ADDRESS_V2P((void*)thread->kernelStack.begin);
-        Size stackFrameNum = DIVIDE_ROUND_UP(thread->kernelStack.length, PAGE_SIZE);
+    threadStack_clearStruct(&thread->kernelStack);
 
-        extendedPageTableRoot_erase(
-            process->extendedTable, (void*)thread->kernelStack.begin, stackFrameNum
-        );
-
-        memory_freeFrames(stackFrames);
-    }
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newProcess, Context* retContext) {
@@ -122,18 +97,21 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
 
     thread->state = cloneFrom->state;
 
-    if (cloneFrom->userStack.begin != 0) {
-        thread_setupForUserProgram(thread);
-        ERROR_GOTO_IF_ERROR(0);
-        memory_memcpy((void*)thread->userStack.begin, (void*)cloneFrom->userStack.begin, cloneFrom->userStack.length);
-    } else {
-        thread->userStack = (Range) {
-            .begin = 0,
-            .length = 0
-        };
-    }
+    threadStack_initStructFromExisting(
+        &thread->kernelStack,
+        cloneFrom->kernelStack.stackBottom,
+        cloneFrom->kernelStack.size,
+        newProcess->extendedTable,
+        cloneFrom->kernelStack.type
+    );
 
-    thread->kernelStack = cloneFrom->kernelStack;
+    threadStack_initStructFromExisting(
+        &thread->userStack,
+        cloneFrom->userStack.stackBottom,
+        cloneFrom->userStack.size,
+        newProcess->extendedTable,
+        cloneFrom->userStack.type
+    );
 
     if (cloneFrom == schedule_getCurrentThread()) {
         DEBUG_ASSERT_SILENT(retContext != NULL);
@@ -210,15 +188,6 @@ void thread_switch(Thread* currentThread, Thread* nextThread) {
     __thread_switchContext(currentThread, nextThread);
 
     currentThread->process->lastActiveThread = currentThread;
-}
-
-void thread_setupForUserProgram(Thread* thread) {
-    __thread_allocateStackStack(
-        &thread->userStack,
-        thread->process->extendedTable,
-        MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA,
-        THREAD_DEFAULT_USER_STACK_SIZE
-    );
 }
 
 void thread_stop(Thread* thread) {  //TODO: Not designed for SMP
@@ -326,37 +295,8 @@ static void __thread_switchContext(Thread* from, Thread* to) {
     CONTEXT_RESTORE(__switch_return);
 }
 
-static void __thread_allocateStackStack(Range* stack, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType memoryType, Size size) {
-    Size stackFrameNum = DIVIDE_ROUND_UP(size, PAGE_SIZE);
-    void* stackFrames = memory_allocateFrames(stackFrameNum);
-    if (stackFrames == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, THREAD_DEFAULT_KERNEL_STACK_SIZE);
-
-    void* stackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
-
-    extendedPageTableRoot_draw(
-        extendedTable,
-        stackBottom,
-        stackFrames,
-        stackFrameNum,
-        extraPageTableContext_getDefaultPreset(extendedTable->context, memoryType),
-        EMPTY_FLAGS
-    );
-    ERROR_GOTO_IF_ERROR(0);
-    
-    stack->begin = (Uintptr)stackBottom;
-    stack->length = size;
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-}
-
 static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry) {
-    Range* stack = &thread->kernelStack;
-    Context* context = (Context*)(stack->begin + stack->length - sizeof(Context));
+    Context* context = (Context*)(threadStack_getStackTop(&thread->kernelStack) - sizeof(Context));
 
     Context* contextWrite = (Context*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_CONVERT_HEAP_ADDRESS_V2P(context));
 
