@@ -1,5 +1,5 @@
-#if !defined(__REAPER_H)
-#define __REAPER_H
+#if !defined(__MULTITASK_REAPER_H)
+#define __MULTITASK_REAPER_H
 
 #include<multitask/thread.h>
 
@@ -9,4 +9,4 @@ void reaper_daemon();
 
 void reaper_submitThread(Thread* thread);
 
-#endif // __REAPER_H
+#endif // __MULTITASK_REAPER_H

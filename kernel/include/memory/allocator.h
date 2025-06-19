@@ -60,7 +60,7 @@ typedef struct HeapAllocator {
 typedef struct AllocatorOperations {
     void* (*allocate)(HeapAllocator* allocator, Size n);
     void (*free)(HeapAllocator* allocator, void* ptr);
-    Size (*getActualSize)(Size n);
+    Size (*getActualSize)(HeapAllocator* allocator, Size n);
 } AllocatorOperations;
 
 static inline void* heapAllocator_allocate(HeapAllocator* allocator, Size n) {
@@ -72,9 +72,9 @@ static inline void heapAllocator_free(HeapAllocator* allocator, void* ptr) {
 }
 
 static inline Size heapAllocator_getActualSize(HeapAllocator* allocator, Size n) {
-    return allocator->operations->getActualSize(n);
+    return allocator->operations->getActualSize(allocator, n);
 }
 
-void allocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID);
+void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID);
 
 #endif // __MEMORY_ALLOCATOR_H

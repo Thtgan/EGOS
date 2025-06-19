@@ -30,12 +30,12 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n);
 
 static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr);
 
-static Size __buddyHeapAllocator_getActualSize(Size n);
+static Size __buddyHeapAllocator_getActualSize(HeapAllocator* allocator, Size n);
 
-static AllocatorOperations _buddyHeapAllocatorOperations = {
-    .allocate = __buddyHeapAllocator_allocate,
-    .free = __buddyHeapAllocator_free,
-    .getActualSize = __buddyHeapAllocator_getActualSize
+static AllocatorOperations _buddyHeapAllocator_operations = {
+    .allocate       = __buddyHeapAllocator_allocate,
+    .free           = __buddyHeapAllocator_free,
+    .getActualSize  = __buddyHeapAllocator_getActualSize
 };
 
 static int __buddyHeapAllocatorBuddyList_compareBlock(const SinglyLinkedListNode* node1, const SinglyLinkedListNode* node2);
@@ -57,7 +57,7 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page);
 
 void buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 presetID) {
-    allocator_initStruct(&allocator->allocator, frameAllocator, &_buddyHeapAllocatorOperations, presetID);
+    heapAllocator_initStruct(&allocator->allocator, frameAllocator, &_buddyHeapAllocator_operations, presetID);
     for (int j = 0; j < BUDDY_HEAP_ALLOCATOR_BUDDY_LIST_LIST_NUM; ++j) {
         __buddyHeapAllocatorBuddyList_initStruct(&allocator->buddyLists[j], j);
     }
@@ -243,7 +243,7 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     }
 
     BuddyHeapAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyHeapAllocator, allocator);
-    Size actualSize = __buddyHeapAllocator_getActualSize(n);
+    Size actualSize = __buddyHeapAllocator_getActualSize(allocator, n);
 
     if (actualSize > BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(BUDDY_HEAP_ALLOCATOR_MAX_ORDER)) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
@@ -334,6 +334,6 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     ERROR_GOTO(0);
 }
 
-static Size __buddyHeapAllocator_getActualSize(Size n) {
+static Size __buddyHeapAllocator_getActualSize(HeapAllocator* allocator, Size n) {
     return ALIGN_UP(n + ALIGN_UP(sizeof(__BuddyHeader), 16) + sizeof(__BuddyTail), BUDDY_HEAP_ALLOCATOR_ORDER_LENGTH(0));
 }
