@@ -4,7 +4,7 @@
 typedef struct FrameAllocator FrameAllocator;
 typedef struct FrameAllocatorOperations FrameAllocatorOperations;
 typedef struct HeapAllocator HeapAllocator;
-typedef struct AllocatorOperations AllocatorOperations;
+typedef struct HeapAllocatorOperations HeapAllocatorOperations;
 
 #include<debug.h>
 #include<kit/bit.h>
@@ -23,13 +23,13 @@ typedef struct FrameAllocator {
 } FrameAllocator;
 
 typedef struct FrameAllocatorOperations {
-    void* (*allocateFrames)(FrameAllocator* allocator, Size n, bool chunk);
+    void* (*allocateFrames)(FrameAllocator* allocator, Size n);
     void (*freeFrames)(FrameAllocator* allocator, void* frames, Size n);
     void (*addFrames)(FrameAllocator* allocator, void* frames, Size n);
 } FrameAllocatorOperations;
 
-static inline void* frameAllocator_allocateFrames(FrameAllocator* allocator, Size n, bool chunk) {
-    void* ret = allocator->operations->allocateFrames(allocator, n, chunk);
+static inline void* frameAllocator_allocateFrames(FrameAllocator* allocator, Size n) {
+    void* ret = allocator->operations->allocateFrames(allocator, n);
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(ret));
     return ret;
 }
@@ -49,7 +49,7 @@ void frameAllocator_initStruct(FrameAllocator* allocator, FrameAllocatorOperatio
 typedef struct HeapAllocator {
     Size total; //TODO: Setup operations for amount control
     Size remaining;
-    AllocatorOperations* operations;
+    HeapAllocatorOperations* operations;
     FrameAllocator* frameAllocator;
     Uint8 presetID;
 } HeapAllocator;
@@ -57,11 +57,11 @@ typedef struct HeapAllocator {
 #define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE        PAGE_SIZE
 #define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE_SHIFT  PAGE_SIZE_SHIFT
 
-typedef struct AllocatorOperations {    //TODO: Rename this
+typedef struct HeapAllocatorOperations {
     void* (*allocate)(HeapAllocator* allocator, Size n);
     void (*free)(HeapAllocator* allocator, void* ptr);
     Size (*getActualSize)(HeapAllocator* allocator, Size n);
-} AllocatorOperations;
+} HeapAllocatorOperations;
 
 static inline void* heapAllocator_allocate(HeapAllocator* allocator, Size n) {
     return allocator->operations->allocate(allocator, n);
@@ -75,6 +75,6 @@ static inline Size heapAllocator_getActualSize(HeapAllocator* allocator, Size n)
     return allocator->operations->getActualSize(allocator, n);
 }
 
-void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID);
+void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, HeapAllocatorOperations* opeartions, Uint8 presetID);
 
 #endif // __MEMORY_ALLOCATOR_H

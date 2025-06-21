@@ -69,7 +69,7 @@ void mm_init() {
 }
 
 void* mm_allocateFramesDetailed(Size n, Flags16 flags) {
-    void* ret = frameAllocator_allocateFrames(mm->frameAllocator, n, true);
+    void* ret = frameAllocator_allocateFrames(mm->frameAllocator, n);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -97,7 +97,7 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
     }
 
     DEBUG_ASSERT_SILENT(preset->base != 0);
-    void* frames = frameAllocator_allocateFrames(allocator, n, true);
+    void* frames = frameAllocator_allocateFrames(allocator, n);
     if (frames == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

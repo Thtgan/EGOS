@@ -19,7 +19,7 @@ static Size __regionHeapAllocator_getActualSize(HeapAllocator* allocator, Size n
 
 static void __regionHeapAllocator_expand(RegionHeapAllocator* allocator);
 
-static AllocatorOperations _regionHeapAllocator_operations = {
+static HeapAllocatorOperations _regionHeapAllocator_operations = {
     .allocate       = __regionHeapAllocator_allocate,
     .free           = __regionHeapAllocator_free,
     .getActualSize  = __regionHeapAllocator_getActualSize

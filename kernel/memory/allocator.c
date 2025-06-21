@@ -9,7 +9,7 @@ void frameAllocator_initStruct(FrameAllocator* allocator, FrameAllocatorOperatio
     allocator->metadata = metadata;
 }
 
-void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, AllocatorOperations* opeartions, Uint8 presetID) {
+void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, HeapAllocatorOperations* opeartions, Uint8 presetID) {
     allocator->total = 0;
     allocator->remaining = 0;
     allocator->operations = opeartions;

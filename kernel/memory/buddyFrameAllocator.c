@@ -10,7 +10,7 @@
 #include<error.h>
 #include<print.h>
 
-static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n, bool chunk);
+static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n);
 
 static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* frames, Size n);
 
@@ -172,7 +172,7 @@ static void __buddyFrameList_recycleFrames(BuddyFrameAllocator* alloctor, void* 
     }
 }
 
-static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n, bool chunk) {
+static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n) {
     if (n == 0) {
         return NULL;
     }
@@ -194,14 +194,16 @@ static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Siz
 
     allocator->remaining -= n;
 
-    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(allocator->metadata, ret);
-    FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, ret);
     DEBUG_ASSERT_SILENT(
-        RANGE_WITHIN(
-            (Uintptr)&header->units, (Uintptr)&header->units[header->frameNum],
-            (Uintptr)unit, (Uintptr)&unit[n],
-            <=, <=
-        )
+        ({
+            FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(allocator->metadata, ret);
+            FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, ret);
+            RANGE_WITHIN(
+                (Uintptr)&header->units, (Uintptr)&header->units[header->frameNum],
+                (Uintptr)unit, (Uintptr)&unit[n],
+                <=, <=
+            );
+        })
     );
 
     return ret;

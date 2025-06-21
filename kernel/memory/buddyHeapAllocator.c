@@ -33,7 +33,7 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr);
 
 static Size __buddyHeapAllocator_getActualSize(HeapAllocator* allocator, Size n);
 
-static AllocatorOperations _buddyHeapAllocator_operations = {
+static HeapAllocatorOperations _buddyHeapAllocator_operations = {
     .allocate       = __buddyHeapAllocator_allocate,
     .free           = __buddyHeapAllocator_free,
     .getActualSize  = __buddyHeapAllocator_getActualSize
