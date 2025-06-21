@@ -3,6 +3,7 @@
 #include<debug.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
@@ -132,7 +133,7 @@ Size inputBuffer_getLine(InputBuffer* buffer, char* writeTo, Size n) {
 }
 
 static __InputBufferNode* __inputBufferNode_allocateNode() {
-    __InputBufferNode* ret = memory_allocate(sizeof(__InputBufferNode));
+    __InputBufferNode* ret = mm_allocate(sizeof(__InputBufferNode));
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -149,5 +150,5 @@ static __InputBufferNode* __inputBufferNode_allocateNode() {
 
 static void __inputBufferNode_freeNode(__InputBufferNode* node) {
     memory_memset(node, 0, PAGE_SIZE);
-    memory_free(node);
+    mm_free(node);
 }

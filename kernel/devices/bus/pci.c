@@ -2,6 +2,7 @@
 
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<real/ports/pci.h>
 #include<real/simpleAsmLines.h>
@@ -230,7 +231,7 @@ static bool __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
     __pci_readDevice(baseAddr, &tmpDevice);
     ERROR_GOTO_IF_ERROR(0);
 
-    PCIdevice* pciDevice = memory_allocate(sizeof(PCIdevice));
+    PCIdevice* pciDevice = mm_allocate(sizeof(PCIdevice));
     if (pciDevice == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(1);
@@ -251,7 +252,7 @@ static bool __pci_probeFunction(Uint8 bus, Uint8 device, Uint8 function) {
 
     ERROR_FINAL_BEGIN(1);
     if (pciDevice != NULL) {
-        memory_free(pciDevice);
+        mm_free(pciDevice);
     }
     return false;
 }

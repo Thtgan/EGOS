@@ -7,6 +7,7 @@
 #include<devices/display/vga/registers.h>
 #include<devices/display/display.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<realmode.h>
 #include<error.h>
@@ -288,7 +289,7 @@ static void __vga_printCharacter(DisplayPosition* position, Uint8 ch, RGBA color
 static void __vga_printString(DisplayPosition* position, ConstCstring str, Size n, RGBA color) {
     VGAcolor vgaColor = vga_approximateColor(color);
     if (_vga_currentMode->memoryMode == VGA_MEMORY_MODE_TEXT) {
-        VGAtextModeCell* tmpCells = memory_allocate(n * sizeof(VGAtextModeCell));
+        VGAtextModeCell* tmpCells = mm_allocate(n * sizeof(VGAtextModeCell));
         if (tmpCells == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -303,7 +304,7 @@ static void __vga_printString(DisplayPosition* position, ConstCstring str, Size 
         }
         vgaTextMode_writeCell(textMode, position, tmpCells, n);
 
-        memory_free(tmpCells);
+        mm_free(tmpCells);
     } else {
         //TODO: Graphic mode string print
         ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);

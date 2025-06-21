@@ -202,7 +202,7 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
 
     if (unit->cow > 0) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
-        void* copyTo = memory_allocateFrames(span >> PAGE_SIZE_SHIFT);
+        void* copyTo = mm_allocateFrames(span >> PAGE_SIZE_SHIFT);
         memory_memcpy(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(copyTo), PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(pageTable_getNextLevelPage(level, *entry)), span);
 
         --unit->cow;
@@ -255,7 +255,7 @@ static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extende
     if (PAGING_IS_LEAF(level, *entry)) {
         void* p = pageTable_getNextLevelPage(level, *entry);
         if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) { //If writable, this frame must have only 1 reference, no matter cloned or not
-            memory_freeFrames(p, 1);    //TODO: This frame might not be allocated by default frame allocator
+            mm_freeFrames(p, 1);    //TODO: This frame might not be allocated by default frame allocator
         } else {
             FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, p);
             if (unit == NULL) {

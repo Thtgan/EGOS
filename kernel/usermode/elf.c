@@ -6,6 +6,7 @@
 #include<kit/bit.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<multitask/schedule.h>
 #include<multitask/process.h>
@@ -117,7 +118,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         ERROR_GOTO_IF_ERROR(0);
         DEBUG_ASSERT_SILENT(translated == NULL);
 
-        frame = memory_allocateFrames(1);
+        frame = mm_allocateFrames(1);
         if (frame == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -155,7 +156,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (frame != NULL) {
-        memory_freeFrames(frame, 1);
+        mm_freeFrames(frame, 1);
     }
 
     void* releaseBase = (void*)pageBegin;
@@ -190,7 +191,7 @@ void elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
         extendedPageTableRoot_erase(extendedTable, base, 1);
         ERROR_GOTO_IF_ERROR(0);
 
-        memory_freeFrames(frame, 1);
+        mm_freeFrames(frame, 1);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 

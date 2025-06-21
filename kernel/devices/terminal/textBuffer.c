@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/loopArray.h>
 #include<structs/vector.h>
@@ -64,7 +65,7 @@ void textBuffer_clearStruct(TextBuffer* textBuffer) {
         void* dataPage = (void*)vector_get(&textBuffer->partDataPages, i);
         ERROR_GOTO_IF_ERROR(0);
 
-        memory_freePages(dataPage);
+        mm_freePages(dataPage);
     }
     
     vector_clearStruct(&textBuffer->partDataPages);
@@ -353,7 +354,7 @@ static void* __textBuffer_getDataPage(TextBuffer* textBuffer, Index64 position, 
 }
 
 static void __textBuffer_enqueueDataPage(TextBuffer* textBuffer) {
-    void* newPage = memory_allocatePages(1);
+    void* newPage = mm_allocatePages(1);
     if (newPage == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -376,7 +377,7 @@ static void __textBuffer_dequeueDataPageFront(TextBuffer* textBuffer, Size relea
     for (int i = 0; i < releasePageNum; ++i) {
         void* page = (void*)vector_get(&textBuffer->partDataPages, i);
         ERROR_GOTO_IF_ERROR(0);
-        memory_freePages(page);
+        mm_freePages(page);
     }
 
     vector_ereaseN(&textBuffer->partDataPages, 0, releasePageNum);
@@ -396,7 +397,7 @@ static void __textBuffer_dequeueDataPageBack(TextBuffer* textBuffer, Size releas
     for (int i = 0; i < releasePageNum; ++i) {
         void* page = (void*)vector_get(&textBuffer->partDataPages, textBuffer->partDataPages.size - 1);
         ERROR_GOTO_IF_ERROR(0);
-        memory_freePages(page);
+        mm_freePages(page);
         vector_pop(&textBuffer->partDataPages);
         ERROR_GOTO_IF_ERROR(0);
     }

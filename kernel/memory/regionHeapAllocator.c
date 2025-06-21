@@ -74,7 +74,7 @@ static Size __regionHeapAllocator_getActualSize(HeapAllocator* allocator, Size n
 
 static void __regionHeapAllocator_expand(RegionHeapAllocator* allocator) {
     MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID);
-    void* page = memory_allocatePagesDetailed(1, mm->extendedTable, allocator->allocator.frameAllocator, preset, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP);
+    void* page = mm_allocatePagesDetailed(1, mm->extendedTable, allocator->allocator.frameAllocator, preset, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP);
     if (page == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

@@ -29,6 +29,8 @@ extern char pKernelRangeEnd;
  */
 void paging_init();
 
+void* paging_fastTranslate(void* v);
+
 //Flush the TLB, If page table update not working, try this
 #define PAGING_FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 

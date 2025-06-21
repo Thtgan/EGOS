@@ -103,3 +103,14 @@ void paging_init() {
     return;
     ERROR_FINAL_BEGIN(0);
 }
+
+void* paging_fastTranslate(void* v) {
+    void* p = NULL;
+    if (PAGING_IS_BASED_CONTAGIOUS_SPACE(v)) {
+        p = PAGING_CONVERT_CONTAGIOUS_SPACE_V2P(v);
+    } else {
+        p = extendedPageTableRoot_translate(mm->extendedTable, v);
+    }
+
+    return p;
+}

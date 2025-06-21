@@ -3,6 +3,7 @@
 #include<algorithms.h>
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<error.h>
 
 #define __VECTOR_INIT_STORAGE_SIZE  48  //TODO: Ugly codes assuming memory header size
@@ -10,7 +11,7 @@
 void vector_initStruct(Vector* vector) {
     vector->size = 0;
     vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
-    vector->storage = memory_allocate(__VECTOR_INIT_STORAGE_SIZE);
+    vector->storage = mm_allocate(__VECTOR_INIT_STORAGE_SIZE);
     if (vector->storage == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -23,7 +24,7 @@ void vector_initStruct(Vector* vector) {
 }
 
 void vector_clearStruct(Vector* vector) {
-    memory_free(vector->storage);
+    mm_free(vector->storage);
 }
 
 bool vector_isEmpty(Vector* vector) {
@@ -36,7 +37,7 @@ void vector_clear(Vector* vector) {
 }
 
 void vector_resize(Vector* vector, Size newCapacity) {
-    Object* newStorage = memory_allocate(newCapacity * sizeof(Object));
+    Object* newStorage = mm_allocate(newCapacity * sizeof(Object));
     if (newStorage == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -45,7 +46,7 @@ void vector_resize(Vector* vector, Size newCapacity) {
     vector->capacity = newCapacity;
     vector->size = algorithms_min64(vector->size, newCapacity);
     memory_memcpy(newStorage, vector->storage, vector->size * sizeof(Object));
-    memory_free(vector->storage);
+    mm_free(vector->storage);
     vector->storage = newStorage;
 
     return;

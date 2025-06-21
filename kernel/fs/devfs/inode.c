@@ -8,6 +8,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<system/pageTable.h>
 #include<structs/hashTable.h>
@@ -116,7 +117,7 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
     
     if (newPageNum != oldPageNum) {
         if (newPageNum != 0) {
-            newPages = memory_allocatePages(newPageNum);
+            newPages = mm_allocatePages(newPageNum);
             if (newPages == NULL) {
                 ERROR_ASSERT_ANY();
                 ERROR_GOTO(0);
@@ -132,7 +133,7 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
         }
         
         if (oldPageNum != 0) {
-            memory_freePages(devfsInode->data);
+            mm_freePages(devfsInode->data);
         }
 
         devfsInode->data = newPages;
@@ -143,7 +144,7 @@ static void __devfs_iNode_resize(iNode* inode, Size newSizeInByte) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (newPages != NULL) {
-        memory_freePages(newPages);
+        mm_freePages(newPages);
     }
     return;
 }
@@ -159,7 +160,7 @@ static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
     Device* device = &targetBlockDevice->device;
     Size blockSize = POWER_2(device->granularity);
     
-    blockBuffer = memory_allocate(blockSize);
+    blockBuffer = mm_allocate(blockSize);
     if (blockBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -198,12 +199,12 @@ static void __devfs_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    memory_free(blockBuffer);
+    mm_free(blockBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (blockBuffer != NULL) {
-        memory_free(blockBuffer);
+        mm_free(blockBuffer);
     }
 
     return;
@@ -290,12 +291,12 @@ static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
 
     if (currentPointer + sizeof(DevfsDirectoryEntry) < inode->sizeInByte) {
         Size remainingDataSize = inode->sizeInByte - currentPointer - sizeof(DevfsDirectoryEntry);
-        remainingData = memory_allocate(remainingDataSize);
+        remainingData = mm_allocate(remainingDataSize);
         iNode_rawReadData(inode, currentPointer, remainingData + sizeof(DevfsDirectoryEntry), remainingDataSize);
         ERROR_GOTO_IF_ERROR(0);
         iNode_rawWriteData(inode, currentPointer, remainingData, remainingDataSize);
         ERROR_GOTO_IF_ERROR(0);
-        memory_free(remainingData);
+        mm_free(remainingData);
         remainingData = NULL;
     }
 
@@ -305,7 +306,7 @@ static void __devfs_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
     return;
     ERROR_FINAL_BEGIN(0);
     if (remainingData != NULL) {
-        memory_free(remainingData);
+        mm_free(remainingData);
     }
 }
 
@@ -339,12 +340,12 @@ static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
 
     if (currentPointer + sizeof(DevfsDirectoryEntry) < inode->sizeInByte) {
         Size remainingDataSize = inode->sizeInByte - currentPointer - sizeof(DevfsDirectoryEntry);
-        remainingData = memory_allocate(remainingDataSize);
+        remainingData = mm_allocate(remainingDataSize);
         iNode_rawReadData(inode, currentPointer, remainingData + sizeof(DevfsDirectoryEntry), remainingDataSize);
         ERROR_GOTO_IF_ERROR(0);
         iNode_rawWriteData(inode, currentPointer, remainingData, remainingDataSize);
         ERROR_GOTO_IF_ERROR(0);
-        memory_free(remainingData);
+        mm_free(remainingData);
         remainingData = NULL;
     }
 
@@ -384,6 +385,6 @@ static void __devfs_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     ERROR_FINAL_BEGIN(0);
 
     if (remainingData != NULL) {
-        memory_free(remainingData);
+        mm_free(remainingData);
     }
 }

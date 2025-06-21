@@ -13,6 +13,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<multitask/locks/spinlock.h>
 #include<structs/hashTable.h>
@@ -66,7 +67,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     void* BPBbuffer = NULL;
 
     Device* device = &blockDevice->device;
-    BPBbuffer = memory_allocate(POWER_2(device->granularity));
+    BPBbuffer = mm_allocate(POWER_2(device->granularity));
     if (BPBbuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -79,12 +80,12 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     Uint32 clusterNum = (device->capacity - BPB->reservedSectorNum - BPB->FATnum * BPB->sectorPerFAT) / BPB->sectorPerCluster - BPB->rootDirectoryClusterIndex;
     bool ret = BPB->bytePerSector == POWER_2(device->granularity) && BPB->signature == __FS_FAT32_BPB_SIGNATURE && memory_memcmp(BPB->systemIdentifier, "FAT32   ", 8) == 0 && clusterNum > __FS_FAT32_MINIMUM_CLUSTER_NUM;
 
-    memory_free(BPBbuffer);
+    mm_free(BPBbuffer);
 
     return ret;
     ERROR_FINAL_BEGIN(0);
     if (BPBbuffer != NULL) {
-        memory_free(BPBbuffer);
+        mm_free(BPBbuffer);
     }
     return false;
 }
@@ -94,7 +95,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
 
 void fat32_open(FS* fs, BlockDevice* blockDevice) {
     void* batchAllocated = NULL, * buffer = NULL;
-    batchAllocated = memory_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
+    batchAllocated = mm_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
     if (batchAllocated == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -107,7 +108,7 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     );
 
     Device* device = &blockDevice->device;
-    buffer = memory_allocate(POWER_2(device->granularity));
+    buffer = mm_allocate(POWER_2(device->granularity));
     if (buffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -118,7 +119,7 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
 
     memory_memcpy(BPB, buffer, sizeof(FAT32BPB));
 
-    memory_free(buffer);
+    mm_free(buffer);
     buffer = NULL;
 
     if (POWER_2(device->granularity) != BPB->bytePerSector) {
@@ -138,7 +139,7 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
 
     Size FATsizeInByte                  = BPB->sectorPerFAT * POWER_2(device->granularity);
 
-    Index32* FAT = memory_allocate(FATsizeInByte);
+    Index32* FAT = mm_allocate(FATsizeInByte);
     if (FAT == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -186,15 +187,15 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (FAT != NULL) {
-        memory_free(FAT);
+        mm_free(FAT);
     }
 
     if (buffer != NULL) {
-        memory_free(buffer);
+        mm_free(buffer);
     }
     
     if (batchAllocated != NULL) {
-        memory_free(batchAllocated);
+        mm_free(batchAllocated);
     }
 }
 
@@ -209,11 +210,11 @@ void fat32_close(FS* fs) {
     Device* superBlockDevice = &superBlockBlockDevice->device;
     Size FATsizeInByte = fat32SuperBlock->FATrange.length * POWER_2(superBlockDevice->granularity);
     memory_memset(fat32SuperBlock->FAT, 0, FATsizeInByte);
-    memory_free(fat32SuperBlock->FAT);
+    mm_free(fat32SuperBlock->FAT);
 
     void* batchAllocated = fat32SuperBlock; //TODO: Ugly code
     memory_memset(batchAllocated, 0, __FS_FAT32_BATCH_ALLOCATE_SIZE);
-    memory_free(batchAllocated);
+    mm_free(batchAllocated);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -221,7 +222,7 @@ void fat32_close(FS* fs) {
 
 void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, DirectoryEntry* entry, fsNode* belongTo, Index64 firstCluster, iNodeAttribute* inodeAttribute) {
     FAT32NodeMetadata* metadata = NULL;
-    metadata = memory_allocate(sizeof(FAT32NodeMetadata));
+    metadata = mm_allocate(sizeof(FAT32NodeMetadata));
     if (metadata == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -243,14 +244,14 @@ void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, DirectoryEntr
         },
         (ERROR_ID_ALREADY_EXIST, {
             ERROR_CLEAR();
-            memory_free(metadata);
+            mm_free(metadata);
         })
     );
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (metadata != NULL) {
-        memory_free(metadata);
+        mm_free(metadata);
     }
 }
 
@@ -268,7 +269,7 @@ void fat32SuperBlock_unregisterMetadata(FAT32SuperBlock* superBlock, Index64 fir
         ERROR_GOTO(0);
     }
 
-    memory_free(metadata);
+    mm_free(metadata);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -309,7 +310,7 @@ Index32 fat32SuperBlock_createFirstCluster(FAT32SuperBlock* superBlock) {
     Device* targetDevice = &targetBlockDevice->device;
     Size clusterSize = BPB->sectorPerCluster * POWER_2(targetDevice->granularity);
 
-    clusterBuffer = memory_allocate(clusterSize);
+    clusterBuffer = mm_allocate(clusterSize);
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -361,7 +362,7 @@ static fsNode* __fat32_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) 
 static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     FAT32Inode* fat32Inode = NULL;
 
-    fat32Inode = memory_allocate(sizeof(FAT32Inode));
+    fat32Inode = mm_allocate(sizeof(FAT32Inode));
     if (fat32Inode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -416,7 +417,7 @@ static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     return inode;
     ERROR_FINAL_BEGIN(0);
     if (fat32Inode != NULL) {
-        memory_free(fat32Inode);
+        mm_free(fat32Inode);
     }
     
     return NULL;
@@ -428,7 +429,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     ID inodeID = superBlock_allocateInodeID(superBlock);
     fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, inodeID);
 
-    fat32Inode = memory_allocate(sizeof(FAT32Inode));
+    fat32Inode = mm_allocate(sizeof(FAT32Inode));
     if (fat32Inode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -476,7 +477,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     return inode;
     ERROR_FINAL_BEGIN(0);
     if (fat32Inode != NULL) {
-        memory_free(fat32Inode);
+        mm_free(fat32Inode);
     }
 
     return NULL;
@@ -490,7 +491,7 @@ static void __fat32_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) 
     FAT32Inode* fat32Inode = HOST_POINTER(inode, FAT32Inode, inode);
     fsNode_release(inode->fsNode);
 
-    memory_free(fat32Inode);
+    mm_free(fat32Inode);
 }
 
 static void __fat32_superBlock_sync(SuperBlock* superBlock) {
@@ -504,7 +505,7 @@ static void __fat32_superBlock_sync(SuperBlock* superBlock) {
 
     RangeN* fatRange = &fat32SuperBlock->FATrange;
     Size FATsizeInByte = fatRange->length * POWER_2(superBlockDevice->granularity);
-    FATcopy = memory_allocate(FATsizeInByte);
+    FATcopy = mm_allocate(FATsizeInByte);
     if (FATcopy == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -521,7 +522,7 @@ static void __fat32_superBlock_sync(SuperBlock* superBlock) {
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    memory_free(FATcopy);
+    mm_free(FATcopy);
     FATcopy = NULL;
 
     blockDevice_flush(superBlockBlockDevice);
@@ -530,7 +531,7 @@ static void __fat32_superBlock_sync(SuperBlock* superBlock) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (FATcopy != NULL) {
-        memory_free(FATcopy);
+        mm_free(FATcopy);
     }
     return;
 }

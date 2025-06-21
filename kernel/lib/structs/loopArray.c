@@ -2,6 +2,7 @@
 
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<algorithms.h>
 #include<error.h>
 
@@ -13,7 +14,7 @@ void loopArray_initStruct(LoopArray* array, Size capacity) {
     array->capacity = capacity;
     array->size = 0;
     array->loopBegin = 0;
-    array->data = memory_allocate(capacity * sizeof(Object));
+    array->data = mm_allocate(capacity * sizeof(Object));
     if (array->data == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -25,7 +26,7 @@ void loopArray_initStruct(LoopArray* array, Size capacity) {
 }
 
 void loopArray_clearStruct(LoopArray* array) {
-    memory_free(array->data);
+    mm_free(array->data);
 }
 
 void loopArray_pushBack(LoopArray* array, Object val) {
@@ -116,7 +117,7 @@ void loopArray_resize(LoopArray* array, Size newCapacity) {
         return;
     }
 
-    Object* newData = memory_allocate(newCapacity * sizeof(Object));
+    Object* newData = mm_allocate(newCapacity * sizeof(Object));
     if (newData == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

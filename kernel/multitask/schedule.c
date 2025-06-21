@@ -66,7 +66,7 @@ void schedule_init() {
     mutex_initStruct(&_schedule_lock, MUTEX_FLAG_CRITICAL);
     mutex_initStruct(&_schedule_queueLock, MUTEX_FLAG_CRITICAL);
     
-    _schedule_rootProcess = memory_allocate(sizeof(Process));
+    _schedule_rootProcess = mm_allocate(sizeof(Process));
     if (_schedule_rootProcess == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -85,7 +85,7 @@ void schedule_init() {
     process_createThread(_schedule_rootProcess, reaper_daemon);
     ERROR_GOTO_IF_ERROR(0);
     
-    _schedule_initProcess = memory_allocate(sizeof(Process));
+    _schedule_initProcess = mm_allocate(sizeof(Process));
     if (_schedule_initProcess == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -290,7 +290,7 @@ void schedule_yieldIfStopped() {    //TODO: Remove this?
 }
 
 Process* schedule_fork() {
-    Process* newProcess = memory_allocate(sizeof(Process));
+    Process* newProcess = mm_allocate(sizeof(Process));
     if (newProcess == NULL) {
         ERROR_ASSERT_ANY();
     }
@@ -312,7 +312,7 @@ Process* schedule_fork() {
     ERROR_FINAL_BEGIN(2);
     process_clearStruct(newProcess);
     ERROR_FINAL_BEGIN(1);
-    memory_free(newProcess);
+    mm_free(newProcess);
     ERROR_FINAL_BEGIN(0);
     return 0;
 }
@@ -371,7 +371,7 @@ void schedule_collectOrphans(Process* process) {
 }
 
 static Thread* __schedule_initFirstThread() {
-    Thread* firstThread = memory_allocate(sizeof(Thread));
+    Thread* firstThread = mm_allocate(sizeof(Thread));
     if (firstThread == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

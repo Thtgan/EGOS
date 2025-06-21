@@ -135,7 +135,7 @@ void kernelMain(SystemInfo* info) {
     semaphore_initStruct(&sema2, -1);
 
     MemoryPreset* cowPreset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    arr1 = memory_allocate(1 * sizeof(int)), arr2 = memory_allocateDetailed(1 * sizeof(int), cowPreset);
+    arr1 = mm_allocate(1 * sizeof(int)), arr2 = mm_allocateDetailed(1 * sizeof(int), cowPreset);
     print_printf("%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
     rootTID = schedule_getCurrentThread()->tid;
@@ -192,8 +192,8 @@ void kernelMain(SystemInfo* info) {
         process_signal(schedule_getCurrentProcess(), SIGNAL_SIGKILL);
     }
 
-    memory_free(arr1);
-    memory_free(arr2);
+    mm_free(arr1);
+    mm_free(arr2);
 
     print_printf("FINAL %u\n", schedule_getCurrentThread()->tid);
 

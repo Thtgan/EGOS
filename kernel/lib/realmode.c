@@ -76,7 +76,7 @@ void realmode_init() {
 
     _realMode_stack = _realMode_stack + stackPageNum * PAGE_SIZE;
 
-    void* pageTableFrames = memory_allocateFrames(3);    //TODO: Make sure it allocates fromn lower 4GB
+    void* pageTableFrames = mm_allocateFrames(3);    //TODO: Make sure it allocates fromn lower 4GB
     if (pageTableFrames == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

@@ -7,6 +7,7 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<real/ports/vga.h>
 #include<real/simpleAsmLines.h>
 #include<structs/KDtree.h>
@@ -302,7 +303,7 @@ void __vgaPalette_registerKey(VGApalette* palette, Object key) {
         return;
     }
 
-    KDtreeNode* node = memory_allocate(sizeof(KDtreeNode));
+    KDtreeNode* node = mm_allocate(sizeof(KDtreeNode));
     if (node == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

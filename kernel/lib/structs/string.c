@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<cstring.h>
 #include<error.h>
 
@@ -21,7 +22,7 @@ void string_initStructStr(String* str, ConstCstring cstr) {
 
 void string_initStructStrN(String* str, ConstCstring cstr, Size n) {
     Size len = algorithms_umin64(n, cstring_strlen(cstr)), capacity = ALIGN_UP(len + 1, __STRING_CAPACITY_ALIGN);
-    Cstring data = memory_allocate(capacity);
+    Cstring data = mm_allocate(capacity);
     if (data == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -45,7 +46,7 @@ void string_clearStruct(String* str) {
         ERROR_THROW(ERROR_ID_VERIFICATION_FAILED, 0);
     }
 
-    memory_free(str->data);
+    mm_free(str->data);
     str->capacity = str->length = str->magic = 0;
 
     return;
@@ -214,7 +215,7 @@ static void __string_doResize(String* str, Size newCapacity, bool reset) {
         return;
     }
 
-    Cstring newData = memory_allocate(newCapacity);
+    Cstring newData = mm_allocate(newCapacity);
     if (newData == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -227,7 +228,7 @@ static void __string_doResize(String* str, Size newCapacity, bool reset) {
         memory_memcpy(newData, str->data, newCapacity);
         newData[str->length] = '\0';
     }
-    memory_free(str->data);
+    mm_free(str->data);
 
     str->data       = newData;
     str->capacity   = newCapacity;

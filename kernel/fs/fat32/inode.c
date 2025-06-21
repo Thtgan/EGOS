@@ -12,6 +12,7 @@
 #include<fs/superblock.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<structs/hashTable.h>
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
@@ -69,13 +70,13 @@ Size fat32_iNode_touchDirectory(iNode* inode) {
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    entriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    entriesBuffer = mm_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
     if (entriesBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -119,19 +120,19 @@ Size fat32_iNode_touchDirectory(iNode* inode) {
         currentPointer += entriesLength;
     }
 
-    memory_free(clusterBuffer);
-    memory_free(entriesBuffer);
+    mm_free(clusterBuffer);
+    mm_free(entriesBuffer);
 
     string_clearStruct(&entryName);
     
     return currentPointer + sizeof(FAT32DirectoryEntry);
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 
     if (entriesBuffer != NULL) {
-        memory_free(entriesBuffer);
+        mm_free(entriesBuffer);
     }
 
     if (string_isAvailable(&entryName)) {
@@ -151,7 +152,7 @@ static void __fat32_iNode_readData(iNode* inode, Index64 begin, void* buffer, Si
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -161,12 +162,12 @@ static void __fat32_iNode_readData(iNode* inode, Index64 begin, void* buffer, Si
     __fat32_iNode_doReadData(inode, begin, buffer, byteN, clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
 
-    memory_free(clusterBuffer);
+    mm_free(clusterBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 }
 
@@ -180,7 +181,7 @@ static void __fat32_iNode_writeData(iNode* inode, Index64 begin, const void* buf
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -190,12 +191,12 @@ static void __fat32_iNode_writeData(iNode* inode, Index64 begin, const void* buf
     __fat32_iNode_doWriteData(inode, begin, buffer, byteN, clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
 
-    memory_free(clusterBuffer);
+    mm_free(clusterBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 }
 
@@ -413,13 +414,13 @@ static void __fat32_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    entriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    entriesBuffer = mm_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
     if (entriesBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -470,17 +471,17 @@ static void __fat32_iNode_iterateDirectoryEntries(iNode* inode, iNodeOperationIt
         currentPointer += entriesLength;
     }
 
-    memory_free(clusterBuffer);
-    memory_free(entriesBuffer);
+    mm_free(clusterBuffer);
+    mm_free(entriesBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 
     if (entriesBuffer != NULL) {
-        memory_free(entriesBuffer);
+        mm_free(entriesBuffer);
     }
     return;
 }
@@ -498,13 +499,13 @@ static void __fat32_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsE
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    entriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    entriesBuffer = mm_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
     if (entriesBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -565,17 +566,17 @@ static void __fat32_iNode_addDirectoryEntry(iNode* inode, ConstCstring name, fsE
     __fat32_iNode_doWriteData(inode, currentPointer, &_fat32_iNode_directoryTail, sizeof(FAT32DirectoryEntry), clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
 
-    memory_free(clusterBuffer);
-    memory_free(entriesBuffer);
+    mm_free(clusterBuffer);
+    mm_free(entriesBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 
     if (entriesBuffer != NULL) {
-        memory_free(entriesBuffer);
+        mm_free(entriesBuffer);
     }
 }
 
@@ -589,13 +590,13 @@ static void __fat32_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    entriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    entriesBuffer = mm_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
     if (entriesBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -643,32 +644,32 @@ static void __fat32_iNode_removeDirectoryEntry(iNode* inode, ConstCstring name, 
     DEBUG_ASSERT_SILENT(entriesLength > 0);
     DEBUG_ASSERT_SILENT(currentPointer + entriesLength < inode->sizeInByte);
     Size remainingDataSize = inode->sizeInByte - currentPointer - entriesLength;
-    remainingData = memory_allocate(remainingDataSize);
+    remainingData = mm_allocate(remainingDataSize);
     __fat32_iNode_doReadData(inode, currentPointer + entriesLength, remainingData, remainingDataSize, clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
     __fat32_iNode_doWriteData(inode, currentPointer, remainingData, remainingDataSize, clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
-    memory_free(remainingData);
+    mm_free(remainingData);
     remainingData = NULL;
     
     iNode_rawResize(inode, inode->sizeInByte - entriesLength);
     ERROR_GOTO_IF_ERROR(0);
     
-    memory_free(clusterBuffer);
-    memory_free(entriesBuffer);
+    mm_free(clusterBuffer);
+    mm_free(entriesBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 
     if (entriesBuffer != NULL) {
-        memory_free(entriesBuffer);
+        mm_free(entriesBuffer);
     }
 
     if (remainingData != NULL) {
-        memory_free(remainingData);
+        mm_free(remainingData);
     }
 }
 
@@ -682,19 +683,19 @@ static void __fat32_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     BlockDevice* targetBlockDevice = superBlock->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = memory_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    entriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    entriesBuffer = mm_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
     if (entriesBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    transplantEntriesBuffer = memory_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
+    transplantEntriesBuffer = mm_allocate(FAT32_DIRECTORY_ENTRY_MAX_ENTRIES_SIZE);
     if (transplantEntriesBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -739,12 +740,12 @@ static void __fat32_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     DEBUG_ASSERT_SILENT(entriesLength > 0);
     DEBUG_ASSERT_SILENT(currentPointer + entriesLength < inode->sizeInByte);
     Size remainingDataSize = inode->sizeInByte - currentPointer - entriesLength;
-    remainingData = memory_allocate(remainingDataSize);
+    remainingData = mm_allocate(remainingDataSize);
     __fat32_iNode_doReadData(inode, currentPointer + entriesLength, remainingData, remainingDataSize, clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
     __fat32_iNode_doWriteData(inode, currentPointer, remainingData, remainingDataSize, clusterBuffer);
     ERROR_GOTO_IF_ERROR(0);
-    memory_free(remainingData);
+    mm_free(remainingData);
     remainingData = NULL;
     
     iNode_rawResize(inode, inode->sizeInByte - entriesLength);
@@ -794,25 +795,25 @@ static void __fat32_iNode_renameDirectoryEntry(iNode* inode, fsNode* entry, iNod
     fsNode_transplant(entry, moveTo->fsNode);
     ERROR_GOTO_IF_ERROR(0);
 
-    memory_free(clusterBuffer);
-    memory_free(entriesBuffer);
-    memory_free(transplantEntriesBuffer);
+    mm_free(clusterBuffer);
+    mm_free(entriesBuffer);
+    mm_free(transplantEntriesBuffer);
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
-        memory_free(clusterBuffer);
+        mm_free(clusterBuffer);
     }
 
     if (entriesBuffer != NULL) {
-        memory_free(entriesBuffer);
+        mm_free(entriesBuffer);
     }
 
     if (transplantEntriesBuffer != NULL) {
-        memory_free(transplantEntriesBuffer);
+        mm_free(transplantEntriesBuffer);
     }
 
     if (remainingData != NULL) {
-        memory_free(remainingData);
+        mm_free(remainingData);
     }
 }

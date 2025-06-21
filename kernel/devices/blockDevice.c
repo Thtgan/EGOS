@@ -6,6 +6,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<print.h>
 #include<cstring.h>
 #include<structs/hashTable.h>
@@ -22,7 +23,7 @@ void blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args)
 
     BlockBuffer* blockBuffer = NULL;
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_BUFFERED)) {
-        blockBuffer = memory_allocate(sizeof(BlockBuffer));
+        blockBuffer = mm_allocate(sizeof(BlockBuffer));
         if (blockBuffer == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -37,7 +38,7 @@ void blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args)
     return;
     ERROR_FINAL_BEGIN(0);
     if (blockBuffer != NULL) {
-        memory_free(blockBuffer);
+        mm_free(blockBuffer);
     }
 }
 

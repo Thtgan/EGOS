@@ -197,7 +197,7 @@ static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allo
 
 static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
     MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID);
-    void* pages = memory_allocatePagesDetailed(n, mm->extendedTable, allocator->allocator.frameAllocator, preset, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP);
+    void* pages = mm_allocatePagesDetailed(n, mm->extendedTable, allocator->allocator.frameAllocator, preset, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP);
     if (pages == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -213,7 +213,7 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
 }
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page) {
-    memory_freePagesDetailed(page, mm->extendedTable, allocator->allocator.frameAllocator);
+    mm_freePagesDetailed(page, mm->extendedTable, allocator->allocator.frameAllocator);
 
     allocator->allocator.total -= PAGE_SIZE;
     allocator->allocator.remaining -= PAGE_SIZE;

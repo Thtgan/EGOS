@@ -2,7 +2,7 @@
 
 #include<fs/path.h>
 #include<kit/util.h>
-#include<memory/memory.h>
+#include<memory/mm.h>
 #include<multitask/locks/spinlock.h>
 #include<structs/linkedList.h>
 #include<structs/refCounter.h>
@@ -29,7 +29,7 @@ static void __fsNode_doGetAbsolutePath(fsNode* node, String* pathOut);
 fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID inodeID) {
     DEBUG_ASSERT_SILENT(type != FS_ENTRY_TYPE_DUMMY);
     
-    fsNode* ret = memory_allocate(sizeof(fsNode));
+    fsNode* ret = mm_allocate(sizeof(fsNode));
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -105,7 +105,7 @@ void fsNode_release(fsNode* node) {
             break;
         }
 
-        memory_free(currentNode);
+        mm_free(currentNode);
         currentNode = parent;
     }
 }

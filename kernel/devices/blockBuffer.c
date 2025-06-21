@@ -7,6 +7,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/linkedList.h>
 #include<structs/hashTable.h>
@@ -16,7 +17,7 @@ static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64
 
 void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
-    void* blockData = memory_allocate(blockNum << bytePerBlockShift);
+    void* blockData = mm_allocate(blockNum << bytePerBlockShift);
     if (blockData == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -25,7 +26,7 @@ void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockN
 
     linkedList_initStruct(&blockBuffer->LRU);
 
-    BlockBufferBlock* blocks = memory_allocate(sizeof(BlockBufferBlock) * blockNum);
+    BlockBufferBlock* blocks = mm_allocate(sizeof(BlockBufferBlock) * blockNum);
     if (blocks == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -38,7 +39,7 @@ void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockN
         linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
     }
 
-    SinglyLinkedList* chains = memory_allocate(sizeof(SinglyLinkedList) * chainNum);
+    SinglyLinkedList* chains = mm_allocate(sizeof(SinglyLinkedList) * chainNum);
     if (chains == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -51,15 +52,15 @@ void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockN
     ERROR_FINAL_BEGIN(0);
 
     if (blockData != NULL) {
-        memory_free(blockData);
+        mm_free(blockData);
     }
 
     if (blocks != NULL) {
-        memory_free(blocks);
+        mm_free(blocks);
     }
 
     if (chains != NULL) {
-        memory_free(chains);
+        mm_free(chains);
     }
 }
 
@@ -71,15 +72,15 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
         current = linkedListNode_getNext(current);
     }
 
-    memory_free((void*)minOldBlockPtr);
-    memory_free(blockBuffer->hashTable.chains);
-    memory_free(blockBuffer->blockData);
+    mm_free((void*)minOldBlockPtr);
+    mm_free(blockBuffer->hashTable.chains);
+    mm_free(blockBuffer->blockData);
 
     memory_memset(blockBuffer, 0, sizeof(BlockBuffer));
 }
 
 void blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
-    BlockBufferBlock* newBlocks = memory_allocate(sizeof(BlockBufferBlock) * newBlockNum);
+    BlockBufferBlock* newBlocks = mm_allocate(sizeof(BlockBufferBlock) * newBlockNum);
     if (newBlocks == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -114,7 +115,7 @@ void blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
         }
     }
 
-    memory_free((void*)minOldBlockPtr);
+    mm_free((void*)minOldBlockPtr);
     blockBuffer->blockNum = newBlockNum;
 
     return;

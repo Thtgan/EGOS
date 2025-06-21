@@ -8,6 +8,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryLayout.h>
@@ -22,7 +23,7 @@ void debug_init() {
     virtualTeletype_initStruct(&_debug_tty, display_getCurrentContext(), 500);
     ERROR_GOTO_IF_ERROR(0);
     
-    _debug_dumpTo = memory_allocate(__TTY_DUMP_SIZE);
+    _debug_dumpTo = mm_allocate(__TTY_DUMP_SIZE);
     if (_debug_dumpTo == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

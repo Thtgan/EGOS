@@ -7,6 +7,7 @@
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<multitask/schedule.h>
 #include<multitask/state.h>
 #include<multitask/thread.h>
@@ -224,7 +225,7 @@ void process_removeThread(Process* process, Thread* thread) {
 }
 
 Thread* process_createThread(Process* process, ThreadEntryPoint entry) {
-    Thread* newThread = memory_allocate(sizeof(Thread));
+    Thread* newThread = mm_allocate(sizeof(Thread));
     if (newThread == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -341,7 +342,7 @@ static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, 
     if (cloneFrom->lastActiveThread != NULL) {
         DEBUG_ASSERT_SILENT(cloneFrom->lastActiveThread->state == STATE_RUNNING);
     
-        Thread* newThread = memory_allocate(sizeof(Thread));
+        Thread* newThread = mm_allocate(sizeof(Thread));
         if (newThread == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);

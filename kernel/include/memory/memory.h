@@ -2,9 +2,6 @@
 #define __MEMORY_MEMORY_H
 
 #include<kit/types.h>
-#include<memory/allocator.h>
-#include<memory/extendedPageTable.h>
-#include<memory/memoryPresets.h>
 
 /**
  * @brief Copy data from source to destination, overlap not handled
@@ -56,25 +53,5 @@ void* memory_memchr(const void* ptr, int val, Size n);
  * @return void* des
  */
 void* memory_memmove(void* des, const void* src, Size n);
-
-void* memory_allocateFramesDetailed(Size n, Flags16 flags);
-
-void* memory_allocateFrames(Size n);
-
-void memory_freeFrames(void* p, Size n);
-
-void* memory_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset, Flags16 firstFrameFlag);
-
-void* memory_allocatePages(Size n);
-
-void memory_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator);
-
-void memory_freePages(void* p);
-
-void* memory_allocateDetailed(Size n, MemoryPreset* preset);
-
-void* memory_allocate(Size n);
-
-void memory_free(void* p);
 
 #endif // __MEMORY_MEMORY_H

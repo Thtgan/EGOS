@@ -10,6 +10,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<structs/hashTable.h>
 #include<structs/linkedList.h>
 #include<structs/refCounter.h>
@@ -106,7 +107,7 @@ void superBlock_closeInode(iNode* inode) {
 
 fsEntry* superBlock_genericOpenFSentry(SuperBlock* superBlock, iNode* inode, FCNTLopenFlags flags) {
     //TODO: Lock
-    fsEntry* ret = memory_allocate(sizeof(fsEntry));
+    fsEntry* ret = mm_allocate(sizeof(fsEntry));
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -122,7 +123,7 @@ fsEntry* superBlock_genericOpenFSentry(SuperBlock* superBlock, iNode* inode, FCN
 void superBlock_genericCloseFSentry(SuperBlock* superBlock, fsEntry* entry) {
     //TODO: Lock
     memory_memset(entry, 0, sizeof(fsEntry));
-    memory_free(entry);
+    mm_free(entry);
 }
 
 void superBlock_genericMount(SuperBlock* superBlock, fsIdentifier* mountPoint, iNode* mountInode, Flags8 flags) {
@@ -130,7 +131,7 @@ void superBlock_genericMount(SuperBlock* superBlock, fsIdentifier* mountPoint, i
     //TODO: Lock
     fsNode* mountPointNode = NULL;
     iNode* parentDirInode = NULL;
-    Mount* mount = memory_allocate(sizeof(Mount));
+    Mount* mount = mm_allocate(sizeof(Mount));
     if (mount == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -184,7 +185,7 @@ void superBlock_genericMount(SuperBlock* superBlock, fsIdentifier* mountPoint, i
             fsNode_setMount(mountPointNode, NULL);  //TODO: Is this correct?
         }
 
-        memory_free(mount);
+        mm_free(mount);
     }
 
     if (mountPointNode != NULL) {
@@ -211,7 +212,7 @@ void superBlock_genericUnmount(SuperBlock* superBlock, fsIdentifier* mountPoint)
     string_clearStruct(&mount->path);
     linkedListNode_delete(&mount->node);
 
-    memory_free(mount);
+    mm_free(mount);
 
     SuperBlock* finalSuperBlock = NULL;
     mountPointNode = locate(mountPoint, FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS, &parentDirInode, &finalSuperBlock);   //Refer 'mountPointNode' once (if found), refer 'parentDirInode->fsNode' once (if iNode opened)

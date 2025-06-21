@@ -3,7 +3,7 @@
 #include<devices/blockDevice.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/memory.h>
+#include<memory/mm.h>
 #include<print.h>
 
 typedef struct __MBRpartitionEntry {
@@ -32,7 +32,7 @@ static DeviceOperations _partitionBlockDeviceOperations = {
 BlockDevice* blockDevice_bootFromDevice;    //TODO: Ugly, figure out a method to know which device we are booting from
 
 void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
-    void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
+    void* buffer = mm_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
     if (buffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -45,7 +45,7 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
     char nameBuffer[DEVICE_NAME_MAX_LENGTH + 1];
     PartitionBlockDevice* partitioBlockDevice = NULL;
     if (PTR_TO_VALUE(16, buffer + 0x1FE) != 0xAA55) {
-        memory_free(buffer);
+        mm_free(buffer);
         return;
     }
 
@@ -76,7 +76,7 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
             },
         };
 
-        partitioBlockDevice = memory_allocate(sizeof(PartitionBlockDevice));
+        partitioBlockDevice = mm_allocate(sizeof(PartitionBlockDevice));
         if (partitioBlockDevice == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -95,15 +95,15 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
         partitioBlockDevice = NULL;
     }
 
-    memory_free(buffer);
+    mm_free(buffer);
     return;
     ERROR_FINAL_BEGIN(0);
     if (partitioBlockDevice != NULL) {
-        memory_free(partitioBlockDevice);
+        mm_free(partitioBlockDevice);
     }
 
     if (buffer != NULL) {
-        memory_free(buffer);
+        mm_free(buffer);
     }
 }
 

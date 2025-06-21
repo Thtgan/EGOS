@@ -6,6 +6,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<structs/RBtree.h>
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
@@ -53,7 +54,7 @@ MajorDeviceID device_allocMajor() {
     }
 
     if (ret != DEVICE_INVALID_ID) {
-        __DeviceMajorTreeNode* newNode = memory_allocate(sizeof(__DeviceMajorTreeNode));
+        __DeviceMajorTreeNode* newNode = mm_allocate(sizeof(__DeviceMajorTreeNode));
         if (newNode == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -87,7 +88,7 @@ void device_releaseMajor(MajorDeviceID major) {
     RBtreeNode* deleted = RBtree_delete(&_device_majorDeviceTree, (Object)major);
     DEBUG_ASSERT_SILENT(deleted == found);
 
-    memory_free(node);
+    mm_free(node);
 
     return;
     ERROR_FINAL_BEGIN(0);

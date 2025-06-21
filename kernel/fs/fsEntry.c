@@ -10,6 +10,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<structs/refCounter.h>
 #include<structs/string.h>
 #include<system/pageTable.h>
@@ -65,7 +66,7 @@ void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 }
 
 fsEntry* fsEntry_copy(fsEntry* entry) {
-    fsEntry* ret = memory_allocate(sizeof(fsEntry));
+    fsEntry* ret = mm_allocate(sizeof(fsEntry));
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

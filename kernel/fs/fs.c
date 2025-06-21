@@ -11,6 +11,7 @@
 #include<kit/util.h>
 #include<memory/paging.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<structs/hashTable.h>
 #include<error.h>
 
@@ -51,7 +52,7 @@ void fs_init() {
     _supports[type].init();
     ERROR_GOTO_IF_ERROR(0);
 
-    fs_rootFS = memory_allocate(sizeof(FS));
+    fs_rootFS = mm_allocate(sizeof(FS));
     if (fs_rootFS == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -63,7 +64,7 @@ void fs_init() {
     _supports[FS_TYPE_DEVFS].init();
     ERROR_GOTO_IF_ERROR(0);
 
-    fs_devFS = memory_allocate(sizeof(FS));
+    fs_devFS = mm_allocate(sizeof(FS));
     if (fs_devFS == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -82,11 +83,11 @@ void fs_init() {
     return;
     ERROR_FINAL_BEGIN(0);
     if (fs_rootFS != NULL) {
-        memory_free(fs_rootFS);
+        mm_free(fs_rootFS);
     }
 
     if (fs_devFS != NULL) {
-        memory_free(fs_devFS);
+        mm_free(fs_devFS);
     }
 }
 

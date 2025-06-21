@@ -8,7 +8,7 @@
 #include<fs/devfs/inode.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/memory.h>
+#include<memory/mm.h>
 #include<multitask/locks/spinlock.h>
 #include<structs/hashTable.h>
 #include<structs/refCounter.h>
@@ -66,7 +66,7 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
         ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
     }
 
-    batchAllocated = memory_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);
+    batchAllocated = mm_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);
     if (batchAllocated == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -98,18 +98,18 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (batchAllocated != NULL) {
-        memory_free(batchAllocated);
+        mm_free(batchAllocated);
     }
 }
 
 void devfs_close(FS* fs) {
     _devfs_opened = false;
-    memory_free(fs->superBlock);
+    mm_free(fs->superBlock);
 }
 
 void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
     DevfsNodeMetadata* metadata = NULL;
-    metadata = memory_allocate(sizeof(DevfsNodeMetadata));
+    metadata = mm_allocate(sizeof(DevfsNodeMetadata));
     if (metadata == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -126,14 +126,14 @@ void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, f
         },
         (ERROR_ID_ALREADY_EXIST, {
             ERROR_CLEAR();
-            memory_free(metadata);
+            mm_free(metadata);
         })
     );
 
     return;
     ERROR_FINAL_BEGIN(0);
     if (metadata != NULL) {
-        memory_free(metadata);
+        mm_free(metadata);
     }
 }
 
@@ -147,7 +147,7 @@ void devfsSuperBlock_unregisterMetadata(DevfsSuperBlock* superBlock, ID inodeID)
     DevfsNodeMetadata* node = HOST_POINTER(deleted, DevfsNodeMetadata, hashNode);
 
     fsNode_release(node->node);
-    memory_free(node);
+    mm_free(node);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -182,7 +182,7 @@ static fsNode* __devfs_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) 
 static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     DevfsInode* devfsInode = NULL;
 
-    devfsInode = memory_allocate(sizeof(DevfsInode));
+    devfsInode = mm_allocate(sizeof(DevfsInode));
     if (devfsInode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -231,7 +231,7 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     return inode;
     ERROR_FINAL_BEGIN(0);
     if (devfsInode != NULL) {
-        memory_free(devfsInode);
+        mm_free(devfsInode);
     }
 
     ERROR_CHECKPOINT();
@@ -245,7 +245,7 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
     ID inodeID = superBlock_allocateInodeID(superBlock);
     fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, inodeID);
 
-    devfsInode = memory_allocate(sizeof(DevfsInode));
+    devfsInode = mm_allocate(sizeof(DevfsInode));
     if (devfsInode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -297,7 +297,7 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
     return inode;
     ERROR_FINAL_BEGIN(0);
     if (devfsInode != NULL) {
-        memory_free(devfsInode);
+        mm_free(devfsInode);
     }
 
     return NULL;
@@ -311,7 +311,7 @@ static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) 
     fsNode_release(inode->fsNode);
     inode->fsNode->isInodeActive = false;
     DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
-    memory_free(devfsInode);
+    mm_free(devfsInode);
 }
 
 static void __devfs_superBlock_sync(SuperBlock* superBlock) {

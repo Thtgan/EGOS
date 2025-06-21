@@ -5,6 +5,7 @@
 #include<kit/util.h>
 #include<memory/frameMetadata.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
@@ -12,7 +13,7 @@
 #include<debug.h>
 
 void* extendedPageTable_allocateFrame() {
-    void* ret = memory_allocateFrames(EXTENDED_PAGE_TABLE_FRAME_SIZE);
+    void* ret = mm_allocateFrames(EXTENDED_PAGE_TABLE_FRAME_SIZE);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -25,7 +26,7 @@ void* extendedPageTable_allocateFrame() {
 
 void extendedPageTable_freeFrame(void* frame) {
     memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frame), 0, sizeof(ExtendedPageTable));
-    memory_freeFrames(frame, EXTENDED_PAGE_TABLE_FRAME_SIZE);
+    mm_freeFrames(frame, EXTENDED_PAGE_TABLE_FRAME_SIZE);
 }
 
 ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry) {
@@ -59,7 +60,7 @@ void extraPageTableContext_registerPreset(ExtraPageTableContext* context, Memory
 }
 
 ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* source) {
-    ExtendedPageTableRoot* ret = memory_allocate(sizeof(ExtendedPageTableRoot));
+    ExtendedPageTableRoot* ret = mm_allocate(sizeof(ExtendedPageTableRoot));
     void* frames = extendedPageTable_allocateFrame();
     if (frames == NULL) {
         ERROR_ASSERT_ANY();
@@ -91,7 +92,7 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
     ERROR_GOTO_IF_ERROR(0);
     
     extendedPageTable_freeFrame(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(table->extendedTable));
-    memory_free(table);
+    mm_free(table);
 
     return;
     ERROR_FINAL_BEGIN(0);

@@ -22,7 +22,7 @@ void init_initKernelStage1();
 __attribute__((always_inline))
 static inline void init_initKernelStack() {
     MemoryPreset* cowPreset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    void* newStack = memory_allocateDetailed(
+    void* newStack = mm_allocateDetailed(
         THREAD_DEFAULT_KERNEL_STACK_SIZE,
         cowPreset
     ), * oldStack = init_getBootStackBottom();

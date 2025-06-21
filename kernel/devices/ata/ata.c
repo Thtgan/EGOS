@@ -10,6 +10,7 @@
 #include<kit/util.h>
 #include<real/simpleAsmLines.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<error.h>
 
 static ATAdeviceType __ata_getDeviceType(ATAchannel* channel, int deviceSelect);
@@ -237,7 +238,7 @@ static bool __ata_initDevice(ATAchannel* channel, Uint8 deviceSelect, ATAdevice*
         ERROR_THROW(ERROR_ID_IO_FAILED, 0);
     }
 
-    void* buffer = memory_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
+    void* buffer = mm_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
     if (buffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -274,13 +275,13 @@ static bool __ata_initDevice(ATAchannel* channel, Uint8 deviceSelect, ATAdevice*
 
     device->deviceNumber = deviceSelect;
 
-    memory_free(buffer);
+    mm_free(buffer);
     return true;
     ERROR_FINAL_BEGIN(0);
     return false;
 
     ERROR_FINAL_BEGIN(1);
-    memory_free(buffer);
+    mm_free(buffer);
     ERROR_GOTO(0);
 }
 
