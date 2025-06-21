@@ -209,7 +209,6 @@ void fat32_close(FS* fs) {
     Device* superBlockDevice = &superBlockBlockDevice->device;
     Size FATsizeInByte = fat32SuperBlock->FATrange.length * POWER_2(superBlockDevice->granularity);
     memory_memset(fat32SuperBlock->FAT, 0, FATsizeInByte);
-    // memory_freeFrames(paging_convertAddressV2P(fat32SuperBlock->FAT));
     memory_free(fat32SuperBlock->FAT);
 
     void* batchAllocated = fat32SuperBlock; //TODO: Ugly code
@@ -235,6 +234,7 @@ void fat32SuperBlock_registerMetadata(FAT32SuperBlock* superBlock, DirectoryEntr
     metadata->belongTo = belongTo;
     memory_memcpy(&metadata->inodeAttribute, inodeAttribute, sizeof(iNodeAttribute));
     metadata->size = entry->size;
+    metadata->isTouched = false;
 
     hashTable_insert(&superBlock->metadataTableInodeID, entry->inodeID, &metadata->hashNodeInodeID);
     hashTable_insert(&superBlock->metadataTableFirstCluster, firstCluster, &metadata->hashNodeFirstCluster);
