@@ -21,9 +21,10 @@ void init_initKernelStage1();
 
 __attribute__((always_inline))
 static inline void init_initKernelStack() {
+    MemoryPreset* cowPreset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
     void* newStack = memory_allocateDetailed(
         THREAD_DEFAULT_KERNEL_STACK_SIZE,
-        EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW)
+        cowPreset
     ), * oldStack = init_getBootStackBottom();
     DEBUG_ASSERT_SILENT(newStack != NULL);
     DEBUG_ASSERT_SILENT(*(Uintptr*)readRegister_RBP_64() == INIT_BOOT_STACK_MAGIC);

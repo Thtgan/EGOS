@@ -82,7 +82,6 @@ extern char __usermode_executeReturn;
 void* usermode_executeReturn = &__usermode_executeReturn;
 
 static int __usermode_doExecute(ConstCstring path, File* file) {
-    void* frame = NULL;
     Size loadedHeaderNum = 0;
     Size initedStackSize = 0;
     
@@ -144,9 +143,6 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
 
     return (int)ret;
     ERROR_FINAL_BEGIN(0);
-    if (frame != NULL) {
-        memory_freeFrames(frame);
-    }
 
     ErrorRecord tmp;
     error_readRecord(&tmp);

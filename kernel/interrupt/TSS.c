@@ -12,7 +12,7 @@ static TSS _tss; //TODO: Capsule this
 
 void tss_init() {
     memory_memset(&_tss, 0, sizeof(TSS));
-    _tss.ist[0] = (Uintptr)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(memory_allocateFrames(4) + 4 * PAGE_SIZE);
+    _tss.ist[0] = (Uintptr)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(memory_allocateFrames(4) + 4 * PAGE_SIZE);  //TODO: Identical mapping should not live so long
     _tss.ist[1] = (Uintptr)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(memory_allocateFrames(4) + 4 * PAGE_SIZE);
     _tss.rsp[0] = (Uintptr)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(memory_allocateFrames(4) + 4 * PAGE_SIZE);
 

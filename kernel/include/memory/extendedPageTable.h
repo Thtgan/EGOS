@@ -67,7 +67,7 @@ void extraPageTableContext_initStruct(ExtraPageTableContext* context);
 
 void extraPageTableContext_registerPreset(ExtraPageTableContext* context, MemoryPreset* preset);
 
-static inline MemoryPreset* extraPageTableContext_getPreset(ExtraPageTableContext* context, Index8 id) {
+static inline MemoryPreset* extraPageTableContext_getPreset(ExtraPageTableContext* context, Index8 id) {    //TODO: Duplicated with EXTRA_PAGE_TABLE_CONTEXT_ID_TO_PRESET
     return context->presetCnt <= id ? NULL : context->presets[id];
 }
 

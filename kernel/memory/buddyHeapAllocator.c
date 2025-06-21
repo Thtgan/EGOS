@@ -7,6 +7,7 @@
 #include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/singlyLinkedList.h>
+#include<system/memoryLayout.h>
 #include<algorithms.h>
 #include<error.h>
 #include<print.h>
@@ -195,22 +196,14 @@ static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allo
 }
 
 static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
-    void* frames = frameAllocator_allocateFrames(allocator->allocator.frameAllocator, n, false);
-    if (frames == NULL) {
+    MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID);
+    void* pages = memory_allocatePagesDetailed(n, mm->extendedTable, allocator->allocator.frameAllocator, preset, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP);
+    if (pages == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    void* v = NULL;
-    if (allocator->allocator.presetID == EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(mm->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)) {
-        v = PAGING_CONVERT_SHARED_HEAP_ADDRESS_P2V(frames);
-    } else {
-        v = PAGING_CONVERT_HEAP_ADDRESS_P2V(frames);
-    }
-    extendedPageTableRoot_draw(mm->extendedTable, v, frames, n, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID), EMPTY_FLAGS);
-    ERROR_GOTO_IF_ERROR(0);
-
-    __buddyHeapAllocatorBuddyList_recycleMemory(allocator, v, PAGE_SIZE);
+    __buddyHeapAllocatorBuddyList_recycleMemory(allocator, pages, PAGE_SIZE);
 
     allocator->allocator.remaining += PAGE_SIZE;
     allocator->allocator.total += PAGE_SIZE;
@@ -220,15 +213,7 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
 }
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page) {
-    extendedPageTableRoot_erase(mm->extendedTable, page, 1);
-    ERROR_GOTO_IF_ERROR(0);
-    void* p = NULL;
-    if (allocator->allocator.presetID == EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(mm->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)) {
-        p = PAGING_CONVERT_SHARED_HEAP_ADDRESS_V2P(page);
-    } else {
-        p = PAGING_CONVERT_HEAP_ADDRESS_V2P(page);
-    }
-    frameAllocator_freeFrames(allocator->allocator.frameAllocator, p, 1);
+    memory_freePagesDetailed(page, mm->extendedTable, allocator->allocator.frameAllocator);
 
     allocator->allocator.total -= PAGE_SIZE;
     allocator->allocator.remaining -= PAGE_SIZE;
@@ -284,8 +269,8 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
 
 static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     if (
-        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_HEAP_BEGIN, MEMORY_LAYOUT_KERNEL_HEAP_END, (Uintptr)ptr, <=, <) &&
-        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_SHARED_HEAP_BEGIN, MEMORY_LAYOUT_KERNEL_SHARED_HEAP_END, (Uintptr)ptr, <=, <)
+        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_END, (Uintptr)ptr, <=, <) &&
+        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_END, (Uintptr)ptr, <=, <)
     ) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }

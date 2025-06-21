@@ -297,8 +297,8 @@ static void __thread_switchContext(Thread* from, Thread* to) {
 
 static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry) {
     Context* context = (Context*)(threadStack_getStackTop(&thread->kernelStack) - sizeof(Context));
-
-    Context* contextWrite = (Context*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_CONVERT_HEAP_ADDRESS_V2P(context));
+    
+    Context* contextWrite = (Context*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_CONVERT_SHREAD_SPACE_V2P(context));   //TODO: Generalize this fast translation
 
     contextWrite->rip = (Uintptr)entry;
     Registers* regs = &contextWrite->regs;

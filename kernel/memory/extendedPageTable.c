@@ -25,7 +25,7 @@ void* extendedPageTable_allocateFrame() {
 
 void extendedPageTable_freeFrame(void* frame) {
     memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frame), 0, sizeof(ExtendedPageTable));
-    memory_freeFrames(frame);
+    memory_freeFrames(frame, EXTENDED_PAGE_TABLE_FRAME_SIZE);
 }
 
 ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry) {
@@ -324,7 +324,5 @@ void* extendedPageTableRoot_translate(ExtendedPageTableRoot* root, void* v) {
         table = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
-    //Not supposed to reach here
-    ERROR_THROW_NO_GOTO(ERROR_ID_UNKNOWN);                                              
-    return NULL;
+    debug_blowup("Not supposed to reach here!\n");
 }

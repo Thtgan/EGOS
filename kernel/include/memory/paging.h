@@ -44,17 +44,23 @@ static inline bool paging_isBasedAddress(void* v, Uintptr base) {
     return VAL_AND((Uintptr)v, base) == base;
 }
 
-#define PAGING_CONVERT_HEAP_ADDRESS_V2P(__V)        paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN)
+//Contagious space macros
 
-#define PAGING_CONVERT_HEAP_ADDRESS_P2V(__P)        paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN)
+#define PAGING_CONVERT_CONTAGIOUS_SPACE_V2P(__V)    paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN)
 
-#define PAGING_IS_BASED_ADDRESS_HEAP(__V)           paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_HEAP_BEGIN)
+#define PAGING_CONVERT_CONTAGIOUS_SPACE_P2V(__P)    paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN)
 
-#define PAGING_CONVERT_SHARED_HEAP_ADDRESS_V2P(__V) paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_SHARED_HEAP_BEGIN)
+#define PAGING_IS_BASED_CONTAGIOUS_SPACE(__V)       paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN)
 
-#define PAGING_CONVERT_SHARED_HEAP_ADDRESS_P2V(__P) paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_SHARED_HEAP_BEGIN)
+//Shread space macros
 
-#define PAGING_IS_BASED_ADDRESS_SHARED_HEAP(__V)    paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_SHARED_HEAP_BEGIN)
+#define PAGING_CONVERT_SHREAD_SPACE_V2P(__V)        paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN)
+
+#define PAGING_CONVERT_SHREAD_SPACE_P2V(__P)        paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN)
+
+#define PAGING_IS_BASED_SHREAD_SPACE(__V)           paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN)
+
+//Identical memory macros
 
 #define PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(__V)   paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
 

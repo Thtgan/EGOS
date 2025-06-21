@@ -3,6 +3,7 @@
 #include<kit/types.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<system/pageTable.h>
 #include<debug.h>
@@ -28,25 +29,9 @@ void threadStack_touch(ThreadStack* stack) {
         return;
     }
     DEBUG_ASSERT_SILENT(stack->size % PAGE_SIZE == 0);
-    Size stackFrameNum = stack->size / PAGE_SIZE;
-    void* stackFrames = memory_allocateFrames(stackFrameNum);
-    if (stackFrames == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(stackFrames), 0, stack->size);
-
-    void* stackBottom = PAGING_CONVERT_HEAP_ADDRESS_P2V(stackFrames);
-
-    extendedPageTableRoot_draw(
-        stack->extendedTable,
-        stackBottom,
-        stackFrames,
-        stackFrameNum,
-        extraPageTableContext_getDefaultPreset(stack->extendedTable->context, stack->type),
-        EMPTY_FLAGS
-    );
-    ERROR_GOTO_IF_ERROR(0);
+    Size stackPageNum = stack->size / PAGE_SIZE;
+    MemoryPreset* preset = extraPageTableContext_getDefaultPreset(stack->extendedTable->context, stack->type);
+    void* stackBottom = memory_allocatePagesDetailed(stackPageNum, stack->extendedTable, mm->frameAllocator, preset, EMPTY_FLAGS);
     
     stack->stackBottom = stackBottom;
 
@@ -55,14 +40,7 @@ void threadStack_touch(ThreadStack* stack) {
 }
 
 void threadStack_clearStruct(ThreadStack* stack) {
-    void* stackFrames = PAGING_CONVERT_HEAP_ADDRESS_V2P(stack->stackBottom);
-    DEBUG_ASSERT_SILENT(stack->size % PAGE_SIZE == 0);
-    Size stackFrameNum = stack->size / PAGE_SIZE;
-
-    extendedPageTableRoot_erase(stack->extendedTable, (void*)stack->stackBottom, stackFrameNum);
-    ERROR_GOTO_IF_ERROR(0);
-
-    memory_freeFrames(stackFrames);
+    memory_freePagesDetailed(stack->stackBottom, stack->extendedTable, mm->frameAllocator);
 
     return;
     ERROR_FINAL_BEGIN(0);

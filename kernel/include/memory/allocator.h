@@ -57,7 +57,7 @@ typedef struct HeapAllocator {
 #define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE        PAGE_SIZE
 #define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE_SHIFT  PAGE_SIZE_SHIFT
 
-typedef struct AllocatorOperations {
+typedef struct AllocatorOperations {    //TODO: Rename this
     void* (*allocate)(HeapAllocator* allocator, Size n);
     void (*free)(HeapAllocator* allocator, void* ptr);
     Size (*getActualSize)(HeapAllocator* allocator, Size n);

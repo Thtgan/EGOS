@@ -1,11 +1,13 @@
-#include<memory/extendedPageTable.h>
+#include<memory/memoryPresets.h>
 
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
+#include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
+#include<system/memoryLayout.h>
 #include<system/pageTable.h>
 #include<multitask/context.h>
 #include<interrupt/IDT.h>
@@ -37,7 +39,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        }
+        },
+        .base = MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_SHARE] = (MemoryPreset) {
         .id = 0,
@@ -46,7 +49,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        }
+        },
+        .base = MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_COW] = (MemoryPreset) {
         .id = 0,
@@ -55,7 +59,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
-        }
+        },
+        .base = MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_MIXED] = (MemoryPreset) {
         .id = 0,
@@ -64,7 +69,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_deepCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_deepReleaseEntry    //TODO: Setup sepcific relase function for mixed
-        }
+        },
+        .base = 0
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA] = (MemoryPreset) {
         .id = 0,
@@ -73,7 +79,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
-        }
+        },
+        .base = MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_CODE] = (MemoryPreset) {
         .id = 0,
@@ -82,7 +89,8 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        }
+        },
+        .base = MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN
     }
 };
 
@@ -246,18 +254,9 @@ static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extende
 
     if (PAGING_IS_LEAF(level, *entry)) {
         void* p = pageTable_getNextLevelPage(level, *entry);
-        // if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) {
-        //     memory_freeFrames(p);
-        // } else {
-        //     FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, p);
-        //     if (unit == NULL) {
-        //         ERROR_ASSERT_ANY();
-        //         ERROR_GOTO(0);
-        //     }
-        //     --unit->cow;
-        // }
-
-        if (TEST_FLAGS_FAIL(*entry, PAGING_ENTRY_FLAG_RW)) {
+        if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) { //If writable, this frame must have only 1 reference, no matter cloned or not
+            memory_freeFrames(p, 1);    //TODO: This frame might not be allocated by default frame allocator
+        } else {
             FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, p);
             if (unit == NULL) {
                 ERROR_ASSERT_ANY();

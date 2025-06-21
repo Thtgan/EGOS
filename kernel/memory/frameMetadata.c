@@ -15,36 +15,6 @@
 #include<error.h>
 #include<debug.h>
 
-void frameMetadataUnit_markAllocatedChunk(FrameMetadataUnit* unit, Size n) {
-    SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK);
-    unit->chunkLength = n;
-}
-
-void frameMetadataUnit_markAllocatedShard(FrameMetadataUnit* unit, Size n) {
-    for (int i = 0; i < n; ++i) {
-        FrameMetadataUnit* u = &unit[i];
-        SET_FLAG_BACK(u->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS);
-        u->chunkLength = 1;
-    }
-}
-
-void frameMetadataUnit_unmarkAllocated(FrameMetadataUnit* unit, Size n) {
-    DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK | FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS));
-    DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK | FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS));
-
-    if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK)) {
-        DEBUG_ASSERT_SILENT(n == unit->chunkLength);
-        CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK);
-        unit->chunkLength = 0;
-    } else {
-        for (int i = 0; i < n; ++i) {
-            FrameMetadataUnit* u = &unit[i];
-            SET_FLAG_BACK(u->flags, FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS);
-            u->chunkLength = 1;
-        }
-    }
-}
-
 #define __FRAME_METADATA_PAGE_N(__N)    DIVIDE_ROUND_UP((sizeof(FrameMetadataHeader) + sizeof(FrameMetadata) * (__N)), PAGE_SIZE)
 
 void frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* frames, Size n) {
@@ -129,14 +99,14 @@ FrameMetadataHeader* frameMetadata_getFrameMetadataHeader(FrameMetadata* metadat
     return NULL;
 }
 
-FrameMetadataUnit* frameMetadata_getFrameMetadataUnit(FrameMetadata* metadata, void* p) {
-    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(&mm->frameMetadata, p);
+FrameMetadataUnit* frameMetadata_getFrameMetadataUnit(FrameMetadata* metadata, void* frame) {
+    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(&mm->frameMetadata, frame);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
     
-    return frameMetadataHeader_getMetadataUnit(header, p);
+    return frameMetadataHeader_getMetadataUnit(header, frame);
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }

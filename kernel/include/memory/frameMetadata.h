@@ -15,21 +15,14 @@ typedef struct FrameMetadata FrameMetadata;
 
 typedef struct FrameMetadataUnit {
     Flags8  flags;
-#define FRAME_METADATA_UNIT_FLAGS_PAGE_TABLE            FLAG16(0)
-#define FRAME_METADATA_UNIT_FLAGS_ALLOCATED_CHUNK       FLAG16(1)
-#define FRAME_METADATA_UNIT_FLAGS_ALLOCATED_SHARDS      FLAG16(2)
+#define FRAME_METADATA_UNIT_FLAGS_IS_REGION_HEAD        FLAG16(0)
+#define FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP          FLAG16(1)
     Uint8   reserved;
     Uint16  cow;
-    Uint32  chunkLength;
+    Uint32  vRegionLength;
 } __attribute__((packed)) FrameMetadataUnit;
 
 DEBUG_ASSERT_COMPILE(sizeof(FrameMetadataUnit) == 8);
-
-void frameMetadataUnit_markAllocatedChunk(FrameMetadataUnit* unit, Size n);
-
-void frameMetadataUnit_markAllocatedShard(FrameMetadataUnit* unit, Size n);
-
-void frameMetadataUnit_unmarkAllocated(FrameMetadataUnit* unit, Size n);
 
 typedef struct FrameMetadataHeader {
     void*               frameBase;

@@ -203,12 +203,6 @@ static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Siz
             <=, <=
         )
     );
-    
-    if (chunk) {
-        frameMetadataUnit_markAllocatedChunk(unit, n);
-    } else {
-        frameMetadataUnit_markAllocatedShard(unit, n);
-    }
 
     return ret;
     ERROR_FINAL_BEGIN(0);
@@ -217,17 +211,6 @@ static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Siz
 
 static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* frames, Size n) {
     BuddyFrameAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyFrameAllocator, allocator);
-
-    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(allocator->metadata, frames);
-    FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, frames);
-    DEBUG_ASSERT_SILENT(
-        RANGE_WITHIN(
-            (Uintptr)&header->units, (Uintptr)&header->units[header->frameNum],
-            (Uintptr)unit, (Uintptr)&unit[n],
-            <=, <=
-        )
-    );
-    frameMetadataUnit_unmarkAllocated(unit, n);
 
     __buddyFrameList_recycleFrames(buddyAllocator, frames, n);
 

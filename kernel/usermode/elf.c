@@ -109,8 +109,6 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     Process* currentProcess = schedule_getCurrentProcess();
     ExtendedPageTableRoot* extendedTable = currentProcess->extendedTable;
     fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN);
-
-    Uint64 flags = PAGING_ENTRY_FLAG_US | (TEST_FLAGS(programHeader->flags, ELF64_PROGRAM_HEADER_FLAGS_WRITE) ? PAGING_ENTRY_FLAG_RW : 0) | PAGING_ENTRY_FLAG_PRESENT;
     
     Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
     void* base = (void*)pageBegin;
@@ -157,7 +155,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     return;
     ERROR_FINAL_BEGIN(0);
     if (frame != NULL) {
-        memory_freeFrames(frame);
+        memory_freeFrames(frame, 1);
     }
 
     void* releaseBase = (void*)pageBegin;
@@ -192,7 +190,7 @@ void elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
         extendedPageTableRoot_erase(extendedTable, base, 1);
         ERROR_GOTO_IF_ERROR(0);
 
-        memory_freeFrames(frame);
+        memory_freeFrames(frame, 1);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 

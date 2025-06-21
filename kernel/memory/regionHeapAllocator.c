@@ -73,23 +73,15 @@ static Size __regionHeapAllocator_getActualSize(HeapAllocator* allocator, Size n
 }
 
 static void __regionHeapAllocator_expand(RegionHeapAllocator* allocator) {
-    void* frames = frameAllocator_allocateFrames(allocator->allocator.frameAllocator, 1, false);
-    if (frames == NULL) {
+    MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID);
+    void* page = memory_allocatePagesDetailed(1, mm->extendedTable, allocator->allocator.frameAllocator, preset, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP);
+    if (page == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    void* v = NULL;
-    if (allocator->allocator.presetID == EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(mm->extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_SHARE)) {
-        v = PAGING_CONVERT_SHARED_HEAP_ADDRESS_P2V(frames);
-    } else {
-        v = PAGING_CONVERT_HEAP_ADDRESS_P2V(frames);
-    }
-    extendedPageTableRoot_draw(mm->extendedTable, v, frames, 1, extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID), EMPTY_FLAGS);
-    ERROR_GOTO_IF_ERROR(0);
-
     Size regionNum = PAGE_SIZE / allocator->regionSize;
-    void* currentRegion = v;
+    void* currentRegion = page;
     for (int i = 0; i < regionNum; ++i, currentRegion += allocator->regionSize) {
         SinglyLinkedListNode* node = (SinglyLinkedListNode*)currentRegion;
         singlyLinkedList_insertNext(&allocator->regionList, node);
