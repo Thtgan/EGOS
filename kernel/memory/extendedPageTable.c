@@ -36,7 +36,7 @@ ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry) {
 
 void extraPageTableContext_initStruct(ExtraPageTableContext* context) {
     context->presetCnt = 0;
-    memory_memset(context->presets, 0, sizeof(context->presets));
+    memory_memset(context->presets, NULL, sizeof(context->presets));
     memory_memset(context->presetType2id, 0xFF, sizeof(context->presetType2id));
 
     memoryPreset_registerDefaultPresets(context);
