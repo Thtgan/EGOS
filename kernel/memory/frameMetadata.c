@@ -24,13 +24,15 @@ void frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* frames, S
     DEBUG_ASSERT_SILENT(metadataPageNum < n);
 
     linkedListNode_initStruct(&header->node);
-    header->frameBase = frames + metadataPageNum * PAGE_SIZE;
+    header->frameBaseIndex = FRAME_METADATA_FRAME_TO_INDEX(frames) + metadataPageNum;
     header->frameNum = n - metadataPageNum;
+
+    memory_memset(header->units, 0, header->frameNum * sizeof(FrameMetadata));
 }
 
-FrameMetadataUnit* frameMetadataHeader_getMetadataUnit(FrameMetadataHeader* header, void* frame) {
+FrameMetadataUnit* frameMetadataHeader_getUnit(FrameMetadataHeader* header, void* frame) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(frame));
-    Index64 index = DIVIDE_ROUND_DOWN(frame - header->frameBase, PAGE_SIZE);
+    Index64 index = FRAME_METADATA_FRAME_TO_INDEX(frame) - header->frameBaseIndex;
     DEBUG_ASSERT_SILENT(index < header->frameNum);
     return &header->units[index];
 }
@@ -43,70 +45,131 @@ void frameMetadata_initStruct(FrameMetadata* metadata) {
 
 FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* frames, Size n) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(frames));
-    FrameMetadataHeader* newHeader = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
+    
 
+    Index32 newFramesBeginIndex = FRAME_METADATA_FRAME_TO_INDEX(frames);
     LinkedListNode* insertBefore = metadata->headerList.next;
     for (; insertBefore != &metadata->headerList; insertBefore = insertBefore->next) {
         FrameMetadataHeader* header = HOST_POINTER(insertBefore, FrameMetadataHeader, node);
 
         DEBUG_ASSERT_SILENT(
-            VALUE_WITHIN(
-                (Uintptr)header, (Uintptr)(header->frameBase + header->frameNum * PAGE_SIZE),
-                (Uintptr)newHeader,
-                <=, <
+            !RANGE_HAS_OVERLAP(
+                newFramesBeginIndex, newFramesBeginIndex + n,
+                header->frameBaseIndex, header->frameBaseIndex + header->frameNum
             )
         );
 
-        if ((Uintptr)header->frameBase > (Uintptr)newHeader->frameBase) {
+        if (header->frameBaseIndex > newFramesBeginIndex) {
             break;
         }
     }
 
+    FrameMetadataHeader* newHeader = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
     frameMetadataHeader_initStruct(newHeader, frames, n);
-
-    memory_memset(newHeader->units, 0, newHeader->frameNum * sizeof(FrameMetadata));
-
     linkedListNode_insertFront(insertBefore, &newHeader->node);
 
     metadata->frameNum += newHeader->frameNum;
     return newHeader;
 }
 
-FrameMetadataHeader* frameMetadata_getFrameMetadataHeader(FrameMetadata* metadata, void* frame) {
+FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, void* frame) {
     FrameMetadataHeader* lastAccessed = metadata->lastAccessed;
-    if (lastAccessed != NULL && VALUE_WITHIN((Uintptr)lastAccessed->frameBase, (Uintptr)(lastAccessed->frameBase + lastAccessed->frameNum * PAGE_SIZE), (Uintptr)frame, <=, <)) {
+    if (lastAccessed != NULL && frameMetadataHeader_checkContain(lastAccessed, frame)) {
         return lastAccessed;
     }
     
     for (LinkedListNode* node = metadata->headerList.next; node != &metadata->headerList; node = node->next) {
         FrameMetadataHeader* header = HOST_POINTER(node, FrameMetadataHeader, node);
-        if (
-            !VALUE_WITHIN(
-                (Uintptr)header->frameBase, (Uintptr)(header->frameBase + header->frameNum * PAGE_SIZE),
-                (Uintptr)frame,
-                <=, <
-            )
-        ) {
-            continue;
+        if (frameMetadataHeader_checkContain(header, frame)) {
+            metadata->lastAccessed = header;
+            return header;
         }
-
-        metadata->lastAccessed = header;
-
-        return header;
     }
 
     ERROR_THROW_NO_GOTO(ERROR_ID_NOT_FOUND);
     return NULL;
 }
 
-FrameMetadataUnit* frameMetadata_getFrameMetadataUnit(FrameMetadata* metadata, void* frame) {
-    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(&mm->frameMetadata, frame);
+FrameMetadataUnit* frameMetadata_getUnit(FrameMetadata* metadata, void* frame) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(&mm->frameMetadata, frame);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
     
-    return frameMetadataHeader_getMetadataUnit(header, frame);
+    return frameMetadataHeader_getUnit(header, frame);
     ERROR_FINAL_BEGIN(0);
     return NULL;
+}
+
+void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, void* frames, Size n, FrameAllocator* allocator) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+    if (header == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    if (!frameMetadataHeader_checkRangeContain(header, frames, n)) {
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+    }
+
+    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, frames);
+    for (int i = 0; i < n; ++i) {
+        FrameMetadataUnit* unit = unitBegin + i;
+        CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR);
+        SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR);
+        unit->belongToAllocator = allocator;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
+}
+
+void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, void* frames, Size n, HeapAllocator* allocator) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+    if (header == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    if (!frameMetadataHeader_checkRangeContain(header, frames, n)) {
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+    }
+
+    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, frames);
+    for (int i = 0; i < n; ++i) {
+        FrameMetadataUnit* unit = unitBegin + i;
+        CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR);
+        SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR);
+        unit->belongToAllocator = allocator;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
+}
+
+void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, void* frames, Size n) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+    if (header == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    if (!frameMetadataHeader_checkRangeContain(header, frames, n)) {
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+    }
+
+    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, frames);
+    for (int i = 0; i < n; ++i) {
+        FrameMetadataUnit* unit = unitBegin + i;
+        DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR) && unit->belongToAllocator != NULL);
+        CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR);
+        unit->belongToAllocator = NULL;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+    return;
 }

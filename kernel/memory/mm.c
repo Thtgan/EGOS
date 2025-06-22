@@ -47,7 +47,7 @@ void mm_init() {
     buddyFrameAllocator_initStruct(&_buddyFrameAllocator, &mm->frameMetadata);
     mm->frameAllocator = &_buddyFrameAllocator.allocator;
 
-    frameAllocator_addFrames(mm->frameAllocator, header->frameBase, header->frameNum);
+    frameAllocator_addFrames(mm->frameAllocator, frameMetadataHeader_getBase(header), header->frameNum);
     ERROR_GOTO_IF_ERROR(0);
 
     paging_init();
@@ -75,9 +75,9 @@ void* mm_allocateFramesDetailed(Size n, Flags16 flags) {
         ERROR_GOTO(0);
     }
 
-    FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(&mm->frameMetadata, ret);
-    FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, ret);
-    unit->flags = flags;
+    FrameMetadataHeader* header = frameMetadata_getHeader(&mm->frameMetadata, ret);
+    FrameMetadataUnit* unit = frameMetadataHeader_getUnit(header, ret);
+    SET_FLAG_BACK(unit->flags, flags);
 
     return ret;
     ERROR_FINAL_BEGIN(0);
@@ -107,14 +107,43 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
     extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(1);
 
-    FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, frames);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, frames);
     unit->vRegionLength = n;
-    unit->flags = firstFrameFlag | FRAME_METADATA_UNIT_FLAGS_IS_REGION_HEAD;
+    // unit->flags = firstFrameFlag | FRAME_METADATA_UNIT_FLAGS_IS_REGION_HEAD;
+    SET_FLAG_BACK(unit->flags, firstFrameFlag);
     
     return ret;
 
     ERROR_FINAL_BEGIN(1);
     frameAllocator_freeFrames(allocator, frames, n);
+    
+    ERROR_FINAL_BEGIN(0);
+}
+
+void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, MemoryPreset* preset) {
+    if (n == 0) {
+        return NULL;
+    }
+
+    DEBUG_ASSERT_SILENT(preset->base != 0);
+    FrameAllocator* frameAllocator = allocator->frameAllocator;
+    void* frames = frameAllocator_allocateFrames(frameAllocator, n);
+    if (frames == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    void* ret = paging_convertAddressP2V(frames, preset->base);
+    frameMetadata_assignToHeapAllocator(&mm->frameMetadata, frames, n, allocator);
+    ERROR_GOTO_IF_ERROR(1);
+
+    extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, EMPTY_FLAGS);
+    ERROR_GOTO_IF_ERROR(1);
+    
+    return ret;
+
+    ERROR_FINAL_BEGIN(1);
+    frameAllocator_freeFrames(frameAllocator, frames, n);
     
     ERROR_FINAL_BEGIN(0);
 }
@@ -127,7 +156,7 @@ void* mm_allocatePages(Size n) {
 void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
     void* firstFrame = paging_fastTranslate(p);
-    FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, firstFrame);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, firstFrame);
     ERROR_CHECKPOINT();
 
     if (PAGING_IS_BASED_CONTAGIOUS_SPACE(p)) {
@@ -135,6 +164,28 @@ void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo, FrameAllocator*
         frameAllocator_freeFrames(allocator, firstFrame, unit->vRegionLength);
     } else {
         extendedPageTableRoot_erase(mapTo, p, unit->vRegionLength);
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+void mm_freeHeapPages(void* p, Size n, ExtendedPageTableRoot* mapTo) {
+    DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
+    void* firstFrame = paging_fastTranslate(p);
+    
+    if (PAGING_IS_BASED_CONTAGIOUS_SPACE(p)) {
+        extendedPageTableRoot_erase(mapTo, p, n);
+        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, firstFrame);
+        ERROR_CHECKPOINT();
+        DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR));
+        HeapAllocator* heapAllocator = (HeapAllocator*)unit->belongToAllocator;
+        FrameAllocator* frameAllocator = heapAllocator->frameAllocator;
+        
+        // frameMetadata_clearAssignedAllocator(&mm->frameMetadata, firstFrame, n);
+        frameAllocator_freeFrames(frameAllocator, firstFrame, n);
+    } else {
+        extendedPageTableRoot_erase(mapTo, p, n);
     }
 
     return;
@@ -169,18 +220,15 @@ void mm_free(void* p) {
     DEBUG_ASSERT_SILENT(PAGING_IS_BASED_CONTAGIOUS_SPACE(p) || PAGING_IS_BASED_SHREAD_SPACE(p));
 
     void* firstFrame = (void*)ALIGN_DOWN((Uintptr)paging_fastTranslate(p), PAGE_SIZE);
-    FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, firstFrame);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, firstFrame);
     ERROR_CHECKPOINT();
 
-    if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_IS_REGION_HEAD) == TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP)) { //This frame is used for heap, so p should be freed by heap allocator
-        Uint8 presetID = extendedPageTableRoot_peek(mm->extendedTable, p)->id;
-        HeapAllocator* allocator = mm->heapAllocators[presetID];
-        DEBUG_ASSERT_SILENT(allocator != NULL);
-    
+    DEBUG_ASSERT_SILENT(unit->belongToAllocator != NULL);
+    if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR)) {
+        HeapAllocator* allocator = (HeapAllocator*)unit->belongToAllocator;
         heapAllocator_free(allocator, p);
     } else {
-        DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP));
-        DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
+        DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
 
         if (PAGING_IS_BASED_CONTAGIOUS_SPACE(p)) {
             extendedPageTableRoot_erase(mm->extendedTable, p, unit->vRegionLength);

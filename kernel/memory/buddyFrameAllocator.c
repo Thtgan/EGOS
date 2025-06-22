@@ -3,6 +3,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/allocator.h>
+#include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
@@ -194,18 +195,6 @@ static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Siz
 
     allocator->remaining -= n;
 
-    DEBUG_ASSERT_SILENT(
-        ({
-            FrameMetadataHeader* header = frameMetadata_getFrameMetadataHeader(allocator->metadata, ret);
-            FrameMetadataUnit* unit = frameMetadataHeader_getMetadataUnit(header, ret);
-            RANGE_WITHIN(
-                (Uintptr)&header->units, (Uintptr)&header->units[header->frameNum],
-                (Uintptr)unit, (Uintptr)&unit[n],
-                <=, <=
-            );
-        })
-    );
-
     return ret;
     ERROR_FINAL_BEGIN(0);
     return NULL;
@@ -225,6 +214,9 @@ static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* fr
     }
 
     allocator->remaining += n;
+
+    frameMetadata_assignToFrameAllocator(&mm->frameMetadata, frames, n, allocator);
+    ERROR_CHECKPOINT();
 }
 
 static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* frames, Size n) {
@@ -237,6 +229,9 @@ static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* fra
 
     allocator->total += n;
     allocator->remaining += n;
+
+    frameMetadata_assignToFrameAllocator(&mm->frameMetadata, frames, n, allocator);
+    ERROR_GOTO_IF_ERROR(0);
 
     return;
     ERROR_FINAL_BEGIN(0);

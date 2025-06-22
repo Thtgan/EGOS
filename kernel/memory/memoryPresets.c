@@ -148,7 +148,7 @@ static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPa
 
 
     if (PAGING_IS_LEAF(level, *srcEntry)) {
-        FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *srcEntry));
+        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *srcEntry));
         if (unit == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -194,7 +194,7 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
 
     DEBUG_ASSERT_SILENT(TEST_FLAGS(handlerStackFrame->errorCode, PAGING_PAGE_FAULT_ERROR_CODE_FLAG_WR) && TEST_FLAGS_FAIL(*entry, PAGING_ENTRY_FLAG_RW) && PAGING_IS_LEAF(level, *entry));
     
-    FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *entry));
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *entry));
     if (unit == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -254,10 +254,17 @@ static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extende
 
     if (PAGING_IS_LEAF(level, *entry)) {
         void* p = pageTable_getNextLevelPage(level, *entry);
+        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, p);
         if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) { //If writable, this frame must have only 1 reference, no matter cloned or not
-            mm_freeFrames(p, 1);    //TODO: This frame might not be allocated by default frame allocator
+            if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR)) {
+                HeapAllocator* allocator = (HeapAllocator*)unit->belongToAllocator;
+                frameAllocator_freeFrames(allocator->frameAllocator, p, 1);
+            } else {
+                DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
+                FrameAllocator* allocator = (FrameAllocator*)unit->belongToAllocator;
+                frameAllocator_freeFrames(allocator, p, 1);
+            }
         } else {
-            FrameMetadataUnit* unit = frameMetadata_getFrameMetadataUnit(&mm->frameMetadata, p);
             if (unit == NULL) {
                 ERROR_ASSERT_ANY();
                 ERROR_GOTO(0);
