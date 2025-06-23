@@ -125,7 +125,7 @@ static void __memoryPresetsOperations_deepCopyEntry(PagingLevel level, ExtendedP
         ERROR_GOTO(0);
     }
 
-    ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(newExtendedTableFrames);
+    ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
     for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
         if (TEST_FLAGS_FAIL(srcSubExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
             continue;
@@ -135,7 +135,7 @@ static void __memoryPresetsOperations_deepCopyEntry(PagingLevel level, ExtendedP
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
+    *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_KERNEL_MEMORY_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
     desExtendedTable->extraTable.tableEntries[index] = srcExtendedTable->extraTable.tableEntries[index];
 
     return;
@@ -166,7 +166,7 @@ static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPa
             ERROR_GOTO(0);
         }
 
-        ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(newExtendedTableFrames);
+        ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
             if (TEST_FLAGS_FAIL(srcSubExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
                 continue;
@@ -176,7 +176,7 @@ static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPa
             ERROR_GOTO_IF_ERROR(0);
         }
 
-        *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
+        *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_KERNEL_MEMORY_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
@@ -203,7 +203,7 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
     if (unit->cow > 0) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
         void* copyTo = mm_allocateFrames(span >> PAGE_SIZE_SHIFT);
-        memory_memcpy(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(copyTo), PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(pageTable_getNextLevelPage(level, *entry)), span);
+        memory_memcpy(PAGING_CONVERT_KERNEL_MEMORY_P2V(copyTo), PAGING_CONVERT_KERNEL_MEMORY_P2V(pageTable_getNextLevelPage(level, *entry)), span);
 
         --unit->cow;
         *entry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), copyTo, FLAGS_FROM_PAGING_ENTRY(*entry));
@@ -238,7 +238,7 @@ static void __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, Extend
             ERROR_GOTO_IF_ERROR(0);
         }
 
-        extendedPageTable_freeFrame(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(subExtendedTable));
+        extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
     }
 
     *entry = EMPTY_PAGING_ENTRY;
@@ -281,7 +281,7 @@ static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extende
             __memoryPresetsOperations_cowReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
-        extendedPageTable_freeFrame(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(subExtendedTable));
+        extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
     }
 
     *entry = EMPTY_PAGING_ENTRY;

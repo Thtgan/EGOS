@@ -1,8 +1,8 @@
-#include<memory/buddyFrameAllocator.h>
+#include<memory/allocators/buddyFrameAllocator.h>
 
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/singlyLinkedList.h>
@@ -68,13 +68,13 @@ static void* __buddyFrameList_getFrames(FrameBuddyList* list) {
     singlyLinkedListNode_initStruct(node);
     --list->remaining;
 
-    return PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(node);
+    return PAGING_CONVERT_KERNEL_MEMORY_V2P(node);
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
 static void __buddyFrameList_addFrames(FrameBuddyList* list, void* frames) {
-    SinglyLinkedListNode* node = (SinglyLinkedListNode*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
+    SinglyLinkedListNode* node = (SinglyLinkedListNode*)PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
     singlyLinkedListNode_initStruct(node);
 
     singlyLinkedList_insertNext(&list->list, node);

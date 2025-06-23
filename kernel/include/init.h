@@ -24,6 +24,7 @@ static inline void init_initKernelStack() {
     MemoryPreset* cowPreset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
     void* newStack = mm_allocateDetailed(
         THREAD_DEFAULT_KERNEL_STACK_SIZE,
+        NULL,
         cowPreset
     ), * oldStack = init_getBootStackBottom();
     DEBUG_ASSERT_SILENT(newStack != NULL);

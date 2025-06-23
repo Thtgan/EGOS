@@ -1,5 +1,5 @@
-#if !defined(__MEMORY_ALLOCATOR_H)
-#define __MEMORY_ALLOCATOR_H
+#if !defined(__MEMORY_ALLOCATORS_ALLOCATOR_H)
+#define __MEMORY_ALLOCATORS_ALLOCATOR_H
 
 typedef struct FrameAllocator FrameAllocator;
 typedef struct FrameAllocatorOperations FrameAllocatorOperations;
@@ -77,4 +77,4 @@ static inline Size heapAllocator_getActualSize(HeapAllocator* allocator, Size n)
 
 void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, HeapAllocatorOperations* opeartions, Uint8 presetID);
 
-#endif // __MEMORY_ALLOCATOR_H
+#endif // __MEMORY_ALLOCATORS_ALLOCATOR_H

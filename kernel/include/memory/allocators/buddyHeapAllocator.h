@@ -1,12 +1,12 @@
-#if !defined(__MEMORY_BUDDYHEAPALLOCATOR_H)
-#define __MEMORY_BUDDYHEAPALLOCATOR_H
+#if !defined(__MEMORY_ALLOCATORS_BUDDYHEAPALLOCATOR_H)
+#define __MEMORY_ALLOCATORS_BUDDYHEAPALLOCATOR_H
 
 typedef struct BuddyHeapAllocatorBuddyList BuddyHeapAllocatorBuddyList;
 typedef struct BuddyHeapAllocator BuddyHeapAllocator;
 
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 
@@ -30,4 +30,4 @@ typedef struct BuddyHeapAllocator {
 
 void buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 presetID);
 
-#endif // __MEMORY_BUDDYHEAPALLOCATOR_H
+#endif // __MEMORY_ALLOCATORS_BUDDYHEAPALLOCATOR_H

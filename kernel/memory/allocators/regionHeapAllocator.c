@@ -1,8 +1,8 @@
-#include<memory/regionHeapAllocator.h>
+#include<memory/allocators/regionHeapAllocator.h>
 
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/mm.h>

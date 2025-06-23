@@ -128,7 +128,7 @@ void realmode_registerFuncs(void* codeBegin, Size codeSize, CarrierMovMetadata**
         ERROR_GOTO(0);
     }
 
-    carrier_carry(codeBegin, PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(copyTo), codeSize, carrierList);
+    carrier_carry(codeBegin, PAGING_CONVERT_KERNEL_MEMORY_P2V(copyTo), codeSize, carrierList);
     ERROR_GOTO_IF_ERROR(0);
 
     for (int i = 0; i < funcNum; ++i, ++_realMode_funcNum) {
@@ -178,16 +178,16 @@ void* __realmode_findHighestMemory(MemoryMap* mMap, Uintptr below, Size n) {
 }
 
 void __realmode_setupPageTables(void* pageTableFrames) {
-    Uint32* protectedModePageDirectory = (Uint32*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(pageTableFrames);
+    Uint32* protectedModePageDirectory = (Uint32*)PAGING_CONVERT_KERNEL_MEMORY_P2V(pageTableFrames);
     memory_memset(protectedModePageDirectory, 0, PAGE_SIZE);
 
     for (int i = 0; i < 1024; ++i) {
         protectedModePageDirectory[i] = ((Uint32)i * 0x400000) | 0x83;
     }
 
-    Uint64* compatabilityModePML4 = (Uint64*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)protectedModePageDirectory + PAGE_SIZE);
+    Uint64* compatabilityModePML4 = (Uint64*)PAGING_CONVERT_KERNEL_MEMORY_P2V((void*)protectedModePageDirectory + PAGE_SIZE);
     memory_memset(compatabilityModePML4, 0, PAGE_SIZE);
-    Uint64* compatabilityModePDPT = (Uint64*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)compatabilityModePML4 + PAGE_SIZE);
+    Uint64* compatabilityModePDPT = (Uint64*)PAGING_CONVERT_KERNEL_MEMORY_P2V((void*)compatabilityModePML4 + PAGE_SIZE);
     memory_memset(compatabilityModePDPT, 0, PAGE_SIZE);
 
 
@@ -195,8 +195,8 @@ void __realmode_setupPageTables(void* pageTableFrames) {
         compatabilityModePDPT[i] = ((Uint64)i * 0x40000000) | 0x83;
     }
 
-    compatabilityModePML4[0] = (Uint64)PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePDPT) | 0x3;
+    compatabilityModePML4[0] = (Uint64)PAGING_CONVERT_KERNEL_MEMORY_V2P(compatabilityModePDPT) | 0x3;
 
-    realmode_protectedModePageDirectory = CAST_SIZE32(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(protectedModePageDirectory));
-    realmode_compatabilityModePML4 = CAST_SIZE32(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(compatabilityModePML4));
+    realmode_protectedModePageDirectory = CAST_SIZE32(PAGING_CONVERT_KERNEL_MEMORY_V2P(protectedModePageDirectory));
+    realmode_compatabilityModePML4 = CAST_SIZE32(PAGING_CONVERT_KERNEL_MEMORY_V2P(compatabilityModePML4));
 }

@@ -10,7 +10,7 @@ typedef struct FrameMetadata FrameMetadata;
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<multitask/context.h>
 #include<structs/linkedList.h>
 #include<system/pageTable.h>

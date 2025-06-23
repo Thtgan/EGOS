@@ -4,7 +4,7 @@
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
@@ -64,7 +64,7 @@ FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* fram
         }
     }
 
-    FrameMetadataHeader* newHeader = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
+    FrameMetadataHeader* newHeader = PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
     frameMetadataHeader_initStruct(newHeader, frames, n);
     linkedListNode_insertFront(insertBefore, &newHeader->node);
 

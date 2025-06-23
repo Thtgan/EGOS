@@ -2,7 +2,7 @@
 #include<devices/bus/pci.h>
 #include<init.h>
 #include<kit/types.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<multitask/schedule.h>
 #include<multitask/locks/semaphore.h>
 #include<print.h>
@@ -46,6 +46,8 @@ Uint16 rootTID = 0;
 
 #include<devices/terminal/tty.h>
 
+#include<memory/allocators/buddyHeapAllocator.h>
+
 Timer timer1, timer2, timer3;
 
 static void __timerFunc1(Timer* timer) {
@@ -69,6 +71,8 @@ static void __timerFunc3(Timer* timer) {
 static void __testSigaction(int signal) {
     print_printf("Signal %s triggered\n", signal_names[signal]);
 }
+
+static BuddyHeapAllocator cowTestAllocator;
 
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
@@ -134,8 +138,10 @@ void kernelMain(SystemInfo* info) {
     semaphore_initStruct(&sema1, 0);
     semaphore_initStruct(&sema2, -1);
 
+    buddyHeapAllocator_initStruct(&cowTestAllocator, mm->frameAllocator, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW));
+
     MemoryPreset* cowPreset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    arr1 = mm_allocate(1 * sizeof(int)), arr2 = mm_allocateDetailed(1 * sizeof(int), cowPreset);
+    arr1 = mm_allocate(1 * sizeof(int)), arr2 = mm_allocateDetailed(1 * sizeof(int), &cowTestAllocator.allocator, cowPreset);
     print_printf("%p %p\n", arr1, arr2);
     arr1[0] = 1, arr2[0] = 114514;
     rootTID = schedule_getCurrentThread()->tid;

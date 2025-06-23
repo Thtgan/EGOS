@@ -18,25 +18,25 @@ void* extendedPageTable_allocateFrame() {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(ret), 0, sizeof(ExtendedPageTable));
+    memory_memset(PAGING_CONVERT_KERNEL_MEMORY_P2V(ret), 0, sizeof(ExtendedPageTable));
 
     return ret;
     ERROR_FINAL_BEGIN(0);
 }
 
 void extendedPageTable_freeFrame(void* frame) {
-    memory_memset(PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frame), 0, sizeof(ExtendedPageTable));
+    memory_memset(PAGING_CONVERT_KERNEL_MEMORY_P2V(frame), 0, sizeof(ExtendedPageTable));
     mm_freeFrames(frame, EXTENDED_PAGE_TABLE_FRAME_SIZE);
 }
 
 ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry) {
     void* pageTable = PAGING_TABLE_FROM_PAGING_ENTRY(entry);
-    return PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(HOST_POINTER(pageTable, ExtendedPageTable, table));
+    return PAGING_CONVERT_KERNEL_MEMORY_P2V(HOST_POINTER(pageTable, ExtendedPageTable, table));
 }
 
 void extraPageTableContext_initStruct(ExtraPageTableContext* context) {
     context->presetCnt = 0;
-    memory_memset(context->presets, NULL, sizeof(context->presets));
+    memory_memset(context->presets, 0, sizeof(context->presets));
     memory_memset(context->presetType2id, 0xFF, sizeof(context->presetType2id));
 
     memoryPreset_registerDefaultPresets(context);
@@ -68,8 +68,8 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
     }
 
     ret->context = source->context;
-    ret->extendedTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
-    ret->pPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(&ret->extendedTable->table);
+    ret->extendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
+    ret->pPageTable = PAGING_CONVERT_KERNEL_MEMORY_V2P(&ret->extendedTable->table);
 
     for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
         if (TEST_FLAGS_FAIL(source->extendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
@@ -91,7 +91,7 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
     extendedPageTableRoot_erase(table, 0, 1ull << 36);
     ERROR_GOTO_IF_ERROR(0);
     
-    extendedPageTable_freeFrame(PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(table->extendedTable));
+    extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(table->extendedTable));
     mm_free(table);
 
     return;
@@ -109,8 +109,8 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
-        root->extendedTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(frames);
-        root->pPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(&root->extendedTable->table);
+        root->extendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
+        root->pPageTable = PAGING_CONVERT_KERNEL_MEMORY_V2P(&root->extendedTable->table);
     }
 
     __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset, flags);
@@ -148,7 +148,7 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             }
             realPreset = preset;
             
-            ExtendedPageTable* nextExtendedTable = (ExtendedPageTable*)PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(mapTo);
+            ExtendedPageTable* nextExtendedTable = (ExtendedPageTable*)PAGING_CONVERT_KERNEL_MEMORY_P2V(mapTo);
             __extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset, flags);
             ERROR_GOTO_IF_ERROR(0);
 
@@ -322,7 +322,7 @@ void* extendedPageTableRoot_translate(ExtendedPageTableRoot* root, void* v) {
             return ADDR_FROM_ENTRY_PS(level, v, entry);
         }
 
-        table = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
+        table = PAGING_CONVERT_KERNEL_MEMORY_P2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));
     }
 
     debug_blowup("Not supposed to reach here!\n");

@@ -64,11 +64,11 @@ static inline bool paging_isBasedAddress(void* v, Uintptr base) {
 
 //Identical memory macros
 
-#define PAGING_CONVERT_IDENTICAL_ADDRESS_V2P(__V)   paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
+#define PAGING_CONVERT_KERNEL_MEMORY_V2P(__V)       paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN)
 
-#define PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(__P)   paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
+#define PAGING_CONVERT_KERNEL_MEMORY_P2V(__P)       paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN)
 
-#define PAGING_IS_BASED_ADDRESS_IDENTICAL(__V)      paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN)
+#define PAGING_IS_BASED_KERNEL_MEMORY(__V)          paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN)
 
 #define PAGING_PAGE_ALIGN(__P)                      (void*)ALIGN_DOWN_SHIFT((Uintptr)__P, PAGE_SIZE_SHIFT)
 

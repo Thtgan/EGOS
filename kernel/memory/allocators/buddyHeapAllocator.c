@@ -1,7 +1,7 @@
-#include<memory/buddyHeapAllocator.h>
+#include<memory/allocators/buddyHeapAllocator.h>
 
 #include<kit/types.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/mm.h>

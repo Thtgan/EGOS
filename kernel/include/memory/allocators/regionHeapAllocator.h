@@ -1,10 +1,10 @@
-#if !defined(__MEMORY_REGIONHEAPALLOCATOR_H)
-#define __MEMORY_REGIONHEAPALLOCATOR_H
+#if !defined(__MEMORY_ALLOCATORS_REGIONHEAPALLOCATOR_H)
+#define __MEMORY_ALLOCATORS_REGIONHEAPALLOCATOR_H
 
 typedef struct RegionHeapAllocator RegionHeapAllocator;
 
 #include<kit/types.h>
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<structs/singlyLinkedList.h>
 
 #define REGION_HEAP_ALLOCATOR_ALIGN             8
@@ -20,4 +20,4 @@ typedef struct RegionHeapAllocator {
 
 void regionHeapAllocator_initStruct(RegionHeapAllocator* allocator, Size regionSize, FrameAllocator* frameAllocator, Uint8 presetID);
 
-#endif // __MEMORY_REGIONHEAPALLOCATOR_H
+#endif // __MEMORY_ALLOCATORS_REGIONHEAPALLOCATOR_H

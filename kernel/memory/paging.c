@@ -34,7 +34,7 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         }
 
         if (!PAGING_IS_LEAF(level, entry)) {
-            extendedPageTable = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(HOST_POINTER(PAGING_TABLE_FROM_PAGING_ENTRY(entry), ExtendedPageTable, table));
+            extendedPageTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(HOST_POINTER(PAGING_TABLE_FROM_PAGING_ENTRY(entry), ExtendedPageTable, table));
             continue;
         }
 
@@ -82,8 +82,8 @@ void paging_init() {
 
     extendedPageTableRoot_draw(
         &_extendedPageTableRoot,
-        (void*)MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
-        algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_END - MEMORY_LAYOUT_KERNEL_IDENTICAL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
+        (void*)MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
+        algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_MEMORY_END - MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
         extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL),
         EMPTY_FLAGS
     );
@@ -106,7 +106,9 @@ void paging_init() {
 
 void* paging_fastTranslate(void* v) {
     void* p = NULL;
-    if (PAGING_IS_BASED_CONTAGIOUS_SPACE(v)) {
+    if (PAGING_IS_BASED_KERNEL_MEMORY(v)) {
+        p = PAGING_CONVERT_KERNEL_MEMORY_V2P(v);
+    } else if (PAGING_IS_BASED_CONTAGIOUS_SPACE(v)) {
         p = PAGING_CONVERT_CONTAGIOUS_SPACE_V2P(v);
     } else {
         p = extendedPageTableRoot_translate(mm->extendedTable, v);

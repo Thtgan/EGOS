@@ -1,10 +1,10 @@
-#if !defined(__MEMORY_BUDDYFRAMEALLOCATOR_H)
-#define __MEMORY_BUDDYFRAMEALLOCATOR_H
+#if !defined(__MEMORY_ALLOCATORS_BUDDYFRAMEALLOCATOR_H)
+#define __MEMORY_ALLOCATORS_BUDDYFRAMEALLOCATOR_H
 
 typedef struct FrameBuddyList FrameBuddyList;
 typedef struct BuddyFrameAllocator BuddyFrameAllocator;
 
-#include<memory/allocator.h>
+#include<memory/allocators/allocator.h>
 #include<memory/frameMetadata.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -28,4 +28,4 @@ typedef struct BuddyFrameAllocator {
 
 void buddyFrameAllocator_initStruct(BuddyFrameAllocator* allocator, FrameMetadata* metadata);
 
-#endif // __MEMORY_BUDDYFRAMEALLOCATOR_H
+#endif // __MEMORY_ALLOCATORS_BUDDYFRAMEALLOCATOR_H

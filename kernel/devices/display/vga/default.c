@@ -43,7 +43,7 @@ void vga_dumpDefaultDisplayContext(DisplayContext* context) {
     context->operations     = &_vgaDefault_operations;
 }
 
-#define __VGA_DEFAULT_POSITION_TO_PTR(__POS)  PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAtextModeCell*)0xB8000) + ((__POS)->x * 80 + (__POS)->y))
+#define __VGA_DEFAULT_POSITION_TO_PTR(__POS)  PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAtextModeCell*)0xB8000) + ((__POS)->x * 80 + (__POS)->y))
 
 static void __vgaDefault_drawPixel(DisplayPosition* position, RGBA color) {
     VGAtextModeCell* cellBuffer = __VGA_DEFAULT_POSITION_TO_PTR(position);

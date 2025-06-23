@@ -2,8 +2,9 @@
 
 #include<kit/util.h>
 #include<system/pageTable.h>
-#include<memory/buddyFrameAllocator.h>
-#include<memory/buddyHeapAllocator.h>
+#include<memory/allocators/buddyFrameAllocator.h>
+// #include<memory/allocators/buddyHeapAllocator.h>
+#include<memory/allocators/kernelHeapAllocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
 #include<memory/memory.h>
@@ -22,8 +23,9 @@ static void __mm_auditE820(MemoryManager* mm);
 
 static MemoryManager _memoryManager;
 static BuddyFrameAllocator _buddyFrameAllocator;
-static BuddyHeapAllocator _buddyHeapAllocators[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
-static HeapAllocator* heapAllocatorPtrs[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
+static KernelHeapAllocator _kernelHeapAllocator;
+// static BuddyHeapAllocator _buddyHeapAllocators[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
+// static HeapAllocator* heapAllocatorPtrs[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
 
 MemoryManager* mm;
 
@@ -53,15 +55,19 @@ void mm_init() {
     paging_init();
     ERROR_GOTO_IF_ERROR(0);
 
-    Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
-    buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
-    heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
+    // Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
+    // buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
+    // heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
 
-    presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
-    heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
+    // presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
+    // buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
+    // heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
 
-    mm->heapAllocators = heapAllocatorPtrs;
+    // mm->heapAllocators = heapAllocatorPtrs;
+
+    kernelHeapAllocator_initStruct(&_kernelHeapAllocator, mm->frameAllocator);
+    
+    mm->defaultAllocator = &_kernelHeapAllocator.parentAllocator;
 
     mm->initialized = true;
     return;
@@ -196,14 +202,15 @@ void mm_freePages(void* p) {
     mm_freePagesDetailed(p, mm->extendedTable, mm->frameAllocator);
 }
 
-void* mm_allocateDetailed(Size n, MemoryPreset* preset) {
+void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, MemoryPreset* preset) {
     void* ret = NULL;
-    HeapAllocator* allocator = mm->heapAllocators[preset->id];
-    if (allocator == NULL || heapAllocator_getActualSize(allocator, n) > HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE) {
+    if (heapAllocator == NULL || heapAllocator_getActualSize(heapAllocator, n) > HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE) {
+        DEBUG_ASSERT_SILENT(preset != NULL);
         ret = mm_allocatePagesDetailed(DIVIDE_ROUND_UP(n, PAGE_SIZE), mm->extendedTable, mm->frameAllocator, preset, EMPTY_FLAGS);
         ERROR_GOTO_IF_ERROR(0);
     } else {
-        ret = heapAllocator_allocate(allocator, n);
+        DEBUG_ASSERT_SILENT(heapAllocator != NULL);
+        ret = heapAllocator_allocate(heapAllocator, n);
     }
 
     return ret;
@@ -213,7 +220,7 @@ void* mm_allocateDetailed(Size n, MemoryPreset* preset) {
 
 void* mm_allocate(Size n) {
     MemoryPreset* preset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
-    return mm_allocateDetailed(n, preset);
+    return mm_allocateDetailed(n, mm->defaultAllocator, preset);
 }
 
 void mm_free(void* p) {

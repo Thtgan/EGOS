@@ -37,7 +37,7 @@ void bootTeletype_initStruct(BootTeletype* tty) {
     tty->printedRowNum = 0;
     tty->lastRowLength = 0;
 
-    void* videoBufferBegin = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)0xB8000);
+    void* videoBufferBegin = PAGING_CONVERT_KERNEL_MEMORY_P2V((void*)0xB8000);
     memory_memset(videoBufferBegin, 0, sizeof(VGAtextModeCell) * 25 * 80);
 }
 
@@ -105,7 +105,7 @@ static void __bootTTY_moveToNewLine(BootTeletype* tty) {
     if (tty->printedRowNum + 1 < 25) {
         ++tty->printedRowNum;
     } else {
-        VGAtextModeCell* videoBufferBegin = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V((void*)0xB8000);
+        VGAtextModeCell* videoBufferBegin = PAGING_CONVERT_KERNEL_MEMORY_P2V((void*)0xB8000);
         memory_memmove(videoBufferBegin, videoBufferBegin + 80, sizeof(VGAtextModeCell) * 24 * 80);
         memory_memset(videoBufferBegin + 24 * 80, 0, sizeof(VGAtextModeCell) * 80);
     }

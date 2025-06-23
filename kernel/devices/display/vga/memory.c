@@ -14,7 +14,7 @@ void vgaMemory_textWriteCell(VGAtextMode* mode, DisplayPosition* pos, VGAtextMod
     Uint16 desIndex = __VGA_MEMORY_POS_TO_INDEX(mode, pos);
 
     VGAtextModeCell* cellSrc = cells;
-    VGAtextModeCell* cellDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + desIndex);
+    VGAtextModeCell* cellDes = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + desIndex);
     n = algorithms_umin16(n, mode->header.size - desIndex);
     for (; n > 0; --n, ++cellSrc, ++cellDes) {
         *cellDes = *cellSrc;
@@ -24,7 +24,7 @@ void vgaMemory_textWriteCell(VGAtextMode* mode, DisplayPosition* pos, VGAtextMod
 void vgaMemory_textReadCell(VGAtextMode* mode, DisplayPosition* pos, VGAtextModeCell* cells, Size n) {
     Uint16 srcIndex = __VGA_MEMORY_POS_TO_INDEX(mode, pos);
 
-    VGAtextModeCell* cellSrc = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + srcIndex);
+    VGAtextModeCell* cellSrc = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + srcIndex);
     VGAtextModeCell* cellDes = cells;
     n = algorithms_umin16(n, mode->header.size - srcIndex);
     for (; n > 0; --n, ++cellSrc, ++cellDes) {
@@ -35,7 +35,7 @@ void vgaMemory_textReadCell(VGAtextMode* mode, DisplayPosition* pos, VGAtextMode
 void vgaMemory_textSetCell(VGAtextMode* mode, DisplayPosition* pos, VGAtextModeCell cell, Size n) {
     Uint16 srcIndex = __VGA_MEMORY_POS_TO_INDEX(mode, pos);
 
-    VGAtextModeCell* cellDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + srcIndex);
+    VGAtextModeCell* cellDes = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + srcIndex);
     n = algorithms_umin16(n, mode->header.size - srcIndex);
     for (; n > 0; --n, ++cellDes) {
         *cellDes = cell;
@@ -44,8 +44,8 @@ void vgaMemory_textSetCell(VGAtextMode* mode, DisplayPosition* pos, VGAtextModeC
 
 void vgaMemory_textMoveCell(VGAtextMode* mode, DisplayPosition* des, DisplayPosition* src, Size n) {
     Uint16 srcIndex = __VGA_MEMORY_POS_TO_INDEX(mode, src), desIndex = __VGA_MEMORY_POS_TO_INDEX(mode, des);
-    VGAtextModeCell* cellSrc = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + srcIndex);
-    VGAtextModeCell* cellDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + desIndex);
+    VGAtextModeCell* cellSrc = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + srcIndex);
+    VGAtextModeCell* cellDes = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAtextModeCell*)mode->header.videoMemory.begin) + desIndex);
 
     memory_memmove(cellDes, cellSrc, (mode->header.size - algorithms_umax16(srcIndex, desIndex)) * sizeof(VGAtextModeCell));
 }
@@ -53,7 +53,7 @@ void vgaMemory_textMoveCell(VGAtextMode* mode, DisplayPosition* des, DisplayPosi
 void vgaMemory_linearWritePixel(VGAgraphicMode* mode, DisplayPosition* pos, VGAcolor* colors, Size n) {
     Uint16 desIndex = __VGA_MEMORY_POS_TO_INDEX(mode, pos);
     VGAcolor* pixelSrc = colors;
-    VGAcolor* pixelDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAcolor*)mode->header.videoMemory.begin) + desIndex);
+    VGAcolor* pixelDes = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAcolor*)mode->header.videoMemory.begin) + desIndex);
     n = algorithms_umin16(n, mode->header.size - desIndex);
     for (; n > 0; --n, ++pixelSrc, ++pixelDes) {
         *pixelDes = *pixelSrc;
@@ -62,7 +62,7 @@ void vgaMemory_linearWritePixel(VGAgraphicMode* mode, DisplayPosition* pos, VGAc
 
 void vgaMemory_linearReadPixel(VGAgraphicMode* mode, DisplayPosition* pos, VGAcolor* colors, Size n) {
     Uint16 srcIndex = __VGA_MEMORY_POS_TO_INDEX(mode, pos);
-    VGAcolor* pixelSrc = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAcolor*)mode->header.videoMemory.begin) + srcIndex);
+    VGAcolor* pixelSrc = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAcolor*)mode->header.videoMemory.begin) + srcIndex);
     VGAcolor* pixelDes = colors;
     n = algorithms_umin16(n, mode->header.size - srcIndex);
     for (; n > 0; --n, ++pixelSrc, ++pixelDes) {
@@ -73,7 +73,7 @@ void vgaMemory_linearReadPixel(VGAgraphicMode* mode, DisplayPosition* pos, VGAco
 
 void vgaMemory_linearSetPixel(VGAgraphicMode* mode, DisplayPosition* pos, VGAcolor color, Size n) {
     Uint16 srcIndex = __VGA_MEMORY_POS_TO_INDEX(mode, pos);
-    VGAcolor* pixelDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAcolor*)mode->header.videoMemory.begin) + srcIndex);
+    VGAcolor* pixelDes = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAcolor*)mode->header.videoMemory.begin) + srcIndex);
     n = algorithms_umin16(n, mode->header.size - srcIndex);
     for (; n > 0; --n, ++pixelDes) {
         *pixelDes = color;
@@ -82,8 +82,8 @@ void vgaMemory_linearSetPixel(VGAgraphicMode* mode, DisplayPosition* pos, VGAcol
 
 void vgaMemory_linearMovePixel(VGAgraphicMode* mode, DisplayPosition* des, DisplayPosition* src, Size n) {
     Uint16 srcIndex = __VGA_MEMORY_POS_TO_INDEX(mode, src), desIndex = __VGA_MEMORY_POS_TO_INDEX(mode, des);
-    VGAcolor* pixelSrc = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAcolor*)mode->header.videoMemory.begin) + srcIndex);
-    VGAcolor* pixelDes = PAGING_CONVERT_IDENTICAL_ADDRESS_P2V(((VGAcolor*)mode->header.videoMemory.begin) + desIndex);
+    VGAcolor* pixelSrc = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAcolor*)mode->header.videoMemory.begin) + srcIndex);
+    VGAcolor* pixelDes = PAGING_CONVERT_KERNEL_MEMORY_P2V(((VGAcolor*)mode->header.videoMemory.begin) + desIndex);
 
     memory_memmove(pixelDes, pixelSrc, (mode->header.size - algorithms_umax16(srcIndex, desIndex)) * sizeof(VGAcolor));
 }
