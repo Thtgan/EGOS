@@ -17,6 +17,7 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-O2					\
 								-mcmodel=large		\
 								-g					\
+								-MMD				\
 
 BUILD_KERNEL_MAP_NAME		:=	kernelMap.txt
 BUILD_KERNEL_MAP			:=	$(BUILD_KERNEL_DIR)/$(BUILD_KERNEL_MAP_NAME)
@@ -26,6 +27,8 @@ OBJ_FILES_C					:=	$(abspath $(patsubst $(PWD)/%.c, $(BUILD_KERNEL_DIR)/%.o, $(S
 
 SOURCE_FILES_ASM			:=	$(abspath $(shell find ./ -type f -name '*.S' | sort))
 OBJ_FILES_ASM				:=	$(abspath $(patsubst $(PWD)/%.S, $(BUILD_KERNEL_DIR)/%.o, $(SOURCE_FILES_ASM)))
+
+DEP_FILES 					:=	$(patsubst %.o, %.d, $(OBJ_FILES_C) $(OBJ_FILES_ASM))
 
 PROCESSED_LINKER_SCRIPT		:=	$(BUILD_KERNEL_DIR)/linker.ld
 
@@ -41,6 +44,10 @@ postBuild:
 
 buildDir:
 	@for i in $(OBJ_FILES_C) $(OBJ_FILES_ASM); do mkdir -p `dirname $$i`; done
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(DEP_FILES)
+endif
 
 $(BUILD_KERNEL): $(OBJ_FILES_C) $(OBJ_FILES_ASM) $(PROCESSED_LINKER_SCRIPT)
 	@$(LD) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -T $(PROCESSED_LINKER_SCRIPT) -o $@ -nmagic

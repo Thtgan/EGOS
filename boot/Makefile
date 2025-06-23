@@ -15,6 +15,7 @@ CC_OPTIONS 					:= 	-nostdlib			\
 								-I../include		\
 								-O2					\
 								-g					\
+								-MMD				\
 
 BUILD_BOOTLOADER_MAP_NAME	:=	bootMap.txt
 BUILD_BOOTLOADER_MAP		:=	$(BUILD_BOORLOADER_DIR)/$(BUILD_BOOTLOADER_MAP_NAME)
@@ -24,6 +25,8 @@ OBJ_FILES_C					:=	$(abspath $(patsubst $(PWD)/%.c, $(BUILD_BOORLOADER_DIR)/%.o,
 
 SOURCE_FILES_ASM			:=	$(abspath $(shell find ./ -type f -name '*.S' | sort))
 OBJ_FILES_ASM				:=	$(abspath $(patsubst $(PWD)/%.S, $(BUILD_BOORLOADER_DIR)/%.o, $(SOURCE_FILES_ASM)))
+
+DEP_FILES 					:=	$(patsubst %.o, %.d, $(OBJ_FILES_C) $(OBJ_FILES_ASM))
 
 PROCESSED_LINKER_SCRIPT		:=	$(BUILD_BOORLOADER_DIR)/linker.ld
 BUILD_TARGET_BLOCK_SIZE		:= 	512
@@ -40,7 +43,11 @@ postBuild:
 
 buildDir:
 	@for i in $(OBJ_FILES_C) $(OBJ_FILES_ASM); do mkdir -p `dirname $$i`; done
-	
+
+ifneq ($(MAKECMDGOALS),clean)
+-include $(DEP_FILES)
+endif
+
 $(BUILD_BOOTLOADER): $(OBJ_FILES_C) $(OBJ_FILES_ASM) $(PROCESSED_LINKER_SCRIPT)
 	@$(LD) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -T $(PROCESSED_LINKER_SCRIPT) -m elf_i386 -o $@
 	@echo "LD -> $@"
