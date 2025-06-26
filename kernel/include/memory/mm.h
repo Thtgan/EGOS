@@ -17,7 +17,6 @@ typedef struct MemoryManager {
     FrameMetadata frameMetadata;
     ExtraPageTableContext extraPageTableContext;
     FrameAllocator* frameAllocator;
-    // HeapAllocator** heapAllocators;
     HeapAllocator* defaultAllocator;
     ExtendedPageTableRoot* extendedTable;
     Uintptr accessibleBegin, accessibleEnd;
@@ -32,13 +31,11 @@ static inline void mm_switchPageTable(ExtendedPageTableRoot* extendedTable) {
     mm->extendedTable = extendedTable;
 }
 
-void* mm_allocateFramesDetailed(Size n, Flags16 flags);
-
 void* mm_allocateFrames(Size n);
 
 void mm_freeFrames(void* p, Size n);
 
-void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset, Flags16 firstFrameFlag);
+void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset);
 
 void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, MemoryPreset* preset);
 

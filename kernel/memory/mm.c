@@ -24,8 +24,6 @@ static void __mm_auditE820(MemoryManager* mm);
 static MemoryManager _memoryManager;
 static BuddyFrameAllocator _buddyFrameAllocator;
 static KernelHeapAllocator _kernelHeapAllocator;
-// static BuddyHeapAllocator _buddyHeapAllocators[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
-// static HeapAllocator* heapAllocatorPtrs[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
 
 MemoryManager* mm;
 
@@ -55,16 +53,6 @@ void mm_init() {
     paging_init();
     ERROR_GOTO_IF_ERROR(0);
 
-    // Uint8 presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
-    // buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
-    // heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
-
-    // presetID = EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    // buddyHeapAllocator_initStruct(&_buddyHeapAllocators[presetID], mm->frameAllocator, presetID);
-    // heapAllocatorPtrs[presetID] = &_buddyHeapAllocators[presetID].allocator;
-
-    // mm->heapAllocators = heapAllocatorPtrs;
-
     kernelHeapAllocator_initStruct(&_kernelHeapAllocator, mm->frameAllocator);
     
     mm->defaultAllocator = &_kernelHeapAllocator.parentAllocator;
@@ -74,30 +62,22 @@ void mm_init() {
     ERROR_FINAL_BEGIN(0);
 }
 
-void* mm_allocateFramesDetailed(Size n, Flags16 flags) {
+void* mm_allocateFrames(Size n) {
     void* ret = frameAllocator_allocateFrames(mm->frameAllocator, n);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    FrameMetadataHeader* header = frameMetadata_getHeader(&mm->frameMetadata, ret);
-    FrameMetadataUnit* unit = frameMetadataHeader_getUnit(header, ret);
-    SET_FLAG_BACK(unit->flags, flags);
-
     return ret;
     ERROR_FINAL_BEGIN(0);
-}
-
-void* mm_allocateFrames(Size n) {
-    return mm_allocateFramesDetailed(n, EMPTY_FLAGS);
 }
 
 void mm_freeFrames(void* p, Size n) {
     frameAllocator_freeFrames(mm->frameAllocator, p, n);
 }
 
-void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset, Flags16 firstFrameFlag) {
+void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset) {
     if (n == 0) {
         return NULL;
     }
@@ -115,8 +95,6 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
 
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, frames);
     unit->vRegionLength = n;
-    // unit->flags = firstFrameFlag | FRAME_METADATA_UNIT_FLAGS_IS_REGION_HEAD;
-    SET_FLAG_BACK(unit->flags, firstFrameFlag);
     
     return ret;
 
@@ -156,7 +134,7 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
 
 void* mm_allocatePages(Size n) {
     MemoryPreset* preset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
-    return mm_allocatePagesDetailed(n, mm->extendedTable, mm->frameAllocator, preset, EMPTY_FLAGS);
+    return mm_allocatePagesDetailed(n, mm->extendedTable, mm->frameAllocator, preset);
 }
 
 void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator) {
@@ -206,7 +184,7 @@ void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, MemoryPreset* pr
     void* ret = NULL;
     if (heapAllocator == NULL || heapAllocator_getActualSize(heapAllocator, n) > HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE) {
         DEBUG_ASSERT_SILENT(preset != NULL);
-        ret = mm_allocatePagesDetailed(DIVIDE_ROUND_UP(n, PAGE_SIZE), mm->extendedTable, mm->frameAllocator, preset, EMPTY_FLAGS);
+        ret = mm_allocatePagesDetailed(DIVIDE_ROUND_UP(n, PAGE_SIZE), mm->extendedTable, mm->frameAllocator, preset);
         ERROR_GOTO_IF_ERROR(0);
     } else {
         DEBUG_ASSERT_SILENT(heapAllocator != NULL);

@@ -31,7 +31,7 @@ void threadStack_touch(ThreadStack* stack) {
     DEBUG_ASSERT_SILENT(stack->size % PAGE_SIZE == 0);
     Size stackPageNum = stack->size / PAGE_SIZE;
     MemoryPreset* preset = extraPageTableContext_getDefaultPreset(stack->extendedTable->context, stack->type);
-    void* stackBottom = mm_allocatePagesDetailed(stackPageNum, stack->extendedTable, mm->frameAllocator, preset, EMPTY_FLAGS);
+    void* stackBottom = mm_allocatePagesDetailed(stackPageNum, stack->extendedTable, mm->frameAllocator, preset);
     
     stack->stackBottom = stackBottom;
 
