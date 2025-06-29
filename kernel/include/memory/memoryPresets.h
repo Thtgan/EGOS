@@ -32,9 +32,7 @@ typedef struct MemoryPresetOperations {
 
 typedef struct MemoryPreset {
     Uint8 id;
-    PagingEntry blankEntry;
     MemoryPresetOperations operations;
-    // Uintptr base;
 } MemoryPreset;
 
 typedef struct ExtraPageTableContext ExtraPageTableContext;

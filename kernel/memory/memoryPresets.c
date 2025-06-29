@@ -34,7 +34,6 @@ static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extend
 static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_NUM] = {
     [MEMORY_DEFAULT_PRESETS_TYPE_KERNEL] = (MemoryPreset) {
         .id = 0,
-        .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_A,
         .operations = {
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
@@ -43,7 +42,6 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_SHARE] = (MemoryPreset) {
         .id = 0,
-        .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_A | PAGING_ENTRY_FLAG_XD,
         .operations = {
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
@@ -52,7 +50,6 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_COW] = (MemoryPreset) {
         .id = 0,
-        .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_A | PAGING_ENTRY_FLAG_XD,
         .operations = {
             .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
@@ -61,7 +58,6 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_MIXED] = (MemoryPreset) {
         .id = 0,
-        .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A,
         .operations = {
             .copyPagingEntry = __memoryPresetsOperations_deepCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
@@ -70,7 +66,6 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA] = (MemoryPreset) {
         .id = 0,
-        .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A,    //TODO: Set not executable
         .operations = {
             .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
@@ -79,7 +74,6 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_CODE] = (MemoryPreset) {
         .id = 0,
-        .blankEntry = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A,
         .operations = {
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,

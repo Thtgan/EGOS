@@ -198,7 +198,7 @@ static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allo
 static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
     HeapAllocator* baseAllocator = &allocator->allocator;
     MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, baseAllocator->presetID);
-    void* pages = mm_allocateHeapPages(n, mm->extendedTable, baseAllocator, preset);
+    void* pages = mm_allocateHeapPages(n, mm->extendedTable, baseAllocator, preset, false);
     if (pages == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

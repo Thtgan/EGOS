@@ -101,9 +101,9 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void  __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset, Flags8 flags);
+void  __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset, Flags64 prot, Flags8 flags);
 
-void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset, Flags8 flags) {
+void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset, Flags64 prot, Flags8 flags) {
     DEBUG_ASSERT_SILENT(extraPageTableContext_getPreset(root->context, preset->id) == preset);
 
     if (root->extendedTable == NULL) {
@@ -116,7 +116,9 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
         root->pPageTable = PAGING_CONVERT_KERNEL_MEMORY_V2P(&root->extendedTable->table);
     }
 
-    __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset, flags);
+    prot = VAL_AND(prot, PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_XD);
+    prot = VAL_OR(prot, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_A);
+    __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, preset, prot, flags);
 
     PAGING_FLUSH_TLB();
     
@@ -124,7 +126,7 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
     ERROR_FINAL_BEGIN(0);
 }
 
-void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset, Flags8 flags) {
+void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* currentTable, Uintptr currentV, Uintptr currentP, Size subN, MemoryPreset* preset, Flags64 prot, Flags8 flags) {
     Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
     Index16 begin = PAGING_INDEX(level, currentV), end = begin + DIVIDE_ROUND_UP(subN << PAGE_SIZE_SHIFT, span);
     DEBUG_ASSERT(end <= PAGING_TABLE_SIZE, "");
@@ -141,6 +143,7 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
         bool isMappingNotPresent = (mapTo == NULL);
 
         MemoryPreset* realPreset = NULL;
+        Flags64 realProt = EMPTY_FLAGS;
         if (level > PAGING_LEVEL_PAGE_TABLE) {
             if (isMappingNotPresent) {
                 mapTo = extendedPageTable_allocateFrame();
@@ -149,10 +152,9 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
                     ERROR_GOTO(0);
                 }
             }
-            realPreset = preset;
             
             ExtendedPageTable* nextExtendedTable = (ExtendedPageTable*)PAGING_CONVERT_KERNEL_MEMORY_P2V(mapTo);
-            __extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset, flags);
+            __extendedPageTableRoot_doDraw(root, PAGING_NEXT_LEVEL(level), nextExtendedTable, currentV, currentP, subSubN, preset, prot, flags);
             ERROR_GOTO_IF_ERROR(0);
 
             Uint16 entryNum = 0;    //TODO: Rework these logic
@@ -175,6 +177,10 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
 
             if (isMixed) {
                 realPreset = mixedPreset;
+                realProt = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A;
+            } else {
+                realPreset = preset;
+                realProt = prot;    //TODO: Use full access or given prot?
             }
 
             extraEntry->tableEntryNum = entryNum;
@@ -185,8 +191,12 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             
             if (isMappingNotPresent || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE)) {
                 realPreset = preset;
+                nop();
+                realProt = prot;
             } else {
                 realPreset = extraPageTableContext_getPreset(root->context, extraEntry->presetID);
+                nop();
+                realProt = FLAGS_FROM_PAGING_ENTRY(*entry);
             }
 
             if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE)) {
@@ -196,8 +206,9 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
 
         DEBUG_ASSERT_SILENT(mapTo != NULL);
         DEBUG_ASSERT_SILENT(realPreset != NULL);
+        DEBUG_ASSERT_SILENT(realProt != EMPTY_FLAGS);
 
-        *entry = BUILD_ENTRY_PAGING_TABLE(mapTo, realPreset->blankEntry);   //TODO: Not considering the case of COW
+        *entry = BUILD_ENTRY_PAGING_TABLE(mapTo, realProt);   //TODO: Not considering the case of COW
         extraEntry->presetID = realPreset->id;
 
         currentV += (subSubN << PAGE_SIZE_SHIFT);

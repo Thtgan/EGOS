@@ -34,8 +34,8 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 
     memory_memset(&thread->context, 0, sizeof(Context));
 
-    threadStack_initStruct(&thread->kernelStack, THREAD_DEFAULT_KERNEL_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW);
-    threadStack_initStruct(&thread->userStack, THREAD_DEFAULT_USER_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA);
+    threadStack_initStruct(&thread->kernelStack, THREAD_DEFAULT_KERNEL_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW, true);
+    threadStack_initStruct(&thread->userStack, THREAD_DEFAULT_USER_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA, false);
 
     thread->remainTick = THREAD_TICK;
 
@@ -59,7 +59,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, void* stackBottom, Size stackSize){
     thread_initStruct(thread, tid, process);
 
-    threadStack_initStructFromExisting(&thread->kernelStack, stackBottom, stackSize, thread->process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW);
+    threadStack_initStructFromExisting(&thread->kernelStack, stackBottom, stackSize, thread->process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW, false);
 }
 
 void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry) {
@@ -102,7 +102,8 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
         cloneFrom->kernelStack.stackBottom,
         cloneFrom->kernelStack.size,
         newProcess->extendedTable,
-        cloneFrom->kernelStack.type
+        cloneFrom->kernelStack.type,
+        false
     );
 
     threadStack_initStructFromExisting(
@@ -110,7 +111,8 @@ void thread_clone(Thread* thread, Thread* cloneFrom, Uint16 tid, Process* newPro
         cloneFrom->userStack.stackBottom,
         cloneFrom->userStack.size,
         newProcess->extendedTable,
-        cloneFrom->userStack.type
+        cloneFrom->userStack.type,
+        true
     );
 
     if (cloneFrom == schedule_getCurrentThread()) {

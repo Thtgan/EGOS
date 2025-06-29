@@ -9,19 +9,21 @@
 #include<debug.h>
 #include<error.h>
 
-void threadStack_initStruct(ThreadStack* stack, Size size, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType type) {
+void threadStack_initStruct(ThreadStack* stack, Size size, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType type, bool isUser) {
     stack->extendedTable = extendedTable;
     stack->type = type;
     stack->stackBottom = NULL;
     stack->size = ALIGN_UP(size, PAGE_SIZE);
+    stack->isUser = isUser;
 }
 
-void threadStack_initStructFromExisting(ThreadStack* stack, void* stackBottom, Size size, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType type) {
+void threadStack_initStructFromExisting(ThreadStack* stack, void* stackBottom, Size size, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType type, bool isUser) {
     DEBUG_ASSERT_SILENT(size % PAGE_SIZE == 0);
     stack->extendedTable = extendedTable;
     stack->type = type;
     stack->stackBottom = stackBottom;
     stack->size = size;
+    stack->isUser = isUser;
 }
 
 void threadStack_touch(ThreadStack* stack) {
@@ -31,7 +33,7 @@ void threadStack_touch(ThreadStack* stack) {
     DEBUG_ASSERT_SILENT(stack->size % PAGE_SIZE == 0);
     Size stackPageNum = stack->size / PAGE_SIZE;
     MemoryPreset* preset = extraPageTableContext_getDefaultPreset(stack->extendedTable->context, stack->type);
-    void* stackBottom = mm_allocatePagesDetailed(stackPageNum, stack->extendedTable, mm->frameAllocator, preset);
+    void* stackBottom = mm_allocatePagesDetailed(stackPageNum, stack->extendedTable, mm->frameAllocator, preset, stack->isUser);
     
     stack->stackBottom = stackBottom;
 

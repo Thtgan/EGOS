@@ -57,6 +57,7 @@ void realmode_init() {
         copyTo, copyTo, 
         requiredPageNum,
         extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL),
+        PAGING_ENTRY_FLAG_RW,
         EMPTY_FLAGS
     );
     ERROR_GOTO_IF_ERROR(0);
@@ -70,6 +71,7 @@ void realmode_init() {
         _realMode_stack, _realMode_stack, 
         stackPageNum,
         extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_KERNEL),
+        PAGING_ENTRY_FLAG_RW,
         EMPTY_FLAGS
     );
     ERROR_GOTO_IF_ERROR(0);

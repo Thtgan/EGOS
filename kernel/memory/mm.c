@@ -12,6 +12,7 @@
 #include<memory/mm.h>
 #include<memory/paging.h>
 #include<system/memoryMap.h>
+#include<system/pageTable.h>
 #include<debug.h>
 #include<error.h>
 #include<kernel.h>
@@ -77,7 +78,7 @@ void mm_freeFrames(void* p, Size n) {   //TODO: Get allocator from metadata?
     frameAllocator_freeFrames(mm->frameAllocator, p, n);
 }
 
-void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset) {
+void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset, bool isUser) {
     if (n == 0) {
         return NULL;
     }
@@ -89,7 +90,11 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
     }
 
     void* ret = paging_convertAddressP2V(frames, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN);
-    extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, EMPTY_FLAGS);
+    Flags64 prot = PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_XD;
+    if (isUser) {
+        SET_FLAG_BACK(prot, PAGING_ENTRY_FLAG_US);
+    }
+    extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, prot, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(1);
 
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames));
@@ -103,7 +108,7 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
     ERROR_FINAL_BEGIN(0);
 }
 
-void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, MemoryPreset* preset) {
+void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, MemoryPreset* preset, bool isUser) {
     if (n == 0) {
         return NULL;
     }
@@ -119,7 +124,11 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
     frameMetadata_assignToHeapAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
     ERROR_GOTO_IF_ERROR(1);
 
-    extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, EMPTY_FLAGS);
+    Flags64 prot = PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_XD;
+    if (isUser) {
+        SET_FLAG_BACK(prot, PAGING_ENTRY_FLAG_US);
+    }
+    extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, prot, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(1);
     
     return ret;
@@ -132,7 +141,7 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
 
 void* mm_allocatePages(Size n) {
     MemoryPreset* preset = extraPageTableContext_getDefaultPreset(&mm->extraPageTableContext, MEMORY_DEFAULT_PRESETS_TYPE_SHARE);
-    return mm_allocatePagesDetailed(n, mm->extendedTable, mm->frameAllocator, preset);
+    return mm_allocatePagesDetailed(n, mm->extendedTable, mm->frameAllocator, preset, false);
 }
 
 void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo) {
@@ -167,7 +176,7 @@ void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, MemoryPreset* pr
     void* ret = NULL;
     if (heapAllocator == NULL || heapAllocator_getActualSize(heapAllocator, n) > HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE) {
         DEBUG_ASSERT_SILENT(preset != NULL);
-        ret = mm_allocatePagesDetailed(DIVIDE_ROUND_UP(n, PAGE_SIZE), mm->extendedTable, mm->frameAllocator, preset);
+        ret = mm_allocatePagesDetailed(DIVIDE_ROUND_UP(n, PAGE_SIZE), mm->extendedTable, mm->frameAllocator, preset, false);
         ERROR_GOTO_IF_ERROR(0);
     } else {
         DEBUG_ASSERT_SILENT(heapAllocator != NULL);
