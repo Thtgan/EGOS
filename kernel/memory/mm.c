@@ -136,7 +136,7 @@ void* mm_allocatePages(Size n) {
     return mm_allocatePagesDetailed(n, mm->extendedTable, mm->frameAllocator, preset);
 }
 
-void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator) {   //TODO: Remove argument allocator
+void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
     void* firstFrame = paging_fastTranslate(mm->extendedTable, p);
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, firstFrame);
@@ -161,7 +161,7 @@ void mm_freeHeapPages(void* p, Size n, ExtendedPageTableRoot* mapTo) {
 }
 
 void mm_freePages(void* p) {
-    mm_freePagesDetailed(p, mm->extendedTable, mm->frameAllocator);
+    mm_freePagesDetailed(p, mm->extendedTable);
 }
 
 void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, MemoryPreset* preset) {

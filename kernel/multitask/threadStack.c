@@ -40,7 +40,7 @@ void threadStack_touch(ThreadStack* stack) {
 }
 
 void threadStack_clearStruct(ThreadStack* stack) {
-    mm_freePagesDetailed(stack->stackBottom, stack->extendedTable, mm->frameAllocator);
+    mm_freePagesDetailed(stack->stackBottom, stack->extendedTable);
 
     return;
     ERROR_FINAL_BEGIN(0);

@@ -41,7 +41,7 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
 
 void* mm_allocatePages(Size n);
 
-void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator);
+void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo);
 
 void mm_freeHeapPages(void* p, Size n, ExtendedPageTableRoot* mapTo);
 
