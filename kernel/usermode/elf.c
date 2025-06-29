@@ -5,6 +5,7 @@
 #include<fs/fsEntry.h>
 #include<kit/bit.h>
 #include<memory/extendedPageTable.h>
+#include<memory/frameReaper.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
@@ -172,6 +173,7 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         ERROR_ASSERT_NONE();
         releaseBase += PAGE_SIZE;
     }
+    frameReaper_reap(&extendedTable->reaper);
     error_writeRecord(&tmp);
 }
 
@@ -191,13 +193,14 @@ void elf_unloadELF64Program(ELF64ProgramHeader* programHeader) {
         extendedPageTableRoot_erase(extendedTable, base, 1);
         ERROR_GOTO_IF_ERROR(0);
 
-        mm_freeFrames(frame, 1);
         base += PAGE_SIZE;
         memoryRemain -= (to - from);
 
         from = to;
         to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, to + PAGE_SIZE);
     }
+
+    frameReaper_reap(&extendedTable->reaper);
 
     return;
     ERROR_FINAL_BEGIN(0);

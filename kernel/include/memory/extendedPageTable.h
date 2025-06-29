@@ -10,6 +10,7 @@ typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 #include<interrupt/IDT.h>
 #include<kit/types.h>
 #include<kit/bit.h>
+#include<memory/frameReaper.h>
 #include<memory/memoryPresets.h>
 #include<system/pageTable.h>
 #include<debug.h>
@@ -77,6 +78,7 @@ typedef struct ExtendedPageTableRoot {
     ExtendedPageTable* extendedTable;
     ExtraPageTableContext* context;
     void* pPageTable;
+    FrameReaper reaper;
 } ExtendedPageTableRoot;
 
 ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* source);
@@ -99,9 +101,9 @@ static inline void extendedPageTableRoot_copyEntry(ExtendedPageTableRoot* root, 
     extraPageTableContext_getPreset(root->context, presetID)->operations.copyPagingEntry(level, srcExtendedTable, desExtendedTable, index);
 }
 
-static inline void extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static inline void* extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     Uint8 presetID = extendedTable->extraTable.tableEntries[index].presetID;
-    extraPageTableContext_getPreset(root->context, presetID)->operations.releasePagingEntry(level, extendedTable, index);
+    return extraPageTableContext_getPreset(root->context, presetID)->operations.releasePagingEntry(level, extendedTable, index);
 }
 
 static inline void extendedPageTableRoot_pageFaultHandler(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {

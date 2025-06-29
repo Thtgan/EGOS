@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/frameMetadata.h>
+#include<memory/frameReaper.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
@@ -70,6 +71,7 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
     ret->context = source->context;
     ret->extendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
     ret->pPageTable = PAGING_CONVERT_KERNEL_MEMORY_V2P(&ret->extendedTable->table);
+    frameReaper_initStruct(&ret->reaper);
 
     for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
         if (TEST_FLAGS_FAIL(source->extendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
@@ -91,6 +93,7 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table) {
     extendedPageTableRoot_erase(table, 0, 1ull << 36);
     ERROR_GOTO_IF_ERROR(0);
     
+    frameReaper_reap(&table->reaper);
     extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(table->extendedTable));
     mm_free(table);
 
@@ -232,8 +235,9 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 break;
             }
 
+            void* framesToRelease = NULL;
             if (IS_ALIGNED(currentV, span) && subSubN == spanN) {
-                extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
+                framesToRelease = extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
                 ERROR_GOTO_IF_ERROR(0);
             } else {
                 DEBUG_ASSERT_SILENT(level > PAGING_LEVEL_PAGE);
@@ -260,7 +264,7 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 }
 
                 if (entryNum == 0) {
-                    extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
+                    framesToRelease = extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
                     ERROR_GOTO_IF_ERROR(0);
                 } else if (!isMixed && lastPresetID != extraEntry->presetID) {
                     extraEntry->presetID = lastPresetID;
@@ -268,6 +272,10 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 } else {
                     extraEntry->tableEntryNum = entryNum;
                 }
+            }
+
+            if (framesToRelease != NULL) {
+                frameReaper_collect(&root->reaper, framesToRelease, spanN);
             }
         } while(0);
 
@@ -319,7 +327,8 @@ void* extendedPageTableRoot_translate(ExtendedPageTableRoot* root, void* v) {
         }
 
         if (PAGING_IS_LEAF(level, entry)) {
-            return ADDR_FROM_ENTRY_PS(level, v, entry);
+            void* ret = ADDR_FROM_ENTRY_PS(level, v, entry);
+            return ret;
         }
 
         table = PAGING_CONVERT_KERNEL_MEMORY_P2V(PAGING_TABLE_FROM_PAGING_ENTRY(entry));

@@ -10,6 +10,7 @@
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
+#include<memory/frameReaper.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<real/flags/cr0.h>
@@ -70,6 +71,7 @@ void paging_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     _extendedPageTableRoot.context = &mm->extraPageTableContext;
+    frameReaper_initStruct(&_extendedPageTableRoot.reaper);
 
     extendedPageTableRoot_draw(
         &_extendedPageTableRoot,
@@ -104,14 +106,12 @@ void paging_init() {
     ERROR_FINAL_BEGIN(0);
 }
 
-void* paging_fastTranslate(void* v) {
+void* paging_fastTranslate(ExtendedPageTableRoot* pageTable, void* v) {
     void* p = NULL;
     if (PAGING_IS_BASED_KERNEL_MEMORY(v)) {
         p = PAGING_CONVERT_KERNEL_MEMORY_V2P(v);
-    } else if (PAGING_IS_BASED_CONTAGIOUS_SPACE(v)) {
-        p = PAGING_CONVERT_CONTAGIOUS_SPACE_V2P(v);
     } else {
-        p = extendedPageTableRoot_translate(mm->extendedTable, v);
+        p = extendedPageTableRoot_translate(pageTable, v);
     }
 
     return p;

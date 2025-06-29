@@ -26,7 +26,7 @@ typedef struct ExtendedPageTable ExtendedPageTable;
 
 typedef struct MemoryPresetOperations {
     void (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
-    void (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+    void* (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
     void (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 } MemoryPresetOperations;
 
@@ -34,7 +34,7 @@ typedef struct MemoryPreset {
     Uint8 id;
     PagingEntry blankEntry;
     MemoryPresetOperations operations;
-    Uintptr base;
+    // Uintptr base;
 } MemoryPreset;
 
 typedef struct ExtraPageTableContext ExtraPageTableContext;

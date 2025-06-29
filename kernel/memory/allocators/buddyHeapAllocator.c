@@ -270,10 +270,7 @@ static void* __buddyHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
 }
 
 static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
-    if (
-        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_END, (Uintptr)ptr, <=, <) &&
-        !VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_END, (Uintptr)ptr, <=, <)
-    ) {
+    if (!VALUE_WITHIN(MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN, MEMORY_LAYOUT_COLORFUL_SPACE_END, (Uintptr)ptr, <=, <)) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 

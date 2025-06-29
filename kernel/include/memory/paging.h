@@ -4,6 +4,7 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
+#include<memory/extendedPageTable.h>
 #include<real/simpleAsmLines.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
@@ -29,7 +30,7 @@ extern char pKernelRangeEnd;
  */
 void paging_init();
 
-void* paging_fastTranslate(void* v);
+void* paging_fastTranslate(ExtendedPageTableRoot* pageTable, void* v);
 
 //Flush the TLB, If page table update not working, try this
 #define PAGING_FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
@@ -46,21 +47,13 @@ static inline bool paging_isBasedAddress(void* v, Uintptr base) {
     return VAL_AND((Uintptr)v, base) == base;
 }
 
-//Contagious space macros
+//Colorful space macros
 
-#define PAGING_CONVERT_CONTAGIOUS_SPACE_V2P(__V)    paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN)
+#define PAGING_CONVERT_COLORFUL_SPACE_V2P(__V)      paging_convertAddressV2P(__V, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN)
 
-#define PAGING_CONVERT_CONTAGIOUS_SPACE_P2V(__P)    paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN)
+#define PAGING_CONVERT_COLORFUL_SPACE_P2V(__P)      paging_convertAddressP2V(__P, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN)
 
-#define PAGING_IS_BASED_CONTAGIOUS_SPACE(__V)       paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN)
-
-//Shread space macros
-
-#define PAGING_CONVERT_SHREAD_SPACE_V2P(__V)        paging_convertAddressV2P(__V, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN)
-
-#define PAGING_CONVERT_SHREAD_SPACE_P2V(__P)        paging_convertAddressP2V(__P, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN)
-
-#define PAGING_IS_BASED_SHREAD_SPACE(__V)           paging_isBasedAddress(__V, MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN)
+#define PAGING_IS_BASED_COLORFUL_SPACE(__V)         paging_isBasedAddress(__V, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN)
 
 //Identical memory macros
 

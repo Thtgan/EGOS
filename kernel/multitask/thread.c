@@ -298,7 +298,8 @@ static void __thread_switchContext(Thread* from, Thread* to) {
 static void __thread_setupKernelContext(Thread* thread, ThreadEntryPoint entry) {
     Context* context = (Context*)(threadStack_getStackTop(&thread->kernelStack) - sizeof(Context));
     
-    Context* contextWrite = (Context*)PAGING_CONVERT_KERNEL_MEMORY_P2V(PAGING_CONVERT_SHREAD_SPACE_V2P(context));   //TODO: Generalize this fast translation
+    void* pContext = paging_fastTranslate(thread->kernelStack.extendedTable, context);
+    Context* contextWrite = (Context*)PAGING_CONVERT_KERNEL_MEMORY_P2V(pContext);
 
     contextWrite->rip = (Uintptr)entry;
     Registers* regs = &contextWrite->regs;

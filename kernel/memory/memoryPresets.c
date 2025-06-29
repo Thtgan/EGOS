@@ -25,11 +25,11 @@ static void __memoryPresetsOperations_dummyFaultHandler(PagingLevel level, Exten
 
 static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 
-static void __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void* __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
-static void __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void* __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
-static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
 static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_NUM] = {
     [MEMORY_DEFAULT_PRESETS_TYPE_KERNEL] = (MemoryPreset) {
@@ -39,8 +39,7 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        },
-        .base = MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN
+        }
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_SHARE] = (MemoryPreset) {
         .id = 0,
@@ -49,8 +48,7 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        },
-        .base = MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN
+        }
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_COW] = (MemoryPreset) {
         .id = 0,
@@ -59,8 +57,7 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
-        },
-        .base = MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN
+        }
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_MIXED] = (MemoryPreset) {
         .id = 0,
@@ -69,8 +66,7 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_deepCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_deepReleaseEntry    //TODO: Setup sepcific relase function for mixed
-        },
-        .base = 0
+        }
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA] = (MemoryPreset) {
         .id = 0,
@@ -79,8 +75,7 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
-        },
-        .base = MEMORY_LAYOUT_KERNEL_SHREAD_SPACE_BEGIN
+        }
     },
     [MEMORY_DEFAULT_PRESETS_TYPE_USER_CODE] = (MemoryPreset) {
         .id = 0,
@@ -89,8 +84,7 @@ static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_N
             .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
             .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
             .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        },
-        .base = MEMORY_LAYOUT_KERNEL_CONTAGIOUS_SPACE_BEGIN
+        }
     }
 };
 
@@ -215,18 +209,21 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
     ERROR_FINAL_BEGIN(0);
 }
 
-static void __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void* __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
     *entry = EMPTY_PAGING_ENTRY;
     *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
+
+    //TODO: Use refer counter to release pages;
 }
 
-static void __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void* __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
+    void* frameToRelease = NULL;
     if (!PAGING_IS_LEAF(level, *entry)) {
         ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
@@ -239,31 +236,29 @@ static void __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, Extend
         }
 
         extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
+    } else {
+        frameToRelease = pageTable_getNextLevelPage(level, *entry);
     }
 
     *entry = EMPTY_PAGING_ENTRY;
     *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
 
-    return;
+    return frameToRelease;
     ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
-static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
+    void* frameToRelease = NULL;
     if (PAGING_IS_LEAF(level, *entry)) {
         void* p = pageTable_getNextLevelPage(level, *entry);
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, p);
         if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) { //If writable, this frame must have only 1 reference, no matter cloned or not
-            if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR)) {
-                HeapAllocator* allocator = (HeapAllocator*)unit->belongToAllocator;
-                frameAllocator_freeFrames(allocator->frameAllocator, p, 1);
-            } else {
-                DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
-                FrameAllocator* allocator = (FrameAllocator*)unit->belongToAllocator;
-                frameAllocator_freeFrames(allocator, p, 1);
-            }
+            DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
+            frameToRelease = p;
         } else {
             if (unit == NULL) {
                 ERROR_ASSERT_ANY();
@@ -287,6 +282,7 @@ static void __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extende
     *entry = EMPTY_PAGING_ENTRY;
     *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
 
-    return;
+    return frameToRelease;
     ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
