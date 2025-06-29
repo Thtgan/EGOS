@@ -142,7 +142,8 @@ static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPa
 
 
     if (PAGING_IS_LEAF(level, *srcEntry)) {
-        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *srcEntry));
+        void* mapToFrame = pageTable_getNextLevelPage(level, *srcEntry);
+        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
         if (unit == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -188,7 +189,8 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
 
     DEBUG_ASSERT_SILENT(TEST_FLAGS(handlerStackFrame->errorCode, PAGING_PAGE_FAULT_ERROR_CODE_FLAG_WR) && TEST_FLAGS_FAIL(*entry, PAGING_ENTRY_FLAG_RW) && PAGING_IS_LEAF(level, *entry));
     
-    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, pageTable_getNextLevelPage(level, *entry));
+    void* mapToFrame = pageTable_getNextLevelPage(level, *entry);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
     if (unit == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -197,7 +199,7 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
     if (unit->cow > 0) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
         void* copyTo = mm_allocateFrames(span >> PAGE_SIZE_SHIFT);
-        memory_memcpy(PAGING_CONVERT_KERNEL_MEMORY_P2V(copyTo), PAGING_CONVERT_KERNEL_MEMORY_P2V(pageTable_getNextLevelPage(level, *entry)), span);
+        memory_memcpy(PAGING_CONVERT_KERNEL_MEMORY_P2V(copyTo), PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame), span);
 
         --unit->cow;
         *entry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), copyTo, FLAGS_FROM_PAGING_ENTRY(*entry));
@@ -254,11 +256,11 @@ static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extend
 
     void* frameToRelease = NULL;
     if (PAGING_IS_LEAF(level, *entry)) {
-        void* p = pageTable_getNextLevelPage(level, *entry);
-        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, p);
+        void* mapToFrame = pageTable_getNextLevelPage(level, *entry);
+        FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
         if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_RW)) { //If writable, this frame must have only 1 reference, no matter cloned or not
             DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
-            frameToRelease = p;
+            frameToRelease = mapToFrame;
         } else {
             if (unit == NULL) {
                 ERROR_ASSERT_ANY();

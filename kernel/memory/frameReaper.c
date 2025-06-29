@@ -31,20 +31,21 @@ static inline void __frameReaper_initStruct(FrameReaper* reaper) {
 }
 
 void frameReaper_collect(FrameReaper* reaper, void* frames, Size n) {
-    frameMetadata_markCollected(&mm->frameMetadata, frames, n);
+    Index32 framesBeginIndex = FRAME_METADATA_FRAME_TO_INDEX(frames);
+    frameMetadata_markCollected(&mm->frameMetadata, framesBeginIndex, n);
     __FrameReaperNode* mergedNode = (__FrameReaperNode*)PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
     __frameReaperNode_initStruct(mergedNode, n);
     linkedListNode_insertBack(reaper, &mergedNode->node);
 
     Index32 mergedFramesBeginIndex = INVALID_INDEX32;
-    if ((mergedFramesBeginIndex = frameMetadata_tryMergeNearbyCollected(&mm->frameMetadata, frames, 0)) != INVALID_INDEX32) {
+    if ((mergedFramesBeginIndex = frameMetadata_tryMergeNearbyCollected(&mm->frameMetadata, framesBeginIndex, 0)) != INVALID_INDEX32) {
         __FrameReaperNode* previousNode = (__FrameReaperNode*)FRAME_METADATA_INDEX_TO_FRAME(mergedFramesBeginIndex);
         previousNode = (__FrameReaperNode*)PAGING_CONVERT_KERNEL_MEMORY_P2V(previousNode);
         __frameReaperNode_merge(previousNode, mergedNode);
         mergedNode = previousNode;
     }
 
-    if ((mergedFramesBeginIndex = frameMetadata_tryMergeNearbyCollected(&mm->frameMetadata, frames + (n - 1) * PAGE_SIZE, 1)) != INVALID_INDEX32) {
+    if ((mergedFramesBeginIndex = frameMetadata_tryMergeNearbyCollected(&mm->frameMetadata, framesBeginIndex + n - 1, 1)) != INVALID_INDEX32) {
         __FrameReaperNode* nextNode = (__FrameReaperNode*)FRAME_METADATA_INDEX_TO_FRAME(mergedFramesBeginIndex);
         nextNode = (__FrameReaperNode*)PAGING_CONVERT_KERNEL_MEMORY_P2V(nextNode);
         __frameReaperNode_merge(mergedNode, nextNode);
@@ -65,15 +66,15 @@ void __frameReaperNode_reap(__FrameReaperNode* node) {
     linkedListNode_delete(&node->node);
     Size n = node->length;
     void* frames = PAGING_CONVERT_KERNEL_MEMORY_V2P(node);
+    Index32 framesIndex = FRAME_METADATA_FRAME_TO_INDEX(frames);
 
-    frameMetadata_unmarkCollected(&mm->frameMetadata, frames, n);
+    frameMetadata_unmarkCollected(&mm->frameMetadata, framesIndex, n);
 
-    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, frames);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, framesIndex);
     FrameAllocator* allocator = NULL;
     DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
     if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR)) {
         allocator = ((HeapAllocator*)unit->belongToAllocator)->frameAllocator;
-        frameMetadata_assignToFrameAllocator(&mm->frameMetadata, frames, n, allocator);
     } else {
         allocator = (FrameAllocator*)unit->belongToAllocator;
     }

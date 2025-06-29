@@ -215,7 +215,7 @@ static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* fr
 
     allocator->remaining += n;
 
-    frameMetadata_assignToFrameAllocator(&mm->frameMetadata, frames, n, allocator);
+    frameMetadata_assignToFrameAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
     ERROR_CHECKPOINT();
 }
 
@@ -230,7 +230,7 @@ static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* fra
     allocator->total += n;
     allocator->remaining += n;
 
-    frameMetadata_assignToFrameAllocator(&mm->frameMetadata, frames, n, allocator);
+    frameMetadata_assignToFrameAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
     ERROR_GOTO_IF_ERROR(0);
 
     return;

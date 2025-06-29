@@ -96,7 +96,7 @@ static void __kernelHeapSubAllocator_expand(KernelHeapSubAllocator* allocator, U
         ERROR_GOTO(0);
     }
 
-    frameMetadata_assignToHeapAllocator(&mm->frameMetadata, frame, 1, baseAllocator);
+    frameMetadata_assignToHeapAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frame), 1, baseAllocator);
 
     Size blockSize = KERNEL_HEAP_ALLOCATOR_ORDER_TO_SIZE(order);
     Size regionNum = PAGE_SIZE / blockSize;

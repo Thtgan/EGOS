@@ -44,34 +44,18 @@ typedef struct FrameMetadataHeader {
 
 void frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* frames, Size n);
 
-FrameMetadataUnit* frameMetadataHeader_getUnit(FrameMetadataHeader* header, void* frame);
-
-FrameMetadataUnit* frameMetadataHeader_getUnitFromIndex(FrameMetadataHeader* header, Index32 index);
+FrameMetadataUnit* frameMetadataHeader_getUnit(FrameMetadataHeader* header, Index32 frameIndex);
 
 static inline void* frameMetadataHeader_getBase(FrameMetadataHeader* header) {
     return (void*)(((Uintptr)header->frameBaseIndex) * PAGE_SIZE);
 }
 
-static inline bool frameMetadataHeader_checkRangeContainIndex(FrameMetadataHeader* header, Index32 index, Size n) {
-    return RANGE_WITHIN(header->frameBaseIndex, header->frameBaseIndex + header->frameNum, index, index + n, <=, <=);
+static inline bool frameMetadataHeader_checkRangeContain(FrameMetadataHeader* header, Index32 frameIndex, Size n) {
+    return RANGE_WITHIN(header->frameBaseIndex, header->frameBaseIndex + header->frameNum, frameIndex, frameIndex + n, <=, <=);
 }
 
-static inline bool frameMetadataHeader_checkContainIndex(FrameMetadataHeader* header, Index32 index) {
-    return VALUE_WITHIN(header->frameBaseIndex, header->frameBaseIndex + header->frameNum, index, <=, <);
-}
-
-static inline bool frameMetadataHeader_checkRangeContain(FrameMetadataHeader* header, void* frames, Size n) {
-    Index32 beginIndex = FRAME_METADATA_FRAME_TO_INDEX(frames);
-    return frameMetadataHeader_checkRangeContainIndex(header, beginIndex, n);
-}
-
-static inline bool frameMetadataHeader_checkContain(FrameMetadataHeader* header, void* frame) {
-    Index32 frameIndex = FRAME_METADATA_FRAME_TO_INDEX(frame);
-    return frameMetadataHeader_checkContainIndex(header, frameIndex);
-}
-
-static inline void* frameMetadataHeader_getFrame(FrameMetadataHeader* header, Index32 index) {
-    return FRAME_METADATA_INDEX_TO_FRAME(header->frameBaseIndex + index);
+static inline bool frameMetadataHeader_checkContain(FrameMetadataHeader* header, Index32 frameIndex) {
+    return VALUE_WITHIN(header->frameBaseIndex, header->frameBaseIndex + header->frameNum, frameIndex, <=, <);
 }
 
 typedef struct FrameMetadata {
@@ -84,20 +68,20 @@ void frameMetadata_initStruct(FrameMetadata* metadata);
 
 FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* frames, Size n);
 
-FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, void* frame);
+FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, Index32 frameIndex);
 
-FrameMetadataUnit* frameMetadata_getUnit(FrameMetadata* metadata, void* frame);
+FrameMetadataUnit* frameMetadata_getUnit(FrameMetadata* metadata, Index32 frameIndex);
 
-void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, void* frames, Size n, FrameAllocator* allocator);
+void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n, FrameAllocator* allocator);
 
-void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, void* frames, Size n, HeapAllocator* allocator);
+void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n, HeapAllocator* allocator);
 
-void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, void* frames, Size n);
+void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n);
 
-void frameMetadata_markCollected(FrameMetadata* metadata, void* frames, Size n);
+void frameMetadata_markCollected(FrameMetadata* metadata, Index32 framesBeginIndex, Size n);
 
-void frameMetadata_unmarkCollected(FrameMetadata* metadata, void* frames, Size n);
+void frameMetadata_unmarkCollected(FrameMetadata* metadata, Index32 framesBeginIndex, Size n);
 
-Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, void* sideFrame, bool direction);
+Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, Index32 frameIndex, bool direction);
 
 #endif // __MEMORY_FRAMEMETADATA_H

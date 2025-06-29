@@ -3,7 +3,6 @@
 #include<kit/util.h>
 #include<system/pageTable.h>
 #include<memory/allocators/buddyFrameAllocator.h>
-// #include<memory/allocators/buddyHeapAllocator.h>
 #include<memory/allocators/kernelHeapAllocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
@@ -93,7 +92,7 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
     extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(1);
 
-    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, frames);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames));
     unit->vRegionLength = n;
     
     return ret;
@@ -117,7 +116,7 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
     }
 
     void* ret = paging_convertAddressP2V(frames, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN);
-    frameMetadata_assignToHeapAllocator(&mm->frameMetadata, frames, n, allocator);
+    frameMetadata_assignToHeapAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
     ERROR_GOTO_IF_ERROR(1);
 
     extendedPageTableRoot_draw(mapTo, ret, frames, n, preset, EMPTY_FLAGS);
@@ -139,7 +138,7 @@ void* mm_allocatePages(Size n) {
 void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
     void* firstFrame = paging_fastTranslate(mm->extendedTable, p);
-    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, firstFrame);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
     ERROR_CHECKPOINT();
 
     extendedPageTableRoot_erase(mapTo, p, unit->vRegionLength);
@@ -188,8 +187,8 @@ void* mm_allocate(Size n) {
 void mm_free(void* p) {
     DEBUG_ASSERT_SILENT(PAGING_IS_BASED_COLORFUL_SPACE(p));
 
-    void* firstFrame = (void*)ALIGN_DOWN((Uintptr)paging_fastTranslate(mm->extendedTable, p), PAGE_SIZE);
-    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, firstFrame);
+    void* firstFrame = paging_fastTranslate(mm->extendedTable, p);
+    FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
     ERROR_CHECKPOINT();
 
     DEBUG_ASSERT_SILENT(unit->belongToAllocator != NULL);

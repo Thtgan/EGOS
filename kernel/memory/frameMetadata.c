@@ -30,14 +30,8 @@ void frameMetadataHeader_initStruct(FrameMetadataHeader* header, void* frames, S
     memory_memset(header->units, 0, header->frameNum * sizeof(FrameMetadata));
 }
 
-FrameMetadataUnit* frameMetadataHeader_getUnit(FrameMetadataHeader* header, void* frame) {
-    Index32 index = FRAME_METADATA_FRAME_TO_INDEX(frame) - header->frameBaseIndex;
-    DEBUG_ASSERT_SILENT(index < header->frameNum);
-    return &header->units[index];
-}
-
-FrameMetadataUnit* frameMetadataHeader_getUnitFromIndex(FrameMetadataHeader* header, Index32 index) {
-    Index32 indexInRegion = index - header->frameBaseIndex;
+FrameMetadataUnit* frameMetadataHeader_getUnit(FrameMetadataHeader* header, Index32 frameIndex) {
+    Index32 indexInRegion = frameIndex - header->frameBaseIndex;
     DEBUG_ASSERT_SILENT(indexInRegion < header->frameNum);
     return &header->units[indexInRegion];
 }
@@ -77,15 +71,15 @@ FrameMetadataHeader* frameMetadata_addFrames(FrameMetadata* metadata, void* fram
     return newHeader;
 }
 
-FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, void* frame) {
+FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, Index32 frameIndex) {
     FrameMetadataHeader* lastAccessed = metadata->lastAccessed;
-    if (lastAccessed != NULL && frameMetadataHeader_checkContain(lastAccessed, frame)) {
+    if (lastAccessed != NULL && frameMetadataHeader_checkContain(lastAccessed, frameIndex)) {
         return lastAccessed;
     }
     
     for (LinkedListNode* node = metadata->headerList.next; node != &metadata->headerList; node = node->next) {
         FrameMetadataHeader* header = HOST_POINTER(node, FrameMetadataHeader, node);
-        if (frameMetadataHeader_checkContain(header, frame)) {
+        if (frameMetadataHeader_checkContain(header, frameIndex)) {
             metadata->lastAccessed = header;
             return header;
         }
@@ -95,30 +89,30 @@ FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, void* fram
     return NULL;
 }
 
-FrameMetadataUnit* frameMetadata_getUnit(FrameMetadata* metadata, void* frame) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(&mm->frameMetadata, frame);
+FrameMetadataUnit* frameMetadata_getUnit(FrameMetadata* metadata, Index32 frameIndex) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(&mm->frameMetadata, frameIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
     
-    return frameMetadataHeader_getUnit(header, frame);
+    return frameMetadataHeader_getUnit(header, frameIndex);
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
-void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, void* frames, Size n, FrameAllocator* allocator) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n, FrameAllocator* allocator) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    if (!frameMetadataHeader_checkRangeContain(header, frames, n)) {
+    if (!frameMetadataHeader_checkRangeContain(header, framesBeginIndex, n)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, frames);
+    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, framesBeginIndex);
     for (int i = 0; i < n; ++i) {
         FrameMetadataUnit* unit = unitBegin + i;
         CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR);
@@ -131,18 +125,18 @@ void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, void* frames,
     return;
 }
 
-void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, void* frames, Size n, HeapAllocator* allocator) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n, HeapAllocator* allocator) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    if (!frameMetadataHeader_checkRangeContain(header, frames, n)) {
+    if (!frameMetadataHeader_checkRangeContain(header, framesBeginIndex, n)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, frames);
+    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, framesBeginIndex);
     for (int i = 0; i < n; ++i) {
         FrameMetadataUnit* unit = unitBegin + i;
         CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR);
@@ -155,18 +149,18 @@ void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, void* frames, 
     return;
 }
 
-void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, void* frames, Size n) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    if (!frameMetadataHeader_checkRangeContain(header, frames, n)) {
+    if (!frameMetadataHeader_checkRangeContain(header, framesBeginIndex, n)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, frames);
+    FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, framesBeginIndex);
     for (int i = 0; i < n; ++i) {
         FrameMetadataUnit* unit = unitBegin + i;
         DEBUG_ASSERT_SILENT(TEST_FLAGS_CONTAIN(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR) && unit->belongToAllocator != NULL);
@@ -179,26 +173,26 @@ void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, void* frames,
     return;
 }
 
-void frameMetadata_markCollected(FrameMetadata* metadata, void* frames, Size n) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+void frameMetadata_markCollected(FrameMetadata* metadata, Index32 framesBeginIndex, Size n) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    Index32 headIndex = FRAME_METADATA_FRAME_TO_INDEX(frames),
+    Index32 headIndex = framesBeginIndex,
             endIndex = headIndex + n - 1;
-    if (!frameMetadataHeader_checkRangeContainIndex(header, headIndex, n)) {
+    if (!frameMetadataHeader_checkRangeContain(header, headIndex, n)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    FrameMetadataUnit* headUnit = frameMetadataHeader_getUnitFromIndex(header, headIndex);
+    FrameMetadataUnit* headUnit = frameMetadataHeader_getUnit(header, headIndex);
     DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(headUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) && headUnit->collectedAnotherSideIndex == 0);
     SET_FLAG_BACK(headUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
     headUnit->collectedAnotherSideIndex = endIndex;
     
     if (n != 1) {
-        FrameMetadataUnit* endUnit = frameMetadataHeader_getUnitFromIndex(header, endIndex);
+        FrameMetadataUnit* endUnit = frameMetadataHeader_getUnit(header, endIndex);
         DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(endUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) && endUnit->collectedAnotherSideIndex == 0);
         SET_FLAG_BACK(endUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
         endUnit->collectedAnotherSideIndex = headIndex;
@@ -209,26 +203,26 @@ void frameMetadata_markCollected(FrameMetadata* metadata, void* frames, Size n) 
     return;
 }
 
-void frameMetadata_unmarkCollected(FrameMetadata* metadata, void* frames, Size n) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frames);
+void frameMetadata_unmarkCollected(FrameMetadata* metadata, Index32 framesBeginIndex, Size n) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    Index32 headIndex = FRAME_METADATA_FRAME_TO_INDEX(frames),
+    Index32 headIndex = framesBeginIndex,
             endIndex = headIndex + n - 1;
-    if (!frameMetadataHeader_checkRangeContainIndex(header, headIndex, n)) {
+    if (!frameMetadataHeader_checkRangeContain(header, headIndex, n)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    FrameMetadataUnit* headUnit = frameMetadataHeader_getUnitFromIndex(header, headIndex);
+    FrameMetadataUnit* headUnit = frameMetadataHeader_getUnit(header, headIndex);
     DEBUG_ASSERT_SILENT(TEST_FLAGS(headUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) && headUnit->collectedAnotherSideIndex == endIndex);    //Must be begin side
     CLEAR_FLAG_BACK(headUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
     headUnit->collectedAnotherSideIndex = 0;
     
     if (n != 1) {
-        FrameMetadataUnit* endUnit = frameMetadataHeader_getUnitFromIndex(header, endIndex);
+        FrameMetadataUnit* endUnit = frameMetadataHeader_getUnit(header, endIndex);
         DEBUG_ASSERT_SILENT(TEST_FLAGS(endUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) && endUnit->collectedAnotherSideIndex == headIndex);  //Must be end side
         CLEAR_FLAG_BACK(endUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
         endUnit->collectedAnotherSideIndex = 0;
@@ -239,37 +233,36 @@ void frameMetadata_unmarkCollected(FrameMetadata* metadata, void* frames, Size n
     return;
 }
 
-Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, void* sideFrame, bool direction) {
-    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, sideFrame);
+Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, Index32 frameIndex, bool direction) {
+    FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frameIndex);
     if (header == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    Index32 index = FRAME_METADATA_FRAME_TO_INDEX(sideFrame);
-    if (!frameMetadataHeader_checkContainIndex(header, index)) {
+    if (!frameMetadataHeader_checkContain(header, frameIndex)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    FrameMetadataUnit* unit = frameMetadataHeader_getUnitFromIndex(header, index);
-    DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) && unit->collectedAnotherSideIndex != 0 && frameMetadataHeader_checkContainIndex(header, unit->collectedAnotherSideIndex));
-    FrameMetadataUnit* anotherSideUnit = frameMetadataHeader_getUnitFromIndex(header, unit->collectedAnotherSideIndex);
+    FrameMetadataUnit* unit = frameMetadataHeader_getUnit(header, frameIndex);
+    DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) && unit->collectedAnotherSideIndex != 0 && frameMetadataHeader_checkContain(header, unit->collectedAnotherSideIndex));
+    FrameMetadataUnit* anotherSideUnit = frameMetadataHeader_getUnit(header, unit->collectedAnotherSideIndex);
 
     Index32 nearbyFramesBeginIndex = INVALID_INDEX32;
-    bool select = unit->collectedAnotherSideIndex == index ? direction : (unit->collectedAnotherSideIndex < index);
+    bool select = unit->collectedAnotherSideIndex == frameIndex ? direction : (unit->collectedAnotherSideIndex < frameIndex);
     if (select) { //It's end side
-        Index32 nearbyIndex = index + 1;
+        Index32 nearbyIndex = frameIndex + 1;
         do {
-            if (!frameMetadataHeader_checkContainIndex(header, nearbyIndex)) {
+            if (!frameMetadataHeader_checkContain(header, nearbyIndex)) {
                 break;
             }
 
-            FrameMetadataUnit* nearbyUnit = frameMetadataHeader_getUnitFromIndex(header, nearbyIndex);
+            FrameMetadataUnit* nearbyUnit = frameMetadataHeader_getUnit(header, nearbyIndex);
             if (TEST_FLAGS_FAIL(nearbyUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) || unit->belongToAllocator != nearbyUnit->belongToAllocator) {
                 break;
             }
-            DEBUG_ASSERT_SILENT(nearbyUnit != NULL && nearbyUnit->collectedAnotherSideIndex >= nearbyIndex && frameMetadataHeader_checkContainIndex(header, nearbyUnit->collectedAnotherSideIndex));
-            FrameMetadataUnit* nearbyAnotherSideUnit = frameMetadataHeader_getUnitFromIndex(header, nearbyUnit->collectedAnotherSideIndex);
+            DEBUG_ASSERT_SILENT(nearbyUnit != NULL && nearbyUnit->collectedAnotherSideIndex >= nearbyIndex && frameMetadataHeader_checkContain(header, nearbyUnit->collectedAnotherSideIndex));
+            FrameMetadataUnit* nearbyAnotherSideUnit = frameMetadataHeader_getUnit(header, nearbyUnit->collectedAnotherSideIndex);
 
             Index32 newBegin = unit->collectedAnotherSideIndex, newEnd = nearbyUnit->collectedAnotherSideIndex;
             unit->collectedAnotherSideIndex = nearbyUnit->collectedAnotherSideIndex = 0;
@@ -287,18 +280,18 @@ Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, void* sid
             nearbyFramesBeginIndex = nearbyIndex;
         } while (0);
     } else {    //It's begin side
-        Index32 nearbyIndex = index - 1;
+        Index32 nearbyIndex = frameIndex - 1;
         do {
-            if (!frameMetadataHeader_checkContainIndex(header, nearbyIndex)) {
+            if (!frameMetadataHeader_checkContain(header, nearbyIndex)) {
                 break;
             }
 
-            FrameMetadataUnit* nearbyUnit = frameMetadataHeader_getUnitFromIndex(header, nearbyIndex);
+            FrameMetadataUnit* nearbyUnit = frameMetadataHeader_getUnit(header, nearbyIndex);
             if (TEST_FLAGS_FAIL(nearbyUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE) || unit->belongToAllocator != nearbyUnit->belongToAllocator) {
                 break;
             }
-            DEBUG_ASSERT_SILENT(nearbyUnit != NULL && nearbyUnit->collectedAnotherSideIndex <= nearbyIndex && frameMetadataHeader_checkContainIndex(header, nearbyUnit->collectedAnotherSideIndex));
-            FrameMetadataUnit* nearbyAnotherSideUnit = frameMetadataHeader_getUnitFromIndex(header, nearbyUnit->collectedAnotherSideIndex);
+            DEBUG_ASSERT_SILENT(nearbyUnit != NULL && nearbyUnit->collectedAnotherSideIndex <= nearbyIndex && frameMetadataHeader_checkContain(header, nearbyUnit->collectedAnotherSideIndex));
+            FrameMetadataUnit* nearbyAnotherSideUnit = frameMetadataHeader_getUnit(header, nearbyUnit->collectedAnotherSideIndex);
 
             Index32 newBegin = nearbyUnit->collectedAnotherSideIndex, newEnd = unit->collectedAnotherSideIndex;
             unit->collectedAnotherSideIndex = nearbyUnit->collectedAnotherSideIndex = 0;
