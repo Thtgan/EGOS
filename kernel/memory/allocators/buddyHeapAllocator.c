@@ -57,8 +57,8 @@ static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n
 
 static void __buddyHeapAllocator_releasePage(BuddyHeapAllocator* allocator, void* page);
 
-void buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 presetID) {
-    heapAllocator_initStruct(&allocator->allocator, frameAllocator, &_buddyHeapAllocator_operations, presetID);
+void buddyHeapAllocator_initStruct(BuddyHeapAllocator* allocator, FrameAllocator* frameAllocator, Uint8 operationsID) {
+    heapAllocator_initStruct(&allocator->allocator, frameAllocator, &_buddyHeapAllocator_operations, operationsID);
     for (int j = 0; j < BUDDY_HEAP_ALLOCATOR_BUDDY_LIST_LIST_NUM; ++j) {
         __buddyHeapAllocatorBuddyList_initStruct(&allocator->buddyLists[j], j);
     }
@@ -197,8 +197,7 @@ static void __buddyHeapAllocatorBuddyList_recycleMemory(BuddyHeapAllocator* allo
 
 static void __buddyHeapAllocator_takePages(BuddyHeapAllocator* allocator, Size n) {
     HeapAllocator* baseAllocator = &allocator->allocator;
-    MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, baseAllocator->presetID);
-    void* pages = mm_allocateHeapPages(n, mm->extendedTable, baseAllocator, preset, false);
+    void* pages = mm_allocateHeapPages(n, mm->extendedTable, baseAllocator, baseAllocator->operationsID, false);
     if (pages == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);

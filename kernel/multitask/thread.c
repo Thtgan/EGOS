@@ -34,8 +34,8 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 
     memory_memset(&thread->context, 0, sizeof(Context));
 
-    threadStack_initStruct(&thread->kernelStack, THREAD_DEFAULT_KERNEL_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW, true);
-    threadStack_initStruct(&thread->userStack, THREAD_DEFAULT_USER_STACK_SIZE, process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA, false);
+    threadStack_initStruct(&thread->kernelStack, THREAD_DEFAULT_KERNEL_STACK_SIZE, process->extendedTable, DEFAULT_MEMORY_OPERATIONS_TYPE_COW, false);
+    threadStack_initStruct(&thread->userStack, THREAD_DEFAULT_USER_STACK_SIZE, process->extendedTable, DEFAULT_MEMORY_OPERATIONS_TYPE_COW, true);
 
     thread->remainTick = THREAD_TICK;
 
@@ -59,7 +59,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, void* stackBottom, Size stackSize){
     thread_initStruct(thread, tid, process);
 
-    threadStack_initStructFromExisting(&thread->kernelStack, stackBottom, stackSize, thread->process->extendedTable, MEMORY_DEFAULT_PRESETS_TYPE_COW, false);
+    threadStack_initStructFromExisting(&thread->kernelStack, stackBottom, stackSize, thread->process->extendedTable, DEFAULT_MEMORY_OPERATIONS_TYPE_COW, false);
 }
 
 void thread_initNewThread(Thread* thread, Uint16 tid, Process* process, ThreadEntryPoint entry) {

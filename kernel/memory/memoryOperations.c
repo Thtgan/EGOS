@@ -1,4 +1,4 @@
-#include<memory/memoryPresets.h>
+#include<memory/memoryOperations.h>
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -15,87 +15,53 @@
 #include<debug.h>
 #include<error.h>
 
-static void __memoryPresetsOperations_shallowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+static void __memoryOperations_shallowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
-static void __memoryPresetsOperations_deepCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+static void __memoryOperations_deepCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
-static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+static void __memoryOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
-static void __memoryPresetsOperations_dummyFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+static void __memoryOperations_dummyFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 
-static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+static void __memoryOperations_cowFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 
-static void* __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void* __memoryOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
-static void* __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void* __memoryOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
-static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
-static MemoryPreset __memoryPresets_defaultPresets[MEMORY_DEFAULT_PRESETS_TYPE_NUM] = {
-    [MEMORY_DEFAULT_PRESETS_TYPE_KERNEL] = (MemoryPreset) {
-        .id = 0,
-        .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        }
+static MemoryOperations __memoryOperations_defaultOperations[DEFAULT_MEMORY_OPERATIONS_TYPE_NUM] = { //TODO: Setup sepcific relase function for mixed
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_SHARE] = (MemoryOperations) {
+        .copyPagingEntry = __memoryOperations_shallowCopyEntry,
+        .pageFaultHandler = __memoryOperations_dummyFaultHandler,
+        .releasePagingEntry = __memoryOperations_shallowReleaseEntry
     },
-    [MEMORY_DEFAULT_PRESETS_TYPE_SHARE] = (MemoryPreset) {
-        .id = 0,
-        .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        }
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_PRIVATE] = (MemoryOperations) {
+        .copyPagingEntry = __memoryOperations_deepCopyEntry,
+        .pageFaultHandler = __memoryOperations_dummyFaultHandler,
+        .releasePagingEntry = __memoryOperations_deepReleaseEntry
     },
-    [MEMORY_DEFAULT_PRESETS_TYPE_COW] = (MemoryPreset) {
-        .id = 0,
-        .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
-        }
-    },
-    [MEMORY_DEFAULT_PRESETS_TYPE_MIXED] = (MemoryPreset) {
-        .id = 0,
-        .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_deepCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_deepReleaseEntry    //TODO: Setup sepcific relase function for mixed
-        }
-    },
-    [MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA] = (MemoryPreset) {
-        .id = 0,
-        .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_cowCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_cowFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_cowReleaseEntry
-        }
-    },
-    [MEMORY_DEFAULT_PRESETS_TYPE_USER_CODE] = (MemoryPreset) {
-        .id = 0,
-        .operations = {
-            .copyPagingEntry = __memoryPresetsOperations_shallowCopyEntry,
-            .pageFaultHandler = __memoryPresetsOperations_dummyFaultHandler,
-            .releasePagingEntry = __memoryPresetsOperations_shallowReleaseEntry
-        }
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_COW] = (MemoryOperations) {
+        .copyPagingEntry = __memoryOperations_cowCopyEntry,
+        .pageFaultHandler = __memoryOperations_cowFaultHandler,
+        .releasePagingEntry = __memoryOperations_cowReleaseEntry
     }
 };
 
-void memoryPreset_registerDefaultPresets(ExtraPageTableContext* context) {
-    for (MemoryDefaultPresetType i = MEMORY_DEFAULT_PRESETS_TYPE_KERNEL; i < MEMORY_DEFAULT_PRESETS_TYPE_NUM; ++i) {
-        MemoryPreset* preset = &__memoryPresets_defaultPresets[i];
-        extraPageTableContext_registerPreset(&mm->extraPageTableContext, preset);
+void memoryOperations_registerDefault(ExtraPageTableContext* context) {
+    for (int i = 0; i < DEFAULT_MEMORY_OPERATIONS_TYPE_NUM; ++i) {
+        MemoryOperations* operations = &__memoryOperations_defaultOperations[i];
+        Index8 index = extraPageTableContext_registerMemoryOperations(&mm->extraPageTableContext, operations);
+        DEBUG_ASSERT_SILENT(index == i && extraPageTableContext_getMemoryOperations(context, i) == &__memoryOperations_defaultOperations[i]);
         ERROR_GOTO_IF_ERROR(0);
-
-        context->presetType2id[i] = preset->id;
     }
 
     return;
     ERROR_FINAL_BEGIN(0);
 }
 
-static void __memoryPresetsOperations_shallowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
+static void __memoryOperations_shallowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
     PagingEntry* srcEntry = &srcExtendedTable->table.tableEntries[index], * desEntry = &desExtendedTable->table.tableEntries[index];
     ExtraPageTableEntry* srcExtraEntry = &srcExtendedTable->extraTable.tableEntries[index], * desExtraEntry = &desExtendedTable->extraTable.tableEntries[index];
     
@@ -103,7 +69,7 @@ static void __memoryPresetsOperations_shallowCopyEntry(PagingLevel level, Extend
     *desExtraEntry = *srcExtraEntry;
 }
 
-static void __memoryPresetsOperations_deepCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
+static void __memoryOperations_deepCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
     PagingEntry* srcEntry = &srcExtendedTable->table.tableEntries[index], * desEntry = &desExtendedTable->table.tableEntries[index];
     ExtraPageTableEntry* srcExtraEntry = &srcExtendedTable->extraTable.tableEntries[index], * desExtraEntry = &desExtendedTable->extraTable.tableEntries[index];
 
@@ -130,7 +96,7 @@ static void __memoryPresetsOperations_deepCopyEntry(PagingLevel level, ExtendedP
     ERROR_FINAL_BEGIN(0);
 }
 
-static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
+static void __memoryOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
     PagingEntry* srcEntry = &srcExtendedTable->table.tableEntries[index], * desEntry = &desExtendedTable->table.tableEntries[index];
     ExtraPageTableEntry* srcExtraEntry = &srcExtendedTable->extraTable.tableEntries[index], * desExtraEntry = &desExtendedTable->extraTable.tableEntries[index];
 
@@ -161,7 +127,7 @@ static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPa
                 continue;
             }
 
-            __memoryPresetsOperations_cowCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
+            __memoryOperations_cowCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
 
@@ -173,11 +139,11 @@ static void __memoryPresetsOperations_cowCopyEntry(PagingLevel level, ExtendedPa
     ERROR_FINAL_BEGIN(0);
 }
 
-static void __memoryPresetsOperations_dummyFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
+static void __memoryOperations_dummyFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
     ERROR_THROW_NO_GOTO(ERROR_ID_NOT_SUPPORTED_OPERATION);
 }
 
-static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
+static void __memoryOperations_cowFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
@@ -205,7 +171,7 @@ static void __memoryPresetsOperations_cowFaultHandler(PagingLevel level, Extende
     ERROR_FINAL_BEGIN(0);
 }
 
-static void* __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void* __memoryOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
@@ -215,7 +181,7 @@ static void* __memoryPresetsOperations_shallowReleaseEntry(PagingLevel level, Ex
     //TODO: Use refer counter to release pages;
 }
 
-static void* __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void* __memoryOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
@@ -244,7 +210,7 @@ static void* __memoryPresetsOperations_deepReleaseEntry(PagingLevel level, Exten
     return NULL;
 }
 
-static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
     ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
@@ -269,7 +235,7 @@ static void* __memoryPresetsOperations_cowReleaseEntry(PagingLevel level, Extend
                 continue;
             }
 
-            __memoryPresetsOperations_cowReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
+            __memoryOperations_cowReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
         extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));

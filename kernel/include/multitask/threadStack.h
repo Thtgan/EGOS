@@ -8,15 +8,15 @@ typedef struct ThreadStack ThreadStack;
 
 typedef struct ThreadStack {
     ExtendedPageTableRoot* extendedTable;
-    MemoryDefaultPresetType type;
+    DefaultMemoryOperationsType type;
     void* stackBottom;
     Size size;
     bool isUser;
 } ThreadStack;
 
-void threadStack_initStruct(ThreadStack* stack, Size size, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType type, bool isUser);
+void threadStack_initStruct(ThreadStack* stack, Size size, ExtendedPageTableRoot* extendedTable, DefaultMemoryOperationsType type, bool isUser);
 
-void threadStack_initStructFromExisting(ThreadStack* stack, void* stackBottom, Size size, ExtendedPageTableRoot* extendedTable, MemoryDefaultPresetType type, bool isUser);
+void threadStack_initStructFromExisting(ThreadStack* stack, void* stackBottom, Size size, ExtendedPageTableRoot* extendedTable, DefaultMemoryOperationsType type, bool isUser);
 
 void threadStack_touch(ThreadStack* stack);
 

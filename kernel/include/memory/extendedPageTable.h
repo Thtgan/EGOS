@@ -11,17 +11,13 @@ typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 #include<kit/types.h>
 #include<kit/bit.h>
 #include<memory/frameReaper.h>
-#include<memory/memoryPresets.h>
+#include<memory/memoryOperations.h>
 #include<system/pageTable.h>
 #include<debug.h>
 
-void memoryPreset_registerDefaultPresets(ExtraPageTableContext* context);
-
-//TODO: Split between ExtendedPageTable and MemoryPreset still unclear
-
 typedef struct ExtraPageTableEntry {    //TODO: Maybe push this to whole program
     Uint16 tableEntryNum;
-    Uint8 presetID;
+    Uint8 operationsID;
     Uint8 reserved[5];
 } __attribute__((packed)) ExtraPageTableEntry;
 
@@ -53,25 +49,18 @@ void extendedPageTable_freeFrame(void* frame);
 ExtendedPageTable* extentedPageTable_extendedTableFromEntry(PagingEntry entry);
 
 typedef struct ExtraPageTableContext {
-#define EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM           0xFF
-#define EXTRA_PAGE_TABLE_OPERATION_INVALID_PRESET_ID        EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM
-    int presetCnt;
-    MemoryPreset* presets[EXTRA_PAGE_TABLE_OPERATION_MAX_PRESET_NUM];
-    Uint8 presetType2id[MEMORY_DEFAULT_PRESETS_TYPE_NUM];
+#define EXTRA_PAGE_TABLE_OPERATION_MAX_OPERATIONS_NUM       0xFF
+#define EXTRA_PAGE_TABLE_OPERATION_INVALID_OPERATIONS_ID    EXTRA_PAGE_TABLE_OPERATION_MAX_OPERATIONS_NUM
+    int operationsCnt;
+    MemoryOperations* memoryOperations[EXTRA_PAGE_TABLE_OPERATION_MAX_OPERATIONS_NUM];
 } ExtraPageTableContext;
-
-#define EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(__CONTEXT, __TYPE)   ((__CONTEXT)->presetType2id[(__TYPE)])
 
 void extraPageTableContext_initStruct(ExtraPageTableContext* context);
 
-void extraPageTableContext_registerPreset(ExtraPageTableContext* context, MemoryPreset* preset);
+Index8 extraPageTableContext_registerMemoryOperations(ExtraPageTableContext* context, MemoryOperations* operations);
 
-static inline MemoryPreset* extraPageTableContext_getPreset(ExtraPageTableContext* context, Index8 id) {
-    return context->presets[id];
-}
-
-static inline MemoryPreset* extraPageTableContext_getDefaultPreset(ExtraPageTableContext* context, MemoryDefaultPresetType presetType) {
-    return extraPageTableContext_getPreset(context, EXTRA_PAGE_TABLE_CONTEXT_DEFAULT_PRESET_TYPE_TO_ID(context, presetType));
+static inline MemoryOperations* extraPageTableContext_getMemoryOperations(ExtraPageTableContext* context, Index8 operationsID) {
+    return context->memoryOperations[operationsID];
 }
 
 typedef struct ExtendedPageTableRoot {
@@ -85,30 +74,30 @@ ExtendedPageTableRoot* extendedPageTableRoot_copyTable(ExtendedPageTableRoot* so
 
 void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table);
 
-#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE    FLAG8(0)
-#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE FLAG8(1)
+#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE        FLAG8(0)
+#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_OPERATIONS_OVERWRITE FLAG8(1)
 
-void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, MemoryPreset* preset, Flags64 prot, Flags8 flags);
+void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, Index8 operationsID, Flags64 prot, Flags8 flags);
 
 void extendedPageTableRoot_erase(ExtendedPageTableRoot* root, void* v, Size n);
 
-MemoryPreset* extendedPageTableRoot_peek(ExtendedPageTableRoot* root, void* v);
+MemoryOperations* extendedPageTableRoot_peek(ExtendedPageTableRoot* root, void* v);
 
 void* extendedPageTableRoot_translate(ExtendedPageTableRoot* root, void* v);
 
 static inline void extendedPageTableRoot_copyEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
-    Uint8 presetID = srcExtendedTable->extraTable.tableEntries[index].presetID;
-    extraPageTableContext_getPreset(root->context, presetID)->operations.copyPagingEntry(level, srcExtendedTable, desExtendedTable, index);
+    Uint8 operationsID = srcExtendedTable->extraTable.tableEntries[index].operationsID;
+    extraPageTableContext_getMemoryOperations(root->context, operationsID)->copyPagingEntry(level, srcExtendedTable, desExtendedTable, index);
 }
 
 static inline void* extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
-    Uint8 presetID = extendedTable->extraTable.tableEntries[index].presetID;
-    return extraPageTableContext_getPreset(root->context, presetID)->operations.releasePagingEntry(level, extendedTable, index);
+    Uint8 operationsID = extendedTable->extraTable.tableEntries[index].operationsID;
+    return extraPageTableContext_getMemoryOperations(root->context, operationsID)->releasePagingEntry(level, extendedTable, index);
 }
 
 static inline void extendedPageTableRoot_pageFaultHandler(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
-    Uint8 presetID = extendedTable->extraTable.tableEntries[index].presetID;
-    extraPageTableContext_getPreset(root->context, presetID)->operations.pageFaultHandler(level, extendedTable, index, v, handlerStackFrame, regs);
+    Uint8 operationsID = extendedTable->extraTable.tableEntries[index].operationsID;
+    extraPageTableContext_getMemoryOperations(root->context, operationsID)->pageFaultHandler(level, extendedTable, index, v, handlerStackFrame, regs);
 }
 
 #endif // __MEMORY_EXTENDEDPAGETABLE_H

@@ -7,7 +7,7 @@ typedef struct MemoryManager MemoryManager;
 #include<memory/allocators/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
-#include<memory/memoryPresets.h>
+#include<memory/memoryOperations.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 
@@ -35,9 +35,9 @@ void* mm_allocateFrames(Size n);
 
 void mm_freeFrames(void* p, Size n);
 
-void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, MemoryPreset* preset, bool isUser);
+void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAllocator* allocator, Index8 operationsID, bool isUser);
 
-void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, MemoryPreset* preset, bool isUser);
+void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, Index8 operationsID, bool isUser);
 
 void* mm_allocatePages(Size n);
 
@@ -47,7 +47,7 @@ void mm_freeHeapPages(void* p, Size n, ExtendedPageTableRoot* mapTo);
 
 void mm_freePages(void* p);
 
-void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, MemoryPreset* preset);
+void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, Index8 operationsID);
 
 void* mm_allocate(Size n);
 

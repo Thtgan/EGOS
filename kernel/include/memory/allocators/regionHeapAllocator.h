@@ -18,6 +18,6 @@ typedef struct RegionHeapAllocator {
     Size remaining;
 } RegionHeapAllocator;
 
-void regionHeapAllocator_initStruct(RegionHeapAllocator* allocator, Size regionSize, FrameAllocator* frameAllocator, Uint8 presetID);
+void regionHeapAllocator_initStruct(RegionHeapAllocator* allocator, Size regionSize, FrameAllocator* frameAllocator, Uint8 operationsID);
 
 #endif // __MEMORY_ALLOCATORS_REGIONHEAPALLOCATOR_H

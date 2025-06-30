@@ -128,9 +128,9 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
         //TODO: Set to USER_CODE when code load complete
         extendedPageTableRoot_draw(
             extendedTable, base, frame, 1,
-            extraPageTableContext_getDefaultPreset(extendedTable->context, MEMORY_DEFAULT_PRESETS_TYPE_USER_DATA),
+            DEFAULT_MEMORY_OPERATIONS_TYPE_COW,
             PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US,    //TODO: Set executable according to header flags
-            EXTENDED_PAGE_TABLE_DRAW_FLAGS_PRESET_OVERWRITE
+            EXTENDED_PAGE_TABLE_DRAW_FLAGS_OPERATIONS_OVERWRITE
         );
         ERROR_GOTO_IF_ERROR(0);
 

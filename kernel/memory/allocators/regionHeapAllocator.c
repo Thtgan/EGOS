@@ -25,8 +25,8 @@ static HeapAllocatorOperations _regionHeapAllocator_operations = {
     .getActualSize  = __regionHeapAllocator_getActualSize
 };
 
-void regionHeapAllocator_initStruct(RegionHeapAllocator* allocator, Size regionSize, FrameAllocator* frameAllocator, Uint8 presetID) {
-    heapAllocator_initStruct(&allocator->allocator, frameAllocator, &_regionHeapAllocator_operations, presetID);
+void regionHeapAllocator_initStruct(RegionHeapAllocator* allocator, Size regionSize, FrameAllocator* frameAllocator, Uint8 operationsID) {
+    heapAllocator_initStruct(&allocator->allocator, frameAllocator, &_regionHeapAllocator_operations, operationsID);
     singlyLinkedList_initStruct(&allocator->regionList);
     allocator->regionSize = ALIGN_UP(algorithms_umax16(regionSize, REGION_HEAP_ALLOCATOR_MIN_REGION_SIZE), REGION_HEAP_ALLOCATOR_ALIGN);
     allocator->regionNum = 0;
@@ -74,8 +74,7 @@ static Size __regionHeapAllocator_getActualSize(HeapAllocator* allocator, Size n
 
 static void __regionHeapAllocator_expand(RegionHeapAllocator* allocator) {
     HeapAllocator* baseAllocator = &allocator->allocator;
-    MemoryPreset* preset = extraPageTableContext_getPreset(mm->extendedTable->context, allocator->allocator.presetID);
-    void* page = mm_allocateHeapPages(1, mm->extendedTable, baseAllocator, preset, false);
+    void* page = mm_allocateHeapPages(1, mm->extendedTable, baseAllocator, baseAllocator->operationsID, false);
     if (page == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
