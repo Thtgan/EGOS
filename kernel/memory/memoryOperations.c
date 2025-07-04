@@ -19,6 +19,8 @@ static void __memoryOperations_shallowCopyEntry(PagingLevel level, ExtendedPageT
 
 static void __memoryOperations_deepCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
+static void __memoryOperations_mixedCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+
 static void __memoryOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
 static void __memoryOperations_anonCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
@@ -33,11 +35,13 @@ static void* __memoryOperations_shallowReleaseEntry(PagingLevel level, ExtendedP
 
 static void* __memoryOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
+static void* __memoryOperations_mixedReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+
 static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
 static void* __memoryOperations_anonReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
 
-static MemoryOperations __memoryOperations_defaultOperations[DEFAULT_MEMORY_OPERATIONS_TYPE_NUM] = { //TODO: Setup sepcific relase function for mixed
+static MemoryOperations __memoryOperations_defaultOperations[DEFAULT_MEMORY_OPERATIONS_TYPE_NUM] = {
     [DEFAULT_MEMORY_OPERATIONS_TYPE_SHARE] = (MemoryOperations) {
         .copyPagingEntry = __memoryOperations_shallowCopyEntry,
         .pageFaultHandler = __memoryOperations_dummyFaultHandler,
@@ -47,6 +51,11 @@ static MemoryOperations __memoryOperations_defaultOperations[DEFAULT_MEMORY_OPER
         .copyPagingEntry = __memoryOperations_deepCopyEntry,
         .pageFaultHandler = __memoryOperations_dummyFaultHandler,
         .releasePagingEntry = __memoryOperations_deepReleaseEntry
+    },
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_MIXED] = (MemoryOperations) {
+        .copyPagingEntry = __memoryOperations_mixedCopyEntry,
+        .pageFaultHandler = __memoryOperations_dummyFaultHandler,
+        .releasePagingEntry = __memoryOperations_mixedReleaseEntry
     },
     [DEFAULT_MEMORY_OPERATIONS_TYPE_COW] = (MemoryOperations) {
         .copyPagingEntry = __memoryOperations_cowCopyEntry,
@@ -101,11 +110,11 @@ static void __memoryOperations_deepCopyEntry(PagingLevel level, ExtendedPageTabl
     
         ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (TEST_FLAGS_FAIL(srcSubExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
+            if (!extendedPageTable_checkEntryRealPresent(srcSubExtendedTable, i)) {
                 continue;
             }
     
-            extendedPageTableRoot_copyEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
+            __memoryOperations_deepCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
     
@@ -113,6 +122,35 @@ static void __memoryOperations_deepCopyEntry(PagingLevel level, ExtendedPageTabl
         *desExtraEntry = *srcExtraEntry;
     }
 
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __memoryOperations_mixedCopyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
+    PagingEntry* srcEntry = &srcExtendedTable->table.tableEntries[index], * desEntry = &desExtendedTable->table.tableEntries[index];
+    ExtraPageTableEntry* srcExtraEntry = &srcExtendedTable->extraTable.tableEntries[index], * desExtraEntry = &desExtendedTable->extraTable.tableEntries[index];
+
+    DEBUG_ASSERT_SILENT(!PAGING_IS_LEAF(level, *srcEntry));
+
+    void* newExtendedTableFrames = extendedPageTable_allocateFrame();   //TODO: Allocate frames at low address for possible realmode switch back requirement
+    if (newExtendedTableFrames == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
+    for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
+        if (!extendedPageTable_checkEntryRealPresent(srcSubExtendedTable, i)) {
+            continue;
+        }
+
+        extendedPageTableRoot_copyEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
+        ERROR_GOTO_IF_ERROR(0);
+    }
+
+    *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_KERNEL_MEMORY_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
+    *desExtraEntry = *srcExtraEntry;
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -144,7 +182,7 @@ static void __memoryOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable
 
         ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (TEST_FLAGS_FAIL(srcSubExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {   //TODO: Use entryNum to check present
+            if (!extendedPageTable_checkEntryRealPresent(srcSubExtendedTable, i)) {
                 continue;
             }
 
@@ -280,47 +318,60 @@ static void __memoryOperations_anonFaultHandler(PagingLevel level, ExtendedPageT
 }
 
 static void* __memoryOperations_shallowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
-    PagingEntry* entry = &extendedTable->table.tableEntries[index];
-    ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
-
-    *entry = EMPTY_PAGING_ENTRY;
-    *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
+    extendedPageTable_clearEntry(extendedTable, index);
 
     //TODO: Use refer counter to release pages;
 }
 
 static void* __memoryOperations_deepReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
-    ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
     void* frameToRelease = NULL;
-    if (!PAGING_IS_LEAF(level, *entry)) {
+    if (PAGING_IS_LEAF(level, *entry)) {
+        frameToRelease = pageTable_getNextLevelPage(level, *entry);
+    } else {
         ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (TEST_FLAGS_FAIL(subExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
+            if (!extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
                 continue;
             }
     
-            extendedPageTableRoot_releaseEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), subExtendedTable, i);
+            __memoryOperations_deepReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
-
         extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
-    } else {
-        frameToRelease = pageTable_getNextLevelPage(level, *entry);
     }
 
-    *entry = EMPTY_PAGING_ENTRY;
-    *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
+    extendedPageTable_clearEntry(extendedTable, index);
 
     return frameToRelease;
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
+static void* __memoryOperations_mixedReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+    PagingEntry* entry = &extendedTable->table.tableEntries[index];
+
+    DEBUG_ASSERT_SILENT(!PAGING_IS_LEAF(level, *entry));
+
+    ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
+    for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
+        if (!extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
+            continue;
+        }
+
+        extendedPageTableRoot_releaseEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), subExtendedTable, i);
+        ERROR_GOTO_IF_ERROR(0);
+    }
+    extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
+
+    return NULL;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
 static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
-    ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
     void* frameToRelease = NULL;
     if (PAGING_IS_LEAF(level, *entry)) {
@@ -339,7 +390,7 @@ static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageT
     } else {
         ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (TEST_FLAGS_FAIL(subExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
+            if (!extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
                 continue;
             }
 
@@ -349,8 +400,7 @@ static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageT
         extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
     }
 
-    *entry = EMPTY_PAGING_ENTRY;
-    *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
+    extendedPageTable_clearEntry(extendedTable, index);
 
     return frameToRelease;
     ERROR_FINAL_BEGIN(0);
@@ -359,7 +409,6 @@ static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageT
 
 static void* __memoryOperations_anonReleaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
-    ExtraPageTableEntry* extraEntry = &extendedTable->extraTable.tableEntries[index];
 
     void* frameToRelease = NULL;
     if (PAGING_IS_LEAF(level, *entry)) {
@@ -380,7 +429,7 @@ static void* __memoryOperations_anonReleaseEntry(PagingLevel level, ExtendedPage
     } else {
         ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
         for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (TEST_FLAGS_FAIL(subExtendedTable->table.tableEntries[i], PAGING_ENTRY_FLAG_PRESENT)) {
+            if (!extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
                 continue;
             }
 
@@ -390,8 +439,7 @@ static void* __memoryOperations_anonReleaseEntry(PagingLevel level, ExtendedPage
         extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
     }
 
-    *entry = EMPTY_PAGING_ENTRY;
-    *extraEntry = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
+    extendedPageTable_clearEntry(extendedTable, index);
 
     return frameToRelease;
     ERROR_FINAL_BEGIN(0);

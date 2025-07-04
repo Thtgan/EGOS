@@ -104,7 +104,7 @@ static void* __syscall_memory_mmap(void* addr, Size length, int prot, int flags,
 
 static int __syscall_memory_munmap(void* addr, Size length) {
     if (length == 0 || length > -PAGE_SIZE) {
-        return NULL;
+        return -1;
     }
 
     length = ALIGN_UP(length, PAGE_SIZE);

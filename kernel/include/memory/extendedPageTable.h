@@ -18,7 +18,7 @@ typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 typedef struct ExtraPageTableEntry {    //TODO: Maybe push this to whole program
     Uint16 tableEntryNum;   //If this field is 0, meaning this entry is not present(for real)
     Uint8 operationsID;
-// #define EXTRA_PAGE_TABLE_ENTRY_FLAGS_FREE_ON_RELEASE    FLAG8(0)
+#define EXTRA_PAGE_TABLE_ENTRY_FLAG_LAZY_MAP    FLAG8(0)
     Uint8 flags;
     Uint8 reserved[4];
 } __attribute__((packed)) ExtraPageTableEntry;
@@ -43,6 +43,15 @@ typedef struct ExtendedPageTable {
 DEBUG_ASSERT_COMPILE(sizeof(ExtendedPageTable) % PAGE_SIZE == 0);
 
 #define EXTENDED_PAGE_TABLE_FRAME_SIZE  (sizeof(ExtendedPageTable) / PAGE_SIZE)
+
+static inline bool extendedPageTable_checkEntryRealPresent(ExtendedPageTable* table, Index16 index) {
+    return TEST_FLAGS(table->table.tableEntries[index], PAGING_ENTRY_FLAG_PRESENT) || TEST_FLAGS(table->extraTable.tableEntries[index].flags, EXTRA_PAGE_TABLE_ENTRY_FLAG_LAZY_MAP);
+}
+
+static inline void extendedPageTable_clearEntry(ExtendedPageTable* table, Index16 index) {
+    table->table.tableEntries[index] = EMPTY_PAGING_ENTRY;
+    table->extraTable.tableEntries[index] = EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY;
+}
 
 void* extendedPageTable_allocateFrame();
 
