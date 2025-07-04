@@ -16,9 +16,11 @@ typedef struct ExtendedPageTableRoot ExtendedPageTableRoot;
 #include<debug.h>
 
 typedef struct ExtraPageTableEntry {    //TODO: Maybe push this to whole program
-    Uint16 tableEntryNum;
+    Uint16 tableEntryNum;   //If this field is 0, meaning this entry is not present(for real)
     Uint8 operationsID;
-    Uint8 reserved[5];
+// #define EXTRA_PAGE_TABLE_ENTRY_FLAGS_FREE_ON_RELEASE    FLAG8(0)
+    Uint8 flags;
+    Uint8 reserved[4];
 } __attribute__((packed)) ExtraPageTableEntry;
 
 #define EXTRA_PAGE_TABLE_ENTRY_EMPTY_ENTRY    (ExtraPageTableEntry) { 0 }
@@ -76,6 +78,8 @@ void extendedPageTableRoot_releaseTable(ExtendedPageTableRoot* table);
 
 #define EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE        FLAG8(0)
 #define EXTENDED_PAGE_TABLE_DRAW_FLAGS_OPERATIONS_OVERWRITE FLAG8(1)
+#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP             FLAG8(2)
+#define EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK    FLAG8(3)
 
 void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, Size n, Index8 operationsID, Flags64 prot, Flags8 flags);
 

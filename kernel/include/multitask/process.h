@@ -6,6 +6,7 @@ typedef struct Process Process;
 #include<fs/fsEntry.h>
 #include<kit/types.h>
 #include<memory/extendedPageTable.h>
+#include<memory/vms.h>
 #include<multitask/signal.h>
 #include<multitask/state.h>
 #include<multitask/thread.h>
@@ -22,6 +23,7 @@ typedef struct Process {
     State state;
 
     ExtendedPageTableRoot* extendedTable;
+    VirtualMemorySpace vms;
 
     Thread* lastActiveThread;
     LinkedList threads;

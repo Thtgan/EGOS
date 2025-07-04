@@ -42,6 +42,10 @@ void RBtree_initStruct(RBtree* tree, int (*cmpFunc)(RBtreeNode*, RBtreeNode*), i
  */
 void RBtreeNode_initStruct(RBtree* tree, RBtreeNode* node);
 
+static inline bool RBtree_isEmpty(RBtree* tree) {
+    return tree->root == &tree->NIL;
+}
+
 RBtreeNode* RBtree_getFirst(RBtree* tree);
 
 /**
@@ -59,7 +63,7 @@ RBtreeNode* RBtree_search(RBtree* tree, Object val);
  * @param tree RB tree
  * @param newNode New node to insert
  */
-void RBtree_insert(RBtree* tree, RBtreeNode* newNode);
+RBtreeNode* RBtree_insert(RBtree* tree, RBtreeNode* newNode);
 
 /**
  * @brief Delete node
@@ -69,6 +73,8 @@ void RBtree_insert(RBtree* tree, RBtreeNode* newNode);
  * @return RBtreeNode* Deleted node, NULL if node not exist
  */
 RBtreeNode* RBtree_delete(RBtree* tree, Object val);
+
+void RBtree_directDelete(RBtree* tree, RBtreeNode* node);
 
 /**
  * @brief Get the predecessor of a node

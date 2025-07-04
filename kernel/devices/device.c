@@ -65,8 +65,7 @@ MajorDeviceID device_allocMajor() {
         RBtree_initStruct(&newNode->minorTree, __device_deviceMinorTreeCmpFunc, __device_deviceMinorTreeSearchFunc);
         RBtreeNode_initStruct(&_device_majorDeviceTree, &newNode->majorTreeNode);
 
-        RBtree_insert(&_device_majorDeviceTree, &newNode->majorTreeNode);
-        ERROR_GOTO_IF_ERROR(0);
+        DEBUG_ASSERT_SILENT(RBtree_insert(&_device_majorDeviceTree, &newNode->majorTreeNode) == NULL);
     }
 
     return ret;
@@ -157,8 +156,7 @@ void device_registerDevice(Device* device) {
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode_initStruct(&node->minorTree, &device->deviceTreeNode);
 
-    RBtree_insert(&node->minorTree, &device->deviceTreeNode);
-    ERROR_GOTO_IF_ERROR(0);
+    DEBUG_ASSERT_SILENT(RBtree_insert(&node->minorTree, &device->deviceTreeNode) == NULL);
 
     ++node->deviceNum;
     

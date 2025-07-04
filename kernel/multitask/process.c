@@ -8,6 +8,7 @@
 #include<memory/extendedPageTable.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
+#include<memory/vms.h>
 #include<multitask/schedule.h>
 #include<multitask/state.h>
 #include<multitask/thread.h>
@@ -32,6 +33,7 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
     process->state = STATE_RUNNING;
 
     process->extendedTable = extendedTable;
+    virtualMemorySpace_initStruct(&process->vms, extendedTable);
 
     process->lastActiveThread = NULL;
     linkedList_initStruct(&process->threads);
@@ -79,6 +81,9 @@ void process_clone(Process* process, Uint16 pid, Process* cloneFrom) {
 void process_clearStruct(Process* process) {    //TODO: Not used
     DEBUG_ASSERT_SILENT(process != schedule_getCurrentProcess());
     DEBUG_ASSERT_SILENT(linkedList_isEmpty(&process->threads));
+
+    virtualMemorySpace_clearStruct(&process->vms);
+    extendedPageTableRoot_releaseTable(process->extendedTable);
 
     Size fsEntryNum = process->fsEntries.size;
     for (int i = 0; i < fsEntryNum; ++i) {

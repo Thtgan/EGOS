@@ -59,7 +59,7 @@ RBtreeNode* RBtree_search(RBtree* tree, Object val) {
     return NULL;
 }
 
-void RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
+RBtreeNode* RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
     RBtreeNode* parent = NULL;
 
     int cmp;
@@ -67,7 +67,7 @@ void RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
         cmp = tree->cmpFunc(newNode, node);
 
         if (cmp == 0) {
-            ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
+            return node;
         } else {
             parent = node;
             node = cmp < 0 ? node->left : node->right;
@@ -85,8 +85,7 @@ void RBtree_insert(RBtree* tree, RBtreeNode* newNode) {
 
     __RBtree_insertFix(tree, newNode);
 
-    return;
-    ERROR_FINAL_BEGIN(0);
+    return NULL;
 }
 
 RBtreeNode* RBtree_delete(RBtree* tree, Object val) {
@@ -96,29 +95,36 @@ RBtreeNode* RBtree_delete(RBtree* tree, Object val) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
+    RBtree_directDelete(tree, found);
+    return found;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
+void RBtree_directDelete(RBtree* tree, RBtreeNode* node) {
     RBtreeNode* replaceNode;
     RBtreeColor removedColor;
-    if (found->left == &tree->NIL) { //If node has no child or has a right child
-        replaceNode = found->right; //If no child, this is a NIL
-        removedColor = found->color;
-        __RBtree_updateParent(tree, found, replaceNode);
-    } else if (found->right == &tree->NIL) { //If node has a left child
-        replaceNode = found->left;
-        removedColor = found->color;
-        __RBtree_updateParent(tree, found, replaceNode);
+    if (node->left == &tree->NIL) { //If node has no child or has a right child
+        replaceNode = node->right; //If no child, this is a NIL
+        removedColor = node->color;
+        __RBtree_updateParent(tree, node, replaceNode);
+    } else if (node->right == &tree->NIL) { //If node has a left child
+        replaceNode = node->left;
+        removedColor = node->color;
+        __RBtree_updateParent(tree, node, replaceNode);
     } else { //Node has two children
-        RBtreeNode* successor = RBtree_getSuccessor(tree, found);
+        RBtreeNode* successor = RBtree_getSuccessor(tree, node);
 
         replaceNode = successor->right;
         removedColor = successor->color;
         __RBtree_updateParent(tree, successor, replaceNode);
 
-        __RBtree_updateParent(tree, found, successor);
+        __RBtree_updateParent(tree, node, successor);
 
-        successor->color = found->color;
-        successor->left = found->left;
+        successor->color = node->color;
+        successor->left = node->left;
         successor->left->parent = successor;
-        successor->right = found->right;
+        successor->right = node->right;
         successor->right->parent = successor;
     }
 
@@ -130,11 +136,8 @@ RBtreeNode* RBtree_delete(RBtree* tree, Object val) {
         replaceNode->parent = NULL; //Set back the NIL parent
     }
 
-    found->parent = NULL;
-    found->left = found->right = &tree->NIL;
-    return found;
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
+    node->parent = NULL;
+    node->left = node->right = &tree->NIL;
 }
 
 RBtreeNode* RBtree_getPredecessor(RBtree* tree, RBtreeNode* node) {
@@ -152,7 +155,7 @@ RBtreeNode* RBtree_getPredecessor(RBtree* tree, RBtreeNode* node) {
         parent = node->parent;
     }
 
-    return parent;
+    return parent;  //The cases of predecessor not exist covered here
 }
 
 RBtreeNode* RBtree_getSuccessor(RBtree* tree, RBtreeNode* node) {
@@ -170,7 +173,7 @@ RBtreeNode* RBtree_getSuccessor(RBtree* tree, RBtreeNode* node) {
         parent = node->parent;
     }
 
-    return parent;
+    return parent;  //The cases of successor not exist covered here
 }
 
 RBtreeNode* RBtree_lowerBound(RBtree* tree, Object val) {

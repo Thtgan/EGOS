@@ -47,6 +47,14 @@ static inline bool paging_isBasedAddress(void* v, Uintptr base) {
     return VAL_AND((Uintptr)v, base) == base;
 }
 
+//VMS space macros
+
+#define PAGING_CONVERT_VMS_SPACE_V2P(__V)           paging_convertAddressV2P(__V, MEMORY_LAYOUT_VMS_SPACE_BEGIN)
+
+#define PAGING_CONVERT_VMS_SPACE_P2V(__P)           paging_convertAddressP2V(__P, MEMORY_LAYOUT_VMS_SPACE_BEGIN)
+
+#define PAGING_IS_BASED_VMS_SPACE(__V)              paging_isBasedAddress(__V, MEMORY_LAYOUT_VMS_SPACE_BEGIN)
+
 //Colorful space macros
 
 #define PAGING_CONVERT_COLORFUL_SPACE_V2P(__V)      paging_convertAddressV2P(__V, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN)

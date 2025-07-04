@@ -114,6 +114,9 @@ void extendedPageTableRoot_draw(ExtendedPageTableRoot* root, void* v, void* p, S
 
     prot = VAL_AND(prot, PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_XD);
     prot = VAL_OR(prot, PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_A);
+    if (TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP)) {
+        CLEAR_FLAG_BACK(prot, PAGING_ENTRY_FLAG_PRESENT);
+    }
     __extendedPageTableRoot_doDraw(root, PAGING_LEVEL_PML4, root->extendedTable, (Uintptr)v, (Uintptr)p, n, operationsID, prot, flags);
 
     PAGING_FLUSH_TLB();
@@ -133,6 +136,10 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
         
         PagingEntry* entry = &currentTable->table.tableEntries[i];
         ExtraPageTableEntry* extraEntry = &currentTable->extraTable.tableEntries[i];
+        if (level == PAGING_LEVEL_PAGE_TABLE && TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK) && extraEntry->tableEntryNum != 0) {
+            ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
+        } 
+
         void* mapTo = pageTable_getNextLevelPage(level, *entry);
 
         bool isMappingNotPresent = (mapTo == NULL);
@@ -158,12 +165,12 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             for (int j = 0; j < PAGING_TABLE_SIZE; ++j) {
                 PagingEntry* nextEntry = &nextExtendedTable->table.tableEntries[j];
                 ExtraPageTableEntry* nextExtraEntry = &nextExtendedTable->extraTable.tableEntries[j];
-                if (TEST_FLAGS_FAIL(*nextEntry, PAGING_ENTRY_FLAG_PRESENT)) {
+                if (nextExtraEntry->tableEntryNum == 0) {
                     continue;
                 }
 
                 ++entryNum;
-                if ((lastOperationsID != EXTRA_PAGE_TABLE_OPERATION_INVALID_OPERATIONS_ID && nextExtraEntry->operationsID != lastOperationsID) || nextExtraEntry->operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_PRIVATE) {
+                if ((lastOperationsID != EXTRA_PAGE_TABLE_OPERATION_INVALID_OPERATIONS_ID && nextExtraEntry->operationsID != lastOperationsID) || nextExtraEntry->operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COPY) {
                     isMixed = true;
                 }
 
@@ -171,11 +178,12 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             }
 
             if (isMixed) {
-                realOperationsID = DEFAULT_MEMORY_OPERATIONS_TYPE_PRIVATE;
+                realOperationsID = DEFAULT_MEMORY_OPERATIONS_TYPE_COPY;
                 realProt = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A;
             } else {
                 realOperationsID = operationsID;
-                realProt = prot;    //TODO: Use full access or given prot?
+                // realProt = prot;    //TODO: Use full access or given prot?
+                realProt = PAGING_ENTRY_FLAG_PRESENT | PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_US | PAGING_ENTRY_FLAG_A;
             }
 
             extraEntry->tableEntryNum = entryNum;
@@ -195,9 +203,14 @@ void __extendedPageTableRoot_doDraw(ExtendedPageTableRoot* root, PagingLevel lev
             if (mapTo == NULL || TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_MAP_OVERWRITE)) {
                 mapTo = (void*)currentP;
             }
+
+            if (TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP)) {
+                mapTo = NULL;   //TODO: Maybe not assign it here...
+            }
+            extraEntry->tableEntryNum = 1;
         }
 
-        DEBUG_ASSERT_SILENT(mapTo != NULL);
+        DEBUG_ASSERT_SILENT(TEST_FLAGS(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP) || mapTo != NULL);
         DEBUG_ASSERT_SILENT(realProt != EMPTY_FLAGS);
 
         *entry = BUILD_ENTRY_PAGING_TABLE(mapTo, realProt);   //TODO: Not considering the case of COW
@@ -242,6 +255,8 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
             if (IS_ALIGNED(currentV, span) && subSubN == spanN) {
                 framesToRelease = extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
                 ERROR_GOTO_IF_ERROR(0);
+                *entry = EMPTY_PAGING_ENTRY;
+                extraEntry->tableEntryNum = 0;
             } else {
                 DEBUG_ASSERT_SILENT(level > PAGING_LEVEL_PAGE);
                 ExtendedPageTable* nextExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
@@ -254,12 +269,12 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 for (int j = 0; j < PAGING_TABLE_SIZE; ++j) {
                     PagingEntry* nextEntry = &nextExtendedTable->table.tableEntries[j];
                     ExtraPageTableEntry* nextExtraEntry = &nextExtendedTable->extraTable.tableEntries[j];
-                    if (TEST_FLAGS_FAIL(*nextEntry, PAGING_ENTRY_FLAG_PRESENT)) {
+                    if (nextExtraEntry->tableEntryNum == 0) {
                         continue;
                     }
 
                     ++entryNum;
-                    if ((lastOperationsID != EXTRA_PAGE_TABLE_OPERATION_INVALID_OPERATIONS_ID && nextExtraEntry->operationsID != lastOperationsID) || nextExtraEntry->operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_PRIVATE) {
+                    if ((lastOperationsID != EXTRA_PAGE_TABLE_OPERATION_INVALID_OPERATIONS_ID && nextExtraEntry->operationsID != lastOperationsID) || nextExtraEntry->operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COPY) {
                         isMixed = true;
                     }
 
@@ -269,12 +284,11 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 if (entryNum == 0) {
                     framesToRelease = extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
                     ERROR_GOTO_IF_ERROR(0);
+                    *entry = EMPTY_PAGING_ENTRY;
                 } else if (!isMixed && lastOperationsID != extraEntry->operationsID) {
                     extraEntry->operationsID = lastOperationsID;
-                    extraEntry->tableEntryNum = entryNum;
-                } else {
-                    extraEntry->tableEntryNum = entryNum;
                 }
+                extraEntry->tableEntryNum = entryNum;
             }
 
             if (framesToRelease != NULL) {
@@ -306,7 +320,7 @@ MemoryOperations* extendedPageTableRoot_peek(ExtendedPageTableRoot* root, void* 
 
         DEBUG_ASSERT_SILENT(TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_PRESENT) && currentOperationsID != 0);
     
-        if (currentOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_PRIVATE) {
+        if (currentOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_COPY) {
             return extraPageTableContext_getMemoryOperations(root->context, currentOperationsID);
         }
 
