@@ -11,9 +11,13 @@
 #include<error.h>
 
 static inline Flags64 __virtualMemoryRegion_getPagingProt(Flags16 flags) {
-    Flags64 ret = PAGING_ENTRY_FLAG_US;
+    Flags64 ret = EMPTY_FLAGS;
     if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_WRITABLE)) {
         SET_FLAG_BACK(ret, PAGING_ENTRY_FLAG_RW);
+    }
+
+    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_USER)) {
+        SET_FLAG_BACK(ret, PAGING_ENTRY_FLAG_US);
     }
     
     if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_NOT_EXECUTABLE)) {
@@ -27,10 +31,40 @@ static int __virtualMemoryRegion_compareFunc(RBtreeNode* node1, RBtreeNode* node
 
 static int __virtualMemoryRegion_searchFunc(RBtreeNode* node, Object key);
 
-static VirtualMemoryRegion* __virtualMemorySpace_getFirstOverlapped(VirtualMemorySpace* vms, void* begin, Size length);
+static inline bool __virtualMemoryRegion_check(VirtualMemoryRegion* vmr, Flags16 flags, Uint8 memoryOperationsID) {
+    return vmr->flags == flags && vmr->memoryOperationsID == memoryOperationsID;
+}
+
+static VirtualMemoryRegion* __virtualMemorySpace_addHoleRegion(VirtualMemorySpace* vms, void* begin, Size length);
+
+static VirtualMemoryRegion* __virtualMemorySpace_addRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID);
+
+static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, void* ptr);
+
+static void __virtualMemorySpace_merge(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr1, VirtualMemoryRegion* vmr2);
+
+static void __virtualMemorySpace_doDraw(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID);
+
+static inline bool __virtualMemorySpace_doAddRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr) {
+    DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&vms->range, &vmr->range, <=, <=));
+
+    RBtreeNode* node = RBtree_insert(&vms->regionTree, &vmr->treeNode);
+    if (node != NULL) {
+        return false;
+    }
+    ++vms->regionNum;
+    return true;
+}
+
+static inline void __virtualMemorySpace_doRemoveRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr) {
+    DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&vms->range, &vmr->range, <=, <=));
+
+    RBtree_directDelete(&vms->regionTree, &vmr->treeNode);
+    --vms->regionNum;
+}
 
 void virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
-    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0);
+    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
     DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
     
     RBtreeNode_initStruct(&vms->regionTree, &vmr->treeNode);
@@ -43,45 +77,37 @@ void virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion
     vmr->memoryOperationsID = memoryOperationsID;
 }
 
-void virtualMemorySpace_initStruct(VirtualMemorySpace* vms, ExtendedPageTableRoot* pageTable) {
+void virtualMemorySpace_initStruct(VirtualMemorySpace* vms, ExtendedPageTableRoot* pageTable, void* base, Size length) {
     RBtree_initStruct(&vms->regionTree, __virtualMemoryRegion_compareFunc, __virtualMemoryRegion_searchFunc);
     vms->regionNum = 0;
     vms->pageTable = pageTable;
+    vms->range = (Range) {
+        .begin = (Uintptr)base,
+        .length = length
+    };
+
+    __virtualMemorySpace_addHoleRegion(vms, base, length);
 }
 
 void virtualMemorySpace_clearStruct(VirtualMemorySpace* vms) {
     for (RBtreeNode* node = RBtree_getFirst(&vms->regionTree); node != NULL;) {
         RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, node);
-        virtualMemorySpace_removeRegion(vms, HOST_POINTER(node, VirtualMemoryRegion, treeNode));
+        VirtualMemoryRegion* vmr = HOST_POINTER(node, VirtualMemoryRegion, treeNode);
+        virtualMemorySpace_erase(vms, (void*)vmr->range.begin, vmr->range.length);
         node = nextNode;
     }
 }
 
-VirtualMemoryRegion* virtualMemorySpace_addRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
-    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0);
-    DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
-    
-    VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
-    if (newRegion == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    virtualMemoryRegion_initStruct(vms, newRegion, begin, length, flags, memoryOperationsID);
-    RBtreeNode* node = RBtree_insert(&vms->regionTree, &newRegion->treeNode);
-    if (node != NULL) {
-        mm_free(newRegion);
-        return HOST_POINTER(node, VirtualMemoryRegion, treeNode);
-    }
+void virtualMemorySpace_draw(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
+    __virtualMemorySpace_doDraw(vms, begin, length, flags, memoryOperationsID);
+    ERROR_GOTO_IF_ERROR(0);
 
     Flags64 pagingProt = __virtualMemoryRegion_getPagingProt(flags);
     extendedPageTableRoot_draw(vms->pageTable, begin, NULL, length / PAGE_SIZE, memoryOperationsID, pagingProt, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP | EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK);
     ERROR_GOTO_IF_ERROR(0);
     
-    ++vms->regionNum;
-    return NULL;
+    return;
     ERROR_FINAL_BEGIN(0);
-    return NULL;
 }
 
 VirtualMemoryRegion* virtualMemorySpace_getRegion(VirtualMemorySpace* vms, void* ptr) {
@@ -89,117 +115,45 @@ VirtualMemoryRegion* virtualMemorySpace_getRegion(VirtualMemorySpace* vms, void*
     return node == NULL ? NULL : HOST_POINTER(node, VirtualMemoryRegion, treeNode);
 }
 
-void* virtualMemorySpace_getFirstFit(VirtualMemorySpace* vms, void* prefer, Size length) {
-    if (RBtree_isEmpty(&vms->regionTree))  {
-        return (void*)MEMORY_LAYOUT_VMS_SPACE_BEGIN;
-    }
+void* virtualMemorySpace_findFirstFitHole(VirtualMemorySpace* vms, void* prefer, Size length) {
+    DEBUG_ASSERT_SILENT(!RBtree_isEmpty(&vms->regionTree));
     
-    VirtualMemoryRegion* currentRegion = NULL;
-    if (prefer == NULL) {
-        currentRegion = HOST_POINTER(RBtree_getFirst(&vms->regionTree), VirtualMemoryRegion, treeNode);
-        if (MEMORY_LAYOUT_VMS_SPACE_BEGIN + length <= currentRegion->range.begin) {
-            return (void*)MEMORY_LAYOUT_VMS_SPACE_BEGIN;
-        }
+    RBtreeNode* beginNode = (prefer == NULL) ? NULL : RBtree_lowerBound(&vms->regionTree, (Object)prefer);
+    if (beginNode == NULL) {
+        beginNode = RBtree_getFirst(&vms->regionTree);
     } else {
-        RBtreeNode* firstNode = RBtree_lowerBound(&vms->regionTree, (Object)prefer);
-        if (firstNode == NULL) {
-            VirtualMemoryRegion* region = HOST_POINTER(RBtree_getFirst(&vms->regionTree), VirtualMemoryRegion, treeNode);
-            if (region->range.begin > (Uintptr)prefer + length) {
-                return prefer;
-            }
-            currentRegion = region;
-        } else {
-            currentRegion = HOST_POINTER(firstNode, VirtualMemoryRegion, treeNode);
+        VirtualMemoryRegion* region = HOST_POINTER(beginNode, VirtualMemoryRegion, treeNode);
+        Range* range = &region->range;
+        Uintptr l1 = range->begin, r1 = range->begin + range->length;
+        Uintptr l2 = (Uintptr)prefer, r2 = (Uintptr)prefer + length;
+
+        if (RANGE_WITHIN(l1, r1, l2, r2, <=, <=)) {
+            return prefer;
         }
     }
 
-    void* currentAddr = (void*)(currentRegion->range.begin + currentRegion->range.length);
-    while (true) {
-        RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &currentRegion->treeNode);
-        if (nextNode == NULL) {
-            break;
+    DEBUG_ASSERT_SILENT(beginNode != NULL);
+    for (RBtreeNode* currentNode = beginNode; currentNode != NULL; currentNode = RBtree_getSuccessor(&vms->regionTree, currentNode)) {
+        VirtualMemoryRegion* currentRegion = HOST_POINTER(currentNode, VirtualMemoryRegion, treeNode);
+        if (TEST_FLAGS(currentRegion->flags, VIRTUAL_MEMORY_REGION_FLAGS_HOLE) && currentRegion->range.length >= length) {
+            return (void*)currentRegion->range.begin;
         }
-        
-        VirtualMemoryRegion* nextRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
-        Range* nextRange = &nextRegion->range;
-        if (nextRange->begin >= (Uintptr)currentAddr + length) {
-            return currentAddr;
-        }
-        currentAddr = (void*)(nextRange->begin + nextRange->length);
-
-        currentRegion = nextRegion;
-    }
-    return currentAddr;
-}
-
-void virtualMemorySpace_removeRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr) {
-    RBtree_directDelete(&vms->regionTree, &vmr->treeNode);
-    --vms->regionNum;
-    extendedPageTableRoot_erase(vms->pageTable, (void*)vmr->range.begin, vmr->range.length / PAGE_SIZE);
-    mm_free(vmr);
-}
-
-void virtualMemorySpace_split(VirtualMemorySpace* vms, void* ptr) {
-    VirtualMemoryRegion* vmr = virtualMemorySpace_getRegion(vms, ptr);
-    if (vmr == NULL) {
-        return;
     }
 
-    Range* range = &vmr->range;
-    if ((Uintptr)ptr == range->begin || (Uintptr)ptr == range->begin + range->length) {
-        return;
-    }
-
-    Size frontLength = (Uintptr)ptr - range->begin,
-        backLength = range->length - frontLength;
-    
-    range->length = frontLength;
-    DEBUG_ASSERT_SILENT(virtualMemorySpace_addRegion(vms, ptr, backLength, vmr->flags, vmr->memoryOperationsID) == NULL);
-    ERROR_GOTO_IF_ERROR(0);
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    range->length = frontLength + backLength;
+    return NULL;
 }
 
 void virtualMemorySpace_erase(VirtualMemorySpace* vms, void* begin, Size length) {
-    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0);
+    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
     DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
+    
+    __virtualMemorySpace_doDraw(vms, begin, length, VIRTUAL_MEMORY_REGION_FLAGS_HOLE, 0);
+    ERROR_GOTO_IF_ERROR(0);
 
-    VirtualMemoryRegion* currentRegion = __virtualMemorySpace_getFirstOverlapped(vms, begin, length);
-    if (currentRegion == NULL) {
-        return;
-    }
+    extendedPageTableRoot_erase(vms->pageTable, begin, length / PAGE_SIZE);
 
-    Uintptr l1 = (Uintptr)begin, r1 = (Uintptr)begin + length;
-    while (currentRegion != NULL) {
-        Range* currentRange = &currentRegion->range;
-        Uintptr l2 = currentRange->begin, r2 = currentRange->begin + currentRange->length;
-        if (!RANGE_HAS_OVERLAP(l1, r1, l2, r2)) {
-            break;
-        }
-
-        RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &currentRegion->treeNode);
-
-        bool lCovered = l1 <= l2, rCovered = r2 <= r1;
-        DEBUG_ASSERT_SILENT(lCovered || rCovered);
-        
-        if (lCovered && rCovered) {
-            virtualMemorySpace_removeRegion(vms, currentRegion);
-        } else if (lCovered) {  //TODO: Move single bound covered out of loop
-            DEBUG_ASSERT_SILENT(VALUE_WITHIN(currentRange->begin, currentRange->begin + currentRange->length, r1, <, <));
-            extendedPageTableRoot_erase(vms->pageTable, (void*)currentRange->begin, (r1 - currentRange->begin) / PAGE_SIZE);
-            Size newLength = currentRange->begin + currentRange->length - r1;
-            currentRange->begin = r1;
-            currentRange->length = newLength;
-        } else if (rCovered) {
-            DEBUG_ASSERT_SILENT(VALUE_WITHIN(currentRange->begin, currentRange->begin + currentRange->length, l1, <, <));
-            extendedPageTableRoot_erase(vms->pageTable, (void*)l1, (currentRange->begin + currentRange->length - l1) / PAGE_SIZE);
-            currentRange->length = l1 - currentRange->begin;
-        }
-        
-        currentRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
-    }
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 static int __virtualMemoryRegion_compareFunc(RBtreeNode* node1, RBtreeNode* node2) {
@@ -222,24 +176,131 @@ static int __virtualMemoryRegion_searchFunc(RBtreeNode* node, Object key) {
     return range->begin < (Uintptr)key ? -1 : 1;
 }
 
-static VirtualMemoryRegion* __virtualMemorySpace_getFirstOverlapped(VirtualMemorySpace* vms, void* begin, Size length) {
-    if (RBtree_isEmpty(&vms->regionTree)) {
-        return NULL;
+static VirtualMemoryRegion* __virtualMemorySpace_addHoleRegion(VirtualMemorySpace* vms, void* begin, Size length) {
+    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
+    DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
+    
+    VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
+    if (newRegion == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    virtualMemoryRegion_initStruct(vms, newRegion, begin, length, VIRTUAL_MEMORY_REGION_FLAGS_HOLE, 0);
+
+    if (!__virtualMemorySpace_doAddRegion(vms, newRegion)) {
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 1);
     }
     
-    RBtreeNode* firstNode = RBtree_lowerBound(&vms->regionTree, (Object)begin);
-    if (firstNode == NULL) {                                                        //No node is ahead or cover the begin
-        firstNode = RBtree_getFirst(&vms->regionTree);
-    } else if (__virtualMemoryRegion_searchFunc(firstNode, (Object)begin) != 0) {   //firstNode is first node ahead the begin
-        firstNode = RBtree_getSuccessor(&vms->regionTree, firstNode);               //firstNode might be NULL heere
+    return newRegion;
+    ERROR_FINAL_BEGIN(1);
+    mm_free(newRegion);
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
+static VirtualMemoryRegion* __virtualMemorySpace_addRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
+    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
+    DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
+    DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(flags, VIRTUAL_MEMORY_REGION_FLAGS_HOLE));
+    
+    VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
+    if (newRegion == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    virtualMemoryRegion_initStruct(vms, newRegion, begin, length, flags, memoryOperationsID);
+
+    if (!__virtualMemorySpace_doAddRegion(vms, newRegion)) {
+        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 1);
     }
 
-    if (firstNode == NULL) {
+    return newRegion;
+    ERROR_FINAL_BEGIN(1);
+    mm_free(newRegion);
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
+static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, void* ptr) {
+    VirtualMemoryRegion* vmr = virtualMemorySpace_getRegion(vms, ptr);
+    if (vmr == NULL) {
         return NULL;
     }
 
-    VirtualMemoryRegion* region = HOST_POINTER(firstNode, VirtualMemoryRegion, treeNode);
-    //firstNode must be behind the begin
-    Range* range = &region->range;
-    return RANGE_HAS_OVERLAP(range->begin, range->begin + range->length, (Uintptr)begin, length) ? region : NULL;
+    Range* range = &vmr->range;
+    if ((Uintptr)ptr == range->begin || (Uintptr)ptr == range->begin + range->length) {
+        return NULL;
+    }
+
+    Size frontLength = (Uintptr)ptr - range->begin,
+        backLength = range->length - frontLength;
+    
+    range->length = frontLength;
+    VirtualMemoryRegion* ret = NULL;
+    if (TEST_FLAGS(vmr->flags, VIRTUAL_MEMORY_REGION_FLAGS_HOLE)) {
+        ret = __virtualMemorySpace_addHoleRegion(vms, ptr, backLength);
+    } else {
+        ret = __virtualMemorySpace_addRegion(vms, ptr, backLength, vmr->flags, vmr->memoryOperationsID);
+    }
+    ERROR_GOTO_IF_ERROR(0);
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    range->length = frontLength + backLength;
+    return NULL;
+}
+
+static void __virtualMemorySpace_merge(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr1, VirtualMemoryRegion* vmr2) {
+    Range* range1 = &vmr1->range, * range2 = &vmr2->range;
+    DEBUG_ASSERT_SILENT(range1->begin + range1->length == range2->begin);
+    Range* range = &vms->range;
+    DEBUG_ASSERT_SILENT(RANGE_WITHIN(range->begin, range->begin + range->length, range1->begin, range2->begin + range2->length, <=, <=));
+
+    __virtualMemorySpace_doRemoveRegion(vms, vmr2);
+    range1->length += range2->length;
+    mm_free(vmr2);
+}
+
+static void __virtualMemorySpace_doDraw(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
+    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
+    DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
+    Range tmp = (Range) {
+        .begin = (Uintptr)begin,
+        .length = length
+    };
+    DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&vms->range, &tmp, <=, <=));
+
+    VirtualMemoryRegion* beginRegion = virtualMemorySpace_getRegion(vms, begin);
+    DEBUG_ASSERT_SILENT(beginRegion != NULL);
+    if (!__virtualMemoryRegion_check(beginRegion, flags, memoryOperationsID)) {
+        VirtualMemoryRegion* newRegion = __virtualMemorySpace_split(vms, begin);
+        if (newRegion != NULL) {
+            beginRegion = newRegion;
+        }
+    }
+
+    VirtualMemoryRegion* endRegion = virtualMemorySpace_getRegion(vms, begin + length - 1);
+    DEBUG_ASSERT_SILENT(endRegion != NULL);
+    if (!__virtualMemoryRegion_check(endRegion, flags, memoryOperationsID)) {
+        __virtualMemorySpace_split(vms, begin + length);
+    }
+
+    beginRegion->flags = flags;
+    beginRegion->memoryOperationsID = memoryOperationsID;
+    if (beginRegion == endRegion) {
+        return;
+    }
+
+    DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&tmp, &beginRegion->range, <=, <=));
+    while (true) {
+        RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &beginRegion->treeNode);
+        VirtualMemoryRegion* nextRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
+        DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&tmp, &nextRegion->range, <=, <=));
+        bool allDrawn = (nextRegion == endRegion);
+        __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
+
+        if (allDrawn) {
+            break;
+        }
+    }
 }

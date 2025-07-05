@@ -114,6 +114,7 @@ static void __memoryOperations_deepCopyEntry(PagingLevel level, ExtendedPageTabl
                 continue;
             }
     
+            DEBUG_ASSERT_SILENT(srcSubExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COPY);
             __memoryOperations_deepCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
@@ -186,6 +187,7 @@ static void __memoryOperations_cowCopyEntry(PagingLevel level, ExtendedPageTable
                 continue;
             }
 
+            DEBUG_ASSERT_SILENT(srcSubExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
             __memoryOperations_cowCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
@@ -230,6 +232,7 @@ static void __memoryOperations_anonCopyEntry(PagingLevel level, ExtendedPageTabl
                 continue;
             }
 
+            DEBUG_ASSERT_SILENT(srcSubExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON);
             __memoryOperations_anonCopyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
@@ -336,6 +339,7 @@ static void* __memoryOperations_deepReleaseEntry(PagingLevel level, ExtendedPage
                 continue;
             }
     
+            DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COPY);
             __memoryOperations_deepReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
@@ -394,6 +398,7 @@ static void* __memoryOperations_cowReleaseEntry(PagingLevel level, ExtendedPageT
                 continue;
             }
 
+            DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
             __memoryOperations_cowReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }
@@ -433,6 +438,7 @@ static void* __memoryOperations_anonReleaseEntry(PagingLevel level, ExtendedPage
                 continue;
             }
 
+            DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON);
             __memoryOperations_anonReleaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i);
             ERROR_GOTO_IF_ERROR(0);
         }

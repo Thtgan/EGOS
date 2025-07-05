@@ -33,7 +33,7 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
     process->state = STATE_RUNNING;
 
     process->extendedTable = extendedTable;
-    virtualMemorySpace_initStruct(&process->vms, extendedTable);
+    virtualMemorySpace_initStruct(&process->vms, extendedTable, (void*)MEMORY_LAYOUT_VMS_SPACE_BEGIN + PAGE_SIZE, MEMORY_LAYOUT_VMS_SPACE_END - MEMORY_LAYOUT_VMS_SPACE_BEGIN - PAGE_SIZE);
 
     process->lastActiveThread = NULL;
     linkedList_initStruct(&process->threads);

@@ -52,7 +52,7 @@
 #define SYSCALL_MMAP_FLAGS_UNINITIALIZED        FLAG64(26)
 
 static inline Flags16 __syscall_memory_mmap_convert_flags(int prot) {
-    Flags16 ret = EMPTY_FLAGS;
+    Flags16 ret = VIRTUAL_MEMORY_REGION_FLAGS_USER;
     if (TEST_FLAGS(prot, SYSCALL_MMAP_PROT_WRITE)) {
         SET_FLAG_BACK(ret, VIRTUAL_MEMORY_REGION_FLAGS_WRITABLE);
     }
@@ -90,14 +90,14 @@ static void* __syscall_memory_mmap(void* addr, Size length, int prot, int flags,
             virtualMemorySpace_erase(vms, addr, length);
         }
     }
-    addr = virtualMemorySpace_getFirstFit(vms, addr, length);
+    addr = virtualMemorySpace_findFirstFitHole(vms, addr, length);
 
     if (TEST_FLAGS_FAIL(flags, SYSCALL_MMAP_FLAGS_ANON)) {
         DEBUG_ASSERT_SILENT(fd != -1);  //TODO: File mapping in future
     }
 
     Flags16 vmsFlags = __syscall_memory_mmap_convert_flags(prot);
-    virtualMemorySpace_addRegion(vms, addr, length, vmsFlags, operationsID);
+    virtualMemorySpace_draw(vms, addr, length, vmsFlags, operationsID);
 
     return addr;
 }
@@ -108,6 +108,7 @@ static int __syscall_memory_munmap(void* addr, Size length) {
     }
 
     length = ALIGN_UP(length, PAGE_SIZE);
+    addr = (void*)ALIGN_DOWN((Uintptr)addr, PAGE_SIZE);
     
     VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
     virtualMemorySpace_erase(vms, addr, length);
