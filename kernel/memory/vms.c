@@ -287,20 +287,34 @@ static void __virtualMemorySpace_doDraw(VirtualMemorySpace* vms, void* begin, Si
 
     beginRegion->flags = flags;
     beginRegion->memoryOperationsID = memoryOperationsID;
-    if (beginRegion == endRegion) {
-        return;
+    if (beginRegion != endRegion) {
+        DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&tmp, &beginRegion->range, <=, <=));
+        while (true) {
+            RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &beginRegion->treeNode);
+            VirtualMemoryRegion* nextRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
+            DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&tmp, &nextRegion->range, <=, <=));
+            bool allDrawn = (nextRegion == endRegion);
+            __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
+    
+            if (allDrawn) {
+                break;
+            }
+        }
     }
 
-    DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&tmp, &beginRegion->range, <=, <=));
-    while (true) {
-        RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &beginRegion->treeNode);
+    RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &beginRegion->treeNode);
+    if (nextNode != NULL) {
         VirtualMemoryRegion* nextRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
-        DEBUG_ASSERT_SILENT(RANGE_WITHIN_PACKED(&tmp, &nextRegion->range, <=, <=));
-        bool allDrawn = (nextRegion == endRegion);
-        __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
+        if (__virtualMemoryRegion_check(nextRegion, flags, memoryOperationsID)) {
+            __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
+        }
+    }
 
-        if (allDrawn) {
-            break;
+    RBtreeNode* prevNode = RBtree_getPredecessor(&vms->regionTree, &beginRegion->treeNode);
+    if (prevNode != NULL) {
+        VirtualMemoryRegion* prevRegion = HOST_POINTER(prevNode, VirtualMemoryRegion, treeNode);
+        if (__virtualMemoryRegion_check(prevRegion, flags, memoryOperationsID)) {
+            __virtualMemorySpace_merge(vms, prevRegion, beginRegion);
         }
     }
 }
