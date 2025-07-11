@@ -325,6 +325,9 @@ static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, 
     process_initStruct(process, pid, cloneFrom->name.data, newTable);
     ERROR_GOTO_IF_ERROR(0);
 
+    virtualMemorySpace_copy(&process->vms, &cloneFrom->vms);
+    ERROR_GOTO_IF_ERROR(0);
+
     vector_resize(&process->fsEntries, cloneFrom->fsEntries.capacity);
     Size fsEntryNum = process->fsEntries.size;
     for (int i = 0; i < fsEntryNum; ++i) {

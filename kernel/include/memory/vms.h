@@ -35,6 +35,8 @@ void virtualMemorySpace_initStruct(VirtualMemorySpace* vms, ExtendedPageTableRoo
 
 void virtualMemorySpace_clearStruct(VirtualMemorySpace* vms);
 
+void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src);
+
 void virtualMemorySpace_draw(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID);
 
 VirtualMemoryRegion* virtualMemorySpace_getRegion(VirtualMemorySpace* vms, void* ptr);

@@ -4,6 +4,7 @@
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>
 #include<memory/memoryOperations.h>
+#include<memory/memory.h>
 #include<memory/mm.h>
 #include<structs/RBtree.h>
 #include<system/memoryLayout.h>
@@ -96,6 +97,38 @@ void virtualMemorySpace_clearStruct(VirtualMemorySpace* vms) {
         virtualMemorySpace_erase(vms, (void*)vmr->range.begin, vmr->range.length);
         node = nextNode;
     }
+}
+
+void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src) {
+    DEBUG_ASSERT_SILENT(des->regionNum == 1);
+    DEBUG_ASSERT_SILENT(des->pageTable != NULL && des->pageTable != src->pageTable);
+
+    memory_memcpy(&des->range, &src->range, sizeof(Range));
+    
+    RBtreeNode* firstNode = RBtree_getFirst(&des->regionTree);
+    DEBUG_ASSERT_SILENT(firstNode != NULL);
+    VirtualMemoryRegion* firstRegion = HOST_POINTER(firstNode, VirtualMemoryRegion, treeNode);
+    __virtualMemorySpace_doRemoveRegion(des, firstRegion);
+    mm_free(firstRegion);
+
+    for (RBtreeNode* node = RBtree_getFirst(&src->regionTree); node != NULL; node = RBtree_getSuccessor(&src->regionTree, node)) {
+        VirtualMemoryRegion* currentRegion = HOST_POINTER(node, VirtualMemoryRegion, treeNode);
+        VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
+        if (newRegion == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
+        }
+        
+        RBtreeNode_initStruct(&des->regionTree, &newRegion->treeNode);
+        memory_memcpy(&newRegion->range, &currentRegion->range, sizeof(Range));
+        newRegion->flags = currentRegion->flags;
+        newRegion->memoryOperationsID = currentRegion->memoryOperationsID;
+
+        __virtualMemorySpace_doAddRegion(des, newRegion);
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
 }
 
 void virtualMemorySpace_draw(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
