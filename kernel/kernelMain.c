@@ -48,6 +48,8 @@ Uint16 rootTID = 0;
 
 #include<memory/allocators/buddyHeapAllocator.h>
 
+#include<memory/mapping.h>
+
 Timer timer1, timer2, timer3;
 
 static void __timerFunc1(Timer* timer) {
@@ -234,19 +236,15 @@ void kernelMain(SystemInfo* info) {
 }
 
 static void printLOGO() {
-    char buffer[1024];
     FS_fileStat stat;
-    File* file = fs_fileOpen("/LOGO.txt", FCNTL_OPEN_READ_ONLY);
+    File* file = fs_fileOpen("/LOGO.txt", FCNTL_OPEN_READ_ONLY);    //TODO: What if file closed before munmap?
     ERROR_CHECKPOINT();
-    fs_fileSeek(file, 0, FS_FILE_SEEK_END);
+    void* addr = mapping_mmap(NULL, file->inode->sizeInByte, MAPPING_MMAP_PROT_READ, MAPPING_MMAP_FLAGS_TYPE_PRIVATE, file, 0);
+    print_printf("%s\n", addr);
+    mapping_munmap(addr, file->inode->sizeInByte);
+
     fs_fileStat(file, &stat);
     ERROR_CHECKPOINT();
-    fs_fileSeek(file, 0, FS_FILE_SEEK_BEGIN);
-
-    fs_fileRead(file, buffer, stat.size);
-    ERROR_CHECKPOINT();
-    buffer[stat.size] = '\0';
-    print_printf("%s\n", buffer);
 
     print_printf("%lu\n", stat.createTime.second);
     print_printf("%lu\n", stat.accessTime.second);
