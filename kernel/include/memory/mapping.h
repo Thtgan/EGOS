@@ -1,5 +1,5 @@
-#if !defined(__MEMORY_MAPPING_MMAP_H)
-#define __MEMORY_MAPPING_MMAP_H
+#if !defined(__MEMORY_MAPPING_H)
+#define __MEMORY_MAPPING_H
 
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -50,4 +50,4 @@ void* mapping_mmap(void* prefer, Size length, Flags32 prot, Flags32 flags, File*
 
 void mapping_munmap(void* addr, Size length);
 
-#endif // __MEMORY_MAPPING_MMAP_H
+#endif // __MEMORY_MAPPING_H
