@@ -18,6 +18,8 @@ typedef struct Vector {
  */
 void vector_initStruct(Vector* vector);
 
+void vector_initStructN(Vector* vector, Size n);
+
 /**
  * @brief Release vector
  * 

@@ -6,18 +6,23 @@
 #include<memory/mm.h>
 #include<error.h>
 
-#define __VECTOR_INIT_STORAGE_SIZE  64
+#define __VECTOR_INIT_STORAGE_CAPACITY  8
 
 void vector_initStruct(Vector* vector) {
+    vector_initStructN(vector, __VECTOR_INIT_STORAGE_CAPACITY);
+}
+
+void vector_initStructN(Vector* vector, Size n) {
     vector->size = 0;
-    vector->capacity = __VECTOR_INIT_STORAGE_SIZE / sizeof(Object);
-    vector->storage = mm_allocate(__VECTOR_INIT_STORAGE_SIZE);
+    vector->capacity = n;
+    Size storageLen = n * sizeof(Object);
+    vector->storage = mm_allocate(storageLen);
     if (vector->storage == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    memory_memset(vector->storage, OBJECT_NULL, __VECTOR_INIT_STORAGE_SIZE);
+    memory_memset(vector->storage, OBJECT_NULL, storageLen);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -109,7 +114,7 @@ Object vector_back(Vector* vector) {
 
 void vector_push(Vector* vector, Object item) {
     if (vector->size == vector->capacity) {
-        vector_resize(vector, ((vector->capacity * sizeof(Object) + 16) * 2 - 16) / sizeof(Object));    //TODO: Ugly codes assuming memory header size
+        vector_resize(vector, vector->capacity * 2);
         ERROR_GOTO_IF_ERROR(0);
     }
 

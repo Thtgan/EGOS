@@ -288,9 +288,8 @@ static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionShar
     refCounter_initStruct(&frames->referCnt);
     refCounter_refer(&frames->referCnt);
 
-    vector_initStruct(&frames->frames);
     Size dividedN = DIVIDE_ROUND_UP(frameN, 2);
-    vector_resize(&frames->frames, dividedN);
+    vector_initStructN(&frames->frames, dividedN);
     for (int i = 0; i < dividedN; ++i) {
         vector_push(&frames->frames, INVALID_INDEX64);
     }
