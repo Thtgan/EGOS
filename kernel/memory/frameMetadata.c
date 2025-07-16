@@ -306,7 +306,7 @@ Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, Index32 f
             if (nearbyUnit != nearbyAnotherSideUnit) {
                 CLEAR_FLAG(nearbyUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
             }
-            nearbyFramesBeginIndex = nearbyUnit->collectedAnotherSideIndex;
+            nearbyFramesBeginIndex = newBegin;
         } while (0);
     }
 

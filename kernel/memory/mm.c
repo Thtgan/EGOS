@@ -149,7 +149,9 @@ void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo) {
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
     ERROR_CHECKPOINT();
 
-    extendedPageTableRoot_erase(mapTo, p, unit->vRegionLength);
+    Size n = unit->vRegionLength;
+    unit->vRegionLength = 0;    //TODO: Ugly solution for free frame collection
+    extendedPageTableRoot_erase(mapTo, p, n);
     frameReaper_reap(&mapTo->reaper);
 
     return;
@@ -203,7 +205,9 @@ void mm_free(void* p) {
         heapAllocator_free(allocator, p);
     } else {
         DEBUG_ASSERT_SILENT(TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR));
-        extendedPageTableRoot_erase(mm->extendedTable, p, unit->vRegionLength);
+        Size n = unit->vRegionLength;
+        unit->vRegionLength = 0;    //TODO: Ugly solution for free frame collection
+        extendedPageTableRoot_erase(mm->extendedTable, p, n);
         frameReaper_reap(&mm->extendedTable->reaper);
     }
 }
