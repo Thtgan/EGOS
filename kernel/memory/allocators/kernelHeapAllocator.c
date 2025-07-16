@@ -9,6 +9,8 @@
 #include<debug.h>
 #include<error.h>
 
+#define __KERNEL_HEAP_ALLOCATOR_EXPAND_THRESHOLD    4
+
 static void* __kernelHeapAllocator_allocate(HeapAllocator* allocator, Size n);
 
 static Size __kernelHeapAllocator_getActualSize(HeapAllocator* allocator, Size n);
@@ -70,10 +72,15 @@ static Uint8 __kernelHeapAllocator_getOrder(Size n) {
 }
 
 static void* __kernelHeapSubAllocator_allocate(KernelHeapSubAllocator* allocator, Uint8 order) {
-    if (singlyLinkedList_isEmpty(&allocator->list)) {
+    // if (singlyLinkedList_isEmpty(&allocator->list)) {
+    //     __kernelHeapSubAllocator_expand(allocator, order);
+    // }
+
+    while (allocator->remaining < __KERNEL_HEAP_ALLOCATOR_EXPAND_THRESHOLD) {
         __kernelHeapSubAllocator_expand(allocator, order);
     }
 
+    DEBUG_ASSERT_SILENT(!singlyLinkedList_isEmpty(&allocator->list));
     SinglyLinkedListNode* node = singlyLinkedList_getNext(&allocator->list);
     --allocator->remaining;
     singlyLinkedList_deleteNext(&allocator->list);

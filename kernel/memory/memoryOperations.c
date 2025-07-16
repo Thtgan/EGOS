@@ -12,12 +12,14 @@
 #include<error.h>
 
 static MemoryOperations* __memoryOperations_defaultOperations[DEFAULT_MEMORY_OPERATIONS_TYPE_NUM] = {
-    [DEFAULT_MEMORY_OPERATIONS_TYPE_SHARE]  = &defaultMemoryOperations_share,
-    [DEFAULT_MEMORY_OPERATIONS_TYPE_COPY]   = &defaultMemoryOperations_copy,
-    [DEFAULT_MEMORY_OPERATIONS_TYPE_MIXED]  = &defaultMemoryOperations_mixed,
-    [DEFAULT_MEMORY_OPERATIONS_TYPE_COW]    = &defaultMemoryOperations_cow,
-    [DEFAULT_MEMORY_OPERATIONS_TYPE_ANON]   = &defaultMemoryOperations_anon,
-    [DEFAULT_MEMORY_OPERATIONS_TYPE_FILE]   = &defaultMemoryOperations_file
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_SHARE]          = &defaultMemoryOperations_share,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_COPY]           = &defaultMemoryOperations_copy,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_MIXED]          = &defaultMemoryOperations_mixed,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_COW]            = &defaultMemoryOperations_cow,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE]   = &defaultMemoryOperations_anon_private,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_SHARED]    = &defaultMemoryOperations_anon_shared,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE]   = &defaultMemoryOperations_file_private,
+    [DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED]    = &defaultMemoryOperations_file_shared
 };
 
 void memoryOperations_registerDefault(ExtraPageTableContext* context) {

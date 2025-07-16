@@ -6,7 +6,7 @@
 #include<memory/mm.h>
 #include<error.h>
 
-#define __VECTOR_INIT_STORAGE_SIZE  48  //TODO: Ugly codes assuming memory header size
+#define __VECTOR_INIT_STORAGE_SIZE  64
 
 void vector_initStruct(Vector* vector) {
     vector->size = 0;

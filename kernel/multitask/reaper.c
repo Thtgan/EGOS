@@ -1,7 +1,5 @@
 #include<multitask/reaper.h>
 
-typedef struct __ThreadReaper __ThreadReaper;
-
 #include<kit/util.h>
 #include<multitask/locks/semaphore.h>
 #include<multitask/locks/spinlock.h>

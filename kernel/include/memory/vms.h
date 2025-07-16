@@ -1,6 +1,7 @@
 #if !defined(__MEMORY_VMS_H)
 #define __MEMORY_VMS_H
 
+typedef struct VirtualMemoryRegionSharedFrames VirtualMemoryRegionSharedFrames;
 typedef struct VirtualMemoryRegion VirtualMemoryRegion;
 typedef struct VirtualMemorySpace VirtualMemorySpace;
 
@@ -10,6 +11,14 @@ typedef struct VirtualMemorySpace VirtualMemorySpace;
 #include<memory/extendedPageTable.h>
 #include<memory/memoryOperations.h>
 #include<structs/RBtree.h>
+#include<structs/refCounter.h>
+#include<structs/vector.h>
+
+typedef struct VirtualMemoryRegionSharedFrames {
+    Uintptr vBase;
+    RefCounter referCnt;
+    Vector frames;
+} VirtualMemoryRegionSharedFrames;
 
 typedef struct VirtualMemoryRegion {
     RBtreeNode treeNode;
@@ -19,13 +28,17 @@ typedef struct VirtualMemoryRegion {
 #define VIRTUAL_MEMORY_REGION_FLAGS_USER                    FLAG16(2)
 #define VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_PROT(__FLAGS)   EXTRACT_VAL(__FLAGS, 16, 0, 3)
 #define VIRTUAL_MEMORY_REGION_FLAGS_HOLE                    FLAG16(3)
+#define VIRTUAL_MEMORY_REGION_FLAGS_SHARED                  FLAG16(4)
     Flags16 flags;
     Uint8 memoryOperationsID;
     File* file;
     Index64 offset;
+    VirtualMemoryRegionSharedFrames* sharedFrames;
 } VirtualMemoryRegion;
 
-void virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, File* file, Index64 offset);
+Index32 virtualMemoryRegion_getFrameIndex(VirtualMemoryRegion* vmr, void* v);
+
+Index32 virtualMemoryRegion_setFrameIndex(VirtualMemoryRegion* vmr, void* v, Index32 frameIndex);
 
 typedef struct VirtualMemorySpace {
     RBtree regionTree;
@@ -40,9 +53,9 @@ void virtualMemorySpace_clearStruct(VirtualMemorySpace* vms);
 
 void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src);
 
-void virtualMemorySpace_drawAnon(VirtualMemorySpace* vms, void* begin, Size length, Flags16 prot, Uint8 memoryOperationsID);
+void virtualMemorySpace_drawAnon(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID);
 
-void virtualMemorySpace_drawFile(VirtualMemorySpace* vms, void* begin, Size length, Flags16 prot, File* file, Index64 offset);
+void virtualMemorySpace_drawFile(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, File* file, Index64 offset);
 
 VirtualMemoryRegion* virtualMemorySpace_getRegion(VirtualMemorySpace* vms, void* ptr);
 

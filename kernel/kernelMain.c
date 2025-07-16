@@ -143,7 +143,9 @@ void kernelMain(SystemInfo* info) {
     buddyHeapAllocator_initStruct(&cowTestAllocator, mm->frameAllocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
 
     arr1 = mm_allocate(1 * sizeof(int)), arr2 = mm_allocateDetailed(1 * sizeof(int), &cowTestAllocator.allocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
+    int* mapped = mapping_mmap(NULL, sizeof(int), MAPPING_MMAP_PROT_READ | MAPPING_MMAP_PROT_WRITE, MAPPING_MMAP_FLAGS_ANON | MAPPING_MMAP_FLAGS_TYPE_SHARED, NULL, 0);
     print_printf("%p %p\n", arr1, arr2);
+    print_printf("%p\n", mapped);
     arr1[0] = 1, arr2[0] = 114514;
     rootTID = schedule_getCurrentThread()->tid;
     Process* forked = schedule_fork();
@@ -160,7 +162,7 @@ void kernelMain(SystemInfo* info) {
         arr1[0] = 3;
         semaphore_up(&sema1);
         semaphore_down(&sema2);
-        print_printf("DONE 0, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
+        print_printf("DONE 0, arr1: %d, arr2: %d, mapped: %d\n", arr1[0], arr2[0], *mapped);
     } else {
         Sigaction sigaction = {
             .handler = __testSigaction
@@ -170,7 +172,8 @@ void kernelMain(SystemInfo* info) {
 
         semaphore_down(&sema1);
         arr1[0] = 2, arr2[0] = 1919810;
-        print_printf("DONE 1, arr1: %d, arr2: %d\n", arr1[0], arr2[0]);
+        *mapped = 114514;
+        print_printf("DONE 1, arr1: %d, arr2: %d, mapped: %d\n", arr1[0], arr2[0], *mapped);
         semaphore_up(&sema2);
         while (true) {
             print_printf("Waiting for input: ");

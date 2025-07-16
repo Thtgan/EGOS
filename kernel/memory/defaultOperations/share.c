@@ -16,7 +16,7 @@ MemoryOperations defaultMemoryOperations_share = (MemoryOperations) {
     .releasePagingEntry = __defaultMemoryOperations_share_releaseEntry
 };
 
-static void __defaultMemoryOperations_share_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
+static void __defaultMemoryOperations_share_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) { //TODO: Simple copy may leak page table content
     PagingEntry* srcEntry = &srcExtendedTable->table.tableEntries[index], * desEntry = &desExtendedTable->table.tableEntries[index];
     ExtraPageTableEntry* srcExtraEntry = &srcExtendedTable->extraTable.tableEntries[index], * desExtraEntry = &desExtendedTable->extraTable.tableEntries[index];
     
@@ -26,4 +26,5 @@ static void __defaultMemoryOperations_share_copyEntry(PagingLevel level, Extende
 
 static void* __defaultMemoryOperations_share_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
     extendedPageTable_clearEntry(extendedTable, index);
+    return NULL;
 }

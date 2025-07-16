@@ -11,7 +11,7 @@
 #include<system/pageTable.h>
 #include<error.h>
 
-static inline Flags16 __mapping_mmapConvertProt(Flags32 prot) {
+static inline Flags16 __mapping_mmapConvertFlags(Flags32 prot, Flags32 flags) {
     Flags16 ret = EMPTY_FLAGS;
     if (TEST_FLAGS(prot, MAPPING_MMAP_PROT_USER)) {
         SET_FLAG_BACK(ret, VIRTUAL_MEMORY_REGION_FLAGS_USER);
@@ -23,6 +23,11 @@ static inline Flags16 __mapping_mmapConvertProt(Flags32 prot) {
 
     if (TEST_FLAGS_FAIL(prot, MAPPING_MMAP_PROT_EXEC)) {
         SET_FLAG_BACK(ret, VIRTUAL_MEMORY_REGION_FLAGS_NOT_EXECUTABLE);
+    }
+
+    Uint8 type = MAPPING_MMAP_FLAGS_TYPE_EXTRACT(flags);
+    if (type == MAPPING_MMAP_FLAGS_TYPE_SHARED) {
+        SET_FLAG_BACK(ret, VIRTUAL_MEMORY_REGION_FLAGS_SHARED);
     }
 
     return ret;
@@ -37,12 +42,6 @@ void* mapping_mmap(void* prefer, Size length, Flags32 prot, Flags32 flags, File*
 
     VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
     
-    int type = TRIM_VAL(flags, MAPPING_MMAP_FLAGS_TYPE_MASK);
-    Uint8 operationsID = 0xFF;
-    if (type == MAPPING_MMAP_FLAGS_TYPE_PRIVATE) {
-        operationsID = DEFAULT_MEMORY_OPERATIONS_TYPE_ANON;
-    }
-    
     void* addr = NULL;
     if (TEST_FLAGS(flags, MAPPING_MMAP_FLAGS_FIXED)) {
         if (prefer == NULL) {
@@ -55,12 +54,13 @@ void* mapping_mmap(void* prefer, Size length, Flags32 prot, Flags32 flags, File*
         addr = virtualMemorySpace_findFirstFitHole(vms, prefer, length);
     }
 
-    Flags16 vmsProt = __mapping_mmapConvertProt(prot);
+    Flags16 vmsFlags = __mapping_mmapConvertFlags(prot, flags);
     if (TEST_FLAGS(flags, MAPPING_MMAP_FLAGS_ANON)) {
-        virtualMemorySpace_drawAnon(vms, addr, length, vmsProt, operationsID);
+        Uint8 memoryOperationsID = TEST_FLAGS(vmsFlags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED) ? DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_SHARED : DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE;
+        virtualMemorySpace_drawAnon(vms, addr, length, vmsFlags, memoryOperationsID);
     } else {
         DEBUG_ASSERT_SILENT(file != NULL);
-        virtualMemorySpace_drawFile(vms, addr, length, vmsProt, file, offset);
+        virtualMemorySpace_drawFile(vms, addr, length, vmsFlags, file, offset);
     }
 
     return addr;

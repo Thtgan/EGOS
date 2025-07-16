@@ -7,9 +7,25 @@
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<structs/RBtree.h>
+#include<structs/refCounter.h>
+#include<structs/vector.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
 #include<error.h>
+
+static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionSharedFrames* frames, Uintptr vBase, Size frameN);
+
+static void __virtualMemoryRegionSharedFrames_derefer(VirtualMemoryRegionSharedFrames* frames);
+
+static inline void __virtualMemoryRegionSharedFrames_refer(VirtualMemoryRegionSharedFrames* frames) {
+    refCounter_refer(&frames->referCnt);
+}
+
+static void __virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, File* file, Index64 offset, VirtualMemoryRegionSharedFrames* sharedFrames);
+
+static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, File* file, Index64 offset, VirtualMemoryRegionSharedFrames* sharedFrames);
+
+static void __virtualMemoryRegion_clearFields(VirtualMemoryRegion* vmr);
 
 static inline Flags64 __virtualMemoryRegion_getPagingProt(Flags16 flags) {
     Flags64 ret = EMPTY_FLAGS;
@@ -32,15 +48,23 @@ static int __virtualMemoryRegion_compareFunc(RBtreeNode* node1, RBtreeNode* node
 
 static int __virtualMemoryRegion_searchFunc(RBtreeNode* node, Object key);
 
-static inline bool __virtualMemoryRegion_check(VirtualMemoryRegion* vmr, Flags16 flags, Uint8 memoryOperationsID) {
-    return vmr->flags == flags && vmr->memoryOperationsID == memoryOperationsID && vmr->memoryOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_FILE;    //TODO: Pass if same file with correct offset
+static inline bool __virtualMemoryRegion_checkMatch(VirtualMemoryRegion* vmr, Flags16 flags, Uint8 memoryOperationsID, VirtualMemoryRegionSharedFrames* sharedFrames) {
+    if (!(vmr->flags == flags && vmr->memoryOperationsID == memoryOperationsID)) {
+        return false;
+    }
+
+    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+        return vmr->sharedFrames == sharedFrames;
+    }
+
+    return memoryOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE && memoryOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED;    //TODO: Pass if same file with correct offset
 }
 
 static VirtualMemoryRegion* __virtualMemorySpace_addHoleRegion(VirtualMemorySpace* vms, void* begin, Size length);
 
-static VirtualMemoryRegion* __virtualMemorySpace_addFileRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, File* file, Index64 offset);
+static VirtualMemoryRegion* __virtualMemorySpace_addFileRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, File* file, Index64 offset, VirtualMemoryRegionSharedFrames* sharedFrames);
 
-static VirtualMemoryRegion* __virtualMemorySpace_addAnonRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID);
+static VirtualMemoryRegion* __virtualMemorySpace_addAnonRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, VirtualMemoryRegionSharedFrames* sharedFrames);
 
 static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, void* ptr);
 
@@ -68,27 +92,41 @@ static inline void __virtualMemorySpace_doRemoveRegion(VirtualMemorySpace* vms, 
     --vms->regionNum;
 }
 
-void virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, File* file, Index64 offset) {
-    DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
-    DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
-    DEBUG_ASSERT_SILENT((memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE) == (file != NULL));
-    
-    RBtreeNode_initStruct(&vms->regionTree, &vmr->treeNode);
-    vmr->range = (Range) {
-        .begin = (Uintptr)begin,
-        .length = length
-    };
-
-    vmr->flags = flags;
-    vmr->memoryOperationsID = memoryOperationsID;
-
-    if (memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE) {
-        vmr->file = file;
-        vmr->offset = offset;
-    } else {
-        vmr->file = NULL;
-        vmr->offset = 0;
+Index32 virtualMemoryRegion_getFrameIndex(VirtualMemoryRegion* vmr, void* v) {
+    VirtualMemoryRegionSharedFrames* sharedFrames = vmr->sharedFrames;
+    if (sharedFrames == NULL) {
+        return INVALID_INDEX32;
     }
+
+    Index64 index = ((Uintptr)v - sharedFrames->vBase) / PAGE_SIZE;
+    
+    struct {
+        union {
+            Index32 indexes[2];
+            Object obj;
+        };
+    } combined;
+    combined.obj = vector_get(&sharedFrames->frames, index >> 1);
+    return combined.indexes[index & 1];
+}
+
+Index32 virtualMemoryRegion_setFrameIndex(VirtualMemoryRegion* vmr, void* v, Index32 frameIndex) {
+    VirtualMemoryRegionSharedFrames* sharedFrames = vmr->sharedFrames;
+    if (sharedFrames == NULL) {
+        return INVALID_INDEX32;
+    }
+
+    Index64 index = ((Uintptr)v - sharedFrames->vBase) / PAGE_SIZE;
+
+    struct {
+        union {
+            Index32 indexes[2];
+            Object obj;
+        };
+    } combined;
+    combined.obj = vector_get(&sharedFrames->frames, index >> 1);
+    combined.indexes[index & 1] = frameIndex;
+    vector_set(&sharedFrames->frames, index >> 1, combined.obj);
 }
 
 void virtualMemorySpace_initStruct(VirtualMemorySpace* vms, ExtendedPageTableRoot* pageTable, void* base, Size length) {
@@ -134,11 +172,14 @@ void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
+
+        Range* range = &currentRegion->range;
+        __virtualMemoryRegion_initStruct(des, newRegion, (void*)range->begin, range->length, currentRegion->flags, currentRegion->memoryOperationsID, currentRegion->file, currentRegion->offset, currentRegion->sharedFrames);
         
-        RBtreeNode_initStruct(&des->regionTree, &newRegion->treeNode);
-        memory_memcpy(&newRegion->range, &currentRegion->range, sizeof(Range));
-        newRegion->flags = currentRegion->flags;
-        newRegion->memoryOperationsID = currentRegion->memoryOperationsID;
+        if (TEST_FLAGS(currentRegion->flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+            DEBUG_ASSERT_SILENT(currentRegion->sharedFrames != NULL);
+            __virtualMemoryRegionSharedFrames_refer(currentRegion->sharedFrames);
+        }
 
         __virtualMemorySpace_doAddRegion(des, newRegion);
     }
@@ -147,22 +188,18 @@ void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void virtualMemorySpace_drawAnon(VirtualMemorySpace* vms, void* begin, Size length, Flags16 prot, Uint8 memoryOperationsID) {
+void virtualMemorySpace_drawAnon(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
     DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
     DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
-    prot = VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_PROT(prot);
 
-    Flags16 flags = prot;
     VirtualMemoryRegion* beginRegion = __virtualMemorySpace_splitToDraw(vms, begin, length, flags, memoryOperationsID);
 
-    beginRegion->flags = flags;
-    beginRegion->memoryOperationsID = memoryOperationsID;
-    beginRegion->file = NULL;
-    beginRegion->offset = 0;
+    __virtualMemoryRegion_clearFields(beginRegion);
+    __virtualMemoryRegion_setFields(beginRegion, begin, length, flags, memoryOperationsID, NULL, 0, NULL);
 
     __virtualMemorySpace_mergeRange(vms, beginRegion, length, flags, memoryOperationsID);
 
-    Flags64 pagingProt = __virtualMemoryRegion_getPagingProt(flags);
+    Flags64 pagingProt = __virtualMemoryRegion_getPagingProt(VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_PROT(flags));
     extendedPageTableRoot_draw(vms->pageTable, begin, NULL, length / PAGE_SIZE, memoryOperationsID, pagingProt, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP | EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK);
     ERROR_GOTO_IF_ERROR(0);
 
@@ -170,23 +207,21 @@ void virtualMemorySpace_drawAnon(VirtualMemorySpace* vms, void* begin, Size leng
     ERROR_FINAL_BEGIN(0);
 }
 
-void virtualMemorySpace_drawFile(VirtualMemorySpace* vms, void* begin, Size length, Flags16 prot, File* file, Index64 offset) {
+void virtualMemorySpace_drawFile(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, File* file, Index64 offset) {
     DEBUG_ASSERT_SILENT(length % PAGE_SIZE == 0 && length > 0);
     DEBUG_ASSERT_SILENT((Uintptr)begin % PAGE_SIZE == 0);
-    prot = VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_PROT(prot);
-    
-    Flags16 flags = prot;
-    VirtualMemoryRegion* beginRegion = __virtualMemorySpace_splitToDraw(vms, begin, length, flags, DEFAULT_MEMORY_OPERATIONS_TYPE_FILE);
 
-    beginRegion->flags = flags;
-    beginRegion->memoryOperationsID = DEFAULT_MEMORY_OPERATIONS_TYPE_FILE;
-    beginRegion->file = file;
-    beginRegion->offset = offset;
+    Uint8 memoryOperationsID = TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED) ? DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED : DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE;
 
-    __virtualMemorySpace_mergeRange(vms, beginRegion, length, flags, DEFAULT_MEMORY_OPERATIONS_TYPE_FILE);
+    VirtualMemoryRegion* beginRegion = __virtualMemorySpace_splitToDraw(vms, begin, length, flags, memoryOperationsID);
 
-    Flags64 pagingProt = __virtualMemoryRegion_getPagingProt(flags);
-    extendedPageTableRoot_draw(vms->pageTable, begin, NULL, length / PAGE_SIZE, DEFAULT_MEMORY_OPERATIONS_TYPE_FILE, pagingProt, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP | EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK);
+    __virtualMemoryRegion_clearFields(beginRegion);
+    __virtualMemoryRegion_setFields(beginRegion, begin, length, flags, memoryOperationsID, file, offset, NULL);
+
+    __virtualMemorySpace_mergeRange(vms, beginRegion, length, flags, memoryOperationsID);
+
+    Flags64 pagingProt = __virtualMemoryRegion_getPagingProt(VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_PROT(flags));
+    extendedPageTableRoot_draw(vms->pageTable, begin, NULL, length / PAGE_SIZE, memoryOperationsID, pagingProt, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP | EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -247,6 +282,86 @@ void virtualMemorySpace_erase(VirtualMemorySpace* vms, void* begin, Size length)
     ERROR_FINAL_BEGIN(0);
 }
 
+static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionSharedFrames* frames, Uintptr vBase, Size frameN) {
+    frames->vBase = vBase;
+    
+    refCounter_initStruct(&frames->referCnt);
+    refCounter_refer(&frames->referCnt);
+
+    vector_initStruct(&frames->frames);
+    Size dividedN = DIVIDE_ROUND_UP(frameN, 2);
+    vector_resize(&frames->frames, dividedN);
+    for (int i = 0; i < dividedN; ++i) {
+        vector_push(&frames->frames, INVALID_INDEX64);
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __virtualMemoryRegionSharedFrames_derefer(VirtualMemoryRegionSharedFrames* frames) {
+    if (refCounter_derefer(&frames->referCnt)) {
+        return;
+    }
+
+    vector_clearStruct(&frames->frames);
+}
+
+static void __virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, File* file, Index64 offset, VirtualMemoryRegionSharedFrames* sharedFrames) {
+    RBtreeNode_initStruct(&vms->regionTree, &vmr->treeNode);
+    __virtualMemoryRegion_setFields(vmr, begin, length, flags, memoryOperationsID, file, offset, sharedFrames);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, File* file, Index64 offset, VirtualMemoryRegionSharedFrames* sharedFrames) {
+    vmr->range = (Range) {
+        .begin = (Uintptr)begin,
+        .length = length
+    };
+    
+    vmr->flags = flags;
+    vmr->memoryOperationsID = memoryOperationsID;
+
+    if (memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE || memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED) {
+        vmr->file = file;   //TODO: Refer file here?
+        vmr->offset = offset;
+    } else {
+        vmr->file = NULL;
+        vmr->offset = 0;
+    }
+
+    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+        if (sharedFrames == NULL) {
+            sharedFrames = mm_allocate(sizeof(VirtualMemoryRegionSharedFrames));
+            if (sharedFrames == NULL) {
+                ERROR_ASSERT_ANY();
+                ERROR_GOTO(0);
+            }
+            __virtualMemoryRegionSharedFrames_initStruct(sharedFrames, (Uintptr)begin, length / PAGE_SIZE);
+            ERROR_GOTO_IF_ERROR(0);
+        } else {
+            __virtualMemoryRegionSharedFrames_refer(sharedFrames);
+        }
+        vmr->sharedFrames = sharedFrames;
+    } else {
+        vmr->sharedFrames = NULL;
+    }
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+static void __virtualMemoryRegion_clearFields(VirtualMemoryRegion* vmr) {
+    if (TEST_FLAGS(vmr->flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+        DEBUG_ASSERT_SILENT(vmr->sharedFrames != NULL);
+        __virtualMemoryRegionSharedFrames_derefer(vmr->sharedFrames);
+    }
+
+    //TODO: Derefer file here?
+}
+
 static int __virtualMemoryRegion_compareFunc(RBtreeNode* node1, RBtreeNode* node2) {
     VirtualMemoryRegion* vmr1 = HOST_POINTER(node1, VirtualMemoryRegion, treeNode), * vmr2 = HOST_POINTER(node2, VirtualMemoryRegion, treeNode);
     Range* range1 = &vmr1->range, * range2 = &vmr2->range;
@@ -273,7 +388,8 @@ static VirtualMemoryRegion* __virtualMemorySpace_addHoleRegion(VirtualMemorySpac
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    virtualMemoryRegion_initStruct(vms, newRegion, begin, length, VIRTUAL_MEMORY_REGION_FLAGS_HOLE, 0, NULL, 0);
+    __virtualMemoryRegion_initStruct(vms, newRegion, begin, length, VIRTUAL_MEMORY_REGION_FLAGS_HOLE, 0, NULL, 0, NULL);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (!__virtualMemorySpace_doAddRegion(vms, newRegion)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 1);
@@ -286,13 +402,16 @@ static VirtualMemoryRegion* __virtualMemorySpace_addHoleRegion(VirtualMemorySpac
     return NULL;
 }
 
-static VirtualMemoryRegion* __virtualMemorySpace_addFileRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, File* file, Index64 offset) {
+static VirtualMemoryRegion* __virtualMemorySpace_addFileRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, File* file, Index64 offset, VirtualMemoryRegionSharedFrames* sharedFrames) {
     VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
     if (newRegion == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    virtualMemoryRegion_initStruct(vms, newRegion, begin, length, flags, DEFAULT_MEMORY_OPERATIONS_TYPE_FILE, file, offset);
+
+    Uint8 memoryOperationsID = TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED) ? DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED : DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE;
+    __virtualMemoryRegion_initStruct(vms, newRegion, begin, length, flags, memoryOperationsID, file, offset, sharedFrames);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (!__virtualMemorySpace_doAddRegion(vms, newRegion)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 1);
@@ -305,15 +424,16 @@ static VirtualMemoryRegion* __virtualMemorySpace_addFileRegion(VirtualMemorySpac
     return NULL;
 }
 
-static VirtualMemoryRegion* __virtualMemorySpace_addAnonRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
-    DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(flags, VIRTUAL_MEMORY_REGION_FLAGS_HOLE) && memoryOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_FILE);
+static VirtualMemoryRegion* __virtualMemorySpace_addAnonRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, VirtualMemoryRegionSharedFrames* sharedFrames) {
+    DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(flags, VIRTUAL_MEMORY_REGION_FLAGS_HOLE) && memoryOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE && memoryOperationsID != DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED);
     
     VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
     if (newRegion == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    virtualMemoryRegion_initStruct(vms, newRegion, begin, length, flags, memoryOperationsID, NULL, 0);
+    __virtualMemoryRegion_initStruct(vms, newRegion, begin, length, flags, memoryOperationsID, NULL, 0, sharedFrames);
+    ERROR_GOTO_IF_ERROR(0);
 
     if (!__virtualMemorySpace_doAddRegion(vms, newRegion)) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 1);
@@ -344,10 +464,10 @@ static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, 
     VirtualMemoryRegion* ret = NULL;
     if (TEST_FLAGS(vmr->flags, VIRTUAL_MEMORY_REGION_FLAGS_HOLE)) {
         ret = __virtualMemorySpace_addHoleRegion(vms, ptr, backLength);
-    } else if (vmr->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE) {
-        ret = __virtualMemorySpace_addFileRegion(vms, ptr, backLength, vmr->flags, vmr->file, vmr->offset + frontLength);
+    } else if (vmr->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE || vmr->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED) {
+        ret = __virtualMemorySpace_addFileRegion(vms, ptr, backLength, vmr->flags, vmr->file, vmr->offset + frontLength, vmr->sharedFrames);
     } else {
-        ret = __virtualMemorySpace_addAnonRegion(vms, ptr, backLength, vmr->flags, vmr->memoryOperationsID);
+        ret = __virtualMemorySpace_addAnonRegion(vms, ptr, backLength, vmr->flags, vmr->memoryOperationsID, vmr->sharedFrames);
     }
     
     ERROR_GOTO_IF_ERROR(0);
@@ -363,7 +483,9 @@ static void __virtualMemorySpace_merge(VirtualMemorySpace* vms, VirtualMemoryReg
     DEBUG_ASSERT_SILENT(range1->begin + range1->length == range2->begin);
     Range* range = &vms->range;
     DEBUG_ASSERT_SILENT(RANGE_WITHIN(range->begin, range->begin + range->length, range1->begin, range2->begin + range2->length, <=, <=));
-
+    
+    __virtualMemoryRegion_clearFields(vmr2);
+    
     __virtualMemorySpace_doRemoveRegion(vms, vmr2);
     range1->length += range2->length;
     mm_free(vmr2);
@@ -372,7 +494,7 @@ static void __virtualMemorySpace_merge(VirtualMemorySpace* vms, VirtualMemoryReg
 static VirtualMemoryRegion* __virtualMemorySpace_splitToDraw(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID) {
     VirtualMemoryRegion* beginRegion = virtualMemorySpace_getRegion(vms, begin);
     DEBUG_ASSERT_SILENT(beginRegion != NULL);
-    if (!__virtualMemoryRegion_check(beginRegion, flags, memoryOperationsID)) {
+    if (!__virtualMemoryRegion_checkMatch(beginRegion, flags, memoryOperationsID, beginRegion->sharedFrames)) {
         VirtualMemoryRegion* newRegion = __virtualMemorySpace_split(vms, begin);
         if (newRegion != NULL) {
             beginRegion = newRegion;
@@ -381,7 +503,7 @@ static VirtualMemoryRegion* __virtualMemorySpace_splitToDraw(VirtualMemorySpace*
 
     VirtualMemoryRegion* endRegion = virtualMemorySpace_getRegion(vms, begin + length - 1);
     DEBUG_ASSERT_SILENT(endRegion != NULL);
-    if (!__virtualMemoryRegion_check(endRegion, flags, memoryOperationsID)) {
+    if (!__virtualMemoryRegion_checkMatch(endRegion, flags, memoryOperationsID, endRegion->sharedFrames)) {
         __virtualMemorySpace_split(vms, begin + length);
     }
 
@@ -406,7 +528,7 @@ static void __virtualMemorySpace_mergeRange(VirtualMemorySpace* vms, VirtualMemo
     RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &beginRegion->treeNode);
     if (nextNode != NULL) {
         VirtualMemoryRegion* nextRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
-        if (__virtualMemoryRegion_check(nextRegion, flags, memoryOperationsID)) {
+        if (__virtualMemoryRegion_checkMatch(nextRegion, flags, memoryOperationsID, nextRegion->sharedFrames)) {
             __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
         }
     }
@@ -414,7 +536,7 @@ static void __virtualMemorySpace_mergeRange(VirtualMemorySpace* vms, VirtualMemo
     RBtreeNode* prevNode = RBtree_getPredecessor(&vms->regionTree, &beginRegion->treeNode);
     if (prevNode != NULL) {
         VirtualMemoryRegion* prevRegion = HOST_POINTER(prevNode, VirtualMemoryRegion, treeNode);
-        if (__virtualMemoryRegion_check(prevRegion, flags, memoryOperationsID)) {
+        if (__virtualMemoryRegion_checkMatch(prevRegion, flags, memoryOperationsID, prevRegion->sharedFrames)) {
             __virtualMemorySpace_merge(vms, prevRegion, beginRegion);
         }
     }

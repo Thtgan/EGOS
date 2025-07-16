@@ -3,6 +3,7 @@
 
 #include<memory/memoryOperations.h>
 
-extern MemoryOperations defaultMemoryOperations_file;
+extern MemoryOperations defaultMemoryOperations_file_private;
+extern MemoryOperations defaultMemoryOperations_file_shared;
 
 #endif // __MEMORY_DEFAULTOPERATIONS_FILE_H
