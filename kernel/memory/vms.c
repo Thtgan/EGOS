@@ -66,7 +66,7 @@ static VirtualMemoryRegion* __virtualMemorySpace_addFileRegion(VirtualMemorySpac
 
 static VirtualMemoryRegion* __virtualMemorySpace_addAnonRegion(VirtualMemorySpace* vms, void* begin, Size length, Flags16 flags, Uint8 memoryOperationsID, VirtualMemoryRegionSharedFrames* sharedFrames);
 
-static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, void* ptr);
+static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* ptr);
 
 static void __virtualMemorySpace_merge(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr1, VirtualMemoryRegion* vmr2);
 
@@ -445,13 +445,9 @@ static VirtualMemoryRegion* __virtualMemorySpace_addAnonRegion(VirtualMemorySpac
     return NULL;
 }
 
-static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, void* ptr) {
-    VirtualMemoryRegion* vmr = virtualMemorySpace_getRegion(vms, ptr);
-    if (vmr == NULL) {
-        return NULL;
-    }
-
+static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, void* ptr) {
     Range* range = &vmr->range;
+    DEBUG_ASSERT_SILENT(VALUE_WITHIN_PACKED(range, (Uintptr)ptr, <=, <=));
     if ((Uintptr)ptr == range->begin || (Uintptr)ptr == range->begin + range->length) {
         return NULL;
     }
@@ -494,7 +490,7 @@ static VirtualMemoryRegion* __virtualMemorySpace_splitToDraw(VirtualMemorySpace*
     VirtualMemoryRegion* beginRegion = virtualMemorySpace_getRegion(vms, begin);
     DEBUG_ASSERT_SILENT(beginRegion != NULL);
     if (!__virtualMemoryRegion_checkMatch(beginRegion, flags, memoryOperationsID, beginRegion->sharedFrames)) {
-        VirtualMemoryRegion* newRegion = __virtualMemorySpace_split(vms, begin);
+        VirtualMemoryRegion* newRegion = __virtualMemorySpace_split(vms, beginRegion, begin);
         if (newRegion != NULL) {
             beginRegion = newRegion;
         }
@@ -503,7 +499,7 @@ static VirtualMemoryRegion* __virtualMemorySpace_splitToDraw(VirtualMemorySpace*
     VirtualMemoryRegion* endRegion = virtualMemorySpace_getRegion(vms, begin + length - 1);
     DEBUG_ASSERT_SILENT(endRegion != NULL);
     if (!__virtualMemoryRegion_checkMatch(endRegion, flags, memoryOperationsID, endRegion->sharedFrames)) {
-        __virtualMemorySpace_split(vms, begin + length);
+        __virtualMemorySpace_split(vms, endRegion, begin + length);
     }
 
     return beginRegion;

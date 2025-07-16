@@ -31,26 +31,26 @@
 #define RANGE_WITHIN(__L1, __R1, __L2, __R2, __CMP1, __CMP2)    ((__L1) __CMP1 (__L2) && (__R2) __CMP2 (__R1))
 
 #define RANGE_WITHIN_PACKED(__RANGE1, __RANGE2, __CMP1, __CMP2) ({      \
-    Range* range1 = (__RANGE1), * range2 = (__RANGE2);                  \
-    Uintptr l1 = range1->begin, r1 = range1->begin + range1->length;    \
-    Uintptr l2 = range2->begin, r2 = range2->begin + range2->length;    \
+    Range* _range1 = (__RANGE1), * _range2 = (__RANGE2);                \
+    Uintptr l1 = _range1->begin, r1 = _range1->begin + _range1->length; \
+    Uintptr l2 = _range2->begin, r2 = _range2->begin + _range2->length; \
     RANGE_WITHIN(l1, r1, l2, r2, __CMP1, __CMP2);                       \
 })
 
 #define RANGE_HAS_OVERLAP(__L1, __R1, __L2, __R2)               (((Int64)(__R2) - (Int64)(__L1)) * ((Int64)(__R1) - (Int64)(__L2)) > 0)
 
 #define RANGE_HAS_OVERLAP_PACKED(__RANGE1, __RANGE2)            ({      \
-    Range* range1 = (__RANGE1), * range2 = (__RANGE2);                  \
-    Uintptr l1 = range1->begin, r1 = range1->begin + range1->length;    \
-    Uintptr l2 = range2->begin, r2 = range2->begin + range2->length;    \
+    Range* _range1 = (__RANGE1), * _range2 = (__RANGE2);                \
+    Uintptr l1 = _range1->begin, r1 = _range1->begin + _range1->length; \
+    Uintptr l2 = _range2->begin, r2 = _range2->begin + _range2->length; \
     RANGE_HAS_OVERLAP(l1, r1, l2, r2);                                  \
 })
 
 #define VALUE_WITHIN(__L1, __R1, __VAL, __CMP1, __CMP2)         ((__L1) __CMP1 (__VAL) && (__VAL) __CMP2 (__R1))
 
 #define VALUE_WITHIN_PACKED(__RANGE, __VAL, __CMP1, __CMP2)     ({      \
-    Range* range = (__RANGE);                                           \
-    Uintptr l = range->begin, r = range->begin + range->length;         \
+    Range* _range = (__RANGE);                                          \
+    Uintptr l = _range->begin, r = _range->begin + _range->length;      \
     VALUE_WITHIN(l, r, __VAL, __CMP1, __CMP2);                          \
 })
 
