@@ -20,7 +20,7 @@ typedef struct SyscallUnit {
 #define SYSCALL_INDEX_LSTAT             0x06    //TODO: Not implemented
 #define SYSCALL_INDEX_POLL              0x07    //TODO: Not implemented
 #define SYSCALL_INDEX_LSEEK             0x08    //TODO: Not implemented
-#define SYSCALL_INDEX_MMAP              0x09    //TODO: fd not supported yet
+#define SYSCALL_INDEX_MMAP              0x09
 #define SYSCALL_INDEX_MPROTECT          0x0A    //TODO: Not implemented
 #define SYSCALL_INDEX_MUNMAP            0x0B
 #define SYSCALL_INDEX_BRK               0x0C    //TODO: Not implemented
@@ -37,7 +37,7 @@ typedef struct SyscallUnit {
 #define SYSCALL_INDEX_SELECT            0x17    //TODO: Not implemented
 #define SYSCALL_INDEX_SCHED_YIELD       0x18
 #define SYSCALL_INDEX_MREMAP            0x19    //TODO: Not implemented
-#define SYSCALL_INDEX_MSYNC             0x1A    //TODO: Not implemented
+#define SYSCALL_INDEX_MSYNC             0x1A    //TODO: flags not fully supported
 #define SYSCALL_INDEX_MADVISE           0x1C    //TODO: Not implemented
 #define SYSCALL_INDEX_SHMGET            0x1D    //TODO: Not implemented
 #define SYSCALL_INDEX_SHMAT             0x1E    //TODO: Not implemented

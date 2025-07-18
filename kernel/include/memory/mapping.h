@@ -51,4 +51,10 @@ void* mapping_mmap(void* prefer, Size length, Flags32 prot, Flags32 flags, File*
 
 void mapping_munmap(void* addr, Size length);
 
+#define MAPPING_MMAP_MSYNC_FLAGS_ASYNC      FLAG8(0)    //TODO: Not supported yet
+#define MAPPING_MMAP_MSYNC_FLAGS_INVALIDATE FLAG8(1)    //TODO: Not supported yet
+#define MAPPING_MMAP_MSYNC_FLAGS_SYNC       FLAG8(2)
+
+void mapping_msync(void* addr, Size length, Flags8 flags);
+
 #endif // __MEMORY_MAPPING_H

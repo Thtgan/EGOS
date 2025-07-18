@@ -23,17 +23,17 @@ typedef struct VirtualMemoryRegionSharedFrames {
 
 typedef struct VirtualMemoryRegionInfo {
     Range range;
-#define VIRTUAL_MEMORY_REGION_FLAGS_WRITABLE                FLAG16(0)
-#define VIRTUAL_MEMORY_REGION_FLAGS_NOT_EXECUTABLE          FLAG16(1)
-#define VIRTUAL_MEMORY_REGION_FLAGS_USER                    FLAG16(2)
-#define VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_PROT(__FLAGS)   EXTRACT_VAL(__FLAGS, 16, 0, 3)
-#define VIRTUAL_MEMORY_REGION_FLAGS_TYPE_HOLE               VAL_LEFT_SHIFT(0, 3)
-#define VIRTUAL_MEMORY_REGION_FLAGS_TYPE_KERNEL             VAL_LEFT_SHIFT(1, 3)
-#define VIRTUAL_MEMORY_REGION_FLAGS_TYPE_ANON               VAL_LEFT_SHIFT(2, 3)
-#define VIRTUAL_MEMORY_REGION_FLAGS_TYPE_FILE               VAL_LEFT_SHIFT(3, 3)
-#define VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_TYPE(__FLAGS)   TRIM_VAL_RANGE(__FLAGS, 16, 3, 5)
-#define VIRTUAL_MEMORY_REGION_FLAGS_SHARED                  FLAG16(5)
-#define VIRTUAL_MEMORY_REGION_FLAGS_LAZY_LOAD               FLAG16(6)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_WRITABLE               FLAG16(0)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_NOT_EXECUTABLE         FLAG16(1)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_USER                   FLAG16(2)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_PROT(__FLAGS)  EXTRACT_VAL(__FLAGS, 16, 0, 3)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_HOLE              VAL_LEFT_SHIFT(0, 3)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_KERNEL            VAL_LEFT_SHIFT(1, 3)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_ANON              VAL_LEFT_SHIFT(2, 3)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_FILE              VAL_LEFT_SHIFT(3, 3)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_TYPE(__FLAGS)  TRIM_VAL_RANGE(__FLAGS, 16, 3, 5)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED                 FLAG16(5)
+#define VIRTUAL_MEMORY_REGION_INFO_FLAGS_LAZY_LOAD              FLAG16(6)
     Flags16 flags;
     Uint8 memoryOperationsID;
     File* file;
@@ -42,15 +42,15 @@ typedef struct VirtualMemoryRegionInfo {
 
 static inline Flags64 virtualMemoryRegionInfo_convertPagingProt(VirtualMemoryRegionInfo* info) {
     Flags64 flags = info->flags, ret = EMPTY_FLAGS;
-    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_WRITABLE)) {
+    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_WRITABLE)) {
         SET_FLAG_BACK(ret, PAGING_ENTRY_FLAG_RW);
     }
 
-    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_USER)) {
+    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_USER)) {
         SET_FLAG_BACK(ret, PAGING_ENTRY_FLAG_US);
     }
     
-    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_FLAGS_NOT_EXECUTABLE)) {
+    if (TEST_FLAGS(flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_NOT_EXECUTABLE)) {
         SET_FLAG_BACK(ret, PAGING_ENTRY_FLAG_XD);
     }
 
@@ -61,7 +61,7 @@ static inline void virtualMemoryRegionInfo_drawToExtendedTable(VirtualMemoryRegi
     Range* range = &info->range;
     Flags64 prot = virtualMemoryRegionInfo_convertPagingProt(info);
     Flags8 flags = EXTENDED_PAGE_TABLE_DRAW_FLAGS_ASSERT_DRAW_BLANK;
-    if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_FLAGS_LAZY_LOAD)) {
+    if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_LAZY_LOAD)) {
         SET_FLAG_BACK(flags, EXTENDED_PAGE_TABLE_DRAW_FLAGS_LAZY_MAP);
     }
     extendedPageTableRoot_draw(extendedTable, (void*)range->begin, p, range->length / PAGE_SIZE, info->memoryOperationsID, prot, flags);
@@ -97,5 +97,9 @@ VirtualMemoryRegion* virtualMemorySpace_getRegion(VirtualMemorySpace* vms, void*
 void* virtualMemorySpace_findFirstFitHole(VirtualMemorySpace* vms, void* prefer, Size length);
 
 void virtualMemorySpace_erase(VirtualMemorySpace* vms, void* begin, Size length);
+
+VirtualMemoryRegion* virtualMemorySpace_getPrevRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr);
+
+VirtualMemoryRegion* virtualMemorySpace_getNextRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr);
 
 #endif // __MEMORY_VMS_H

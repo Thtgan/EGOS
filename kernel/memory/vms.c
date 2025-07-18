@@ -36,7 +36,7 @@ static inline bool __virtualMemoryRegionInfo_isSimilar(VirtualMemoryRegionInfo* 
         return false;
     }
 
-    if (TEST_FLAGS(info1->flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+    if (TEST_FLAGS(info1->flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED)) {
         DEBUG_ASSERT_SILENT(sharedFrames1 != NULL);
         return sharedFrames1 == sharedFrames2;
     }
@@ -49,12 +49,12 @@ static inline bool __virtualMemoryRegionInfo_isSimilar(VirtualMemoryRegionInfo* 
 }
 
 static inline bool __virtualMemoryRegionInfo_isValid(VirtualMemoryRegionInfo* info) {
-    Flags16 type = VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_TYPE(info->flags);
-    if (type == VIRTUAL_MEMORY_REGION_FLAGS_TYPE_ANON && !(info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE || info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_SHARED)) {
+    Flags16 type = VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_TYPE(info->flags);
+    if (type == VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_ANON && !(info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE || info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_SHARED)) {
         return false;
     }
 
-    if (type == VIRTUAL_MEMORY_REGION_FLAGS_TYPE_FILE && !(info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE || info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED)) {
+    if (type == VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_FILE && !(info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE || info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED)) {
         return false;
     }
     
@@ -143,7 +143,7 @@ void virtualMemorySpace_initStruct(VirtualMemorySpace* vms, ExtendedPageTableRoo
             .begin = (Uintptr)base,
             .length = length
         },
-        .flags = VIRTUAL_MEMORY_REGION_FLAGS_TYPE_HOLE,
+        .flags = VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_HOLE,
         .memoryOperationsID = 0,
         .file = NULL,
         .offset = 0
@@ -183,7 +183,7 @@ void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src) {
 
         __virtualMemoryRegion_initStruct(des, newRegion, &currentRegion->info, currentRegion->sharedFrames);
         
-        if (TEST_FLAGS(currentRegion->info.flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+        if (TEST_FLAGS(currentRegion->info.flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED)) {
             DEBUG_ASSERT_SILENT(currentRegion->sharedFrames != NULL);
             __virtualMemoryRegionSharedFrames_refer(currentRegion->sharedFrames);
         }
@@ -247,7 +247,7 @@ void* virtualMemorySpace_findFirstFitHole(VirtualMemorySpace* vms, void* prefer,
     for (RBtreeNode* currentNode = beginNode; currentNode != NULL; currentNode = RBtree_getSuccessor(&vms->regionTree, currentNode)) {
         VirtualMemoryRegion* currentRegion = HOST_POINTER(currentNode, VirtualMemoryRegion, treeNode);
         VirtualMemoryRegionInfo* info = &currentRegion->info;
-        if (VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_TYPE(info->flags) == VIRTUAL_MEMORY_REGION_FLAGS_TYPE_HOLE && info->range.length >= length) {
+        if (VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_TYPE(info->flags) == VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_HOLE && info->range.length >= length) {
             return (void*)info->range.begin;
         }
     }
@@ -264,7 +264,7 @@ void virtualMemorySpace_erase(VirtualMemorySpace* vms, void* begin, Size length)
             .begin = (Uintptr)begin,
             .length = length
         },
-        .flags = VIRTUAL_MEMORY_REGION_FLAGS_TYPE_HOLE,
+        .flags = VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_HOLE,
         .memoryOperationsID = 0,
         .file = NULL,
         .offset = 0
@@ -281,6 +281,16 @@ void virtualMemorySpace_erase(VirtualMemorySpace* vms, void* begin, Size length)
 
     return;
     ERROR_FINAL_BEGIN(0);
+}
+
+VirtualMemoryRegion* virtualMemorySpace_getPrevRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr) {
+    RBtreeNode* prevNode = RBtree_getPredecessor(&vms->regionTree, &vmr->treeNode);
+    return prevNode == NULL ? NULL : HOST_POINTER(prevNode, VirtualMemoryRegion, treeNode);
+}
+
+VirtualMemoryRegion* virtualMemorySpace_getNextRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr) {
+    RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &vmr->treeNode);
+    return nextNode == NULL ? NULL : HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
 }
 
 static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionSharedFrames* frames, Uintptr vBase, Size frameN) {
@@ -322,8 +332,8 @@ static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, VirtualMem
     desInfo->flags = info->flags;
     desInfo->memoryOperationsID = info->memoryOperationsID;
 
-    Flags16 type = VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_TYPE(info->flags);
-    if (type == VIRTUAL_MEMORY_REGION_FLAGS_TYPE_FILE) {
+    Flags16 type = VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_TYPE(info->flags);
+    if (type == VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_FILE) {
         DEBUG_ASSERT_SILENT(info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE || info->memoryOperationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED);
         desInfo->file = info->file;
         desInfo->offset = info->offset;
@@ -332,7 +342,7 @@ static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, VirtualMem
         desInfo->offset = 0;
     }
 
-    if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+    if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED)) {
         if (sharedFrames == NULL) {
             sharedFrames = mm_allocate(sizeof(VirtualMemoryRegionSharedFrames));
             if (sharedFrames == NULL) {
@@ -355,13 +365,13 @@ static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, VirtualMem
 
 static void __virtualMemoryRegion_clearFields(VirtualMemoryRegion* vmr) {
     VirtualMemoryRegionInfo* info = &vmr->info;
-    if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED)) {
+    if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED)) {
         DEBUG_ASSERT_SILENT(vmr->sharedFrames != NULL);
         __virtualMemoryRegionSharedFrames_derefer(vmr->sharedFrames);
     }
 
     //TODO: Derefer file here?
-    info->flags = VIRTUAL_MEMORY_REGION_FLAGS_TYPE_HOLE;
+    info->flags = VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_HOLE;
     info->memoryOperationsID = 0;
     info->file = NULL;
     info->offset = 0;
@@ -428,8 +438,8 @@ static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, 
         .length = backLength
     };
 
-    Flags16 type = VIRTUAL_MEMORY_REGION_FLAGS_EXTRACT_TYPE(vmr->info.flags);
-    if (type == VIRTUAL_MEMORY_REGION_FLAGS_TYPE_FILE) {
+    Flags16 type = VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_TYPE(vmr->info.flags);
+    if (type == VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_FILE) {
         newRegionInfo.offset = info->offset + frontLength;
     }
 
@@ -502,21 +512,15 @@ static VirtualMemoryRegion* __virtualMemorySpace_mergeRange(VirtualMemorySpace* 
 
     VirtualMemoryRegion* ret = beginRegion;
 
-    RBtreeNode* nextNode = RBtree_getSuccessor(&vms->regionTree, &beginRegion->treeNode);
-    if (nextNode != NULL) {
-        VirtualMemoryRegion* nextRegion = HOST_POINTER(nextNode, VirtualMemoryRegion, treeNode);
-        if (__virtualMemoryRegionInfo_isSimilar(&beginRegion->info, beginRegion->sharedFrames, &nextRegion->info, nextRegion->sharedFrames)) {
-            __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
-        }
+    VirtualMemoryRegion* nextRegion = virtualMemorySpace_getNextRegion(vms, beginRegion);
+    if (nextRegion != NULL && __virtualMemoryRegionInfo_isSimilar(&beginRegion->info, beginRegion->sharedFrames, &nextRegion->info, nextRegion->sharedFrames)) {
+        __virtualMemorySpace_merge(vms, beginRegion, nextRegion);
     }
 
-    RBtreeNode* prevNode = RBtree_getPredecessor(&vms->regionTree, &beginRegion->treeNode);
-    if (prevNode != NULL) {
-        VirtualMemoryRegion* prevRegion = HOST_POINTER(prevNode, VirtualMemoryRegion, treeNode);
-        if (__virtualMemoryRegionInfo_isSimilar(&prevRegion->info, prevRegion->sharedFrames, &beginRegion->info, beginRegion->sharedFrames)) {
-            __virtualMemorySpace_merge(vms, prevRegion, beginRegion);
-            ret = prevRegion;
-        }
+    VirtualMemoryRegion* prevRegion = virtualMemorySpace_getPrevRegion(vms, beginRegion);
+    if (prevRegion != NULL && __virtualMemoryRegionInfo_isSimilar(&prevRegion->info, prevRegion->sharedFrames, &beginRegion->info, beginRegion->sharedFrames)) {
+        __virtualMemorySpace_merge(vms, prevRegion, beginRegion);
+        ret = prevRegion;
     }
 
     return ret;

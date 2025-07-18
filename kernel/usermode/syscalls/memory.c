@@ -9,6 +9,8 @@ static void* __syscall_memory_mmap(void* addr, Size length, int prot, int flags,
 
 static int __syscall_memory_munmap(void* addr, Size length);
 
+static int __syscall_memory_msync(void* addr, Size length, Flags8 flags);
+
 static void* __syscall_memory_mmap(void* addr, Size length, int prot, int flags, int fd, Index64 offset) {
     File* file = NULL;
     if (fd >= 0) {
@@ -24,6 +26,19 @@ static int __syscall_memory_munmap(void* addr, Size length) {
     mapping_munmap(addr, length);
     ERROR_CHECKPOINT(,
         (ERROR_ID_ILLEGAL_ARGUMENTS, {
+            ERROR_CLEAR();
+            ret = -1;
+        })
+    );
+    return ret;
+}
+
+static int __syscall_memory_msync(void* addr, Size length, Flags8 flags) {
+    int ret = 0;
+    mapping_msync(addr, length, flags);
+    ERROR_CHECKPOINT(,
+        (ERROR_ID_ILLEGAL_ARGUMENTS, {
+            ERROR_CLEAR();
             ret = -1;
         })
     );
@@ -32,3 +47,4 @@ static int __syscall_memory_munmap(void* addr, Size length) {
 
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_MMAP,      __syscall_memory_mmap);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_MUNMAP,    __syscall_memory_munmap);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_MSYNC,     __syscall_memory_msync);

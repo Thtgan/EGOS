@@ -1,45 +1,56 @@
 #include<memory/mapping.h>
 
+#include<fs/fs.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/frameReaper.h>
 #include<memory/memoryOperations.h>
+#include<memory/paging.h>
 #include<memory/vms.h>
 #include<multitask/process.h>
 #include<multitask/schedule.h>
 #include<system/pageTable.h>
+#include<algorithms.h>
 #include<error.h>
+
+#define __MAPPING_ROUND_RANGE(__BEGIN, __LENGTH)    do {            \
+    Uintptr _l = (Uintptr)(__BEGIN), _r = _l + (Uintptr)(__LENGTH); \
+    _l = ALIGN_DOWN(_l, PAGE_SIZE);                                 \
+    _r = ALIGN_UP(_r, PAGE_SIZE);                                   \
+    (__BEGIN) = (typeof(__BEGIN))_l;                                \
+    (__LENGTH) = (typeof(__LENGTH))(_r - _l);                       \
+} while(0)
 
 static inline void __mapping_mmapSetupInfo(VirtualMemoryRegionInfo* info, void* addr, Size length, Flags32 prot, Flags32 flags, File* file, Index64 offset) {
     Flags16 infoFlags = EMPTY_FLAGS;
     Uint8 type = MAPPING_MMAP_FLAGS_TYPE_EXTRACT(flags);
     Uint8 infoMemoryOperationsID = 0;
     if (TEST_FLAGS(flags, MAPPING_MMAP_FLAGS_ANON)) {
-        infoFlags = VIRTUAL_MEMORY_REGION_FLAGS_TYPE_ANON;
+        infoFlags = VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_ANON;
         infoMemoryOperationsID = (type == MAPPING_MMAP_FLAGS_TYPE_SHARED) ? DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_SHARED : DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE;
     } else {
-        infoFlags = VIRTUAL_MEMORY_REGION_FLAGS_TYPE_FILE;
+        infoFlags = VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_FILE;
         infoMemoryOperationsID = (type == MAPPING_MMAP_FLAGS_TYPE_SHARED) ? DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED : DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE;
     }
 
     if (type == MAPPING_MMAP_FLAGS_TYPE_SHARED) {
-        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_FLAGS_SHARED);
+        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED);
     }
     
     if (TEST_FLAGS(prot, MAPPING_MMAP_PROT_USER)) {
-        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_FLAGS_USER);
+        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_USER);
     }
     
     if (TEST_FLAGS(prot, MAPPING_MMAP_PROT_WRITE)) {
-        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_FLAGS_WRITABLE);
+        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_WRITABLE);
     }
     
     if (TEST_FLAGS_FAIL(prot, MAPPING_MMAP_PROT_EXEC)) {
-        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_FLAGS_NOT_EXECUTABLE);
+        SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_NOT_EXECUTABLE);
     }
     
-    SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_FLAGS_LAZY_LOAD);
+    SET_FLAG_BACK(infoFlags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_LAZY_LOAD);
 
     info->range = (Range) {
         .begin = (Uintptr)addr,
@@ -56,7 +67,8 @@ void* mapping_mmap(void* prefer, Size length, Flags32 prot, Flags32 flags, File*
         return NULL;
     }
 
-    length = ALIGN_UP(length, PAGE_SIZE);
+    // length = ALIGN_UP(length, PAGE_SIZE);
+    __MAPPING_ROUND_RANGE(prefer, length);
 
     VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
     
@@ -90,14 +102,60 @@ void mapping_munmap(void* addr, Size length) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
 
-    length = ALIGN_UP(length, PAGE_SIZE);
-    addr = (void*)ALIGN_DOWN((Uintptr)addr, PAGE_SIZE);
+    // length = ALIGN_UP(length, PAGE_SIZE);
+    // addr = (void*)ALIGN_DOWN((Uintptr)addr, PAGE_SIZE);
+    __MAPPING_ROUND_RANGE(addr, length);
     
     VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
     virtualMemorySpace_erase(vms, addr, length);
 
     extendedPageTableRoot_erase(vms->pageTable, addr, length / PAGE_SIZE);
     frameReaper_reap(&vms->pageTable->reaper);
+
+    return;
+    ERROR_FINAL_BEGIN(0);
+}
+
+void mapping_msync(void* addr, Size length, Flags8 flags) {
+    if (TEST_FLAGS_CONTAIN(flags, MAPPING_MMAP_MSYNC_FLAGS_ASYNC | MAPPING_MMAP_MSYNC_FLAGS_INVALIDATE)) {  //TODO: Remove this if flags are supported
+        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
+    }
+
+    if (!TEST_FLAGS_CONTAIN(flags, MAPPING_MMAP_MSYNC_FLAGS_ASYNC | MAPPING_MMAP_MSYNC_FLAGS_SYNC)) {
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
+    }
+
+    __MAPPING_ROUND_RANGE(addr, length);
+
+    VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
+    VirtualMemoryRegion* currentRegion = virtualMemorySpace_getRegion(vms, addr);
+    if (currentRegion == NULL) {
+        return;
+    }
+
+    Uintptr end = (Uintptr)addr + length;
+    Uintptr currentPointer = (Uintptr)addr;
+
+    while (currentPointer < end) {
+        VirtualMemoryRegionInfo* info = &currentRegion->info;
+        if (VIRTUAL_MEMORY_REGION_INFO_FLAGS_EXTRACT_TYPE(info->flags) == VIRTUAL_MEMORY_REGION_INFO_FLAGS_TYPE_FILE && TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_WRITABLE)) {
+            DEBUG_ASSERT_SILENT(info->file != NULL);
+            Uintptr regionEnd = algorithms_umin64(end, info->range.begin + info->range.length);
+            while (currentPointer < regionEnd) {  
+                void* p = extendedPageTableRoot_translate(vms->pageTable, (void*)currentPointer);
+                if (p == NULL) {
+                    continue;
+                }
+
+                fs_fileWrite(info->file, PAGING_CONVERT_KERNEL_MEMORY_P2V(p), PAGE_SIZE);
+                ERROR_GOTO_IF_ERROR(0);
+                currentPointer += PAGE_SIZE;    //TODO: Maybe not step by PAGE_SIZE
+            }
+        }
+
+        currentRegion = virtualMemorySpace_getNextRegion(vms, currentRegion);
+        currentPointer = currentRegion->info.range.begin;
+    }
 
     return;
     ERROR_FINAL_BEGIN(0);
