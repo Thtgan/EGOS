@@ -98,12 +98,13 @@ static void __defaultMemoryOperations_file_private_faultHandler(PagingLevel leve
 
         VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
         VirtualMemoryRegion* vmr = virtualMemorySpace_getRegion(vms, v);
-        DEBUG_ASSERT_SILENT(vmr != NULL && vmr->file != NULL);
+        DEBUG_ASSERT_SILENT(vmr != NULL && vmr->info.file != NULL);
+        VirtualMemoryRegionInfo* info = &vmr->info;
 
-        File* file = vmr->file;
+        File* file = info->file;
         Index64 originPointer = file->pointer;
 
-        Index64 absoluteOffset = vmr->offset + (ALIGN_DOWN((Uintptr)v, span) - vmr->range.begin);
+        Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
         void* frameWrite = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
         Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
         if (seeked == INVALID_INDEX64 || seeked == file->inode->sizeInByte) {
@@ -238,7 +239,8 @@ static void __defaultMemoryOperations_file_shared_faultHandler(PagingLevel level
 
     VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
     VirtualMemoryRegion* vmr = virtualMemorySpace_getRegion(vms, v);
-    DEBUG_ASSERT_SILENT(vmr != NULL && vmr->file != NULL);
+    DEBUG_ASSERT_SILENT(vmr != NULL && vmr->info.file != NULL);
+    VirtualMemoryRegionInfo* info = &vmr->info;
 
     Index32 frameIndex = virtualMemoryRegion_getFrameIndex(vmr, v);
     void* mapToFrame = NULL;
@@ -251,10 +253,10 @@ static void __defaultMemoryOperations_file_shared_faultHandler(PagingLevel level
             ERROR_GOTO(0);
         }
 
-        File* file = vmr->file;
+        File* file = info->file;
         Index64 originPointer = file->pointer;
 
-        Index64 absoluteOffset = vmr->offset + (ALIGN_DOWN((Uintptr)v, span) - vmr->range.begin);
+        Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
         void* frameWrite = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
         Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
         if (seeked == INVALID_INDEX64 || seeked == file->inode->sizeInByte) {
