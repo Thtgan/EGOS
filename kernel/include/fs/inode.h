@@ -32,7 +32,7 @@ typedef struct iNode {
     SuperBlock*             superBlock;
     iNodeOperations*        operations;
 
-    RefCounter              refCounter;
+    RefCounter32            refCounter;
     HashChainNode           openedNode;
     fsNode*                 fsNode;
 
@@ -110,7 +110,7 @@ void iNode_genericReadAttr(iNode* inode, iNodeAttribute* attribute);
 void iNode_genericWriteAttr(iNode* inode, iNodeAttribute* attribute);
 
 static inline Uint32 iNode_getReferenceCount(iNode* inode) {
-    return refCounter_getCount(&inode->refCounter);
+    return REF_COUNTER_GET(inode->refCounter);
 }
 
 #endif // __FS_INODE_H

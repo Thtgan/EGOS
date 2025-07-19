@@ -24,7 +24,6 @@ typedef fsEntry File;
 #include<kit/types.h>
 #include<structs/string.h>
 #include<structs/hashTable.h>
-#include<structs/refCounter.h>
 
 //Real fs entry for process
 typedef struct fsEntry {    //TODO: Add RW lock

@@ -115,7 +115,7 @@ static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pa
     fsNode* currentNode = NULL;
 
     if (pathFromBase->length == 0 || cstring_strcmp(pathFromBase->data, PATH_SEPERATOR_STR) == 0) {
-        refCounter_refer(&baseInode->fsNode->refCounter);
+        REF_COUNTER_REFER(baseInode->fsNode->refCounter);
         return baseInode->fsNode;
     }
 

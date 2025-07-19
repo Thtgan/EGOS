@@ -391,7 +391,7 @@ static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     inode->superBlock       = superBlock;
     inode->operations       = fat32_iNode_getOperations();
     
-    refCounter_initStruct(&inode->refCounter);
+    REF_COUNTER_INIT(inode->refCounter);
     hashChainNode_initStruct(&inode->openedNode);
 
     inode->fsNode = superBlock_getFSnode(superBlock, inodeID);
@@ -450,7 +450,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     inode->superBlock           = superBlock;
     inode->operations           = fat32_iNode_getOperations();
     
-    refCounter_initStruct(&inode->refCounter);
+    REF_COUNTER_INIT(inode->refCounter);
     hashChainNode_initStruct(&inode->openedNode);
     inode->fsNode = rootNode;
     fsNode_refer(inode->fsNode);
@@ -465,7 +465,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     
     inode->deviceID             = INVALID_ID;
     inode->lock                 = SPINLOCK_UNLOCKED;
-    refCounter_refer(&inode->refCounter);
+    REF_COUNTER_REFER(inode->refCounter);
     
     rootNode->isInodeActive = true; //TODO: Ugly code
     
@@ -484,7 +484,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
 }
 
 static void __fat32_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
-    if (!refCounter_derefer(&inode->refCounter)) {
+    if (!REF_COUNTER_DEREFER(inode->refCounter) == 0) {
         return;
     }
     

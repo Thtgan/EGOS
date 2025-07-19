@@ -73,7 +73,7 @@ iNode* superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
         hashTable_insert(&superBlock->openedInode, inodeID, &ret->openedNode);
         ERROR_ASSERT_NONE();
     }
-    refCounter_refer(&ret->refCounter);
+    REF_COUNTER_REFER(ret->refCounter);
     ret->fsNode->isInodeActive = true;  //TODO: Ugly code
     fsNode_refer(ret->fsNode);  //Refer 'node' once
 
@@ -87,7 +87,7 @@ void superBlock_closeInode(iNode* inode) {
     DEBUG_ASSERT_SILENT(inode->superBlock != NULL);
 
     SuperBlock* superBlock = inode->superBlock;
-    if (refCounter_derefer(&inode->refCounter)) {
+    if (REF_COUNTER_DEREFER(inode->refCounter) == 0) {
         fsNode* node = inode->fsNode;
         HashChainNode* deleted = hashTable_delete(&superBlock->openedInode, inode->inodeID);
         if (deleted == NULL) {

@@ -73,7 +73,7 @@ fsEntry* fsEntry_copy(fsEntry* entry) {
     }
 
     memory_memcpy(ret, entry, sizeof(fsEntry));
-    refCounter_refer(&ret->inode->refCounter);
+    REF_COUNTER_REFER(ret->inode->refCounter);
 
     return ret;
     ERROR_FINAL_BEGIN(0);

@@ -6,28 +6,15 @@ typedef struct RefCounter RefCounter;
 #include<kit/types.h>
 #include<kit/atomic.h>
 
-typedef struct RefCounter {
-    Uint32 cnt;
-} RefCounter;
+typedef Uint8   RefCounter8;
+typedef Uint16  RefCounter16;
+typedef Uint32  RefCounter32;
+typedef Uint64  RefCounter64;
 
-static inline void refCounter_initStruct(RefCounter* counter) {
-    counter->cnt = 0;
-}
-
-static inline void refCounter_refer(RefCounter* counter) {
-    ATOMIC_INC_FETCH(&counter->cnt);
-}
-
-static inline bool refCounter_derefer(RefCounter* counter) {
-    return ATOMIC_DEC_FETCH(&counter->cnt) == 0;
-}
-
-static inline Uint32 refCounter_getCount(RefCounter* counter) {
-    return ATOMIC_LOAD(&counter->cnt);
-}
-
-static inline bool refCounter_check(RefCounter* counter, Uint32 val) {
-    return refCounter_getCount(counter) == val;
-}
+#define REF_COUNTER_INIT(__CNT)         (__CNT) = 0
+#define REF_COUNTER_REFER(__CNT)        ATOMIC_INC_FETCH(&(__CNT))
+#define REF_COUNTER_DEREFER(__CNT)      ATOMIC_DEC_FETCH(&(__CNT))
+#define REF_COUNTER_GET(__CNT)          ATOMIC_LOAD(&(__CNT))
+#define REF_COUNTER_CHECK(__CNT, __VAL) (REF_COUNTER_GET(__CNT) == (__VAL))
 
 #endif // __LIB_STRUCTS_REFCOUNTER_H

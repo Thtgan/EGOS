@@ -19,6 +19,7 @@
 #include<real/flags/eflags.h>
 #include<structs/linkedList.h>
 #include<structs/queue.h>
+#include<structs/refCounter.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
 
@@ -46,7 +47,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 
     linkedListNode_initStruct(&thread->waitNode);
 
-    refCounter_initStruct(&thread->refCounter);
+    REF_COUNTER_INIT(thread->refCounter);
     thread->lock = SPINLOCK_UNLOCKED;
 
     thread->waittingFor = NULL;
@@ -212,17 +213,17 @@ void thread_continue(Thread* thread) {  //TODO: Not designed for SMP
 }
 
 void thread_lock(Thread* thread) {
-    if (refCounter_check(&thread->refCounter, 0)) {
+    if (REF_COUNTER_CHECK(thread->refCounter, 0)) {
         schedule_enterCritical();
         spinlock_lock(&thread->lock);
     }
-    refCounter_refer(&thread->refCounter);
+    REF_COUNTER_REFER(thread->refCounter);
 }
 
 void thread_unlock(Thread* thread) {
-    DEBUG_ASSERT_SILENT(!refCounter_check(&thread->refCounter, 0));
+    DEBUG_ASSERT_SILENT(!REF_COUNTER_CHECK(thread->refCounter, 0));
     DEBUG_ASSERT_SILENT(spinlock_isLocked(&thread->lock));
-    if (!refCounter_derefer(&thread->refCounter)) {
+    if (!REF_COUNTER_DEREFER(thread->refCounter) == 0) {
         return;
     }
 

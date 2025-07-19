@@ -36,7 +36,7 @@ typedef struct Thread {
     LinkedListNode scheduleRunningNode;
     QueueNode reapNode;
 
-    RefCounter refCounter;
+    RefCounter32 refCounter;
     Spinlock lock;
 
     Wait* waittingFor;

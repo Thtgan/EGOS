@@ -214,7 +214,7 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     inode->superBlock       = superBlock;
     inode->operations       = devfs_iNode_getOperations();
 
-    refCounter_initStruct(&inode->refCounter);
+    REF_COUNTER_INIT(inode->refCounter);
     
     inode->fsNode           = metadata->node;
     inode->attribute        = (iNodeAttribute) {   //TODO: Ugly code
@@ -259,7 +259,7 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
     inode->superBlock       = superBlock;
     inode->operations       = devfs_iNode_getOperations();
 
-    refCounter_initStruct(&inode->refCounter);
+    REF_COUNTER_INIT(inode->refCounter);
     
     inode->fsNode           = rootNode;
     inode->attribute        = (iNodeAttribute) {   //TODO: Ugly code
@@ -284,7 +284,7 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
     
     devfsInode->data = NULL;
     
-    refCounter_refer(&inode->refCounter);
+    REF_COUNTER_REFER(inode->refCounter);
     fsNode_refer(inode->fsNode);
 
     for (MajorDeviceID major = device_iterateMajor(DEVICE_INVALID_ID); major != DEVICE_INVALID_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
@@ -304,7 +304,7 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
 }
 
 static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
-    if (!refCounter_derefer(&inode->refCounter)) {
+    if (!REF_COUNTER_DEREFER(inode->refCounter) == 0) {
         return;
     }
 

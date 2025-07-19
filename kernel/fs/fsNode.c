@@ -16,7 +16,7 @@ static inline bool __fsNode_isTypeMatchDirectory(fsNode* node, bool isDirectory)
 }
 
 static inline void __fsNode_addChildNode(fsNode* node, fsNode* child) {
-    refCounter_refer(&node->refCounter);
+    REF_COUNTER_REFER(node->refCounter);
     linkedListNode_insertBack(&node->children, &child->childNode);
 }
 
@@ -38,7 +38,7 @@ fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID in
     string_initStructStr(&ret->name, name);
     ERROR_GOTO_IF_ERROR(0);
     ret->type = type;
-    refCounter_initStruct(&ret->refCounter);
+    REF_COUNTER_INIT(ret->refCounter);
     linkedList_initStruct(&ret->children);
     linkedListNode_initStruct(&ret->childNode);
 
@@ -64,7 +64,7 @@ fsNode* fsNode_lookup(fsNode* node, ConstCstring name, bool isDirectory) {
     fsNode* ret = NULL;
     
     spinlock_lock(&node->lock);
-    DEBUG_ASSERT_SILENT(!refCounter_check(&node->refCounter, 0));  //TODO: Not reliable
+    DEBUG_ASSERT_SILENT(!REF_COUNTER_CHECK(node->refCounter, 0));  //TODO: Not reliable
     for (LinkedListNode* childNode = node->children.next; childNode != &node->children; childNode = childNode->next) {
         fsNode* child = HOST_POINTER(childNode, fsNode, childNode);
         if (cstring_strcmp(name, child->name.data) == 0 && __fsNode_isTypeMatchDirectory(child, isDirectory)) {
@@ -89,7 +89,7 @@ void fsNode_release(fsNode* node) {
     fsNode* currentNode = node;
 
     while (true) {  //Node is not supposed to be released when its being accessed(e.g. lookup), for it should be refered by a iNode
-        if (!(refCounter_check(&currentNode->refCounter, 0) || refCounter_derefer(&currentNode->refCounter))) {
+        if (!(REF_COUNTER_CHECK(currentNode->refCounter, 0) || REF_COUNTER_DEREFER(currentNode->refCounter) == 0)) {
             break;
         }
 
@@ -98,7 +98,7 @@ void fsNode_release(fsNode* node) {
         fsNode* parent = currentNode->parent;
         if (parent != NULL) {
             spinlock_lock(&parent->lock);
-            DEBUG_ASSERT_SILENT(!refCounter_check(&parent->refCounter, 0));    //TODO: Not reliable
+            DEBUG_ASSERT_SILENT(!REF_COUNTER_CHECK(parent->refCounter, 0));    //TODO: Not reliable
             __fsNode_removeChildNode(currentNode);
             spinlock_unlock(&parent->lock);
         } else {

@@ -18,7 +18,7 @@ static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionShar
 static void __virtualMemoryRegionSharedFrames_derefer(VirtualMemoryRegionSharedFrames* frames);
 
 static inline void __virtualMemoryRegionSharedFrames_refer(VirtualMemoryRegionSharedFrames* frames) {
-    refCounter_refer(&frames->referCnt);
+    REF_COUNTER_REFER(frames->refCounter);
 }
 
 static void __virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, VirtualMemoryRegionInfo* info, VirtualMemoryRegionSharedFrames* sharedFrames);
@@ -296,8 +296,8 @@ VirtualMemoryRegion* virtualMemorySpace_getNextRegion(VirtualMemorySpace* vms, V
 static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionSharedFrames* frames, Uintptr vBase, Size frameN) {
     frames->vBase = vBase;
     
-    refCounter_initStruct(&frames->referCnt);
-    refCounter_refer(&frames->referCnt);
+    REF_COUNTER_INIT(frames->refCounter);
+    REF_COUNTER_REFER(frames->refCounter);
 
     Size dividedN = DIVIDE_ROUND_UP(frameN, 2);
     vector_initStructN(&frames->frames, dividedN);
@@ -310,7 +310,7 @@ static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionShar
 }
 
 static void __virtualMemoryRegionSharedFrames_derefer(VirtualMemoryRegionSharedFrames* frames) {
-    if (refCounter_derefer(&frames->referCnt)) {
+    if (REF_COUNTER_DEREFER(frames->refCounter) == 0) {
         return;
     }
 

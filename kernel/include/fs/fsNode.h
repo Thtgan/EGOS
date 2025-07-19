@@ -19,7 +19,7 @@ typedef struct fsNode {
     LinkedListNode  childNode;
     fsNode*         parent;
     ID              inodeID;
-    RefCounter      refCounter; //fsNode is only refered by: inode (up to once), children
+    RefCounter32    refCounter; //fsNode is only refered by: inode (up to once), children
     fsEntryType     type;
     bool            isInodeActive;
     Spinlock        lock;
@@ -35,7 +35,7 @@ void fsNode_remove(fsNode* node);
 void fsNode_release(fsNode* node);
 
 static inline void fsNode_refer(fsNode* node) {    //Only for inode openging
-    refCounter_refer(&node->refCounter);
+    REF_COUNTER_REFER(node->refCounter);
 }
 
 iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock);

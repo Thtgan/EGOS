@@ -12,12 +12,11 @@ typedef struct VirtualMemorySpace VirtualMemorySpace;
 #include<memory/extendedPageTable.h>
 #include<memory/memoryOperations.h>
 #include<structs/RBtree.h>
-#include<structs/refCounter.h>
 #include<structs/vector.h>
 
 typedef struct VirtualMemoryRegionSharedFrames {
     Uintptr vBase;
-    RefCounter referCnt;
+    RefCounter32 refCounter;
     Vector frames;
 } VirtualMemoryRegionSharedFrames;
 
