@@ -391,7 +391,7 @@ static iNode* __fat32_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     inode->superBlock       = superBlock;
     inode->operations       = fat32_iNode_getOperations();
     
-    REF_COUNTER_INIT(inode->refCounter);
+    REF_COUNTER_INIT(inode->refCounter, 0);
     hashChainNode_initStruct(&inode->openedNode);
 
     inode->fsNode = superBlock_getFSnode(superBlock, inodeID);
@@ -450,7 +450,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
     inode->superBlock           = superBlock;
     inode->operations           = fat32_iNode_getOperations();
     
-    REF_COUNTER_INIT(inode->refCounter);
+    REF_COUNTER_INIT(inode->refCounter, 0);
     hashChainNode_initStruct(&inode->openedNode);
     inode->fsNode = rootNode;
     fsNode_refer(inode->fsNode);
@@ -484,7 +484,7 @@ static iNode* __fat32_superBlock_openRootInode(SuperBlock* superBlock) {
 }
 
 static void __fat32_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
-    if (!REF_COUNTER_DEREFER(inode->refCounter) == 0) {
+    if (REF_COUNTER_DEREFER(inode->refCounter) != 0) {
         return;
     }
     

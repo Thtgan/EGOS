@@ -47,7 +47,7 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
 
     linkedListNode_initStruct(&thread->waitNode);
 
-    REF_COUNTER_INIT(thread->refCounter);
+    REF_COUNTER_INIT(thread->refCounter, 0);
     thread->lock = SPINLOCK_UNLOCKED;
 
     thread->waittingFor = NULL;
@@ -223,7 +223,7 @@ void thread_lock(Thread* thread) {
 void thread_unlock(Thread* thread) {
     DEBUG_ASSERT_SILENT(!REF_COUNTER_CHECK(thread->refCounter, 0));
     DEBUG_ASSERT_SILENT(spinlock_isLocked(&thread->lock));
-    if (!REF_COUNTER_DEREFER(thread->refCounter) == 0) {
+    if (REF_COUNTER_DEREFER(thread->refCounter) != 0) {
         return;
     }
 

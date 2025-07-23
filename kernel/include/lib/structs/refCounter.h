@@ -11,7 +11,7 @@ typedef Uint16  RefCounter16;
 typedef Uint32  RefCounter32;
 typedef Uint64  RefCounter64;
 
-#define REF_COUNTER_INIT(__CNT)         (__CNT) = 0
+#define REF_COUNTER_INIT(__CNT, __VAL)  ATOMIC_STORE(&(__CNT), __VAL)
 #define REF_COUNTER_REFER(__CNT)        ATOMIC_INC_FETCH(&(__CNT))
 #define REF_COUNTER_DEREFER(__CNT)      ATOMIC_DEC_FETCH(&(__CNT))
 #define REF_COUNTER_GET(__CNT)          ATOMIC_LOAD(&(__CNT))

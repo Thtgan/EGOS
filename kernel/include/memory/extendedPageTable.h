@@ -103,9 +103,9 @@ static inline void extendedPageTableRoot_copyEntry(ExtendedPageTableRoot* root, 
     extraPageTableContext_getMemoryOperations(root->context, operationsID)->copyPagingEntry(level, srcExtendedTable, desExtendedTable, index);
 }
 
-static inline void* extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static inline void extendedPageTableRoot_releaseEntry(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper) {
     Uint8 operationsID = extendedTable->extraTable.tableEntries[index].operationsID;
-    return extraPageTableContext_getMemoryOperations(root->context, operationsID)->releasePagingEntry(level, extendedTable, index);
+    extraPageTableContext_getMemoryOperations(root->context, operationsID)->releasePagingEntry(level, extendedTable, index, v, reaper);
 }
 
 static inline void extendedPageTableRoot_pageFaultHandler(ExtendedPageTableRoot* root, PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {

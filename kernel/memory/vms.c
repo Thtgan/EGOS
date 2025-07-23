@@ -296,8 +296,7 @@ VirtualMemoryRegion* virtualMemorySpace_getNextRegion(VirtualMemorySpace* vms, V
 static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionSharedFrames* frames, Uintptr vBase, Size frameN) {
     frames->vBase = vBase;
     
-    REF_COUNTER_INIT(frames->refCounter);
-    REF_COUNTER_REFER(frames->refCounter);
+    REF_COUNTER_INIT(frames->refCounter, 1);
 
     Size dividedN = DIVIDE_ROUND_UP(frameN, 2);
     vector_initStructN(&frames->frames, dividedN);

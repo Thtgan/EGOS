@@ -243,9 +243,8 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 continue;
             }
 
-            void* framesToRelease = NULL;
             if (IS_ALIGNED(currentV, span) && subSubN == spanN) {   //Release whole entry
-                framesToRelease = extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
+                extendedPageTableRoot_releaseEntry(root, level, currentTable, i, (void*)currentV, &root->reaper);
                 ERROR_GOTO_IF_ERROR(0);
             } else {                                                //Release partial entry
                 DEBUG_ASSERT_SILENT(level > PAGING_LEVEL_PAGE);
@@ -271,16 +270,12 @@ void __extendedPageTableRoot_doErase(ExtendedPageTableRoot* root, PagingLevel le
                 }
 
                 if (entryNum == 0) {
-                    framesToRelease = extendedPageTableRoot_releaseEntry(root, level, currentTable, i);
+                    extendedPageTableRoot_releaseEntry(root, level, currentTable, i, (void*)currentV, &root->reaper);
                     ERROR_GOTO_IF_ERROR(0);
                 } else if (!isMixed && lastOperationsID != extraEntry->operationsID) {
                     extraEntry->operationsID = lastOperationsID;
                 }
                 extraEntry->tableEntryNum = entryNum;
-            }
-
-            if (framesToRelease != NULL) {
-                frameReaper_collect(&root->reaper, framesToRelease, spanN);
             }
         } while(0);
 

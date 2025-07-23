@@ -3,6 +3,7 @@
 #include<kit/types.h>
 #include<memory/defaultOperations/generic.h>
 #include<memory/extendedPageTable.h>
+#include<memory/frameReaper.h>
 #include<memory/memoryOperations.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
@@ -12,7 +13,7 @@
 
 static void __defaultMemoryOperations_mixed_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
-static void* __defaultMemoryOperations_mixed_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void __defaultMemoryOperations_mixed_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper);
 
 MemoryOperations defaultMemoryOperations_mixed = (MemoryOperations) {
     .copyPagingEntry    = __defaultMemoryOperations_mixed_copyEntry,
@@ -49,23 +50,23 @@ static void __defaultMemoryOperations_mixed_copyEntry(PagingLevel level, Extende
     ERROR_FINAL_BEGIN(0);
 }
 
-static void* __defaultMemoryOperations_mixed_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void __defaultMemoryOperations_mixed_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper) {
     PagingEntry* entry = &extendedTable->table.tableEntries[index];
 
     DEBUG_ASSERT_SILENT(!PAGING_IS_LEAF(level, *entry));
 
     ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-    for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-        if (!extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
-            continue;
+        Size span = PAGING_SPAN(level);
+        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
+            if (extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
+                DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE);
+                extendedPageTableRoot_releaseEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), subExtendedTable, i, v, reaper);
+                ERROR_GOTO_IF_ERROR(0);
+            }
+            v += span;
         }
+        extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
 
-        extendedPageTableRoot_releaseEntry(mm->extendedTable, PAGING_NEXT_LEVEL(level), subExtendedTable, i);
-        ERROR_GOTO_IF_ERROR(0);
-    }
-    extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
-
-    return NULL;
+    return;
     ERROR_FINAL_BEGIN(0);
-    return NULL;
 }

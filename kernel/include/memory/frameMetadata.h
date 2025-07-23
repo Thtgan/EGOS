@@ -13,20 +13,21 @@ typedef struct FrameMetadata FrameMetadata;
 #include<memory/allocators/allocator.h>
 #include<multitask/context.h>
 #include<structs/linkedList.h>
+#include<structs/refCounter.h>
 #include<system/pageTable.h>
 
 typedef struct FrameMetadataUnit {
-    Flags8      flags;
+    Flags8          flags;
 #define FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR    FLAG16(0)
 #define FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR   FLAG16(1)
 #define FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE     FLAG16(2)
-    Uint8       reserved;
-    Uint16      cow;
+    Uint8           reserved;
+    RefCounter16    refCounter;
     union {
-        Uint32  vRegionLength;
-        Index32 collectedAnotherSideIndex;
+        Uint32      vRegionLength;
+        Index32     collectedAnotherSideIndex;
     };
-    void*       belongToAllocator;
+    void*           belongToAllocator;
 } __attribute__((packed)) FrameMetadataUnit;
 
 DEBUG_ASSERT_COMPILE(sizeof(FrameMetadataUnit) == 16);

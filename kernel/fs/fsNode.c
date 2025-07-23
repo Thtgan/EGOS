@@ -38,7 +38,7 @@ fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID in
     string_initStructStr(&ret->name, name);
     ERROR_GOTO_IF_ERROR(0);
     ret->type = type;
-    REF_COUNTER_INIT(ret->refCounter);
+    REF_COUNTER_INIT(ret->refCounter, 0);
     linkedList_initStruct(&ret->children);
     linkedListNode_initStruct(&ret->childNode);
 

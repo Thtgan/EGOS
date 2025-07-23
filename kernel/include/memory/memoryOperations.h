@@ -17,6 +17,7 @@ typedef struct MemoryOperations MemoryOperations;
 
 #include<interrupt/IDT.h>
 #include<kit/types.h>
+#include<memory/frameReaper.h>
 #include<multitask/context.h>
 #include<system/pageTable.h>
 
@@ -26,7 +27,7 @@ typedef struct ExtendedPageTable ExtendedPageTable;
 
 typedef struct MemoryOperations {
     void (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
-    void* (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+    void (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper);
     void (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 } MemoryOperations;
 

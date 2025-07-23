@@ -3,12 +3,13 @@
 #include<kit/types.h>
 #include<memory/defaultOperations/generic.h>
 #include<memory/extendedPageTable.h>
+#include<memory/frameReaper.h>
 #include<memory/memoryOperations.h>
 #include<system/pageTable.h>
 
 static void __defaultMemoryOperations_share_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
 
-static void* __defaultMemoryOperations_share_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index);
+static void __defaultMemoryOperations_share_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper);
 
 MemoryOperations defaultMemoryOperations_share = (MemoryOperations) {
     .copyPagingEntry    = __defaultMemoryOperations_share_copyEntry,
@@ -24,7 +25,6 @@ static void __defaultMemoryOperations_share_copyEntry(PagingLevel level, Extende
     *desExtraEntry = *srcExtraEntry;
 }
 
-static void* __defaultMemoryOperations_share_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index) {
+static void __defaultMemoryOperations_share_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper) {
     extendedPageTable_clearEntry(extendedTable, index);
-    return NULL;
 }
