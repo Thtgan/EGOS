@@ -4,6 +4,7 @@
 #include<fs/fsEntry.h>
 #include<interrupt/IDT.h>
 #include<kit/types.h>
+#include<memory/defaultOperations/generic.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
 #include<memory/frameReaper.h>
@@ -64,24 +65,12 @@ static void __defaultMemoryOperations_file_private_copyEntry(PagingLevel level, 
         *desEntry = *srcEntry;
         *desExtraEntry = *srcExtraEntry;
     } else {
-        void* newExtendedTableFrames = extendedPageTable_allocateFrame();
-        if (newExtendedTableFrames == NULL) {
+        void* newTableFrames = defaultMemoryOperations_genericCopyTableEntry(level, srcEntry, __defaultMemoryOperations_file_private_copyEntry);
+        if (newTableFrames == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
-
-        ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
-        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (!extendedPageTable_checkEntryRealPresent(srcSubExtendedTable, i)) {
-                continue;
-            }
-
-            DEBUG_ASSERT_SILENT(srcSubExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_PRIVATE);
-            __defaultMemoryOperations_file_private_copyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
-            ERROR_GOTO_IF_ERROR(0);
-        }
-
-        *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_KERNEL_MEMORY_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
+        *desEntry = BUILD_ENTRY_PAGING_TABLE(newTableFrames, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
@@ -113,7 +102,7 @@ static void __defaultMemoryOperations_file_private_faultHandler(PagingLevel leve
         Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
         void* frameWrite = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
         Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
-        if (seeked == INVALID_INDEX64 || seeked == file->inode->sizeInByte) {
+        if (seeked >= file->inode->sizeInByte) {
             memory_memset(frameWrite, 0, span);   //Offset out of file size
         } else {
             Size n = algorithms_umin64(file->inode->sizeInByte - absoluteOffset, span);
@@ -189,17 +178,7 @@ static void __defaultMemoryOperations_file_private_releaseEntry(PagingLevel leve
             }
         }
     } else {
-        ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-        Size span = PAGING_SPAN(level);
-        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
-                DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE);
-                __defaultMemoryOperations_file_private_releaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i, v, reaper);
-                ERROR_GOTO_IF_ERROR(0);
-            }
-            v += span;
-        }
-        extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
+        defaultMemoryOperations_genericReleaseTableEntry(level, entry, v, reaper, __defaultMemoryOperations_file_private_releaseEntry);
     }
 
     extendedPageTable_clearEntry(extendedTable, index);
@@ -227,24 +206,12 @@ static void __defaultMemoryOperations_file_shared_copyEntry(PagingLevel level, E
         *desEntry = *srcEntry;
         *desExtraEntry = *srcExtraEntry;
     } else {
-        void* newExtendedTableFrames = extendedPageTable_allocateFrame();
-        if (newExtendedTableFrames == NULL) {
+        void* newTableFrames = defaultMemoryOperations_genericCopyTableEntry(level, srcEntry, __defaultMemoryOperations_file_shared_copyEntry);
+        if (newTableFrames == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
-
-        ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
-        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (!extendedPageTable_checkEntryRealPresent(srcSubExtendedTable, i)) {
-                continue;
-            }
-
-            DEBUG_ASSERT_SILENT(srcSubExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_FILE_SHARED);
-            __defaultMemoryOperations_file_shared_copyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
-            ERROR_GOTO_IF_ERROR(0);
-        }
-
-        *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_KERNEL_MEMORY_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
+        *desEntry = BUILD_ENTRY_PAGING_TABLE(newTableFrames, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
@@ -267,7 +234,6 @@ static void __defaultMemoryOperations_file_shared_faultHandler(PagingLevel level
 
     Index32 frameIndex = virtualMemoryRegion_getFrameIndex(vmr, v);
     void* mapToFrame = NULL;
-    //TODO: Use reference counter
     if (frameIndex == INVALID_INDEX32) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
         mapToFrame = mm_allocateFrames(span / PAGE_SIZE);
@@ -282,7 +248,7 @@ static void __defaultMemoryOperations_file_shared_faultHandler(PagingLevel level
         Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
         void* frameWrite = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
         Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
-        if (seeked == INVALID_INDEX64 || seeked == file->inode->sizeInByte) {
+        if (seeked >= file->inode->sizeInByte) {
             memory_memset(frameWrite, 0, span);   //Offset out of file size
         } else {
             Size n = algorithms_umin64(file->inode->sizeInByte - absoluteOffset, span);
@@ -302,6 +268,8 @@ static void __defaultMemoryOperations_file_shared_faultHandler(PagingLevel level
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
+
+        CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_DIRTY_FILE_DATA);    //Shared file mapping supports write back
 
         REF_COUNTER_INIT(unit->refCounter, 1);
     } else {
@@ -329,21 +297,36 @@ static void __defaultMemoryOperations_file_shared_releaseEntry(PagingLevel level
     if (PAGING_IS_LEAF(level, *entry)) {
         void* mapToFrame = pageTable_getNextLevelPage(level, *entry);
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-        if (REF_COUNTER_DEREFER(unit->refCounter) == 0) {
+        if (TEST_FLAGS(*entry, PAGING_ENTRY_FLAG_D)) {
+            SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_DIRTY_FILE_DATA);
+        }
+        
+        if (REF_COUNTER_DEREFER(unit->refCounter) == 0 && TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_DIRTY_FILE_DATA)) {
+            Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
+
+            VirtualMemorySpace* vms = &schedule_getCurrentProcess()->vms;
+            VirtualMemoryRegion* vmr = virtualMemorySpace_getRegion(vms, v);
+            DEBUG_ASSERT_SILENT(vmr != NULL && vmr->info.file != NULL);
+            VirtualMemoryRegionInfo* info = &vmr->info;
+
+            File* file = info->file;
+            Index64 originPointer = file->pointer;
+
+            Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
+            void* frameRead = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
+            Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
+            if (seeked < file->inode->sizeInByte) {
+                Size n = algorithms_umin64(file->inode->sizeInByte - absoluteOffset, span);
+                fs_fileWrite(file, frameRead, n);
+                ERROR_GOTO_IF_ERROR(0);
+            }
+
+            fs_fileSeek(file, originPointer, FS_FILE_SEEK_BEGIN);
+            
             frameReaper_collect(reaper, mapToFrame, PAGING_SPAN(PAGING_NEXT_LEVEL(level)) / PAGE_SIZE);
         }
     } else {
-        ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-        Size span = PAGING_SPAN(level);
-        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
-                DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE);
-                __defaultMemoryOperations_file_shared_releaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i, v, reaper);
-                ERROR_GOTO_IF_ERROR(0);
-            }
-            v += span;
-        }
-        extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
+        defaultMemoryOperations_genericReleaseTableEntry(level, entry, v, reaper, __defaultMemoryOperations_file_shared_releaseEntry);
     }
 
     extendedPageTable_clearEntry(extendedTable, index);

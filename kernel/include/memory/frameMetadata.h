@@ -21,6 +21,7 @@ typedef struct FrameMetadataUnit {
 #define FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR    FLAG16(0)
 #define FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR   FLAG16(1)
 #define FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE     FLAG16(2)
+#define FRAME_METADATA_UNIT_FLAGS_DIRTY_FILE_DATA           FLAG16(3)
     Uint8           reserved;
     RefCounter16    refCounter;
     union {

@@ -35,24 +35,12 @@ static void __defaultMemoryOperations_copy_copyEntry(PagingLevel level, Extended
         *desEntry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), copyTo, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     } else {
-        void* newExtendedTableFrames = extendedPageTable_allocateFrame();   //TODO: Allocate frames at low address for possible realmode switch back requirement
-        if (newExtendedTableFrames == NULL) {
+        void* newTableFrames = defaultMemoryOperations_genericCopyTableEntry(level, srcEntry, __defaultMemoryOperations_copy_copyEntry);
+        if (newTableFrames == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
-    
-        ExtendedPageTable* srcSubExtendedTable = extentedPageTable_extendedTableFromEntry(*srcEntry), * desSubExtendedTable = PAGING_CONVERT_KERNEL_MEMORY_P2V(newExtendedTableFrames);
-        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (!extendedPageTable_checkEntryRealPresent(srcSubExtendedTable, i)) {
-                continue;
-            }
-    
-            DEBUG_ASSERT_SILENT(srcSubExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_COPY);
-            __defaultMemoryOperations_copy_copyEntry(PAGING_NEXT_LEVEL(level), srcSubExtendedTable, desSubExtendedTable, i);
-            ERROR_GOTO_IF_ERROR(0);
-        }
-    
-        *desEntry = BUILD_ENTRY_PAGING_TABLE(PAGING_CONVERT_KERNEL_MEMORY_V2P(&desSubExtendedTable->table), FLAGS_FROM_PAGING_ENTRY(*srcEntry));
+        *desEntry = BUILD_ENTRY_PAGING_TABLE(newTableFrames, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
@@ -68,17 +56,7 @@ static void __defaultMemoryOperations_copy_releaseEntry(PagingLevel level, Exten
         void* frameToRelease = pageTable_getNextLevelPage(level, *entry);
         frameReaper_collect(reaper, frameToRelease, PAGING_SPAN(PAGING_NEXT_LEVEL(level)) / PAGE_SIZE);
     } else {
-        ExtendedPageTable* subExtendedTable = extentedPageTable_extendedTableFromEntry(*entry);
-        Size span = PAGING_SPAN(level);
-        for (int i = 0; i < PAGING_TABLE_SIZE; ++i) {
-            if (extendedPageTable_checkEntryRealPresent(subExtendedTable, i)) {
-                DEBUG_ASSERT_SILENT(subExtendedTable->extraTable.tableEntries[i].operationsID == DEFAULT_MEMORY_OPERATIONS_TYPE_ANON_PRIVATE);
-                __defaultMemoryOperations_copy_releaseEntry(PAGING_NEXT_LEVEL(level), subExtendedTable, i, v, reaper);
-                ERROR_GOTO_IF_ERROR(0);
-            }
-            v += span;
-        }
-        extendedPageTable_freeFrame(PAGING_CONVERT_KERNEL_MEMORY_V2P(subExtendedTable));
+        defaultMemoryOperations_genericReleaseTableEntry(level, entry, v, reaper, __defaultMemoryOperations_copy_releaseEntry);
     }
 
     extendedPageTable_clearEntry(extendedTable, index);

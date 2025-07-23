@@ -9,4 +9,8 @@
 
 void defaultMemoryOperations_genericFaultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
 
+void* defaultMemoryOperations_genericCopyTableEntry(PagingLevel level, PagingEntry* srcEntry, MemoryOperations_CopyPagingEntryFunc copyFunc);
+
+void defaultMemoryOperations_genericReleaseTableEntry(PagingLevel level, PagingEntry* entry, void* currentV, FrameReaper* reaper, MemoryOperations_ReleasePagingEntry releaseFunc);
+
 #endif // __MEMORY_DEFAULTOPERATIONS_GENERIC_H

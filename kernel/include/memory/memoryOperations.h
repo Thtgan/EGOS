@@ -25,10 +25,14 @@ typedef struct MemoryOperations MemoryOperations;
 typedef struct ExtraPageTableEntry ExtraPageTableEntry;
 typedef struct ExtendedPageTable ExtendedPageTable;
 
+typedef void (*MemoryOperations_CopyPagingEntryFunc)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
+typedef void (*MemoryOperations_ReleasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper);
+typedef void (*MemoryOperations_PageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+
 typedef struct MemoryOperations {
-    void (*copyPagingEntry)(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
-    void (*releasePagingEntry)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper);
-    void (*pageFaultHandler)(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs);
+    MemoryOperations_CopyPagingEntryFunc copyPagingEntry;
+    MemoryOperations_ReleasePagingEntry releasePagingEntry;
+    MemoryOperations_PageFaultHandler pageFaultHandler;
 } MemoryOperations;
 
 typedef struct ExtraPageTableContext ExtraPageTableContext;
