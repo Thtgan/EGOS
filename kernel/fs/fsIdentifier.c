@@ -3,13 +3,13 @@
 #include<cstring.h>
 #include<error.h>
 #include<fs/fsNode.h>
-#include<fs/inode.h>
+#include<fs/vnode.h>
 #include<fs/path.h>
 #include<kit/types.h>
 #include<structs/string.h>
 
-void fsIdentifier_initStruct(fsIdentifier* identifier, iNode* baseInode, ConstCstring path, bool isDirectory) {
-    identifier->baseInode = baseInode;
+void fsIdentifier_initStruct(fsIdentifier* identifier, vNode* baseVnode, ConstCstring path, bool isDirectory) {
+    identifier->baseVnode = baseVnode;
     string_initStructStr(&identifier->path, path);
     ERROR_GOTO_IF_ERROR(0);
     identifier->isDirectory = isDirectory;
@@ -26,7 +26,7 @@ void fsIdentifier_getAbsolutePath(fsIdentifier* identifier, String* pathOut) {
     DEBUG_ASSERT_SILENT(string_isAvailable(pathOut));
     string_clear(pathOut);
 
-    fsNode_getAbsolutePath(identifier->baseInode->fsNode, pathOut);
+    fsNode_getAbsolutePath(identifier->baseVnode->fsNode, pathOut);
     ERROR_GOTO_IF_ERROR(0);
     path_join(pathOut, pathOut, &identifier->path);
     ERROR_GOTO_IF_ERROR(0);

@@ -2,7 +2,7 @@
 
 #include<fs/fcntl.h>
 #include<fs/fs.h>
-#include<fs/inode.h>
+#include<fs/vnode.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/extendedPageTable.h>

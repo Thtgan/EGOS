@@ -3,20 +3,20 @@
 
 typedef struct fsIdentifier fsIdentifier;
 
-#include<fs/inode.h>
+#include<fs/vnode.h>
 #include<kit/types.h>
 #include<structs/string.h>
 
 typedef struct fsIdentifier {
-    iNode*      baseInode;
+    vNode*      baseVnode;
     String      path;
     bool        isDirectory;
 } fsIdentifier;
 
-void fsIdentifier_initStruct(fsIdentifier* identifier, iNode* baseInode, ConstCstring path, bool isDirectory);
+void fsIdentifier_initStruct(fsIdentifier* identifier, vNode* baseVnode, ConstCstring path, bool isDirectory);
 
 static inline bool fsIdentifier_isActive(fsIdentifier* identifier) {
-    return identifier->baseInode != NULL && string_isAvailable(&identifier->path);
+    return identifier->baseVnode != NULL && string_isAvailable(&identifier->path);
 }
 
 void fsIdentifier_clearStruct(fsIdentifier* identifier);

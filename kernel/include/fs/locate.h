@@ -4,9 +4,9 @@
 #include<fs/fcntl.h>
 #include<fs/fsIdentifier.h>
 #include<fs/fsNode.h>
-#include<fs/superblock.h>
+#include<fs/fscore.h>
 #include<kit/types.h>
 
-fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, iNode** parentDirInodeOut, SuperBlock** finalSuperBlockOut);
+fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDirVnodeOut, FScore** finalFScoreOut);
 
 #endif // __FS_LOCATE_H

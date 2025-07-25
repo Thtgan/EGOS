@@ -17,8 +17,8 @@ typedef fsEntry File;
 #include<cstring.h>
 #include<devices/device.h>
 #include<fs/fcntl.h>
-#include<fs/inode.h>
-#include<fs/superblock.h>
+#include<fs/vnode.h>
+#include<fs/fscore.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -30,7 +30,7 @@ typedef struct fsEntry {    //TODO: Add RW lock
     FCNTLopenFlags          flags;  //These flags control the IO detail of the entry
     Uint16                  mode;
     Index64                 pointer;
-    iNode*                  inode;
+    vNode*                  vnode;
     fsEntryOperations*      operations;
 } fsEntry;
 
@@ -58,7 +58,7 @@ static inline void fsEntry_rawWrite(fsEntry* entry, const void* buffer, Size n) 
     entry->operations->write(entry, buffer, n);
 }
 
-void fsEntry_initStruct(fsEntry* entry, iNode* inode, fsEntryOperations* operations, FCNTLopenFlags flags);
+void fsEntry_initStruct(fsEntry* entry, vNode* vnode, fsEntryOperations* operations, FCNTLopenFlags flags);
 
 void fsEntry_clearStruct(fsEntry* entry);
 

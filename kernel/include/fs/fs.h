@@ -12,8 +12,8 @@ typedef struct FS FS;
 typedef struct FS_fileStat FS_fileStat;
 
 #include<devices/blockDevice.h>
-#include<fs/inode.h>
-#include<fs/superblock.h>
+#include<fs/vnode.h>
+#include<fs/fscore.h>
 #include<kit/oop.h>
 #include<kit/types.h>
 #include<time/time.h>
@@ -29,7 +29,7 @@ typedef struct FS_fileStat FS_fileStat;
  *                              │              │             │      
  *                              ▼              │             ▼      
  * ┌────────────┐ Points To  ┌──────┐       ┌──┴──┐      ┌───────┐  
- * │fsIdentifier├────────┬──►│fsNode│◄──────┤iNode│◄─────┤fsEntry│┐ 
+ * │fsIdentifier├────────┬──►│fsNode│◄──────┤vNode│◄─────┤fsEntry│┐ 
  * └────────────┘        │   └──┬───┘       └─────┘      └───────┘│┐
  * ┌────────────┐        │      │                         └───────┘│
  * │fsIdentifier├────────┘      ▼                          └───────┘
@@ -41,7 +41,7 @@ typedef struct FS_fileStat FS_fileStat;
  */
 
 typedef struct FS {
-    SuperBlock*     superBlock;
+    FScore*         fsCore;
     ConstCstring    name;
     FStype          type;
 } FS;
@@ -89,18 +89,18 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin);
 
 typedef struct FS_fileStat {
     Uint64 deviceID;
-    Uint64 inodeID;
+    Uint64 vnodeID;
     Uint64 nLink;
     Uint32 mode;
 #define FS_FILE_STAT_MODE_GET_TYPE(__MODE)          TRIM_VAL(EXTRACT_VAL(__MODE, 32, 16, 24), 0x17);
 #define FS_FILE_STAT_MODE_SET_TYPE(__MODE, __TYPE)  ((__MODE) = (CLEAR_VAL_RANGE((__MODE), 32, 16, 24) | VAL_LEFT_SHIFT((Uint32)(__TYPE), 16)))
-#define FS_FILE_STAT_MODE_TYPE_FIFO             0x01    //TODO: Not used
-#define FS_FILE_STAT_MODE_TYPE_CHAR_DEVICE      0x02
-#define FS_FILE_STAT_MODE_TYPE_DIRECTORY        0x04
-#define FS_FILE_STAT_MODE_TYPE_BLOCK_DEVICE     0x06
-#define FS_FILE_STAT_MODE_TYPE_REGULAR_FILE     0x10
-#define FS_FILE_STAT_MODE_TYPE_SYMBOLIC_LINK    0x12    //TODO: Not used
-#define FS_FILE_STAT_MODE_TYPE_SOCKET           0x14    //TODO: Not used
+#define FS_FILE_STAT_MODE_TYPE_FIFO                 0x01    //TODO: Not used
+#define FS_FILE_STAT_MODE_TYPE_CHAR_DEVICE          0x02
+#define FS_FILE_STAT_MODE_TYPE_DIRECTORY            0x04
+#define FS_FILE_STAT_MODE_TYPE_BLOCK_DEVICE         0x06
+#define FS_FILE_STAT_MODE_TYPE_REGULAR_FILE         0x10
+#define FS_FILE_STAT_MODE_TYPE_SYMBOLIC_LINK        0x12    //TODO: Not used
+#define FS_FILE_STAT_MODE_TYPE_SOCKET               0x14    //TODO: Not used
     Uint32 uid;
     Uint32 gid;
     Uint32 reserved0;

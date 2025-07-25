@@ -4,7 +4,7 @@
 #include<fs/fsIdentifier.h>
 #include<fs/fsNode.h>
 #include<fs/path.h>
-#include<fs/superblock.h>
+#include<fs/fscore.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<structs/linkedList.h>
@@ -12,16 +12,16 @@
 #include<debug.h>
 #include<error.h>
 
-static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags);
+static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags);
 
-fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, iNode** parentDirInodeOut, SuperBlock** finalSuperBlockOut) {
-    DEBUG_ASSERT_SILENT(parentDirInodeOut != NULL);
-    DEBUG_ASSERT_SILENT(finalSuperBlockOut != NULL);
+fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDirVnodeOut, FScore** finalFScoreOut) {
+    DEBUG_ASSERT_SILENT(parentDirVnodeOut != NULL);
+    DEBUG_ASSERT_SILENT(finalFScoreOut != NULL);
 
     String localAbsoluteDirPath, dirPathFromBase, basename;
     fsNode* ret = NULL;
     bool isDirectory = TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY);
-    iNode* parentDirInode = NULL;
+    vNode* parentDirVnode = NULL;
 
     string_initStruct(&localAbsoluteDirPath);
     ERROR_GOTO_IF_ERROR(0);
@@ -39,45 +39,45 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, iNode** parentDir
 
     if (basename.length == 0) { //Identifier points to root
         DEBUG_ASSERT_SILENT(localAbsoluteDirPath.length == 1 && localAbsoluteDirPath.data[0] == PATH_SEPERATOR);
-        ret = identifier->baseInode->fsNode;
+        ret = identifier->baseVnode->fsNode;
         fsNode_refer(ret);  //Refer 'ret' once
 
-        *parentDirInodeOut = NULL;
-        *finalSuperBlockOut = identifier->baseInode->superBlock;
+        *parentDirVnodeOut = NULL;
+        *finalFScoreOut = identifier->baseVnode->fsCore;
     } else {
-        iNode* currentBaseInode = identifier->baseInode;
-        SuperBlock* currentSuperBlock = currentBaseInode->superBlock;
+        vNode* currentBaseVnode = identifier->baseVnode;
+        FScore* currentFScore = currentBaseVnode->fsCore;
         while (true) {
-            Mount* relayMount = superBlock_lookupMount(currentSuperBlock, localAbsoluteDirPath.data);
+            Mount* relayMount = fsCore_lookupMount(currentFScore, localAbsoluteDirPath.data);
             if (relayMount == NULL) {
                 break;
             }
     
-            currentBaseInode = relayMount->mountedInode;
+            currentBaseVnode = relayMount->mountedVnode;
             string_slice(&dirPathFromBase, &localAbsoluteDirPath, relayMount->path.length, localAbsoluteDirPath.length);
             ERROR_GOTO_IF_ERROR(0);
-            fsNode_getAbsolutePath(currentBaseInode->fsNode, &localAbsoluteDirPath);
+            fsNode_getAbsolutePath(currentBaseVnode->fsNode, &localAbsoluteDirPath);
             ERROR_GOTO_IF_ERROR(0);
             path_join(&localAbsoluteDirPath, &localAbsoluteDirPath, &dirPathFromBase);
             ERROR_GOTO_IF_ERROR(0);
-            currentSuperBlock = currentBaseInode->superBlock;
+            currentFScore = currentBaseVnode->fsCore;
         }
 
-        fsNode* parentDirNode = locate_local(currentSuperBlock, currentBaseInode, &localAbsoluteDirPath, identifier->isDirectory, flags);    //Refer 'parentDirNode' once
+        fsNode* parentDirNode = locate_local(currentFScore, currentBaseVnode, &localAbsoluteDirPath, identifier->isDirectory, flags);    //Refer 'parentDirNode' once
         ERROR_GOTO_IF_ERROR(0);
-        parentDirInode = fsNode_getInode(parentDirNode, currentSuperBlock); //Refer 'parentDirNode' once (if iNode not opened)
+        parentDirVnode = fsNode_getVnode(parentDirNode, currentFScore); //Refer 'parentDirNode' once (if vNode not opened)
         ERROR_GOTO_IF_ERROR(0);
         fsNode_release(parentDirNode);  //Release 'parentDirNode' once (from locate_local)
 
-        ret = iNode_lookupDirectoryEntry(parentDirInode, basename.data, isDirectory);   //Refer 'ret' once (if found)
+        ret = vNode_lookupDirectoryEntry(parentDirVnode, basename.data, isDirectory);   //Refer 'ret' once (if found)
         ERROR_GOTO_IF_ERROR(0);
         
         if (ret->mountOverwrite != NULL) {
-            currentSuperBlock = ret->mountOverwrite->superBlock;
+            currentFScore = ret->mountOverwrite->fsCore;
         }
 
-        *parentDirInodeOut = parentDirInode;
-        *finalSuperBlockOut = currentSuperBlock;
+        *parentDirVnodeOut = parentDirVnode;
+        *finalFScoreOut = currentFScore;
     }
 
     string_clearStruct(&basename);
@@ -98,37 +98,37 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, iNode** parentDir
         string_clearStruct(&localAbsoluteDirPath);
     }
 
-    if (parentDirInode != NULL) {
-        superBlock_closeInode(parentDirInode);  //Release 'parentDirInode->fsNode' (parentDirNode) once (if iNode opened)
+    if (parentDirVnode != NULL) {
+        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' (parentDirNode) once (if vNode opened)
     }
 
     if (ret != NULL) {
-        fsNode_release(ret);    //Release 'ret' once (from root or iNode_lookupDirectoryEntry)
+        fsNode_release(ret);    //Release 'ret' once (from root or vNode_lookupDirectoryEntry)
     }
 
     return NULL;
 }
 
-static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags) {
+static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags) {
     Index64 currentIndex = 0;
     String walked;
     fsNode* currentNode = NULL;
 
     if (pathFromBase->length == 0 || cstring_strcmp(pathFromBase->data, PATH_SEPERATOR_STR) == 0) {
-        REF_COUNTER_REFER(baseInode->fsNode->refCounter);
-        return baseInode->fsNode;
+        REF_COUNTER_REFER(baseVnode->fsNode->refCounter);
+        return baseVnode->fsNode;
     }
 
     string_initStruct(&walked);
     ERROR_GOTO_IF_ERROR(0);
 
-    iNode* currentInode = baseInode;
+    vNode* currentVnode = baseVnode;
     while (currentIndex != INVALID_INDEX64) {
         currentIndex = path_walk(pathFromBase, currentIndex, &walked);
         ERROR_GOTO_IF_ERROR(0);
 
         fsEntryType type = (currentIndex == INVALID_INDEX64) ? type : FS_ENTRY_TYPE_DIRECTORY;
-        currentNode = iNode_lookupDirectoryEntry(currentInode, walked.data, type);  //Refer 'currentNode' once
+        currentNode = vNode_lookupDirectoryEntry(currentVnode, walked.data, type);  //Refer 'currentNode' once
         if (currentNode == NULL) {
             ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
         }
@@ -136,18 +136,18 @@ static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pa
         DEBUG_ASSERT_SILENT(currentNode->mountOverwrite == NULL);
 
         ERROR_GOTO_IF_ERROR(0);
-        if (currentInode != baseInode) {
-            superBlock_closeInode(currentInode);    //Release 'currentInode->fsNode' (currentNode from last round) once (if iNode opened in last round)
+        if (currentVnode != baseVnode) {
+            fsCore_closeVnode(currentVnode);    //Release 'currentVnode->fsNode' (currentNode from last round) once (if vNode opened in last round)
             ERROR_GOTO_IF_ERROR(0);
-            currentInode = NULL;
+            currentVnode = NULL;
         }
 
         if (currentIndex == INVALID_INDEX64) {
             break;
         }
 
-        currentInode = fsNode_getInode(currentNode, superBlock);    //Refer 'currentNode' once (if iNode not opened)
-        fsNode_release(currentNode);    //Release 'currentNode' once (from iNode_lookupDirectoryEntry)
+        currentVnode = fsNode_getVnode(currentNode, fsCore);    //Refer 'currentNode' once (if vNode not opened)
+        fsNode_release(currentNode);    //Release 'currentNode' once (from vNode_lookupDirectoryEntry)
         currentNode = NULL;
         ERROR_GOTO_IF_ERROR(0);
     }
@@ -162,8 +162,8 @@ static fsNode* locate_local(SuperBlock* superBlock, iNode* baseInode, String* pa
         fsNode_release(currentNode);
     }
 
-    if (currentInode != baseInode && currentInode != NULL) {
-        superBlock_closeInode(currentInode);
+    if (currentVnode != baseVnode && currentVnode != NULL) {
+        fsCore_closeVnode(currentVnode);
     }
     
     return NULL;

@@ -4,7 +4,7 @@
 typedef struct fsNodeController fsNodeController;
 typedef struct fsNode fsNode;
 
-#include<fs/superblock.h>
+#include<fs/fscore.h>
 #include<kit/types.h>
 #include<multitask/locks/spinlock.h>
 #include<structs/linkedList.h>
@@ -18,15 +18,15 @@ typedef struct fsNode {
     LinkedList      children;
     LinkedListNode  childNode;
     fsNode*         parent;
-    ID              inodeID;
-    RefCounter32    refCounter; //fsNode is only refered by: inode (up to once), children
+    ID              vnodeID;
+    RefCounter32    refCounter; //fsNode is only refered by: vnode (up to once), children
     fsEntryType     type;
-    bool            isInodeActive;
+    bool            isVnodeActive;
     Spinlock        lock;
-    iNode*          mountOverwrite;
+    vNode*          mountOverwrite;
 } fsNode;
 
-fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID inodeID);
+fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID vnodeID);
 
 fsNode* fsNode_lookup(fsNode* node, ConstCstring name, bool isDirectory);
 
@@ -34,13 +34,13 @@ void fsNode_remove(fsNode* node);
 
 void fsNode_release(fsNode* node);
 
-static inline void fsNode_refer(fsNode* node) {    //Only for inode openging
+static inline void fsNode_refer(fsNode* node) {    //Only for vnode openging
     REF_COUNTER_REFER(node->refCounter);
 }
 
-iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock);
+vNode* fsNode_getVnode(fsNode* node, FScore* fsCore);
 
-void fsNode_setMount(fsNode* node, iNode* mountInode);
+void fsNode_setMount(fsNode* node, vNode* mountVnode);
 
 void fsNode_getAbsolutePath(fsNode* node, String* pathOut);
 

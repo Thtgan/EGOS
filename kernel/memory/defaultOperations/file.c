@@ -102,10 +102,10 @@ static void __defaultMemoryOperations_file_private_faultHandler(PagingLevel leve
         Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
         void* frameWrite = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
         Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
-        if (seeked >= file->inode->sizeInByte) {
+        if (seeked >= file->vnode->sizeInByte) {
             memory_memset(frameWrite, 0, span);   //Offset out of file size
         } else {
-            Size n = algorithms_umin64(file->inode->sizeInByte - absoluteOffset, span);
+            Size n = algorithms_umin64(file->vnode->sizeInByte - absoluteOffset, span);
             fs_fileRead(file, frameWrite, n);
             ERROR_GOTO_IF_ERROR(0);
             if (n < span) {
@@ -248,10 +248,10 @@ static void __defaultMemoryOperations_file_shared_faultHandler(PagingLevel level
         Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
         void* frameWrite = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
         Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
-        if (seeked >= file->inode->sizeInByte) {
+        if (seeked >= file->vnode->sizeInByte) {
             memory_memset(frameWrite, 0, span);   //Offset out of file size
         } else {
-            Size n = algorithms_umin64(file->inode->sizeInByte - absoluteOffset, span);
+            Size n = algorithms_umin64(file->vnode->sizeInByte - absoluteOffset, span);
             fs_fileRead(file, frameWrite, n);
             ERROR_GOTO_IF_ERROR(0);
             if (n < span) {
@@ -315,8 +315,8 @@ static void __defaultMemoryOperations_file_shared_releaseEntry(PagingLevel level
             Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)v, span) - info->range.begin);
             void* frameRead = PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame);
             Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
-            if (seeked < file->inode->sizeInByte) {
-                Size n = algorithms_umin64(file->inode->sizeInByte - absoluteOffset, span);
+            if (seeked < file->vnode->sizeInByte) {
+                Size n = algorithms_umin64(file->vnode->sizeInByte - absoluteOffset, span);
                 fs_fileWrite(file, frameRead, n);
                 ERROR_GOTO_IF_ERROR(0);
             }

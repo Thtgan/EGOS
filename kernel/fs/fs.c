@@ -74,10 +74,10 @@ void fs_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;
-    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->superBlock->rootInode, "/dev", true);  //TODO: fails if dev not exist
+    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->fsCore->rootVnode, "/dev", true);  //TODO: fails if dev not exist
     ERROR_GOTO_IF_ERROR(0);
 
-    superBlock_rawMount(fs_rootFS->superBlock, &devfsMountPoint, fs_devFS->superBlock->rootInode, EMPTY_FLAGS);
+    fsCore_rawMount(fs_rootFS->fsCore, &devfsMountPoint, fs_devFS->fsCore->rootVnode, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -111,16 +111,16 @@ void fs_close(FS* fs) {
 
 File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     fsIdentifier identifier;
-    SuperBlock* superBlock = NULL;
+    FScore* fsCore = NULL;
     fsNode* parentDirNode = NULL;
-    iNode* inode = NULL, * parentDirInode = NULL;
+    vNode* vnode = NULL, * parentDirVnode = NULL;
     File* ret = NULL;
     String basename;
     
     bool isDirectory = TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY);
-    fsIdentifier_initStruct(&identifier, fs_rootFS->superBlock->rootInode, path, isDirectory);
+    fsIdentifier_initStruct(&identifier, fs_rootFS->fsCore->rootVnode, path, isDirectory);
     ERROR_GOTO_IF_ERROR(0);
-    parentDirNode = locate(&identifier, flags, &parentDirInode, &superBlock);    //Refer 'parentDirNode' once (if found), refer 'parentDirInode->fsNode' once (if iNode opened)
+    parentDirNode = locate(&identifier, flags, &parentDirVnode, &fsCore);    //Refer 'parentDirNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
     bool needCreate = false;
     if (parentDirNode == NULL) {
         ERROR_ASSERT_ANY();
@@ -134,11 +134,11 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
             })
         );
     }
-    DEBUG_ASSERT_SILENT(superBlock != NULL);
+    DEBUG_ASSERT_SILENT(fsCore != NULL);
 
     if (needCreate) {
         DEBUG_ASSERT_SILENT(parentDirNode == NULL);
-        DEBUG_ASSERT_SILENT(parentDirInode != NULL);
+        DEBUG_ASSERT_SILENT(parentDirVnode != NULL);
         if (TEST_FLAGS_FAIL(flags, FCNTL_OPEN_CREAT)) {
             ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
         }
@@ -148,20 +148,20 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
 
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
-        iNodeAttribute attr;
+        vNodeAttribute attr;
         attr.createTime = timestamp.second;
         attr.lastAccessTime = timestamp.second;
         attr.lastModifyTime = timestamp.second;
 
-        iNode_rawAddDirectoryEntry(parentDirInode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
+        vNode_rawAddDirectoryEntry(parentDirVnode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
         ERROR_GOTO_IF_ERROR(0);
-        parentDirNode = iNode_lookupDirectoryEntry(parentDirInode, basename.data, isDirectory);  //Refer 'parentDirNode' once
+        parentDirNode = vNode_lookupDirectoryEntry(parentDirVnode, basename.data, isDirectory);  //Refer 'parentDirNode' once
         ERROR_GOTO_IF_ERROR(0);
         
-        iNode_rawReadAttr(parentDirInode, &attr);
+        vNode_rawReadAttr(parentDirVnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
         attr.lastModifyTime = timestamp.second;
-        iNode_rawWriteAttr(parentDirInode, &attr);
+        vNode_rawWriteAttr(parentDirVnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
         
         string_clearStruct(&basename);
@@ -172,16 +172,16 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     }
     DEBUG_ASSERT_SILENT(parentDirNode != NULL);
 
-    if (parentDirInode != NULL) {
-        superBlock_closeInode(parentDirInode);  //Release 'parentDirInode->fsNode' once (if iNode opened in locate)
+    if (parentDirVnode != NULL) {
+        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
     }
     
-    inode = fsNode_getInode(parentDirNode, superBlock); //Refer 'parentDirNode' once (if iNode not opened)
+    vnode = fsNode_getVnode(parentDirNode, fsCore); //Refer 'parentDirNode' once (if vNode not opened)
     ERROR_GOTO_IF_ERROR(0);
-    fsNode_release(parentDirNode);  //Release 'parentDirNode' once (from locate or iNode_lookupDirectoryEntry)
+    fsNode_release(parentDirNode);  //Release 'parentDirNode' once (from locate or vNode_lookupDirectoryEntry)
     parentDirNode = NULL;
 
-    ret = superBlock_rawOpenFSentry(superBlock, inode, flags);
+    ret = fsCore_rawOpenFSentry(fsCore, vnode, flags);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -201,22 +201,22 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     }
 
     if (ret != NULL) {
-        DEBUG_ASSERT_SILENT(superBlock != NULL);
-        superBlock_rawCloseFSentry(superBlock, ret);
+        DEBUG_ASSERT_SILENT(fsCore != NULL);
+        fsCore_rawCloseFSentry(fsCore, ret);
         ERROR_ASSERT_NONE();
     }
 
     if (parentDirNode != NULL) {
-        fsNode_release(parentDirNode); //Release 'parentDirNode' once (from locate or iNode_lookupDirectoryEntry)
+        fsNode_release(parentDirNode); //Release 'parentDirNode' once (from locate or vNode_lookupDirectoryEntry)
     }
 
-    if (inode != NULL) {
-        superBlock_closeInode(inode);   //Release 'inode->fsNode' (parentDirNode) once (if iNode opened)
+    if (vnode != NULL) {
+        fsCore_closeVnode(vnode);   //Release 'vnode->fsNode' (parentDirNode) once (if vNode opened)
         ERROR_ASSERT_NONE();
     }
     
-    if (parentDirInode != NULL) {
-        superBlock_closeInode(parentDirInode);  //Release 'parentDirInode->fsNode' once (if iNode opened in locate)
+    if (parentDirVnode != NULL) {
+        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
         ERROR_ASSERT_NONE();
     }
 
@@ -231,13 +231,13 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
 }
 
 void fs_fileClose(File* file) {
-    iNode* inode = file->inode;
-    SuperBlock* superBlock = inode->superBlock;
+    vNode* vnode = file->vnode;
+    FScore* fsCore = vnode->fsCore;
 
-    superBlock_rawCloseFSentry(superBlock, file);
+    fsCore_rawCloseFSentry(fsCore, file);
     ERROR_GOTO_IF_ERROR(0);
 
-    superBlock_rawCloseInode(superBlock, inode);
+    fsCore_rawCloseVnode(fsCore, vnode);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -249,7 +249,7 @@ void fs_fileRead(File* file, void* buffer, Size n) {
         ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
     }
 
-    if (file->pointer + n > file->inode->sizeInByte) {
+    if (file->pointer + n > file->vnode->sizeInByte) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
@@ -258,15 +258,15 @@ void fs_fileRead(File* file, void* buffer, Size n) {
     fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->flags, FCNTL_OPEN_NOATIME)) {
-        iNodeAttribute attr;
-        iNode_rawReadAttr(file->inode, &attr);
+        vNodeAttribute attr;
+        vNode_rawReadAttr(file->vnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
         
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
         attr.lastAccessTime = timestamp.second;
 
-        iNode_rawWriteAttr(file->inode, &attr);
+        vNode_rawWriteAttr(file->vnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
     }
 
@@ -288,15 +288,15 @@ void fs_fileWrite(File* file, const void* buffer, Size n) {
     fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->flags, FCNTL_OPEN_NOATIME)) {
-        iNodeAttribute attr;
-        iNode_rawReadAttr(file->inode, &attr);
+        vNodeAttribute attr;
+        vNode_rawReadAttr(file->vnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
         
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
         attr.lastAccessTime = timestamp.second;
 
-        iNode_rawWriteAttr(file->inode, &attr);
+        vNode_rawWriteAttr(file->vnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
     }
 
@@ -313,14 +313,14 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
         case FS_FILE_SEEK_CURRENT:
             break;
         case FS_FILE_SEEK_END:
-            base = file->inode->sizeInByte;
+            base = file->vnode->sizeInByte;
             break;
         default:
             break;
     }
     base += offset;
 
-    if ((Int64)base < 0 || base > file->inode->sizeInByte) {
+    if ((Int64)base < 0 || base > file->vnode->sizeInByte) {
         return INVALID_INDEX64;
     }
 
@@ -332,16 +332,16 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
 }
 
 void fs_fileStat(File* file, FS_fileStat* stat) {
-    iNode* inode = file->inode;
-    SuperBlock* superBlock = inode->superBlock;
+    vNode* vnode = file->vnode;
+    FScore* fsCore = vnode->fsCore;
     
     memory_memset(stat, 0, sizeof(FS_fileStat));
-    stat->deviceID = inode->deviceID;
-    stat->inodeID = inode->inodeID;
+    stat->deviceID = vnode->deviceID;
+    stat->vnodeID = vnode->vnodeID;
     stat->nLink = 1;    //TODO: nLink not implemented actually
     Uint32 mode = file->mode;
 
-    fsEntryType type = inode->fsNode->type;
+    fsEntryType type = vnode->fsNode->type;
     switch (type) {
     case FS_ENTRY_TYPE_FILE:
         FS_FILE_STAT_MODE_SET_TYPE(mode, FS_FILE_STAT_MODE_TYPE_REGULAR_FILE);
@@ -357,15 +357,15 @@ void fs_fileStat(File* file, FS_fileStat* stat) {
         break;
     }
     stat->mode = mode;
-    stat->uid = inode->attribute.uid;  //TODO: User not implemented
-    stat->gid = inode->attribute.gid;
+    stat->uid = vnode->attribute.uid;  //TODO: User not implemented
+    stat->gid = vnode->attribute.gid;
     if (type == FS_ENTRY_TYPE_DEVICE) {
-        stat->rDevice = inode->deviceID;
+        stat->rDevice = vnode->deviceID;
     }
-    stat->size = inode->sizeInByte;
-    stat->blockSize = POWER_2(superBlock->blockDevice->device.granularity);
-    stat->blocks = inode->sizeInBlock;
-    stat->accessTime.second = inode->attribute.lastAccessTime;
-    stat->modifyTime.second = inode->attribute.lastModifyTime;
-    stat->createTime.second = inode->attribute.createTime;
+    stat->size = vnode->sizeInByte;
+    stat->blockSize = POWER_2(fsCore->blockDevice->device.granularity);
+    stat->blocks = vnode->sizeInBlock;
+    stat->accessTime.second = vnode->attribute.lastAccessTime;
+    stat->modifyTime.second = vnode->attribute.lastModifyTime;
+    stat->createTime.second = vnode->attribute.createTime;
 }

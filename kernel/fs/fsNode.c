@@ -26,7 +26,7 @@ static inline void __fsNode_removeChildNode(fsNode* child) {
 
 static void __fsNode_doGetAbsolutePath(fsNode* node, String* pathOut);
 
-fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID inodeID) {
+fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID vnodeID) {
     DEBUG_ASSERT_SILENT(type != FS_ENTRY_TYPE_DUMMY);
     
     fsNode* ret = mm_allocate(sizeof(fsNode));
@@ -49,8 +49,8 @@ fsNode* fsNode_create(ConstCstring name, fsEntryType type, fsNode* parent, ID in
     }
 
     ret->parent = parent;
-    ret->inodeID = inodeID;
-    ret->isInodeActive = false;
+    ret->vnodeID = vnodeID;
+    ret->isVnodeActive = false;
 
     ret->lock = SPINLOCK_UNLOCKED;
     ret->mountOverwrite = NULL;
@@ -88,12 +88,12 @@ void fsNode_remove(fsNode* node) {
 void fsNode_release(fsNode* node) {
     fsNode* currentNode = node;
 
-    while (true) {  //Node is not supposed to be released when its being accessed(e.g. lookup), for it should be refered by a iNode
+    while (true) {  //Node is not supposed to be released when its being accessed(e.g. lookup), for it should be refered by a vNode
         if (!(REF_COUNTER_CHECK(currentNode->refCounter, 0) || REF_COUNTER_DEREFER(currentNode->refCounter) == 0)) {
             break;
         }
 
-        DEBUG_ASSERT_SILENT(!currentNode->isInodeActive);
+        DEBUG_ASSERT_SILENT(!currentNode->isVnodeActive);
 
         fsNode* parent = currentNode->parent;
         if (parent != NULL) {
@@ -110,12 +110,12 @@ void fsNode_release(fsNode* node) {
     }
 }
 
-iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock) {
+vNode* fsNode_getVnode(fsNode* node, FScore* fsCore) {
     if (node->mountOverwrite != NULL) {
         return node->mountOverwrite;
     }
 
-    iNode* ret = superBlock_openInode(superBlock, node->inodeID);
+    vNode* ret = fsCore_openVnode(fsCore, node->vnodeID);
     ERROR_GOTO_IF_ERROR(0);
     
     return ret;
@@ -123,13 +123,13 @@ iNode* fsNode_getInode(fsNode* node, SuperBlock* superBlock) {
     return NULL;
 }
 
-void fsNode_setMount(fsNode* node, iNode* mountInode) {
+void fsNode_setMount(fsNode* node, vNode* mountVnode) {
     DEBUG_ASSERT_SILENT(node->type == FS_ENTRY_TYPE_DIRECTORY);
-    if (node->mountOverwrite != NULL && mountInode != NULL) {   //TODO: Remount support
+    if (node->mountOverwrite != NULL && mountVnode != NULL) {   //TODO: Remount support
         ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
     }
     
-    node->mountOverwrite = mountInode;
+    node->mountOverwrite = mountVnode;
     return;
     ERROR_FINAL_BEGIN(0);
 }

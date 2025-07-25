@@ -1,23 +1,23 @@
 #if !defined(__FS_DEVFS_DEVFS_H)
 #define __FS_DEVFS_DEVFS_H
 
-typedef struct DevfsSuperBlock DevfsSuperBlock;
+typedef struct DevfsFScore DevfsFScore;
 typedef struct DevfsNodeMetadata DevfsNodeMetadata;
 
 #include<devices/blockDevice.h>
 #include<fs/fs.h>
 #include<fs/fsNode.h>
-#include<fs/devfs/inode.h>
-#include<fs/superblock.h>
+#include<fs/devfs/vnode.h>
+#include<fs/fscore.h>
 #include<kit/types.h>
 #include<structs/hashTable.h>
 
-typedef struct DevfsSuperBlock {
-    SuperBlock          superBlock;
+typedef struct DevfsFScore {
+    FScore              fsCore;
     HashTable           metadataTable;
-#define DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM  31
-    SinglyLinkedList    metadataTableChains[DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM];
-} DevfsSuperBlock;
+#define DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM  31
+    SinglyLinkedList    metadataTableChains[DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM];
+} DevfsFScore;
 
 typedef struct DevfsNodeMetadata {
     HashChainNode   hashNode;
@@ -34,10 +34,10 @@ void devfs_open(FS* fs, BlockDevice* blockDevice);
 
 void devfs_close(FS* fs);
 
-void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, fsNode* node, Size sizeInByte, Object pointsTo);
+void devfsFScore_registerMetadata(DevfsFScore* fsCore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo);
 
-void devfsSuperBlock_unregisterMetadata(DevfsSuperBlock* superBlock, ID inodeID);
+void devfsFScore_unregisterMetadata(DevfsFScore* fsCore, ID vnodeID);
 
-DevfsNodeMetadata* devfsSuperBlock_getMetadata(DevfsSuperBlock* superBlock, ID inodeID);
+DevfsNodeMetadata* devfsFScore_getMetadata(DevfsFScore* fsCore, ID vnodeID);
 
 #endif // __FS_DEVFS_DEVFS_H

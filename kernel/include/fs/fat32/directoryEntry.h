@@ -6,7 +6,7 @@ typedef struct FAT32LongNameEntry FAT32LongNameEntry;
 typedef struct FAT32UnknownTypeEntry FAT32UnknownTypeEntry;
 
 #include<fs/fsEntry.h>
-#include<fs/inode.h>
+#include<fs/vnode.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -87,8 +87,8 @@ static inline bool fat32_directoryEntry_isEnd(FAT32UnknownTypeEntry* entry) {
     return firstByte == 0x00 || firstByte == 0xE5;
 }
 
-void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nameOut, Flags8* attributeOut, iNodeAttribute* inodeAttributeOut, Index32* firstClusterOut, Size* sizeOut);
+void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nameOut, Flags8* attributeOut, vNodeAttribute* vnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut);
 
-Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, ConstCstring name, fsEntryType type, iNodeAttribute* inodeAttribute, Index32 firstCluster, Size size);
+Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, ConstCstring name, fsEntryType type, vNodeAttribute* vnodeAttribute, Index32 firstCluster, Size size);
 
 #endif // __FS_FAT32_DIRECTORYENTRY_H

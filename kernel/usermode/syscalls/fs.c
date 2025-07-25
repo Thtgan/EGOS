@@ -1,7 +1,7 @@
 #include<fs/fcntl.h>
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
-#include<fs/inode.h>
+#include<fs/vnode.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
@@ -23,7 +23,7 @@ static int __syscall_fs_stat(ConstCstring filename, FS_fileStat* stat);
 static int __syscall_fs_fstat(int fd, FS_fileStat* stat);
 
 typedef struct __SyscallFSdirectoryEntry {
-    unsigned long   inodeID;
+    unsigned long   vnodeID;
     unsigned long   off;
     unsigned short  length;
     char            name[0];
@@ -42,7 +42,7 @@ typedef enum __FsSyscallDirentType {
 
 static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n);
 
-static bool __syscall_fs_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret);
+static bool __syscall_fs_getdentsIterateFunc(vNode* vnode, DirectoryEntry* entry, Object arg, void* ret);
 
 static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n) {
     Process* currentProcess = schedule_getCurrentProcess();
@@ -51,7 +51,7 @@ static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(file->inode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(file->vnode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
 
     fs_fileRead(file, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
@@ -68,7 +68,7 @@ static int __syscall_fs_write(int fileDescriptor, const void* buffer, Size n) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(file->inode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(file->vnode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
 
     fs_fileWrite(file, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
@@ -108,7 +108,7 @@ static int __syscall_fs_close(int fileDescriptor) {
         ERROR_GOTO(0);
     }
     
-    if (iNode_getReferenceCount(file->inode) == 1) {
+    if (vNode_getReferenceCount(file->vnode) == 1) {
         fs_fileClose(file);
         ERROR_GOTO_IF_ERROR(0);
     } 
@@ -164,14 +164,14 @@ static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(directory->inode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(directory->vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
 
     Range range = (Range) {     //TODO: Ugly code
         .begin = (Uintptr)buffer,
         .length = (Uintptr)n
     };
     bool notEnoughSpace = false;
-    iNode_rawIterateDirectoryEntries(directory->inode, __syscall_fs_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
+    vNode_rawIterateDirectoryEntries(directory->vnode, __syscall_fs_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
     ERROR_GOTO_IF_ERROR(0);
 
     return 0;
@@ -179,7 +179,7 @@ static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
     return -1;
 }
 
-static bool __syscall_fs_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry, Object arg, void* ret) {
+static bool __syscall_fs_getdentsIterateFunc(vNode* vnode, DirectoryEntry* entry, Object arg, void* ret) {
     Size nameLength = cstring_strlen(entry->name);
     Size entryLength = sizeof(__SyscallFSdirectoryEntry) + 2 + nameLength;
     Range* remainingBuffer = (Range*)arg;
@@ -189,7 +189,7 @@ static bool __syscall_fs_getdentsIterateFunc(iNode* inode, DirectoryEntry* entry
     }
 
     __SyscallFSdirectoryEntry* syscallEntry = (__SyscallFSdirectoryEntry*)remainingBuffer->begin;
-    syscallEntry->inodeID = entry->inodeID;
+    syscallEntry->vnodeID = entry->vnodeID;
     syscallEntry->off = 0;  //TODO: Not figured out yet
     cstring_strcpy(syscallEntry->name, entry->name);
 

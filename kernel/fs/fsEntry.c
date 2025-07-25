@@ -17,10 +17,10 @@
 #include<error.h>
 
 
-void fsEntry_initStruct(fsEntry* entry, iNode* inode, fsEntryOperations* operations, FCNTLopenFlags flags) {
+void fsEntry_initStruct(fsEntry* entry, vNode* vnode, fsEntryOperations* operations, FCNTLopenFlags flags) {
     entry->flags = flags;
     entry->pointer = 0;
-    entry->inode = inode;
+    entry->vnode = vnode;
     entry->operations = operations;
 }
 
@@ -29,7 +29,7 @@ void fsEntry_clearStruct(fsEntry* entry) {
 }
 
 Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
-    if (seekTo > entry->inode->sizeInByte) {
+    if (seekTo > entry->vnode->sizeInByte) {
         return INVALID_INDEX64;
     }
     
@@ -37,13 +37,13 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
 }
 
 void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
-    iNode* inode = entry->inode;
+    vNode* vnode = entry->vnode;
 
-    if (entry->pointer + n > inode->sizeInByte) {
+    if (entry->pointer + n > vnode->sizeInByte) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
-    iNode_rawReadData(inode, entry->pointer, buffer, n);
+    vNode_rawReadData(vnode, entry->pointer, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -51,14 +51,14 @@ void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 }
 
 void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
-    iNode* inode = entry->inode;
+    vNode* vnode = entry->vnode;
 
-    if (entry->pointer + n > inode->sizeInByte) {
-        iNode_rawResize(inode, entry->pointer + n);
+    if (entry->pointer + n > vnode->sizeInByte) {
+        vNode_rawResize(vnode, entry->pointer + n);
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    iNode_rawWriteData(inode, entry->pointer, buffer, n);
+    vNode_rawWriteData(vnode, entry->pointer, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -73,7 +73,7 @@ fsEntry* fsEntry_copy(fsEntry* entry) {
     }
 
     memory_memcpy(ret, entry, sizeof(fsEntry));
-    REF_COUNTER_REFER(ret->inode->refCounter);
+    REF_COUNTER_REFER(ret->vnode->refCounter);
 
     return ret;
     ERROR_FINAL_BEGIN(0);

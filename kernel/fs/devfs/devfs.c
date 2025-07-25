@@ -4,8 +4,8 @@
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<fs/fsNode.h>
-#include<fs/superblock.h>
-#include<fs/devfs/inode.h>
+#include<fs/fscore.h>
+#include<fs/devfs/vnode.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/mm.h>
@@ -14,29 +14,29 @@
 #include<structs/refCounter.h>
 #include<error.h>
 
-static fsNode* __devfs_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID);
+static fsNode* __devfs_fsCore_getFSnode(FScore* fsCore, ID vnodeID);
 
-static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID);
+static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID);
 
-static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock);
+static vNode* __devfs_fsCore_openRootVnode(FScore* fsCore);
 
-static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode);
+static void __devfs_fsCore_closeVnode(FScore* fsCore, vNode* vnode);
 
-static void __devfs_superBlock_sync(SuperBlock* superBlock);
+static void __devfs_fsCore_sync(FScore* fsCore);
 
-static fsEntry* __devfs_superBlock_openFSentry(SuperBlock* superBlock, iNode* inode, FCNTLopenFlags flags);
+static fsEntry* __devfs_fsCore_openFSentry(FScore* fsCore, vNode* vnode, FCNTLopenFlags flags);
 
 static ConstCstring __devfs_name = "DEVFS";
-static SuperBlockOperations __devfs_superBlockOperations = {
-    .getFSnode      = __devfs_superBlock_getFSnode,
-    .openInode      = __devfs_superBlock_openInode,
-    .openRootInode  = __devfs_superBlock_openRootInode,
-    .closeInode     = __devfs_superBlock_closeInode,
-    .sync           = __devfs_superBlock_sync,
-    .openFSentry    = __devfs_superBlock_openFSentry,
-    .closeFSentry   = superBlock_genericCloseFSentry,
-    .mount          = superBlock_genericMount,
-    .unmount        = superBlock_genericUnmount
+static FScoreOperations __devfs_fsCoreOperations = {
+    .getFSnode      = __devfs_fsCore_getFSnode,
+    .openVnode      = __devfs_fsCore_openVnode,
+    .openRootVnode  = __devfs_fsCore_openRootVnode,
+    .closeVnode     = __devfs_fsCore_closeVnode,
+    .sync           = __devfs_fsCore_sync,
+    .openFSentry    = __devfs_fsCore_openFSentry,
+    .closeFSentry   = fsCore_genericCloseFSentry,
+    .mount          = fsCore_genericMount,
+    .unmount        = fsCore_genericUnmount
 };
 
 static fsEntryOperations _devfs_fsEntryOperations = {
@@ -55,8 +55,8 @@ bool devfs_checkType(BlockDevice* blockDevice) {
     return blockDevice == NULL; //Only devfs accepts NULL device (probably)
 }
 
-#define __DEVFS_SUPERBLOCK_HASH_BUCKET  31
-#define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((DevfsSuperBlock, 1), (SinglyLinkedList, __DEVFS_SUPERBLOCK_HASH_BUCKET))
+#define __DEVFS_FSCORE_HASH_BUCKET  31
+#define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((DevfsFScore, 1), (SinglyLinkedList, __DEVFS_FSCORE_HASH_BUCKET))
 
 void devfs_open(FS* fs, BlockDevice* blockDevice) {
     DEBUG_ASSERT_SILENT(blockDevice == NULL);
@@ -73,23 +73,23 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     }
 
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
-        (DevfsSuperBlock, devfsSuperBlock, 1),
-        (SinglyLinkedList, openedInodeChains, __DEVFS_SUPERBLOCK_HASH_BUCKET)
+        (DevfsFScore, devfsFScore, 1),
+        (SinglyLinkedList, openedVnodeChains, __DEVFS_FSCORE_HASH_BUCKET)
     );
 
-    SuperBlock* superBlock = &devfsSuperBlock->superBlock;
-    hashTable_initStruct(&devfsSuperBlock->metadataTable, DEVFS_SUPERBLOCK_INODE_TABLE_CHAIN_NUM, devfsSuperBlock->metadataTableChains, hashTable_defaultHashFunc);
+    FScore* fsCore = &devfsFScore->fsCore;
+    hashTable_initStruct(&devfsFScore->metadataTable, DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM, devfsFScore->metadataTableChains, hashTable_defaultHashFunc);
 
-    SuperBlockInitArgs args = {
+    FScoreInitArgs args = {
         .blockDevice        = blockDevice,
-        .operations         = &__devfs_superBlockOperations,
-        .openedInodeBucket  = __DEVFS_SUPERBLOCK_HASH_BUCKET,
-        .openedInodeChains  = openedInodeChains
+        .operations         = &__devfs_fsCoreOperations,
+        .openedVnodeBucket  = __DEVFS_FSCORE_HASH_BUCKET,
+        .openedVnodeChains  = openedVnodeChains
     };
 
-    superBlock_initStruct(superBlock, &args);
+    fsCore_initStruct(fsCore, &args);
 
-    fs->superBlock = superBlock;
+    fs->fsCore = fsCore;
     fs->name = __devfs_name;
     fs->type = FS_TYPE_DEVFS;
 
@@ -104,10 +104,10 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
 
 void devfs_close(FS* fs) {
     _devfs_opened = false;
-    mm_free(fs->superBlock);
+    mm_free(fs->fsCore);
 }
 
-void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
+void devfsFScore_registerMetadata(DevfsFScore* fsCore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
     DevfsNodeMetadata* metadata = NULL;
     metadata = mm_allocate(sizeof(DevfsNodeMetadata));
     if (metadata == NULL) {
@@ -120,7 +120,7 @@ void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, f
 
     fsNode_refer(node);
 
-    hashTable_insert(&superBlock->metadataTable, inodeID, &metadata->hashNode);
+    hashTable_insert(&fsCore->metadataTable, vnodeID, &metadata->hashNode);
     ERROR_CHECKPOINT({ 
             ERROR_GOTO(0);
         },
@@ -137,8 +137,8 @@ void devfsSuperBlock_registerMetadata(DevfsSuperBlock* superBlock, ID inodeID, f
     }
 }
 
-void devfsSuperBlock_unregisterMetadata(DevfsSuperBlock* superBlock, ID inodeID) {
-    HashChainNode* deleted = hashTable_delete(&superBlock->metadataTable, inodeID);
+void devfsFScore_unregisterMetadata(DevfsFScore* fsCore, ID vnodeID) {
+    HashChainNode* deleted = hashTable_delete(&fsCore->metadataTable, vnodeID);
     if (deleted == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -153,8 +153,8 @@ void devfsSuperBlock_unregisterMetadata(DevfsSuperBlock* superBlock, ID inodeID)
     ERROR_FINAL_BEGIN(0);
 }
 
-DevfsNodeMetadata* devfsSuperBlock_getMetadata(DevfsSuperBlock* superBlock, ID inodeID) {
-    HashChainNode* found = hashTable_find(&superBlock->metadataTable, inodeID);
+DevfsNodeMetadata* devfsFScore_getMetadata(DevfsFScore* fsCore, ID vnodeID) {
+    HashChainNode* found = hashTable_find(&fsCore->metadataTable, vnodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
@@ -164,9 +164,9 @@ DevfsNodeMetadata* devfsSuperBlock_getMetadata(DevfsSuperBlock* superBlock, ID i
     return NULL;
 }
 
-static fsNode* __devfs_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) {
-    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
-    HashChainNode* found = hashTable_find(&devfsSuperBlock->metadataTable, inodeID);
+static fsNode* __devfs_fsCore_getFSnode(FScore* fsCore, ID vnodeID) {
+    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
+    HashChainNode* found = hashTable_find(&devfsFScore->metadataTable, vnodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
@@ -179,59 +179,59 @@ static fsNode* __devfs_superBlock_getFSnode(SuperBlock* superBlock, ID inodeID) 
     return NULL;
 }
 
-static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
-    DevfsInode* devfsInode = NULL;
+static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID) {
+    DevfsVnode* devfsVnode = NULL;
 
-    devfsInode = mm_allocate(sizeof(DevfsInode));
-    if (devfsInode == NULL) {
+    devfsVnode = mm_allocate(sizeof(DevfsVnode));
+    if (devfsVnode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    DevfsSuperBlock* devfsSuperBlock = HOST_POINTER(superBlock, DevfsSuperBlock, superBlock);
-    HashChainNode* found = hashTable_find(&devfsSuperBlock->metadataTable, inodeID);
+    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
+    HashChainNode* found = hashTable_find(&devfsFScore->metadataTable, vnodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
-    iNode* inode = &devfsInode->inode;
+    vNode* vnode = &devfsVnode->vnode;
     DevfsNodeMetadata* metadata = HOST_POINTER(found, DevfsNodeMetadata, hashNode);
     DEBUG_ASSERT_SILENT(metadata->node != NULL);
 
-    inode->signature        = INODE_SIGNATURE;
-    inode->inodeID          = inodeID;
+    vnode->signature        = VNODE_SIGNATURE;
+    vnode->vnodeID          = vnodeID;
     fsEntryType type = metadata->node->type;
     if (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY) {
-        inode->sizeInByte   = metadata->sizeInByte;
-        inode->sizeInBlock  = 0;
-        inode->deviceID     = INVALID_ID;
+        vnode->sizeInByte   = metadata->sizeInByte;
+        vnode->sizeInBlock  = 0;
+        vnode->deviceID     = INVALID_ID;
     } else {
-        inode->sizeInByte   = INFINITE;
-        inode->sizeInBlock  = INFINITE;
-        inode->deviceID     = (ID)metadata->pointsTo;
+        vnode->sizeInByte   = INFINITE;
+        vnode->sizeInBlock  = INFINITE;
+        vnode->deviceID     = (ID)metadata->pointsTo;
     }
 
-    inode->superBlock       = superBlock;
-    inode->operations       = devfs_iNode_getOperations();
+    vnode->fsCore       = fsCore;
+    vnode->operations       = devfs_vNode_getOperations();
 
-    REF_COUNTER_INIT(inode->refCounter, 0);
+    REF_COUNTER_INIT(vnode->refCounter, 0);
     
-    inode->fsNode           = metadata->node;
-    inode->attribute        = (iNodeAttribute) {   //TODO: Ugly code
+    vnode->fsNode           = metadata->node;
+    vnode->attribute        = (vNodeAttribute) {   //TODO: Ugly code
         .uid = 0,
         .gid = 0,
         .createTime = 0,
         .lastAccessTime = 0,
         .lastModifyTime = 0
     };
-    inode->lock             = SPINLOCK_UNLOCKED;
+    vnode->lock             = SPINLOCK_UNLOCKED;
     
-    devfsInode->data = NULL;
+    devfsVnode->data = NULL;
 
-    return inode;
+    return vnode;
     ERROR_FINAL_BEGIN(0);
-    if (devfsInode != NULL) {
-        mm_free(devfsInode);
+    if (devfsVnode != NULL) {
+        mm_free(devfsVnode);
     }
 
     ERROR_CHECKPOINT();
@@ -239,42 +239,42 @@ static iNode* __devfs_superBlock_openInode(SuperBlock* superBlock, ID inodeID) {
     return NULL;
 }
 
-static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
-    DevfsInode* devfsInode = NULL;
+static vNode* __devfs_fsCore_openRootVnode(FScore* fsCore) {
+    DevfsVnode* devfsVnode = NULL;
     
-    ID inodeID = superBlock_allocateInodeID(superBlock);
-    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, inodeID);
+    ID vnodeID = fsCore_allocateVnodeID(fsCore);
+    fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, vnodeID);
 
-    devfsInode = mm_allocate(sizeof(DevfsInode));
-    if (devfsInode == NULL) {
+    devfsVnode = mm_allocate(sizeof(DevfsVnode));
+    if (devfsVnode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    iNode* inode = &devfsInode->inode;
-    inode->signature        = INODE_SIGNATURE;
-    inode->inodeID          = inodeID;
-    inode->sizeInByte       = 0;
-    inode->sizeInBlock      = 0;
-    inode->superBlock       = superBlock;
-    inode->operations       = devfs_iNode_getOperations();
+    vNode* vnode = &devfsVnode->vnode;
+    vnode->signature        = VNODE_SIGNATURE;
+    vnode->vnodeID          = vnodeID;
+    vnode->sizeInByte       = 0;
+    vnode->sizeInBlock      = 0;
+    vnode->fsCore           = fsCore;
+    vnode->operations       = devfs_vNode_getOperations();
 
-    REF_COUNTER_INIT(inode->refCounter, 0);
+    REF_COUNTER_INIT(vnode->refCounter, 0);
     
-    inode->fsNode           = rootNode;
-    inode->attribute        = (iNodeAttribute) {   //TODO: Ugly code
+    vnode->fsNode           = rootNode;
+    vnode->attribute        = (vNodeAttribute) {   //TODO: Ugly code
         .uid = 0,
         .gid = 0,
         .createTime = 0,
         .lastAccessTime = 0,
         .lastModifyTime = 0
     };
-    inode->deviceID         = INVALID_ID;
-    inode->lock             = SPINLOCK_UNLOCKED;
+    vnode->deviceID         = INVALID_ID;
+    vnode->lock             = SPINLOCK_UNLOCKED;
     
-    rootNode->isInodeActive = true; //TODO: Ugly code
+    rootNode->isVnodeActive = true; //TODO: Ugly code
     
-    iNodeAttribute attribute = (iNodeAttribute) {   //TODO: Ugly code
+    vNodeAttribute attribute = (vNodeAttribute) {   //TODO: Ugly code
         .uid = 0,
         .gid = 0,
         .createTime = 0,
@@ -282,44 +282,44 @@ static iNode* __devfs_superBlock_openRootInode(SuperBlock* superBlock) {
         .lastModifyTime = 0
     };
     
-    devfsInode->data = NULL;
+    devfsVnode->data = NULL;
     
-    REF_COUNTER_REFER(inode->refCounter);
-    fsNode_refer(inode->fsNode);
+    REF_COUNTER_REFER(vnode->refCounter);
+    fsNode_refer(vnode->fsNode);
 
     for (MajorDeviceID major = device_iterateMajor(DEVICE_INVALID_ID); major != DEVICE_INVALID_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
         for (Device* device = device_iterateMinor(major, DEVICE_INVALID_ID); device != NULL; device = device_iterateMinor(major, DEVICE_MINOR_FROM_ID(device->id))) {
-            iNode_rawAddDirectoryEntry(inode, device->name, FS_ENTRY_TYPE_DEVICE, &attribute, device->id);
+            vNode_rawAddDirectoryEntry(vnode, device->name, FS_ENTRY_TYPE_DEVICE, &attribute, device->id);
             ERROR_GOTO_IF_ERROR(0);
         }
     }
 
-    return inode;
+    return vnode;
     ERROR_FINAL_BEGIN(0);
-    if (devfsInode != NULL) {
-        mm_free(devfsInode);
+    if (devfsVnode != NULL) {
+        mm_free(devfsVnode);
     }
 
     return NULL;
 }
 
-static void __devfs_superBlock_closeInode(SuperBlock* superBlock, iNode* inode) {
-    if (REF_COUNTER_DEREFER(inode->refCounter) != 0) {
+static void __devfs_fsCore_closeVnode(FScore* fsCore, vNode* vnode) {
+    if (REF_COUNTER_DEREFER(vnode->refCounter) != 0) {
         return;
     }
 
-    fsNode_release(inode->fsNode);
-    inode->fsNode->isInodeActive = false;
-    DevfsInode* devfsInode = HOST_POINTER(inode, DevfsInode, inode);
-    mm_free(devfsInode);
+    fsNode_release(vnode->fsNode);
+    vnode->fsNode->isVnodeActive = false;
+    DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
+    mm_free(devfsVnode);
 }
 
-static void __devfs_superBlock_sync(SuperBlock* superBlock) {
+static void __devfs_fsCore_sync(FScore* fsCore) {
 
 }
 
-static fsEntry* __devfs_superBlock_openFSentry(SuperBlock* superBlock, iNode* inode, FCNTLopenFlags flags) {
-    fsEntry* ret = superBlock_genericOpenFSentry(superBlock, inode, flags);
+static fsEntry* __devfs_fsCore_openFSentry(FScore* fsCore, vNode* vnode, FCNTLopenFlags flags) {
+    fsEntry* ret = fsCore_genericOpenFSentry(fsCore, vnode, flags);
     ERROR_GOTO_IF_ERROR(0);
 
     ret->operations = &_devfs_fsEntryOperations;

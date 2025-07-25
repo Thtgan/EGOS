@@ -242,9 +242,9 @@ static void printLOGO() {
     FS_fileStat stat;
     File* file = fs_fileOpen("/LOGO.txt", FCNTL_OPEN_READ_ONLY);    //TODO: What if file closed before munmap?
     ERROR_CHECKPOINT();
-    void* addr = mapping_mmap(NULL, file->inode->sizeInByte, MAPPING_MMAP_PROT_READ, MAPPING_MMAP_FLAGS_TYPE_PRIVATE, file, 0);
+    void* addr = mapping_mmap(NULL, file->vnode->sizeInByte, MAPPING_MMAP_PROT_READ, MAPPING_MMAP_FLAGS_TYPE_PRIVATE, file, 0);
     print_printf("%s\n", addr);
-    mapping_munmap(addr, file->inode->sizeInByte);
+    mapping_munmap(addr, file->vnode->sizeInByte);
 
     fs_fileStat(file, &stat);
     ERROR_CHECKPOINT();
@@ -253,7 +253,7 @@ static void printLOGO() {
     print_printf("%lu\n", stat.accessTime.second);
     print_printf("%lu\n", stat.modifyTime.second);
 
-    BlockDevice* device = file->inode->superBlock->blockDevice;
+    BlockDevice* device = file->vnode->fsCore->blockDevice;
     fs_fileClose(file);
     ERROR_CHECKPOINT();
     blockDevice_flush(device);
