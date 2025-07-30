@@ -1,7 +1,7 @@
 #if !defined(__FS_FAT32_FAT32_H)
 #define __FS_FAT32_FAT32_H
 
-typedef struct FAT32FScore FAT32FScore;
+typedef struct FAT32fscore FAT32fscore;
 typedef struct FAT32BPB FAT32BPB;
 
 #include<devices/blockDevice.h>
@@ -11,8 +11,8 @@ typedef struct FAT32BPB FAT32BPB;
 #include<fs/fscore.h>
 #include<kit/types.h>
 
-typedef struct FAT32FScore {
-    FScore              fsCore;
+typedef struct FAT32fscore {
+    FScore              fscore;
     
     RangeN              FATrange;
     Range               dataBlockRange;
@@ -29,7 +29,7 @@ typedef struct FAT32FScore {
     SinglyLinkedList    metadataTableChainsVnodeID[FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM];
     HashTable           metadataTableFirstCluster;
     SinglyLinkedList    metadataTableChainsFirstCluster[FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM];
-} FAT32FScore;
+} FAT32fscore;
 
 typedef struct FAT32NodeMetadata {
     HashChainNode   hashNodeVnodeID;
@@ -84,14 +84,14 @@ void fat32_open(FS* fs, BlockDevice* blockDevice);
 
 void fat32_close(FS* fs);
 
-void fat32FScore_registerMetadata(FAT32FScore* fsCore, DirectoryEntry* entry, fsNode* belongTo, Index64 firstCluster, vNodeAttribute* vnodeAttribute);
+void fat32FScore_registerMetadata(FAT32fscore* fscore, DirectoryEntry* entry, fsNode* belongTo, Index64 firstCluster, vNodeAttribute* vnodeAttribute);
 
-void fat32FScore_unregisterMetadata(FAT32FScore* fsCore, Index64 firstCluster);
+void fat32FScore_unregisterMetadata(FAT32fscore* fscore, Index64 firstCluster);
 
-FAT32NodeMetadata* fat32FScore_getMetadataFromVnodeID(FAT32FScore* fsCore, ID vnodeID);
+FAT32NodeMetadata* fat32FScore_getMetadataFromVnodeID(FAT32fscore* fscore, ID vnodeID);
 
-FAT32NodeMetadata* fat32FScore_getMetadataFromFirstCluster(FAT32FScore* fsCore, Index64 firstCluster);
+FAT32NodeMetadata* fat32FScore_getMetadataFromFirstCluster(FAT32fscore* fscore, Index64 firstCluster);
 
-Index32 fat32FScore_createFirstCluster(FAT32FScore* fsCore);
+Index32 fat32FScore_createFirstCluster(FAT32fscore* fscore);
 
 #endif // __FS_FAT32_FAT32_H

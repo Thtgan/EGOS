@@ -17,42 +17,42 @@
 #include<structs/string.h>
 #include<error.h>
 
-void fsCore_initStruct(FScore* fsCore, FScoreInitArgs* args) {
+void fscore_initStruct(FScore* fscore, FScoreInitArgs* args) {
     ERROR_ASSERT_NONE();
-    fsCore->blockDevice     = args->blockDevice;
-    fsCore->operations      = args->operations;
-    fsCore->rootVnode       = NULL;
-    hashTable_initStruct(&fsCore->openedVnode, args->openedVnodeBucket, args->openedVnodeChains, hashTable_defaultHashFunc);
-    linkedList_initStruct(&fsCore->mounted);
-    fsCore->nextVnodeID     = 0;
+    fscore->blockDevice     = args->blockDevice;
+    fscore->operations      = args->operations;
+    fscore->rootVnode       = NULL;
+    hashTable_initStruct(&fscore->openedVnode, args->openedVnodeBucket, args->openedVnodeChains, hashTable_defaultHashFunc);
+    linkedList_initStruct(&fscore->mounted);
+    fscore->nextVnodeID     = 0;
     
-    vNode* rootVnode = fsCore_rawOpenRootVnode(fsCore);
+    vNode* rootVnode = fscore_rawOpenRootVnode(fscore);
     if (rootVnode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    fsCore->rootVnode       = rootVnode;
-    hashTable_insert(&fsCore->openedVnode, rootVnode->vnodeID, &rootVnode->openedNode);
+    fscore->rootVnode       = rootVnode;
+    hashTable_insert(&fscore->openedVnode, rootVnode->vnodeID, &rootVnode->openedNode);
     ERROR_ASSERT_NONE();
 
     return;
     ERROR_FINAL_BEGIN(0);
 }
 
-ID fsCore_allocateVnodeID(FScore* fsCore) {
-    ID ret = ATOMIC_FETCH_INC(&fsCore->nextVnodeID);
+ID fscore_allocateVnodeID(FScore* fscore) {
+    ID ret = ATOMIC_FETCH_INC(&fscore->nextVnodeID);
     DEBUG_ASSERT(ret != INVALID_ID, "vNode allocation overflow\n");
     return ret;
 }
 
-fsNode* fsCore_getFSnode(FScore* fsCore, ID vnodeID) {
+fsNode* fscore_getFSnode(FScore* fscore, ID vnodeID) {
     fsNode* ret = NULL;
-    HashChainNode* found = hashTable_find(&fsCore->openedVnode, (Object)vnodeID);
+    HashChainNode* found = hashTable_find(&fscore->openedVnode, (Object)vnodeID);
     if (found != NULL) {
         ret = HOST_POINTER(found, vNode, openedNode)->fsNode;
         fsNode_refer(ret);  //Refer 'ret' once
     } else {
-        ret = fsCore_rawGetFSnode(fsCore, vnodeID); //Refer 'ret' once
+        ret = fscore_rawGetFSnode(fscore, vnodeID); //Refer 'ret' once
         ERROR_GOTO_IF_ERROR(0);
     }
 
@@ -61,16 +61,16 @@ fsNode* fsCore_getFSnode(FScore* fsCore, ID vnodeID) {
     return NULL;
 }
 
-vNode* fsCore_openVnode(FScore* fsCore, ID vnodeID) {
+vNode* fscore_openVnode(FScore* fscore, ID vnodeID) {
     //TODO: Lock
     vNode* ret = NULL;
-    HashChainNode* found = hashTable_find(&fsCore->openedVnode, (Object)vnodeID);
+    HashChainNode* found = hashTable_find(&fscore->openedVnode, (Object)vnodeID);
     if (found != NULL) {
         ret = HOST_POINTER(found, vNode, openedNode);
     } else {
-        ret = fsCore_rawOpenVnode(fsCore, vnodeID);
+        ret = fscore_rawOpenVnode(fscore, vnodeID);
         ERROR_GOTO_IF_ERROR(0);
-        hashTable_insert(&fsCore->openedVnode, vnodeID, &ret->openedNode);
+        hashTable_insert(&fscore->openedVnode, vnodeID, &ret->openedNode);
         ERROR_ASSERT_NONE();
     }
     REF_COUNTER_REFER(ret->refCounter);
@@ -82,20 +82,20 @@ vNode* fsCore_openVnode(FScore* fsCore, ID vnodeID) {
     return NULL;
 }
 
-void fsCore_closeVnode(vNode* vnode) {
+void fscore_closeVnode(vNode* vnode) {
     //TODO: Lock
-    DEBUG_ASSERT_SILENT(vnode->fsCore != NULL);
+    DEBUG_ASSERT_SILENT(vnode->fscore != NULL);
 
-    FScore* fsCore = vnode->fsCore;
+    FScore* fscore = vnode->fscore;
     if (REF_COUNTER_DEREFER(vnode->refCounter) == 0) {
         fsNode* node = vnode->fsNode;
-        HashChainNode* deleted = hashTable_delete(&fsCore->openedVnode, vnode->vnodeID);
+        HashChainNode* deleted = hashTable_delete(&fscore->openedVnode, vnode->vnodeID);
         if (deleted == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
         }
         
-        fsCore_rawCloseVnode(fsCore, vnode);
+        fscore_rawCloseVnode(fscore, vnode);
         ERROR_GOTO_IF_ERROR(0);
         node->isVnodeActive = false;    //TODO: Ugly code
         fsNode_release(node);   //Release 'node' once (from openVnode)
@@ -105,7 +105,7 @@ void fsCore_closeVnode(vNode* vnode) {
     ERROR_FINAL_BEGIN(0);
 }
 
-fsEntry* fsCore_genericOpenFSentry(FScore* fsCore, vNode* vnode, FCNTLopenFlags flags) {
+fsEntry* fscore_genericOpenFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
     //TODO: Lock
     fsEntry* ret = mm_allocate(sizeof(fsEntry));
     if (ret == NULL) {
@@ -120,13 +120,13 @@ fsEntry* fsCore_genericOpenFSentry(FScore* fsCore, vNode* vnode, FCNTLopenFlags 
     
 }
 
-void fsCore_genericCloseFSentry(FScore* fsCore, fsEntry* entry) {
+void fscore_genericCloseFSentry(FScore* fscore, fsEntry* entry) {
     //TODO: Lock
     memory_memset(entry, 0, sizeof(fsEntry));
     mm_free(entry);
 }
 
-void fsCore_genericMount(FScore* fsCore, fsIdentifier* mountPoint, vNode* mountVnode, Flags8 flags) {
+void fscore_genericMount(FScore* fscore, fsIdentifier* mountPoint, vNode* mountVnode, Flags8 flags) {
     //TODO: flags not used yet
     //TODO: Lock
     fsNode* mountPointNode = NULL;
@@ -143,7 +143,7 @@ void fsCore_genericMount(FScore* fsCore, fsIdentifier* mountPoint, vNode* mountV
     linkedListNode_initStruct(&mount->node);
     mount->mountedVnode = mountVnode;
 
-    linkedListNode_insertBack(&fsCore->mounted, &mount->node);
+    linkedListNode_insertBack(&fscore->mounted, &mount->node);
 
     FScore* finalFScore = NULL;
     mountPointNode = locate(mountPoint, FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS, &parentDirVnode, &finalFScore);   //Refer 'mountPointNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
@@ -151,14 +151,14 @@ void fsCore_genericMount(FScore* fsCore, fsIdentifier* mountPoint, vNode* mountV
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(fsCore == finalFScore);
+    DEBUG_ASSERT_SILENT(fscore == finalFScore);
     DEBUG_ASSERT_SILENT(mountPointNode->type == FS_ENTRY_TYPE_DIRECTORY);
 
     fsNode_setMount(mountPointNode, mountVnode);
     ERROR_GOTO_IF_ERROR(0);
 
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
         parentDirVnode = NULL;
     }
 
@@ -170,7 +170,7 @@ void fsCore_genericMount(FScore* fsCore, fsIdentifier* mountPoint, vNode* mountV
         }
 
         bool inserted = false;
-        for (LinkedListNode* node = fsCore->mounted.next; node != &fsCore->mounted; node = node->next) {
+        for (LinkedListNode* node = fscore->mounted.next; node != &fscore->mounted; node = node->next) {
             if (&mount->node == node) {
                 inserted = true;
                 break;
@@ -193,11 +193,11 @@ void fsCore_genericMount(FScore* fsCore, fsIdentifier* mountPoint, vNode* mountV
     }
 
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
     }
 }
 
-void fsCore_genericUnmount(FScore* fsCore, fsIdentifier* mountPoint) {
+void fscore_genericUnmount(FScore* fscore, fsIdentifier* mountPoint) {
     //TODO: Lock
     fsNode* mountPointNode = NULL;
     vNode* parentDirVnode = NULL;
@@ -206,7 +206,7 @@ void fsCore_genericUnmount(FScore* fsCore, fsIdentifier* mountPoint) {
     fsIdentifier_getAbsolutePath(mountPoint, &mountPointPath);
     ERROR_GOTO_IF_ERROR(0);
 
-    Mount* mount = fsCore_lookupMount(fsCore, mountPointPath.data);
+    Mount* mount = fscore_lookupMount(fscore, mountPointPath.data);
     DEBUG_ASSERT_SILENT(mount != NULL);
 
     string_clearStruct(&mount->path);
@@ -226,7 +226,7 @@ void fsCore_genericUnmount(FScore* fsCore, fsIdentifier* mountPoint) {
     ERROR_GOTO_IF_ERROR(0);
 
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
         parentDirVnode = NULL;
     }
 
@@ -245,13 +245,13 @@ void fsCore_genericUnmount(FScore* fsCore, fsIdentifier* mountPoint) {
     }
 
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
     }
 }
 
-Mount* fsCore_lookupMount(FScore* fsCore, ConstCstring path) {
+Mount* fscore_lookupMount(FScore* fscore, ConstCstring path) {
     //TODO: Lock
-    for (LinkedListNode* node = fsCore->mounted.next; node != &fsCore->mounted; node = node->next) {
+    for (LinkedListNode* node = fscore->mounted.next; node != &fscore->mounted; node = node->next) {
         Mount* mount = HOST_POINTER(node, Mount, node);
         String* mountPath = &mount->path;
 

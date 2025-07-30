@@ -14,29 +14,29 @@
 #include<structs/refCounter.h>
 #include<error.h>
 
-static fsNode* __devfs_fsCore_getFSnode(FScore* fsCore, ID vnodeID);
+static fsNode* __devfs_fscore_getFSnode(FScore* fscore, ID vnodeID);
 
-static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID);
+static vNode* __devfs_fscore_openVnode(FScore* fscore, ID vnodeID);
 
-static vNode* __devfs_fsCore_openRootVnode(FScore* fsCore);
+static vNode* __devfs_fscore_openRootVnode(FScore* fscore);
 
-static void __devfs_fsCore_closeVnode(FScore* fsCore, vNode* vnode);
+static void __devfs_fscore_closeVnode(FScore* fscore, vNode* vnode);
 
-static void __devfs_fsCore_sync(FScore* fsCore);
+static void __devfs_fscore_sync(FScore* fscore);
 
-static fsEntry* __devfs_fsCore_openFSentry(FScore* fsCore, vNode* vnode, FCNTLopenFlags flags);
+static fsEntry* __devfs_fscore_openFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags);
 
 static ConstCstring __devfs_name = "DEVFS";
-static FScoreOperations __devfs_fsCoreOperations = {
-    .getFSnode      = __devfs_fsCore_getFSnode,
-    .openVnode      = __devfs_fsCore_openVnode,
-    .openRootVnode  = __devfs_fsCore_openRootVnode,
-    .closeVnode     = __devfs_fsCore_closeVnode,
-    .sync           = __devfs_fsCore_sync,
-    .openFSentry    = __devfs_fsCore_openFSentry,
-    .closeFSentry   = fsCore_genericCloseFSentry,
-    .mount          = fsCore_genericMount,
-    .unmount        = fsCore_genericUnmount
+static FScoreOperations __devfs_fscoreOperations = {
+    .getFSnode      = __devfs_fscore_getFSnode,
+    .openVnode      = __devfs_fscore_openVnode,
+    .openRootVnode  = __devfs_fscore_openRootVnode,
+    .closeVnode     = __devfs_fscore_closeVnode,
+    .sync           = __devfs_fscore_sync,
+    .openFSentry    = __devfs_fscore_openFSentry,
+    .closeFSentry   = fscore_genericCloseFSentry,
+    .mount          = fscore_genericMount,
+    .unmount        = fscore_genericUnmount
 };
 
 static fsEntryOperations _devfs_fsEntryOperations = {
@@ -56,7 +56,7 @@ bool devfs_checkType(BlockDevice* blockDevice) {
 }
 
 #define __DEVFS_FSCORE_HASH_BUCKET  31
-#define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((DevfsFScore, 1), (SinglyLinkedList, __DEVFS_FSCORE_HASH_BUCKET))
+#define __DEVFS_BATCH_ALLOCATE_SIZE     BATCH_ALLOCATE_SIZE((Devfscore, 1), (SinglyLinkedList, __DEVFS_FSCORE_HASH_BUCKET))
 
 void devfs_open(FS* fs, BlockDevice* blockDevice) {
     DEBUG_ASSERT_SILENT(blockDevice == NULL);
@@ -73,23 +73,23 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     }
 
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
-        (DevfsFScore, devfsFScore, 1),
+        (Devfscore, devfscore, 1),
         (SinglyLinkedList, openedVnodeChains, __DEVFS_FSCORE_HASH_BUCKET)
     );
 
-    FScore* fsCore = &devfsFScore->fsCore;
-    hashTable_initStruct(&devfsFScore->metadataTable, DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM, devfsFScore->metadataTableChains, hashTable_defaultHashFunc);
+    FScore* fscore = &devfscore->fscore;
+    hashTable_initStruct(&devfscore->metadataTable, DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM, devfscore->metadataTableChains, hashTable_defaultHashFunc);
 
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
-        .operations         = &__devfs_fsCoreOperations,
+        .operations         = &__devfs_fscoreOperations,
         .openedVnodeBucket  = __DEVFS_FSCORE_HASH_BUCKET,
         .openedVnodeChains  = openedVnodeChains
     };
 
-    fsCore_initStruct(fsCore, &args);
+    fscore_initStruct(fscore, &args);
 
-    fs->fsCore = fsCore;
+    fs->fscore = fscore;
     fs->name = __devfs_name;
     fs->type = FS_TYPE_DEVFS;
 
@@ -104,10 +104,10 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
 
 void devfs_close(FS* fs) {
     _devfs_opened = false;
-    mm_free(fs->fsCore);
+    mm_free(fs->fscore);
 }
 
-void devfsFScore_registerMetadata(DevfsFScore* fsCore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
+void devfscore_registerMetadata(Devfscore* fscore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo) {
     DevfsNodeMetadata* metadata = NULL;
     metadata = mm_allocate(sizeof(DevfsNodeMetadata));
     if (metadata == NULL) {
@@ -120,7 +120,7 @@ void devfsFScore_registerMetadata(DevfsFScore* fsCore, ID vnodeID, fsNode* node,
 
     fsNode_refer(node);
 
-    hashTable_insert(&fsCore->metadataTable, vnodeID, &metadata->hashNode);
+    hashTable_insert(&fscore->metadataTable, vnodeID, &metadata->hashNode);
     ERROR_CHECKPOINT({ 
             ERROR_GOTO(0);
         },
@@ -137,8 +137,8 @@ void devfsFScore_registerMetadata(DevfsFScore* fsCore, ID vnodeID, fsNode* node,
     }
 }
 
-void devfsFScore_unregisterMetadata(DevfsFScore* fsCore, ID vnodeID) {
-    HashChainNode* deleted = hashTable_delete(&fsCore->metadataTable, vnodeID);
+void devfscore_unregisterMetadata(Devfscore* fscore, ID vnodeID) {
+    HashChainNode* deleted = hashTable_delete(&fscore->metadataTable, vnodeID);
     if (deleted == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -153,8 +153,8 @@ void devfsFScore_unregisterMetadata(DevfsFScore* fsCore, ID vnodeID) {
     ERROR_FINAL_BEGIN(0);
 }
 
-DevfsNodeMetadata* devfsFScore_getMetadata(DevfsFScore* fsCore, ID vnodeID) {
-    HashChainNode* found = hashTable_find(&fsCore->metadataTable, vnodeID);
+DevfsNodeMetadata* devfscore_getMetadata(Devfscore* fscore, ID vnodeID) {
+    HashChainNode* found = hashTable_find(&fscore->metadataTable, vnodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
@@ -164,9 +164,9 @@ DevfsNodeMetadata* devfsFScore_getMetadata(DevfsFScore* fsCore, ID vnodeID) {
     return NULL;
 }
 
-static fsNode* __devfs_fsCore_getFSnode(FScore* fsCore, ID vnodeID) {
-    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
-    HashChainNode* found = hashTable_find(&devfsFScore->metadataTable, vnodeID);
+static fsNode* __devfs_fscore_getFSnode(FScore* fscore, ID vnodeID) {
+    Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
+    HashChainNode* found = hashTable_find(&devfscore->metadataTable, vnodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
@@ -179,7 +179,7 @@ static fsNode* __devfs_fsCore_getFSnode(FScore* fsCore, ID vnodeID) {
     return NULL;
 }
 
-static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID) {
+static vNode* __devfs_fscore_openVnode(FScore* fscore, ID vnodeID) {
     DevfsVnode* devfsVnode = NULL;
 
     devfsVnode = mm_allocate(sizeof(DevfsVnode));
@@ -188,8 +188,8 @@ static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID) {
         ERROR_GOTO(0);
     }
 
-    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
-    HashChainNode* found = hashTable_find(&devfsFScore->metadataTable, vnodeID);
+    Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
+    HashChainNode* found = hashTable_find(&devfscore->metadataTable, vnodeID);
     if (found == NULL) {
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
@@ -211,7 +211,7 @@ static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID) {
         vnode->deviceID     = (ID)metadata->pointsTo;
     }
 
-    vnode->fsCore       = fsCore;
+    vnode->fscore       = fscore;
     vnode->operations       = devfs_vNode_getOperations();
 
     REF_COUNTER_INIT(vnode->refCounter, 0);
@@ -239,10 +239,10 @@ static vNode* __devfs_fsCore_openVnode(FScore* fsCore, ID vnodeID) {
     return NULL;
 }
 
-static vNode* __devfs_fsCore_openRootVnode(FScore* fsCore) {
+static vNode* __devfs_fscore_openRootVnode(FScore* fscore) {
     DevfsVnode* devfsVnode = NULL;
     
-    ID vnodeID = fsCore_allocateVnodeID(fsCore);
+    ID vnodeID = fscore_allocateVnodeID(fscore);
     fsNode* rootNode = fsNode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, vnodeID);
 
     devfsVnode = mm_allocate(sizeof(DevfsVnode));
@@ -256,7 +256,7 @@ static vNode* __devfs_fsCore_openRootVnode(FScore* fsCore) {
     vnode->vnodeID          = vnodeID;
     vnode->sizeInByte       = 0;
     vnode->sizeInBlock      = 0;
-    vnode->fsCore           = fsCore;
+    vnode->fscore           = fscore;
     vnode->operations       = devfs_vNode_getOperations();
 
     REF_COUNTER_INIT(vnode->refCounter, 0);
@@ -303,7 +303,7 @@ static vNode* __devfs_fsCore_openRootVnode(FScore* fsCore) {
     return NULL;
 }
 
-static void __devfs_fsCore_closeVnode(FScore* fsCore, vNode* vnode) {
+static void __devfs_fscore_closeVnode(FScore* fscore, vNode* vnode) {
     if (REF_COUNTER_DEREFER(vnode->refCounter) != 0) {
         return;
     }
@@ -314,12 +314,12 @@ static void __devfs_fsCore_closeVnode(FScore* fsCore, vNode* vnode) {
     mm_free(devfsVnode);
 }
 
-static void __devfs_fsCore_sync(FScore* fsCore) {
+static void __devfs_fscore_sync(FScore* fscore) {
 
 }
 
-static fsEntry* __devfs_fsCore_openFSentry(FScore* fsCore, vNode* vnode, FCNTLopenFlags flags) {
-    fsEntry* ret = fsCore_genericOpenFSentry(fsCore, vnode, flags);
+static fsEntry* __devfs_fscore_openFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
+    fsEntry* ret = fscore_genericOpenFSentry(fscore, vnode, flags);
     ERROR_GOTO_IF_ERROR(0);
 
     ret->operations = &_devfs_fsEntryOperations;

@@ -74,10 +74,10 @@ void fs_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;
-    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->fsCore->rootVnode, "/dev", true);  //TODO: fails if dev not exist
+    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->fscore->rootVnode, "/dev", true);  //TODO: fails if dev not exist
     ERROR_GOTO_IF_ERROR(0);
 
-    fsCore_rawMount(fs_rootFS->fsCore, &devfsMountPoint, fs_devFS->fsCore->rootVnode, EMPTY_FLAGS);
+    fscore_rawMount(fs_rootFS->fscore, &devfsMountPoint, fs_devFS->fscore->rootVnode, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -111,16 +111,16 @@ void fs_close(FS* fs) {
 
 File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     fsIdentifier identifier;
-    FScore* fsCore = NULL;
+    FScore* fscore = NULL;
     fsNode* parentDirNode = NULL;
     vNode* vnode = NULL, * parentDirVnode = NULL;
     File* ret = NULL;
     String basename;
     
     bool isDirectory = TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY);
-    fsIdentifier_initStruct(&identifier, fs_rootFS->fsCore->rootVnode, path, isDirectory);
+    fsIdentifier_initStruct(&identifier, fs_rootFS->fscore->rootVnode, path, isDirectory);
     ERROR_GOTO_IF_ERROR(0);
-    parentDirNode = locate(&identifier, flags, &parentDirVnode, &fsCore);    //Refer 'parentDirNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
+    parentDirNode = locate(&identifier, flags, &parentDirVnode, &fscore);    //Refer 'parentDirNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
     bool needCreate = false;
     if (parentDirNode == NULL) {
         ERROR_ASSERT_ANY();
@@ -134,7 +134,7 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
             })
         );
     }
-    DEBUG_ASSERT_SILENT(fsCore != NULL);
+    DEBUG_ASSERT_SILENT(fscore != NULL);
 
     if (needCreate) {
         DEBUG_ASSERT_SILENT(parentDirNode == NULL);
@@ -173,15 +173,15 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     DEBUG_ASSERT_SILENT(parentDirNode != NULL);
 
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
     }
     
-    vnode = fsNode_getVnode(parentDirNode, fsCore); //Refer 'parentDirNode' once (if vNode not opened)
+    vnode = fsNode_getVnode(parentDirNode, fscore); //Refer 'parentDirNode' once (if vNode not opened)
     ERROR_GOTO_IF_ERROR(0);
     fsNode_release(parentDirNode);  //Release 'parentDirNode' once (from locate or vNode_lookupDirectoryEntry)
     parentDirNode = NULL;
 
-    ret = fsCore_rawOpenFSentry(fsCore, vnode, flags);
+    ret = fscore_rawOpenFSentry(fscore, vnode, flags);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -201,8 +201,8 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     }
 
     if (ret != NULL) {
-        DEBUG_ASSERT_SILENT(fsCore != NULL);
-        fsCore_rawCloseFSentry(fsCore, ret);
+        DEBUG_ASSERT_SILENT(fscore != NULL);
+        fscore_rawCloseFSentry(fscore, ret);
         ERROR_ASSERT_NONE();
     }
 
@@ -211,12 +211,12 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
     }
 
     if (vnode != NULL) {
-        fsCore_closeVnode(vnode);   //Release 'vnode->fsNode' (parentDirNode) once (if vNode opened)
+        fscore_closeVnode(vnode);   //Release 'vnode->fsNode' (parentDirNode) once (if vNode opened)
         ERROR_ASSERT_NONE();
     }
     
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
         ERROR_ASSERT_NONE();
     }
 
@@ -232,12 +232,12 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
 
 void fs_fileClose(File* file) {
     vNode* vnode = file->vnode;
-    FScore* fsCore = vnode->fsCore;
+    FScore* fscore = vnode->fscore;
 
-    fsCore_rawCloseFSentry(fsCore, file);
+    fscore_rawCloseFSentry(fscore, file);
     ERROR_GOTO_IF_ERROR(0);
 
-    fsCore_rawCloseVnode(fsCore, vnode);
+    fscore_rawCloseVnode(fscore, vnode);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -333,7 +333,7 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
 
 void fs_fileStat(File* file, FS_fileStat* stat) {
     vNode* vnode = file->vnode;
-    FScore* fsCore = vnode->fsCore;
+    FScore* fscore = vnode->fscore;
     
     memory_memset(stat, 0, sizeof(FS_fileStat));
     stat->deviceID = vnode->deviceID;
@@ -363,7 +363,7 @@ void fs_fileStat(File* file, FS_fileStat* stat) {
         stat->rDevice = vnode->deviceID;
     }
     stat->size = vnode->sizeInByte;
-    stat->blockSize = POWER_2(fsCore->blockDevice->device.granularity);
+    stat->blockSize = POWER_2(fscore->blockDevice->device.granularity);
     stat->blocks = vnode->sizeInBlock;
     stat->accessTime.second = vnode->attribute.lastAccessTime;
     stat->modifyTime.second = vnode->attribute.lastModifyTime;

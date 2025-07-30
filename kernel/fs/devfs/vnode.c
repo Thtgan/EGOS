@@ -43,13 +43,13 @@ static vNodeOperations _devfs_vNodeOperations = {
     .renameDirectoryEntry       = __devfs_vNode_renameDirectoryEntry
 };
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Object pointTo, FScore* fsCore) {
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Object pointTo, FScore* fscore) {
     string_initStructStr(&entry->name, name);
     ERROR_GOTO_IF_ERROR(0);
     entry->pointTo  = pointTo;
     entry->size     = type == FS_ENTRY_TYPE_DEVICE ? (Size)-1 : 0;
     entry->type     = type;
-    entry->vnodeID  = fsCore_allocateVnodeID(fsCore);
+    entry->vnodeID  = fscore_allocateVnodeID(fscore);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -154,9 +154,9 @@ static void __devfs_vNode_iterateDirectoryEntries(vNode* vnode, vNodeOperationIt
 
     void* blockBuffer = NULL;
     
-    FScore* fsCore = vnode->fsCore;
-    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
-    BlockDevice* targetBlockDevice = fsCore->blockDevice;
+    FScore* fscore = vnode->fscore;
+    Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
+    BlockDevice* targetBlockDevice = fscore->blockDevice;
     Device* device = &targetBlockDevice->device;
     Size blockSize = POWER_2(device->granularity);
     
@@ -173,7 +173,7 @@ static void __devfs_vNode_iterateDirectoryEntries(vNode* vnode, vNodeOperationIt
         vNode_rawReadData(vnode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
         ERROR_GOTO_IF_ERROR(0);
 
-        DevfsNodeMetadata* metadata = devfsFScore_getMetadata(devfsFScore, devfsDirectoryEntry.vnodeID);
+        DevfsNodeMetadata* metadata = devfscore_getMetadata(devfscore, devfsDirectoryEntry.vnodeID);
         if (metadata == NULL) {
             ERROR_ASSERT_ANY();
             ERROR_CLEAR();
@@ -215,8 +215,8 @@ static void __devfs_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsE
 
     fsNode* node = NULL;
     
-    FScore* fsCore = vnode->fsCore;
-    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
+    FScore* fscore = vnode->fscore;
+    Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
 
     Size currentPointer = 0;
     DevfsDirectoryEntry devfsDirectoryEntry;
@@ -234,7 +234,7 @@ static void __devfs_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsE
     
     bool isRealData = (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY);
     Object pointTo = isRealData ? (Object)NULL : (Object)deviceID;
-    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, name, type, pointTo, fsCore);
+    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, name, type, pointTo, fscore);
 
     vNode_rawResize(vnode, vnode->sizeInByte + sizeof(DevfsDirectoryEntry));
     ERROR_GOTO_IF_ERROR(0);
@@ -248,7 +248,7 @@ static void __devfs_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsE
         ERROR_GOTO(0);
     }
 
-    devfsFScore_registerMetadata(devfsFScore, devfsDirectoryEntry.vnodeID, node, isRealData ? 0 : INFINITE, pointTo);
+    devfscore_registerMetadata(devfscore, devfsDirectoryEntry.vnodeID, node, isRealData ? 0 : INFINITE, pointTo);
     ERROR_GOTO_IF_ERROR(0);
     node = NULL;
 
@@ -264,8 +264,8 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
 
     void* remainingData = NULL;
     
-    FScore* fsCore = vnode->fsCore;
-    DevfsFScore* devfsFScore = HOST_POINTER(fsCore, DevfsFScore, fsCore);
+    FScore* fscore = vnode->fscore;
+    Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
 
     Size currentPointer = 0;
     bool found = false;
@@ -286,7 +286,7 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
-    devfsFScore_unregisterMetadata(devfsFScore, devfsDirectoryEntry.vnodeID);
+    devfscore_unregisterMetadata(devfscore, devfsDirectoryEntry.vnodeID);
     ERROR_GOTO_IF_ERROR(0);
 
     if (currentPointer + sizeof(DevfsDirectoryEntry) < vnode->sizeInByte) {

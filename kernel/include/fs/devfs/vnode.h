@@ -26,7 +26,7 @@ typedef struct DevfsDirectoryEntry {
 
 DEBUG_ASSERT_COMPILE(sizeof(DevfsDirectoryEntry) == 64);
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Object pointTo, FScore* fsCore);
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Object pointTo, FScore* fscore);
 
 vNodeOperations* devfs_vNode_getOperations();
 

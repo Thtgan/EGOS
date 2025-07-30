@@ -1,7 +1,7 @@
 #if !defined(__FS_DEVFS_DEVFS_H)
 #define __FS_DEVFS_DEVFS_H
 
-typedef struct DevfsFScore DevfsFScore;
+typedef struct Devfscore Devfscore;
 typedef struct DevfsNodeMetadata DevfsNodeMetadata;
 
 #include<devices/blockDevice.h>
@@ -12,12 +12,12 @@ typedef struct DevfsNodeMetadata DevfsNodeMetadata;
 #include<kit/types.h>
 #include<structs/hashTable.h>
 
-typedef struct DevfsFScore {
-    FScore              fsCore;
+typedef struct Devfscore {
+    FScore              fscore;
     HashTable           metadataTable;
 #define DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM  31
     SinglyLinkedList    metadataTableChains[DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM];
-} DevfsFScore;
+} Devfscore;
 
 typedef struct DevfsNodeMetadata {
     HashChainNode   hashNode;
@@ -34,10 +34,10 @@ void devfs_open(FS* fs, BlockDevice* blockDevice);
 
 void devfs_close(FS* fs);
 
-void devfsFScore_registerMetadata(DevfsFScore* fsCore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo);
+void devfscore_registerMetadata(Devfscore* fscore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo);
 
-void devfsFScore_unregisterMetadata(DevfsFScore* fsCore, ID vnodeID);
+void devfscore_unregisterMetadata(Devfscore* fscore, ID vnodeID);
 
-DevfsNodeMetadata* devfsFScore_getMetadata(DevfsFScore* fsCore, ID vnodeID);
+DevfsNodeMetadata* devfscore_getMetadata(Devfscore* fscore, ID vnodeID);
 
 #endif // __FS_DEVFS_DEVFS_H

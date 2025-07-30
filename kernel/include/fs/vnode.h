@@ -29,7 +29,7 @@ typedef struct vNode {
     ID                      vnodeID;
     Size                    sizeInBlock;
     Size                    sizeInByte;
-    FScore*                 fsCore;
+    FScore*                 fscore;
     vNodeOperations*        operations;
 
     RefCounter32            refCounter;

@@ -110,12 +110,12 @@ void fsNode_release(fsNode* node) {
     }
 }
 
-vNode* fsNode_getVnode(fsNode* node, FScore* fsCore) {
+vNode* fsNode_getVnode(fsNode* node, FScore* fscore) {
     if (node->mountOverwrite != NULL) {
         return node->mountOverwrite;
     }
 
-    vNode* ret = fsCore_openVnode(fsCore, node->vnodeID);
+    vNode* ret = fscore_openVnode(fscore, node->vnodeID);
     ERROR_GOTO_IF_ERROR(0);
     
     return ret;

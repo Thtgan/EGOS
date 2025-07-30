@@ -12,7 +12,7 @@
 #include<debug.h>
 #include<error.h>
 
-static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags);
+static fsNode* locate_local(FScore* fscore, vNode* baseVnode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags);
 
 fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDirVnodeOut, FScore** finalFScoreOut) {
     DEBUG_ASSERT_SILENT(parentDirVnodeOut != NULL);
@@ -43,12 +43,12 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDir
         fsNode_refer(ret);  //Refer 'ret' once
 
         *parentDirVnodeOut = NULL;
-        *finalFScoreOut = identifier->baseVnode->fsCore;
+        *finalFScoreOut = identifier->baseVnode->fscore;
     } else {
         vNode* currentBaseVnode = identifier->baseVnode;
-        FScore* currentFScore = currentBaseVnode->fsCore;
+        FScore* currentFScore = currentBaseVnode->fscore;
         while (true) {
-            Mount* relayMount = fsCore_lookupMount(currentFScore, localAbsoluteDirPath.data);
+            Mount* relayMount = fscore_lookupMount(currentFScore, localAbsoluteDirPath.data);
             if (relayMount == NULL) {
                 break;
             }
@@ -60,7 +60,7 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDir
             ERROR_GOTO_IF_ERROR(0);
             path_join(&localAbsoluteDirPath, &localAbsoluteDirPath, &dirPathFromBase);
             ERROR_GOTO_IF_ERROR(0);
-            currentFScore = currentBaseVnode->fsCore;
+            currentFScore = currentBaseVnode->fscore;
         }
 
         fsNode* parentDirNode = locate_local(currentFScore, currentBaseVnode, &localAbsoluteDirPath, identifier->isDirectory, flags);    //Refer 'parentDirNode' once
@@ -73,7 +73,7 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDir
         ERROR_GOTO_IF_ERROR(0);
         
         if (ret->mountOverwrite != NULL) {
-            currentFScore = ret->mountOverwrite->fsCore;
+            currentFScore = ret->mountOverwrite->fscore;
         }
 
         *parentDirVnodeOut = parentDirVnode;
@@ -99,7 +99,7 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDir
     }
 
     if (parentDirVnode != NULL) {
-        fsCore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' (parentDirNode) once (if vNode opened)
+        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' (parentDirNode) once (if vNode opened)
     }
 
     if (ret != NULL) {
@@ -109,7 +109,7 @@ fsNode* locate(fsIdentifier* identifier, FCNTLopenFlags flags, vNode** parentDir
     return NULL;
 }
 
-static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags) {
+static fsNode* locate_local(FScore* fscore, vNode* baseVnode, String* pathFromBase, bool isDirectory, FCNTLopenFlags flags) {
     Index64 currentIndex = 0;
     String walked;
     fsNode* currentNode = NULL;
@@ -137,7 +137,7 @@ static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBa
 
         ERROR_GOTO_IF_ERROR(0);
         if (currentVnode != baseVnode) {
-            fsCore_closeVnode(currentVnode);    //Release 'currentVnode->fsNode' (currentNode from last round) once (if vNode opened in last round)
+            fscore_closeVnode(currentVnode);    //Release 'currentVnode->fsNode' (currentNode from last round) once (if vNode opened in last round)
             ERROR_GOTO_IF_ERROR(0);
             currentVnode = NULL;
         }
@@ -146,7 +146,7 @@ static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBa
             break;
         }
 
-        currentVnode = fsNode_getVnode(currentNode, fsCore);    //Refer 'currentNode' once (if vNode not opened)
+        currentVnode = fsNode_getVnode(currentNode, fscore);    //Refer 'currentNode' once (if vNode not opened)
         fsNode_release(currentNode);    //Release 'currentNode' once (from vNode_lookupDirectoryEntry)
         currentNode = NULL;
         ERROR_GOTO_IF_ERROR(0);
@@ -163,7 +163,7 @@ static fsNode* locate_local(FScore* fsCore, vNode* baseVnode, String* pathFromBa
     }
 
     if (currentVnode != baseVnode && currentVnode != NULL) {
-        fsCore_closeVnode(currentVnode);
+        fscore_closeVnode(currentVnode);
     }
     
     return NULL;

@@ -253,7 +253,7 @@ static void printLOGO() {
     print_printf("%lu\n", stat.accessTime.second);
     print_printf("%lu\n", stat.modifyTime.second);
 
-    BlockDevice* device = file->vnode->fsCore->blockDevice;
+    BlockDevice* device = file->vnode->fscore->blockDevice;
     fs_fileClose(file);
     ERROR_CHECKPOINT();
     blockDevice_flush(device);

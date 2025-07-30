@@ -41,7 +41,7 @@ typedef struct FS_fileStat FS_fileStat;
  */
 
 typedef struct FS {
-    FScore*         fsCore;
+    FScore*         fscore;
     ConstCstring    name;
     FStype          type;
 } FS;

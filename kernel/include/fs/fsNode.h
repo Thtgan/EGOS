@@ -38,7 +38,7 @@ static inline void fsNode_refer(fsNode* node) {    //Only for vnode openging
     REF_COUNTER_REFER(node->refCounter);
 }
 
-vNode* fsNode_getVnode(fsNode* node, FScore* fsCore);
+vNode* fsNode_getVnode(fsNode* node, FScore* fscore);
 
 void fsNode_setMount(fsNode* node, vNode* mountVnode);
 

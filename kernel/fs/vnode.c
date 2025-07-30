@@ -108,7 +108,7 @@ static bool __vNode_lookupIterateFunc(vNode* vnode, DirectoryEntry* entry, Objec
         return false;
     }
 
-    *nodeRet = fsCore_getFSnode(vnode->fsCore, entry->vnodeID); //Refer '*nodeRet' once
+    *nodeRet = fscore_getFSnode(vnode->fscore, entry->vnodeID); //Refer '*nodeRet' once
     if (*nodeRet == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
