@@ -3,6 +3,7 @@
 #include<devices/blockDevice.h>
 #include<devices/memoryBlockDevice.h>
 #include<fs/devfs/devfs.h>
+#include<fs/ext2/ext2.h>
 #include<fs/fat32/fat32.h>
 #include<fs/fsEntry.h>
 #include<fs/fsIdentifier.h>
@@ -13,9 +14,10 @@
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<structs/hashTable.h>
+#include<cstring.h>
 #include<error.h>
 
-FS* fs_rootFS = NULL, * fs_devFS = NULL;
+FS* fs_rootFS = NULL, * fs_devFS = NULL, * fs_ext2;
 
 typedef struct {
     void  (*init)();
@@ -30,6 +32,12 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
         .checkType  = fat32_checkType,
         .open       = fat32_open,
         .close      = fat32_close
+    },
+    [FS_TYPE_EXT2] = {
+        .init       = ext2_init,
+        .checkType  = ext2_checkType,
+        .open       = ext2_open,
+        .close      = ext2_close
     },
     [FS_TYPE_DEVFS] = {
         .init       = devfs_init,
@@ -61,6 +69,35 @@ void fs_init() {
     fs_open(fs_rootFS, blockDevice_bootFromDevice);
     ERROR_GOTO_IF_ERROR(0);
 
+    //Begin of ext2 test code
+    MajorDeviceID storageMajor = DEVICE_MAJOR_FROM_ID(blockDevice_bootFromDevice->device.id);
+    MinorDeviceID storageMinor = DEVICE_INVALID_ID;
+    Device* device = NULL;
+    while ((device = device_iterateMinor(storageMajor, storageMinor)) != NULL) {
+        if (cstring_strcmp(device->name, "HDB") == 0) {
+            break;
+        }
+        storageMinor = DEVICE_MINOR_FROM_ID(device->id);
+    }
+    if (device == NULL) {
+        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
+    }
+
+    BlockDevice* ext2Device = HOST_POINTER(device, BlockDevice, device);
+    _supports[FS_TYPE_EXT2].init();
+    DEBUG_ASSERT_SILENT(fs_checkType(ext2Device) == FS_TYPE_EXT2);
+
+    fs_ext2 = mm_allocate(sizeof(FS));
+    if (fs_ext2 == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    fs_open(fs_ext2, ext2Device);
+    ERROR_GOTO_IF_ERROR(0);
+
+    //End of ext2 test code
+
     _supports[FS_TYPE_DEVFS].init();
     ERROR_GOTO_IF_ERROR(0);
 
@@ -84,6 +121,10 @@ void fs_init() {
     ERROR_FINAL_BEGIN(0);
     if (fs_rootFS != NULL) {
         mm_free(fs_rootFS);
+    }
+
+    if (fs_ext2 != NULL) {
+        mm_free(fs_ext2);
     }
 
     if (fs_devFS != NULL) {

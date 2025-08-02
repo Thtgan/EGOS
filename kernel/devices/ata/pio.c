@@ -7,6 +7,7 @@
 void ata_pio_readData(ATAdevice* device, ATAcommand* command, void* buffer) {
     ATAchannel* channel = device->channel;
     Uint16 portBase = channel->portBase;
+    ata_channel_selectDevice(channel, device != channel->devices[0]);
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
         ERROR_THROW(ERROR_ID_IO_FAILED, 0);
     }

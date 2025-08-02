@@ -3,6 +3,7 @@
 
 typedef enum {
     FS_TYPE_FAT32,
+    FS_TYPE_EXT2,
     FS_TYPE_DEVFS,
     FS_TYPE_NUM,
     FS_TYPE_UNKNOWN
