@@ -59,7 +59,7 @@ vNodeOperations* fat32_vNode_getOperations() {
 }
 
 Size fat32_vNode_touchDirectory(vNode* vnode) {
-    DEBUG_ASSERT_SILENT(vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY && !HOST_POINTER(vnode, FAT32Vnode, vnode)->isTouched);
+    DEBUG_ASSERT_SILENT(vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY && !HOST_POINTER(vnode, FAT32vnode, vnode)->isTouched);
     
     void* clusterBuffer = NULL, * entriesBuffer = NULL;
     
@@ -205,7 +205,7 @@ static void __fat32_vNode_doReadData(vNode* vnode, Index64 begin, void* buffer, 
     FAT32fscore* fat32fscore = HOST_POINTER(fscore, FAT32fscore, fscore);
     
     fsNode* node = vnode->fsNode;
-    FAT32Vnode* fat32Vnode = HOST_POINTER(vnode, FAT32Vnode, vnode);
+    FAT32vnode* fat32vnode = HOST_POINTER(vnode, FAT32vnode, vnode);
 
     BlockDevice* targetBlockDevice = fscore->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
@@ -216,7 +216,7 @@ static void __fat32_vNode_doReadData(vNode* vnode, Index64 begin, void* buffer, 
     FAT32BPB* BPB = fat32fscore->BPB;
     Size clusterSize = POWER_2(targetDevice->granularity) * BPB->sectorPerCluster;
 
-    Index32 currentClusterIndex = fat32_getCluster(fat32fscore, fat32Vnode->firstCluster, begin / clusterSize);
+    Index32 currentClusterIndex = fat32_getCluster(fat32fscore, fat32vnode->firstCluster, begin / clusterSize);
     if (currentClusterIndex == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -278,7 +278,7 @@ static void __fat32_vNode_doWriteData(vNode* vnode, Index64 begin, const void* b
     FAT32fscore* fat32fscore = HOST_POINTER(fscore, FAT32fscore, fscore);
     
     fsNode* node = vnode->fsNode;
-    FAT32Vnode* fat32Vnode = HOST_POINTER(vnode, FAT32Vnode, vnode);
+    FAT32vnode* fat32vnode = HOST_POINTER(vnode, FAT32vnode, vnode);
 
     BlockDevice* targetBlockDevice = fscore->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
@@ -289,7 +289,7 @@ static void __fat32_vNode_doWriteData(vNode* vnode, Index64 begin, const void* b
     FAT32BPB* BPB = fat32fscore->BPB;
     Size clusterSize = POWER_2(targetDevice->granularity) * BPB->sectorPerCluster;
 
-    Index32 currentClusterIndex = fat32_getCluster(fat32fscore, fat32Vnode->firstCluster, begin / clusterSize);
+    Index32 currentClusterIndex = fat32_getCluster(fat32fscore, fat32vnode->firstCluster, begin / clusterSize);
     if (currentClusterIndex == INVALID_INDEX32) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -362,7 +362,7 @@ static void __fat32_vNode_resize(vNode* vnode, Size newSizeInByte) {
     FAT32fscore* fat32fscore = HOST_POINTER(vnode->fscore, FAT32fscore, fscore);
     FAT32BPB* BPB = fat32fscore->BPB;
     Device* fscoreDevice = &vnode->fscore->blockDevice->device;
-    FAT32Vnode* fat32Vnode = HOST_POINTER(vnode, FAT32Vnode, vnode);
+    FAT32vnode* fat32vnode = HOST_POINTER(vnode, FAT32vnode, vnode);
 
     Size newSizeInCluster = DIVIDE_ROUND_UP(DIVIDE_ROUND_UP_SHIFT(newSizeInByte, fscoreDevice->granularity), BPB->sectorPerCluster), oldSizeInCluster = DIVIDE_ROUND_UP(vnode->sizeInBlock, BPB->sectorPerCluster);
     if (newSizeInByte == 0) {
@@ -370,7 +370,7 @@ static void __fat32_vNode_resize(vNode* vnode, Size newSizeInByte) {
     }
     
     if (newSizeInCluster < oldSizeInCluster) {
-        Index32 tail = fat32_getCluster(fat32fscore, fat32Vnode->firstCluster, newSizeInCluster - 1);
+        Index32 tail = fat32_getCluster(fat32fscore, fat32vnode->firstCluster, newSizeInCluster - 1);
         if (tail == INVALID_INDEX32) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
@@ -385,7 +385,7 @@ static void __fat32_vNode_resize(vNode* vnode, Size newSizeInByte) {
             ERROR_GOTO(0);
         }
 
-        Index32 tail = fat32_getCluster(fat32fscore, fat32Vnode->firstCluster, oldSizeInCluster - 1);
+        Index32 tail = fat32_getCluster(fat32fscore, fat32vnode->firstCluster, oldSizeInCluster - 1);
         if (freeClusterChain == INVALID_INDEX32) {
             ERROR_ASSERT_ANY();
             ERROR_GOTO(0);
