@@ -19,7 +19,7 @@ bool directoryEntry_isMatch(DirectoryEntry* entry1, DirectoryEntry* entry2, bool
         }
     }
 
-    if (entry1->vnodeID != DIRECTORY_ENTRY_INDOE_ID_ANY && entry2->vnodeID != DIRECTORY_ENTRY_INDOE_ID_ANY && entry1->vnodeID != entry2->vnodeID) {
+    if (entry1->vnodeID != DIRECTORY_ENTRY_VNDOE_ID_ANY && entry2->vnodeID != DIRECTORY_ENTRY_VNDOE_ID_ANY && entry1->vnodeID != entry2->vnodeID) {
         return false;
     }
 

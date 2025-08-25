@@ -12,7 +12,7 @@ typedef struct DirectoryEntry {
     ConstCstring name;
 #define DIRECTORY_ENTRY_TYPE_ANY        ((fsEntryType)-1)
     fsEntryType type;
-#define DIRECTORY_ENTRY_INDOE_ID_ANY    ((ID)-1)
+#define DIRECTORY_ENTRY_VNDOE_ID_ANY    ((ID)-1)
     ID vnodeID;
 #define DIRECTORY_ENTRY_SIZE_ANY        ((Size)-1)
     Size size;
