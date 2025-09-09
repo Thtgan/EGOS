@@ -26,7 +26,7 @@ void fsIdentifier_getAbsolutePath(fsIdentifier* identifier, String* pathOut) {
     DEBUG_ASSERT_SILENT(string_isAvailable(pathOut));
     string_clear(pathOut);
 
-    fsNode_getAbsolutePath(identifier->baseVnode->fsNode, pathOut);
+    fsnode_getAbsolutePath(identifier->baseVnode->fsNode, pathOut);
     ERROR_GOTO_IF_ERROR(0);
     path_join(pathOut, pathOut, &identifier->path);
     ERROR_GOTO_IF_ERROR(0);

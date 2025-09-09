@@ -9,32 +9,24 @@ typedef struct Mount Mount;
 #include<devices/blockDevice.h>
 #include<fs/fcntl.h>
 #include<fs/fsEntry.h>
+#include<fs/fsIdentifier.h>
+#include<fs/fsNode.h>
 #include<fs/vnode.h>
+#include<kit/atomic.h>
 #include<kit/types.h>
-#include<structs/hashTable.h>
+#include<structs/RBtree.h>
 #include<structs/string.h>
 
-#include<kit/atomic.h>
-#include<fs/fsNode.h>
-#include<fs/fsIdentifier.h>
-
 typedef struct FScore {
-    BlockDevice*            blockDevice;
+    BlockDevice*        blockDevice;
     FScoreOperations*   operations;
 
-    vNode*                  rootVnode;
-
-    HashTable               openedVnode;
-    LinkedList              mounted;
-
-    ID                      nextVnodeID;
+    fsNode*             rootFSnode;
+    LinkedList          mounted;
 } FScore;
 
 typedef struct FScoreOperations {
-    fsNode* (*getFSnode)(FScore* fscore, ID vnodeID);
-
-    vNode* (*openVnode)(FScore* fscore, ID vnodeID);
-    vNode* (*openRootVnode)(FScore* fscore);
+    vNode* (*openVnode)(FScore* fscore, fsNode* node);
     void (*closeVnode)(FScore* fscore, vNode* vnode);
 
     void (*sync)(FScore* fscore);
@@ -47,10 +39,9 @@ typedef struct FScoreOperations {
 } FScoreOperations;
 
 typedef struct FScoreInitArgs {
-    BlockDevice*            blockDevice;
+    BlockDevice*        blockDevice;
     FScoreOperations*   operations;
-    Size                    openedVnodeBucket;
-    SinglyLinkedList*       openedVnodeChains;
+    Index64             rootFSnodePosition;
 } FScoreInitArgs;
 
 //Stands for a mount instance in directory
@@ -60,16 +51,8 @@ typedef struct Mount {
     vNode*          mountedVnode;
 } Mount;
 
-static inline fsNode* fscore_rawGetFSnode(FScore* fscore, ID vnodeID) {
-    return fscore->operations->getFSnode(fscore, vnodeID);
-}
-
-static inline vNode* fscore_rawOpenVnode(FScore* fscore, ID vnodeID) {
-    return fscore->operations->openVnode(fscore, vnodeID);
-}
-
-static inline vNode* fscore_rawOpenRootVnode(FScore* fscore) {
-    return fscore->operations->openRootVnode(fscore);
+static inline vNode* fscore_rawOpenVnode(FScore* fscore, fsNode* node) {
+    return fscore->operations->openVnode(fscore, node);
 }
 
 static inline void fscore_rawCloseVnode(FScore* fscore, vNode* vnode) {
@@ -98,13 +81,13 @@ static inline void fscore_rawUnmount(FScore* fscore, fsIdentifier* mountPoint) {
 
 void fscore_initStruct(FScore* fscore, FScoreInitArgs* args);
 
-ID fscore_allocateVnodeID(FScore* fscore);
+fsNode* fscore_getFSnode(FScore* fscore, fsIdentifier* identifier, FScore** finalFScoreOut, bool followMount);
 
-fsNode* fscore_getFSnode(FScore* fscore, ID vnodeID);
+void fscore_releaseFSnode(fsNode* node);
 
-vNode* fscore_openVnode(FScore* fscore, ID vnodeID);
+vNode* fscore_getVnode(FScore* fscore, fsNode* node, bool followMount);
 
-void fscore_closeVnode(vNode* vnode);
+void fscore_releaseVnode(vNode* vnode);
 
 fsEntry* fscore_genericOpenFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags);
 

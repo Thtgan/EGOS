@@ -5,7 +5,7 @@
 #include<fs/fs.h>
 #include<fs/fsEntry.h>
 #include<fs/fsNode.h>
-#include<fs/locate.h>
+#include<fs/path.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -17,92 +17,140 @@
 #include<structs/string.h>
 #include<error.h>
 
+static fsNode* __fscore_getLocalFSnode(FScore* fscore, fsNode* baseNode, String* pathFromBase, bool isDirectory);
+
 void fscore_initStruct(FScore* fscore, FScoreInitArgs* args) {
     ERROR_ASSERT_NONE();
     fscore->blockDevice     = args->blockDevice;
     fscore->operations      = args->operations;
-    fscore->rootVnode       = NULL;
-    hashTable_initStruct(&fscore->openedVnode, args->openedVnodeBucket, args->openedVnodeChains, hashTable_defaultHashFunc);
+    fscore->rootFSnode      = fsnode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, args->rootFSnodePosition);
     linkedList_initStruct(&fscore->mounted);
-    fscore->nextVnodeID     = 0;
-    
-    vNode* rootVnode = fscore_rawOpenRootVnode(fscore);
-    if (rootVnode == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-    fscore->rootVnode       = rootVnode;
-    hashTable_insert(&fscore->openedVnode, rootVnode->vnodeID, &rootVnode->openedNode);
-    ERROR_ASSERT_NONE();
+
+    fsnode_requestVnode(fscore, fscore->rootFSnode);
+
+    // fscore->nextVnodeID = 0;
 
     return;
     ERROR_FINAL_BEGIN(0);
 }
 
-ID fscore_allocateVnodeID(FScore* fscore) {
-    ID ret = ATOMIC_FETCH_INC(&fscore->nextVnodeID);
-    DEBUG_ASSERT(ret != INVALID_ID, "vNode allocation overflow\n");
-    return ret;
-}
+// ID fscore_allocateVnodeID(FScore* fscore) {
+//     ID ret = ATOMIC_FETCH_INC(&fscore->nextVnodeID);
+//     DEBUG_ASSERT(ret != INVALID_ID, "vNode allocation overflow\n");
+//     return ret;
+// }
 
-fsNode* fscore_getFSnode(FScore* fscore, ID vnodeID) {
+fsNode* fscore_getFSnode(FScore* fscore, fsIdentifier* identifier, FScore** finalFScoreOut, bool followMount) {
+    DEBUG_ASSERT_SILENT(finalFScoreOut != NULL);
+
+    String localAbsoluteDirPath, dirPathFromBase, basename;
     fsNode* ret = NULL;
-    HashChainNode* found = hashTable_find(&fscore->openedVnode, (Object)vnodeID);
-    if (found != NULL) {
-        ret = HOST_POINTER(found, vNode, openedNode)->fsNode;
-        fsNode_refer(ret);  //Refer 'ret' once
+    vNode* parentDirVnode = NULL;
+
+    string_initStruct(&localAbsoluteDirPath);
+    ERROR_GOTO_IF_ERROR(0);
+    string_initStruct(&dirPathFromBase);
+    ERROR_GOTO_IF_ERROR(0);
+    string_initStruct(&basename);
+    ERROR_GOTO_IF_ERROR(0);
+
+    fsIdentifier_getAbsolutePath(identifier, &localAbsoluteDirPath);
+    ERROR_GOTO_IF_ERROR(0);
+    path_basename(&localAbsoluteDirPath, &basename);
+    ERROR_GOTO_IF_ERROR(0);
+    path_dirname(&localAbsoluteDirPath, &localAbsoluteDirPath);
+    ERROR_GOTO_IF_ERROR(0);
+
+    if (basename.length == 0) { //Identifier points to root
+        DEBUG_ASSERT_SILENT(localAbsoluteDirPath.length == 0 || (localAbsoluteDirPath.length == 1 && localAbsoluteDirPath.data[0] == PATH_SEPERATOR));
+        ret = identifier->baseVnode->fsNode;
+        fsnode_refer(ret);  //Refer 'ret' once
+
+        *finalFScoreOut = fscore;
     } else {
-        ret = fscore_rawGetFSnode(fscore, vnodeID); //Refer 'ret' once
-        ERROR_GOTO_IF_ERROR(0);
-    }
-
-    return ret;
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
-}
-
-vNode* fscore_openVnode(FScore* fscore, ID vnodeID) {
-    //TODO: Lock
-    vNode* ret = NULL;
-    HashChainNode* found = hashTable_find(&fscore->openedVnode, (Object)vnodeID);
-    if (found != NULL) {
-        ret = HOST_POINTER(found, vNode, openedNode);
-    } else {
-        ret = fscore_rawOpenVnode(fscore, vnodeID);
-        ERROR_GOTO_IF_ERROR(0);
-        hashTable_insert(&fscore->openedVnode, vnodeID, &ret->openedNode);
-        ERROR_ASSERT_NONE();
-    }
-    REF_COUNTER_REFER(ret->refCounter);
-    ret->fsNode->isVnodeActive = true;  //TODO: Ugly code
-    fsNode_refer(ret->fsNode);  //Refer 'node' once
-
-    return ret;
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
-}
-
-void fscore_closeVnode(vNode* vnode) {
-    //TODO: Lock
-    DEBUG_ASSERT_SILENT(vnode->fscore != NULL);
-
-    FScore* fscore = vnode->fscore;
-    if (REF_COUNTER_DEREFER(vnode->refCounter) == 0) {
-        fsNode* node = vnode->fsNode;
-        HashChainNode* deleted = hashTable_delete(&fscore->openedVnode, vnode->vnodeID);
-        if (deleted == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        vNode* currentBaseVnode = identifier->baseVnode;
+        FScore* currentFScore = fscore;
         
-        fscore_rawCloseVnode(fscore, vnode);
+        if (followMount) {
+            while (true) {
+                Mount* relayMount = fscore_lookupMount(currentFScore, localAbsoluteDirPath.data);
+                if (relayMount == NULL) {
+                    break;
+                }
+        
+                currentBaseVnode = relayMount->mountedVnode;
+                string_slice(&dirPathFromBase, &localAbsoluteDirPath, relayMount->path.length, localAbsoluteDirPath.length);
+                ERROR_GOTO_IF_ERROR(0);
+                fsnode_getAbsolutePath(currentBaseVnode->fsNode, &localAbsoluteDirPath);
+                ERROR_GOTO_IF_ERROR(0);
+                path_join(&localAbsoluteDirPath, &localAbsoluteDirPath, &dirPathFromBase);
+                ERROR_GOTO_IF_ERROR(0);
+                currentFScore = currentBaseVnode->fscore;
+            }
+        }
+
+        fsNode* parentNode = __fscore_getLocalFSnode(currentFScore, currentBaseVnode->fsNode, &localAbsoluteDirPath, identifier->isDirectory);   //Refer 'ret' once
         ERROR_GOTO_IF_ERROR(0);
-        node->isVnodeActive = false;    //TODO: Ugly code
-        fsNode_release(node);   //Release 'node' once (from openVnode)
+
+        fsnode_requestVnode(currentFScore, parentNode);
+        
+        ret = fsnode_lookup(parentNode, basename.data, identifier->isDirectory, true);
+
+        fsnode_releaseVnode(currentFScore, parentNode);
+
+        *finalFScoreOut = currentFScore;
     }
 
-    return;
+    string_clearStruct(&basename);
+    string_clearStruct(&dirPathFromBase);
+    string_clearStruct(&localAbsoluteDirPath);
+
+    return ret;
     ERROR_FINAL_BEGIN(0);
+    if (string_isAvailable(&dirPathFromBase)) {
+        string_clearStruct(&dirPathFromBase);
+    }
+
+    if (string_isAvailable(&basename)) {
+        string_clearStruct(&basename);
+    }
+
+    if (string_isAvailable(&localAbsoluteDirPath)) {
+        string_clearStruct(&localAbsoluteDirPath);
+    }
+
+    if (parentDirVnode != NULL) {
+        fscore_releaseVnode(parentDirVnode);    //Release 'parentDirVnode->fsNode' (parentDirNode) once (if vNode opened)
+    }
+
+    if (ret != NULL) {
+        fsnode_derefer(ret);    //Release 'ret' once (from root or __fscore_getLocalFSnode)
+    }
+
+    return NULL;
+}
+
+void fscore_releaseFSnode(fsNode* node) {
+    fsnode_derefer(node);
+}
+
+vNode* fscore_getVnode(FScore* fscore, fsNode* node, bool followMount) {
+    if (node->mount != NULL && followMount) {
+        vNode* ret = node->mount;
+        fsnode_requestVnode(ret->fscore, ret->fsNode);
+        return ret;
+    }
+
+    fsnode_requestVnode(fscore, node);
+    ERROR_GOTO_IF_ERROR(0);
+
+    return node->vnode;
+    ERROR_FINAL_BEGIN(0);
+    return NULL;
+}
+
+void fscore_releaseVnode(vNode* vnode) {
+    fsnode_releaseVnode(vnode->fscore, vnode->fsNode);
 }
 
 fsEntry* fscore_genericOpenFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
@@ -130,7 +178,6 @@ void fscore_genericMount(FScore* fscore, fsIdentifier* mountPoint, vNode* mountV
     //TODO: flags not used yet
     //TODO: Lock
     fsNode* mountPointNode = NULL;
-    vNode* parentDirVnode = NULL;
     Mount* mount = mm_allocate(sizeof(Mount));
     if (mount == NULL) {
         ERROR_ASSERT_ANY();
@@ -146,7 +193,7 @@ void fscore_genericMount(FScore* fscore, fsIdentifier* mountPoint, vNode* mountV
     linkedListNode_insertBack(&fscore->mounted, &mount->node);
 
     FScore* finalFScore = NULL;
-    mountPointNode = locate(mountPoint, FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS, &parentDirVnode, &finalFScore);   //Refer 'mountPointNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
+    mountPointNode = fscore_getFSnode(fscore, mountPoint, &finalFScore, false); //Refer 'mountPointNode' once (if found)
     if (mountPointNode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -154,13 +201,10 @@ void fscore_genericMount(FScore* fscore, fsIdentifier* mountPoint, vNode* mountV
     DEBUG_ASSERT_SILENT(fscore == finalFScore);
     DEBUG_ASSERT_SILENT(mountPointNode->type == FS_ENTRY_TYPE_DIRECTORY);
 
-    fsNode_setMount(mountPointNode, mountVnode);
+    fsnode_setMount(mountPointNode, mountVnode);
     ERROR_GOTO_IF_ERROR(0);
 
-    if (parentDirVnode != NULL) {
-        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
-        parentDirVnode = NULL;
-    }
+    fscore_releaseFSnode(mountPointNode);   //Release 'mountPointNode' once (from fscore_getFSnode)
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -181,26 +225,21 @@ void fscore_genericMount(FScore* fscore, fsIdentifier* mountPoint, vNode* mountV
             linkedListNode_delete(&mount->node);
         }
 
-        if (mountPointNode != NULL && mountPointNode->mountOverwrite == mountVnode) {
-            fsNode_setMount(mountPointNode, NULL);  //TODO: Is this correct?
+        if (mountPointNode != NULL && mountPointNode->mount == mountVnode) {
+            fsnode_setMount(mountPointNode, NULL);  //TODO: Is this correct?
         }
 
         mm_free(mount);
     }
 
     if (mountPointNode != NULL) {
-        fsNode_release(mountPointNode); //Release 'mountPointNode' once (from locate)
-    }
-
-    if (parentDirVnode != NULL) {
-        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fscore_releaseFSnode(mountPointNode);   //Release 'mountPointNode' once (from fscore_getFSnode)
     }
 }
 
 void fscore_genericUnmount(FScore* fscore, fsIdentifier* mountPoint) {
     //TODO: Lock
     fsNode* mountPointNode = NULL;
-    vNode* parentDirVnode = NULL;
     String mountPointPath;
     string_initStruct(&mountPointPath);
     fsIdentifier_getAbsolutePath(mountPoint, &mountPointPath);
@@ -215,23 +254,17 @@ void fscore_genericUnmount(FScore* fscore, fsIdentifier* mountPoint) {
     mm_free(mount);
 
     FScore* finalFScore = NULL;
-    mountPointNode = locate(mountPoint, FCNTL_OPEN_DIRECTORY_DEFAULT_FLAGS, &parentDirVnode, &finalFScore);   //Refer 'mountPointNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
+    mountPointNode = fscore_getFSnode(fscore, mountPoint, &finalFScore, false);   //Refer 'mountPointNode' once (if found)
     if (mountPointNode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
     DEBUG_ASSERT_SILENT(mountPointNode->type == FS_ENTRY_TYPE_DIRECTORY);
 
-    fsNode_setMount(mountPointNode, NULL);
+    fsnode_setMount(mountPointNode, NULL);
     ERROR_GOTO_IF_ERROR(0);
 
-    if (parentDirVnode != NULL) {
-        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
-        parentDirVnode = NULL;
-    }
-
-    fsNode_release(mountPointNode); //Release 'mountPointNode' once (from locate)
-    fsNode_release(mountPointNode); //Release 'mountPointNode' once (from mount)
+    fscore_releaseFSnode(mountPointNode);   //Release 'mountPointNode' once (from fscore_getFSnode)
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -241,11 +274,7 @@ void fscore_genericUnmount(FScore* fscore, fsIdentifier* mountPoint) {
     }
 
     if (mountPointNode != NULL) {
-        fsNode_release(mountPointNode); //Release 'mountPointNode' once (from locate)
-    }
-
-    if (parentDirVnode != NULL) {
-        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
+        fsnode_setMount(mountPointNode, NULL);
     }
 }
 
@@ -261,5 +290,49 @@ Mount* fscore_lookupMount(FScore* fscore, ConstCstring path) {
         }
     }
 
+    return NULL;
+}
+
+static fsNode* __fscore_getLocalFSnode(FScore* fscore, fsNode* baseNode, String* pathFromBase, bool isDirectory) {
+    Index64 currentIndex = 0;
+    String walked;
+    fsNode* currentNode = baseNode;
+
+    fsnode_refer(baseNode);
+    if (pathFromBase->length == 0 || cstring_strcmp(pathFromBase->data, PATH_SEPERATOR_STR) == 0) {
+        return baseNode;
+    }
+
+    string_initStruct(&walked);
+    ERROR_GOTO_IF_ERROR(0);
+
+    while (currentIndex != INVALID_INDEX64) {
+        currentIndex = path_walk(pathFromBase, currentIndex, &walked);
+        ERROR_GOTO_IF_ERROR(0);
+
+        fsnode_requestVnode(fscore, currentNode);
+
+        fsNode* lastNode = currentNode;
+        currentNode = fsnode_lookup(currentNode, walked.data, (currentIndex == INVALID_INDEX64) ? isDirectory : true, true);    //Refer 'currentNode' once
+        if (currentNode == NULL) {
+            return NULL;
+        }
+        ERROR_GOTO_IF_ERROR(0);
+
+        fsnode_derefer(lastNode);   //Refer the 'currentNode' from last round
+
+        DEBUG_ASSERT_SILENT(currentNode->mount == NULL);
+    }
+
+    return currentNode;
+    ERROR_FINAL_BEGIN(0);
+    if (string_isAvailable(&walked)) {
+        string_clearStruct(&walked);
+    }
+
+    if (currentNode != NULL) {
+        fsnode_derefer(currentNode);
+    }
+    
     return NULL;
 }

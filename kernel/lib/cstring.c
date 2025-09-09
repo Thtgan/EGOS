@@ -49,7 +49,7 @@ Cstring cstring_strstr(ConstCstring str1, ConstCstring str2) {
     const char firstCh = *str2;
     str1 = cstring_strchr(str1, firstCh);
 
-    if  (str1 == NULL) {
+    if (str1 == NULL) {
         return NULL;
     }
 

@@ -24,15 +24,12 @@ typedef struct FAT32fscore {
 
     Index32             firstFreeCluster;
 
-    HashTable           metadataTableVnodeID;
     #define FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM  31
-    SinglyLinkedList    metadataTableChainsVnodeID[FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM];
     HashTable           metadataTableFirstCluster;
     SinglyLinkedList    metadataTableChainsFirstCluster[FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM];
 } FAT32fscore;
 
 typedef struct FAT32NodeMetadata {
-    HashChainNode   hashNodeVnodeID;
     HashChainNode   hashNodeFirstCluster;
     String          name;
     fsEntryType     type;
@@ -43,7 +40,6 @@ typedef struct FAT32NodeMetadata {
     bool            isTouched;
 } FAT32NodeMetadata;
 
-#define FAT32_NODE_METADATA_GET_VNODE_ID(__METADATA)        ((__METADATA)->hashNodeVnodeID.key)
 #define FAT32_NODE_METADATA_GET_FIRST_CLUSTER(__METADATA)   ((__METADATA)->hashNodeFirstCluster.key)
 
 typedef struct FAT32BPB {
@@ -87,8 +83,6 @@ void fat32_close(FS* fs);
 void fat32FScore_registerMetadata(FAT32fscore* fscore, DirectoryEntry* entry, fsNode* belongTo, Index64 firstCluster, vNodeAttribute* vnodeAttribute);
 
 void fat32FScore_unregisterMetadata(FAT32fscore* fscore, Index64 firstCluster);
-
-FAT32NodeMetadata* fat32FScore_getMetadataFromVnodeID(FAT32fscore* fscore, ID vnodeID);
 
 FAT32NodeMetadata* fat32FScore_getMetadataFromFirstCluster(FAT32fscore* fscore, Index64 firstCluster);
 

@@ -42,8 +42,6 @@ typedef enum __FsSyscallDirentType {
 
 static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n);
 
-static bool __syscall_fs_getdentsIterateFunc(vNode* vnode, DirectoryEntry* entry, Object arg, void* ret);
-
 static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n) {
     Process* currentProcess = schedule_getCurrentProcess();
     File* file = process_getFSentry(currentProcess, fileDescriptor);
@@ -158,64 +156,71 @@ static int __syscall_fs_fstat(int fd, FS_fileStat* stat) {
 }
 
 static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
+    fsNode* node = NULL;
+    
     Process* currentProcess = schedule_getCurrentProcess();
     Directory* directory = process_getFSentry(currentProcess, fileDescriptor);
     if (directory == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(directory->vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    
+    node = directory->vnode->fsNode;
+    DEBUG_ASSERT_SILENT(node->type == FS_ENTRY_TYPE_DIRECTORY);
+    DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(node);
 
-    Range range = (Range) {     //TODO: Ugly code
-        .begin = (Uintptr)buffer,
-        .length = (Uintptr)n
-    };
-    bool notEnoughSpace = false;
-    vNode_rawIterateDirectoryEntries(directory->vnode, __syscall_fs_getdentsIterateFunc, (Object)&range, &notEnoughSpace);
+    spinlock_lock(&node->lock);
+    fsnode_readDirectoryEntries(node);
     ERROR_GOTO_IF_ERROR(0);
+    
+    void* currentBuffer = buffer;
+    Size remainingN = n;
+    DEBUG_ASSERT_SILENT(dirNode->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM);
+    for (LinkedList* childNode = linkedListNode_getNext(&dirNode->dirPart.children); childNode != &dirNode->dirPart.children; childNode = linkedListNode_getNext(childNode)) {
+        fsNode* child = HOST_POINTER(childNode, fsNode, childNode);
+
+        Size entryLength = sizeof(__SyscallFSdirectoryEntry) + 2 + child->name.length;
+        if (entryLength > remainingN) {
+            break;
+        }
+
+        __SyscallFSdirectoryEntry* syscallEntry = (__SyscallFSdirectoryEntry*)currentBuffer;
+        syscallEntry->vnodeID = INVALID_ID; //TODO: Bring back vnode ID
+        syscallEntry->off = 0;  //TODO: Not figured out yet
+        cstring_strcpy(syscallEntry->name, child->name.data);
+
+        char* type = (char*)(currentBuffer + sizeof(__SyscallFSdirectoryEntry) + 1 + child->name.length);
+        switch (child->type) {
+            case FS_ENTRY_TYPE_FILE: {
+                *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_REGULAR;
+                break;
+            }
+            case FS_ENTRY_TYPE_DIRECTORY: {
+                *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_DIRECTORY;
+                break;
+            }
+            case FS_ENTRY_TYPE_DEVICE: {    //TODO: Support for block device
+                *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_CHARACTER;
+                break;
+            }
+            default: {
+                *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_UNKNOWN;
+                break;
+            }
+        }
+
+        currentBuffer += entryLength;
+        remainingN -= entryLength;
+    }
+    spinlock_unlock(&node->lock);
 
     return 0;
     ERROR_FINAL_BEGIN(0);
+    if (node != NULL) {
+        spinlock_unlock(&node->lock);
+    }
+
     return -1;
-}
-
-static bool __syscall_fs_getdentsIterateFunc(vNode* vnode, DirectoryEntry* entry, Object arg, void* ret) {
-    Size nameLength = cstring_strlen(entry->name);
-    Size entryLength = sizeof(__SyscallFSdirectoryEntry) + 2 + nameLength;
-    Range* remainingBuffer = (Range*)arg;
-    if (entryLength > remainingBuffer->length) {
-        PTR_TO_VALUE(8, ret) = 1;
-        return true;
-    }
-
-    __SyscallFSdirectoryEntry* syscallEntry = (__SyscallFSdirectoryEntry*)remainingBuffer->begin;
-    syscallEntry->vnodeID = entry->vnodeID;
-    syscallEntry->off = 0;  //TODO: Not figured out yet
-    cstring_strcpy(syscallEntry->name, entry->name);
-
-    char* type = (char*)(remainingBuffer->begin + sizeof(__SyscallFSdirectoryEntry) + 1 + nameLength);
-    switch (entry->type) {
-        case FS_ENTRY_TYPE_FILE: {
-            *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_REGULAR;
-            break;
-        }
-        case FS_ENTRY_TYPE_DIRECTORY: {
-            *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_DIRECTORY;
-            break;
-        }
-        case FS_ENTRY_TYPE_DEVICE: {    //TODO: Support for block device
-            *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_CHARACTER;
-            break;
-        }
-        default: {
-            *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_UNKNOWN;
-            break;
-        }
-    }
-    remainingBuffer->begin += entryLength;
-    remainingBuffer->length -= entryLength;
-
-    return false;
 }
 
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_READ,      __syscall_fs_read);

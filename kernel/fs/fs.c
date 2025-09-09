@@ -7,7 +7,6 @@
 #include<fs/fat32/fat32.h>
 #include<fs/fsEntry.h>
 #include<fs/fsIdentifier.h>
-#include<fs/locate.h>
 #include<fs/path.h>
 #include<kit/util.h>
 #include<memory/paging.h>
@@ -111,11 +110,18 @@ void fs_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;
-    fsIdentifier_initStruct(&devfsMountPoint, fs_rootFS->fscore->rootVnode, "/dev", true);  //TODO: fails if dev not exist
+
+    FScore* rootFScore = fs_rootFS->fscore;
+    vNode* rootFSrootVnode = fscore_getVnode(rootFScore, rootFScore->rootFSnode, false);  //Refer rootFScore->rootFSnode
+    fsIdentifier_initStruct(&devfsMountPoint, rootFSrootVnode, "/dev", true);  //TODO: fails if dev not exist
     ERROR_GOTO_IF_ERROR(0);
 
-    fscore_rawMount(fs_rootFS->fscore, &devfsMountPoint, fs_devFS->fscore->rootVnode, EMPTY_FLAGS);
+    FScore* devFScore = fs_devFS->fscore;
+    vNode* devFSrootVnode = fscore_getVnode(devFScore, devFScore->rootFSnode, false);
+    fscore_rawMount(rootFScore, &devfsMountPoint, devFSrootVnode, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
+
+    fscore_releaseVnode(rootFSrootVnode);
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -150,20 +156,48 @@ void fs_close(FS* fs) {
     _supports[fs->type].close(fs);
 }
 
-File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
-    fsIdentifier identifier;
-    FScore* fscore = NULL;
-    fsNode* parentDirNode = NULL;
-    vNode* vnode = NULL, * parentDirVnode = NULL;
+File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
+    String absolutePathStr, dirAbsolurePath, basename;
+    fsIdentifier dirIdentifier;
+    fsNode* dirFSnode = NULL, * targetNode = NULL;
+    FScore* finalFScore = NULL;
+    vNode* dirVnode = NULL, * targetVnode = NULL;
     File* ret = NULL;
-    String basename;
-    
+
     bool isDirectory = TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY);
-    fsIdentifier_initStruct(&identifier, fs_rootFS->fscore->rootVnode, path, isDirectory);
+
+    string_initStructStr(&absolutePathStr, absolutePath);
     ERROR_GOTO_IF_ERROR(0);
-    parentDirNode = locate(&identifier, flags, &parentDirVnode, &fscore);    //Refer 'parentDirNode' once (if found), refer 'parentDirVnode->fsNode' once (if vNode opened)
+
+    string_initStruct(&dirAbsolurePath);
+    ERROR_GOTO_IF_ERROR(0);
+    path_dirname(&absolutePathStr, &dirAbsolurePath);
+    ERROR_GOTO_IF_ERROR(0);
+
+    string_initStruct(&basename);
+    ERROR_GOTO_IF_ERROR(0);
+    path_basename(&absolutePathStr, &basename);
+    ERROR_GOTO_IF_ERROR(0);
+
+    FScore* rootFScore = fs_rootFS->fscore;
+    vNode* rootFSrootVnode = fscore_getVnode(rootFScore, rootFScore->rootFSnode, false);    //Refer rootFSrootVnode->fsNode once
+    DEBUG_ASSERT_SILENT(rootFSrootVnode != NULL);
+    
+    fsIdentifier_initStruct(&dirIdentifier, rootFSrootVnode, dirAbsolurePath.data, true);
+    
+    dirFSnode = fscore_getFSnode(rootFScore, &dirIdentifier, &finalFScore, true);   //Refer dirFSnode once
+
+    dirVnode = fscore_getVnode(finalFScore, dirFSnode, true);
+    if (dirVnode == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+    dirFSnode = dirVnode->fsNode;
+    finalFScore = dirVnode->fscore;
+    
     bool needCreate = false;
-    if (parentDirNode == NULL) {
+    targetNode = fsnode_lookup(dirFSnode, basename.data, isDirectory, true);    //Refer targetNode once (if found)
+    if (targetNode == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_CHECKPOINT({
                 ERROR_GOTO(0);
@@ -175,18 +209,8 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
             })
         );
     }
-    DEBUG_ASSERT_SILENT(fscore != NULL);
 
     if (needCreate) {
-        DEBUG_ASSERT_SILENT(parentDirNode == NULL);
-        DEBUG_ASSERT_SILENT(parentDirVnode != NULL);
-        if (TEST_FLAGS_FAIL(flags, FCNTL_OPEN_CREAT)) {
-            ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
-        }
-
-        path_basename(&identifier.path, &basename);
-        ERROR_GOTO_IF_ERROR(0);
-
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
         vNodeAttribute attr;
@@ -194,79 +218,73 @@ File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags) {
         attr.lastAccessTime = timestamp.second;
         attr.lastModifyTime = timestamp.second;
 
-        vNode_rawAddDirectoryEntry(parentDirVnode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
+        vNode_addDirectoryEntry(dirVnode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
         ERROR_GOTO_IF_ERROR(0);
-        parentDirNode = vNode_lookupDirectoryEntry(parentDirVnode, basename.data, isDirectory);  //Refer 'parentDirNode' once
-        ERROR_GOTO_IF_ERROR(0);
-        
-        vNode_rawReadAttr(parentDirVnode, &attr);
+
+        vNode_rawReadAttr(dirVnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
         attr.lastModifyTime = timestamp.second;
-        vNode_rawWriteAttr(parentDirVnode, &attr);
+        vNode_rawWriteAttr(dirVnode, &attr);
         ERROR_GOTO_IF_ERROR(0);
-        
-        string_clearStruct(&basename);
-    } else {
-        if (isDirectory && parentDirNode->type != FS_ENTRY_TYPE_DIRECTORY) {
-            ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
+
+        targetNode = fsnode_lookup(dirFSnode, basename.data, isDirectory, true);    //Refer targetNode once (if found)
+        if (targetNode == NULL) {
+            ERROR_ASSERT_ANY();
+            ERROR_GOTO(0);
         }
     }
-    DEBUG_ASSERT_SILENT(parentDirNode != NULL);
 
-    if (parentDirVnode != NULL) {
-        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
-    }
+    DEBUG_ASSERT_SILENT(targetNode != NULL);
+
+    targetVnode = fscore_getVnode(finalFScore, targetNode, false);
     
-    vnode = fsNode_getVnode(parentDirNode, fscore); //Refer 'parentDirNode' once (if vNode not opened)
-    ERROR_GOTO_IF_ERROR(0);
-    fsNode_release(parentDirNode);  //Release 'parentDirNode' once (from locate or vNode_lookupDirectoryEntry)
-    parentDirNode = NULL;
-
-    ret = fscore_rawOpenFSentry(fscore, vnode, flags);
+    ret = fscore_rawOpenFSentry(finalFScore, targetVnode, flags);
     if (ret == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    fsIdentifier_clearStruct(&identifier);
-
+    fscore_releaseVnode(dirVnode);
+    fscore_releaseFSnode(dirFSnode);
+    fsIdentifier_clearStruct(&dirIdentifier);
+    fscore_releaseVnode(rootFSrootVnode);
+    string_clearStruct(&basename);
+    string_clearStruct(&dirAbsolurePath);
+    string_clearStruct(&absolutePathStr);
+    
     return ret;
     ERROR_FINAL_BEGIN(0);
+    if (ret != NULL) {
+        fscore_rawCloseFSentry(finalFScore, ret);
+    }
 
-    ErrorRecord tmp;
-    error_readRecord(&tmp);
-    ERROR_CLEAR();
-    
+    if (targetVnode != NULL) {
+        fscore_releaseVnode(targetVnode);
+    }
+
+    if (dirVnode != NULL) {
+        fscore_releaseVnode(dirVnode);
+    }
+
+    if (dirFSnode != NULL) {
+        fscore_releaseFSnode(dirFSnode);
+    }
+
+    if (fsIdentifier_isActive(&dirIdentifier)) {
+        fsIdentifier_clearStruct(&dirIdentifier);
+    }
+
     if (string_isAvailable(&basename)) {
         string_clearStruct(&basename);
     }
 
-    if (ret != NULL) {
-        DEBUG_ASSERT_SILENT(fscore != NULL);
-        fscore_rawCloseFSentry(fscore, ret);
-        ERROR_ASSERT_NONE();
+    if (string_isAvailable(&dirAbsolurePath)) {
+        string_clearStruct(&dirAbsolurePath);
     }
 
-    if (parentDirNode != NULL) {
-        fsNode_release(parentDirNode); //Release 'parentDirNode' once (from locate or vNode_lookupDirectoryEntry)
+    if (string_isAvailable(&absolutePathStr)) {
+        string_clearStruct(&absolutePathStr);
     }
-
-    if (vnode != NULL) {
-        fscore_closeVnode(vnode);   //Release 'vnode->fsNode' (parentDirNode) once (if vNode opened)
-        ERROR_ASSERT_NONE();
-    }
-    
-    if (parentDirVnode != NULL) {
-        fscore_closeVnode(parentDirVnode);  //Release 'parentDirVnode->fsNode' once (if vNode opened in locate)
-        ERROR_ASSERT_NONE();
-    }
-
-    if (fsIdentifier_isActive(&identifier)) {
-        fsIdentifier_clearStruct(&identifier);
-        ERROR_ASSERT_NONE();
-    }
-
-    error_writeRecord(&tmp);
 
     return NULL;
 }
@@ -278,7 +296,7 @@ void fs_fileClose(File* file) {
     fscore_rawCloseFSentry(fscore, file);
     ERROR_GOTO_IF_ERROR(0);
 
-    fscore_rawCloseVnode(fscore, vnode);
+    fscore_releaseVnode(vnode);
     ERROR_GOTO_IF_ERROR(0);
 
     return;

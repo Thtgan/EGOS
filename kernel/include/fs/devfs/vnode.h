@@ -18,7 +18,7 @@ typedef struct DevfsVnode {
 
 typedef struct DevfsDirectoryEntry {
     String      name;
-    Object      pointTo;
+    Index64     mappingIndex;
     Size        size;
     fsEntryType type;
     ID          vnodeID;
@@ -26,7 +26,7 @@ typedef struct DevfsDirectoryEntry {
 
 DEBUG_ASSERT_COMPILE(sizeof(DevfsDirectoryEntry) == 64);
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Object pointTo, FScore* fscore);
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, FScore* fscore);
 
 vNodeOperations* devfs_vNode_getOperations();
 

@@ -10,15 +10,13 @@
 #include<algorithms.h>
 #include<error.h>
 
-static vNode* __ext2_fscore_openRootVnode(FScore* fscore);
+static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node);
 
 #define __EXT2_SUPERBLOCK_OFFSET    1024
 
 static ConstCstring __ext2_name = "EXT2";
 static FScoreOperations __ext2_fscoreOperations = {
-    .getFSnode      = NULL,
-    .openVnode      = NULL,
-    .openRootVnode  = __ext2_fscore_openRootVnode,
+    .openVnode      = __ext2_fscore_openVnode,
     .closeVnode     = NULL,
     .sync           = NULL,
     .openFSentry    = NULL,
@@ -49,8 +47,9 @@ bool ext2_checkType(BlockDevice* blockDevice) {
     return false;
 }
 
-#define __FS_EXT2_FSCORE_HASH_BUCKET    16
-#define __FS_EXT2_BATCH_ALLOCATE_SIZE   BATCH_ALLOCATE_SIZE((EXT2fscore, 1), (EXT2SuperBlock, 1), (SinglyLinkedList, __FS_EXT2_FSCORE_HASH_BUCKET))
+// #define __FS_EXT2_FSCORE_HASH_BUCKET    16
+// #define __FS_EXT2_BATCH_ALLOCATE_SIZE   BATCH_ALLOCATE_SIZE((EXT2fscore, 1), (EXT2SuperBlock, 1), (SinglyLinkedList, __FS_EXT2_FSCORE_HASH_BUCKET))
+#define __FS_EXT2_BATCH_ALLOCATE_SIZE   BATCH_ALLOCATE_SIZE((EXT2fscore, 1), (EXT2SuperBlock, 1))
 
 void ext2_open(FS* fs, BlockDevice* blockDevice) {
     void* batchAllocated = NULL;
@@ -65,8 +64,9 @@ void ext2_open(FS* fs, BlockDevice* blockDevice) {
 
     BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
         (EXT2fscore, ext2fscore, 1),
-        (EXT2SuperBlock, ext2SuperBlock, 1),
-        (SinglyLinkedList, openedVnodeChains, __FS_EXT2_FSCORE_HASH_BUCKET)
+        (EXT2SuperBlock, ext2SuperBlock, 1)
+        // (EXT2SuperBlock, ext2SuperBlock, 1),
+        // (SinglyLinkedList, openedVnodeChains, __FS_EXT2_FSCORE_HASH_BUCKET)
     );
 
     blockDevice_readBlocks(blockDevice, __EXT2_SUPERBLOCK_OFFSET / POWER_2(device->granularity), (void*)superBlockBuffer, 1);   //TODO: One block?
@@ -76,8 +76,8 @@ void ext2_open(FS* fs, BlockDevice* blockDevice) {
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
         .operations         = &__ext2_fscoreOperations,
-        .openedVnodeBucket  = __FS_EXT2_FSCORE_HASH_BUCKET,
-        .openedVnodeChains  = openedVnodeChains
+        // .openedVnodeBucket  = __FS_EXT2_FSCORE_HASH_BUCKET,
+        // .openedVnodeChains  = openedVnodeChains
     };
 
     fscore_initStruct(&ext2fscore->fscore, &args);
@@ -110,7 +110,7 @@ void ext2_close(FS* fs) {
     ERROR_FINAL_BEGIN(0);
 }
 
-static vNode* __ext2_fscore_openRootVnode(FScore* fscore) {
+static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node) {
     EXT2vnode* ext2vnode = NULL;
 
     ext2vnode = mm_allocate(sizeof(EXT2vnode));
@@ -118,13 +118,12 @@ static vNode* __ext2_fscore_openRootVnode(FScore* fscore) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-
-    vNode* vnode = &ext2vnode->vnode;
-
-    REF_COUNTER_INIT(vnode->refCounter, 0);
-    hashChainNode_initStruct(&vnode->openedNode);
-
-    return vnode;
+    
+    return &ext2vnode->vnode;
     ERROR_FINAL_BEGIN(0);
+    if (ext2vnode != NULL) {
+        mm_free(ext2vnode);
+    }
+    
     return NULL;
 }

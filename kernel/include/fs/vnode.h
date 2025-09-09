@@ -43,8 +43,6 @@ typedef struct vNode {
     Spinlock                lock;   //TODO: Use mutex?
 } vNode;
 
-typedef bool (*vNodeOperationIterateDirectoryEntryFunc)(vNode* vnode, DirectoryEntry* entry, Object arg, void* ret);  //TODO: Add mode
-
 typedef struct vNodeOperations {
     void (*readData)(vNode* vnode, Index64 begin, void* buffer, Size byteN);
 
@@ -56,13 +54,13 @@ typedef struct vNodeOperations {
 
     void (*writeAttr)(vNode* vnode, vNodeAttribute* attribute);
     //=========== Directory Functions ===========
-    void (*iterateDirectoryEntries)(vNode* vnode, vNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret);
-
-    void (*addDirectoryEntry)(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID);
+    Index64 (*addDirectoryEntry)(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID);
 
     void (*removeDirectoryEntry)(vNode* vnode, ConstCstring name, bool isDirectory);
 
     void (*renameDirectoryEntry)(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName);
+
+    void (*readDirectoryEntries)(vNode* vnode);
 } vNodeOperations;
 
 static inline void vNode_rawReadData(vNode* vnode, Index64 begin, void* buffer, Size byteN) {
@@ -85,12 +83,8 @@ static inline void vNode_rawWriteAttr(vNode* vnode, vNodeAttribute* attribute) {
     vnode->operations->writeAttr(vnode, attribute);
 }
 
-static inline void vNode_rawIterateDirectoryEntries(vNode* vnode, vNodeOperationIterateDirectoryEntryFunc func, Object arg, void* ret) {
-    vnode->operations->iterateDirectoryEntries(vnode, func, arg, ret);
-}
-
-static inline void vNode_rawAddDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID) {
-    vnode->operations->addDirectoryEntry(vnode, name, type, attr, deviceID);
+static inline Index64 vNode_rawAddDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID) {
+    return vnode->operations->addDirectoryEntry(vnode, name, type, attr, deviceID);
 }
 
 static inline void vNode_rawRemoveDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory) {
@@ -101,9 +95,15 @@ static inline void vNode_rawRenameDirectoryEntry(vNode* vnode, fsNode* entry, vN
     vnode->operations->renameDirectoryEntry(vnode, entry, moveTo, newName);
 }
 
-fsNode* vNode_lookupDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory);
+static inline void vNode_rawReadDirectoryEntries(vNode* vnode) {
+    vnode->operations->readDirectoryEntries(vnode);
+}
+
+void vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID);
 
 void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory);
+
+void vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName);
 
 void vNode_genericReadAttr(vNode* vnode, vNodeAttribute* attribute);
 

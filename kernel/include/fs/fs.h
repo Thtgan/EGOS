@@ -74,7 +74,7 @@ void fs_close(FS* fs);
 
 //Non-FS codes should use these functions
 
-File* fs_fileOpen(ConstCstring path, FCNTLopenFlags flags);
+File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags);
 
 void fs_fileClose(File* file);
 

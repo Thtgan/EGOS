@@ -23,7 +23,6 @@ typedef struct DevfsNodeMetadata {
     HashChainNode   hashNode;
     fsNode*         node;
     Size            sizeInByte;
-    Object          pointsTo;    //Data block index or device ID
 } DevfsNodeMetadata;
 
 void devfs_init();
@@ -34,10 +33,14 @@ void devfs_open(FS* fs, BlockDevice* blockDevice);
 
 void devfs_close(FS* fs);
 
-void devfscore_registerMetadata(Devfscore* fscore, ID vnodeID, fsNode* node, Size sizeInByte, Object pointsTo);
+Index64 devfscore_registerMetadata(Devfscore* fscore, fsNode* node, Size sizeInByte, Object pointsTo);
 
-void devfscore_unregisterMetadata(Devfscore* fscore, ID vnodeID);
+void devfscore_unregisterMetadata(Devfscore* fscore, Index64 mappingIndex);
 
-DevfsNodeMetadata* devfscore_getMetadata(Devfscore* fscore, ID vnodeID);
+DevfsNodeMetadata* devfscore_getMetadata(Devfscore* fscore, Index64 mappingIndex);
+
+Object devfscore_getStorageMapping(Index64 mappingIndex);
+
+void devfscore_setStorageMapping(Index64 mappingIndex, Object mapTo);
 
 #endif // __FS_DEVFS_DEVFS_H
