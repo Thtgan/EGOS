@@ -11,7 +11,6 @@ typedef struct FAT32vnode FAT32vnode;
 typedef struct FAT32vnode {
     vNode vnode;
     Index32 firstCluster;
-    bool isTouched;
 } FAT32vnode;
 
 void fat32_vNode_init();

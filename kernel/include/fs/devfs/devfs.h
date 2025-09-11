@@ -21,7 +21,6 @@ typedef struct Devfscore {
 
 typedef struct DevfsNodeMetadata {
     HashChainNode   hashNode;
-    fsNode*         node;
     Size            sizeInByte;
 } DevfsNodeMetadata;
 
@@ -33,7 +32,7 @@ void devfs_open(FS* fs, BlockDevice* blockDevice);
 
 void devfs_close(FS* fs);
 
-Index64 devfscore_registerMetadata(Devfscore* fscore, fsNode* node, Size sizeInByte, Object pointsTo);
+Index64 devfscore_registerMetadata(Devfscore* fscore, Size sizeInByte, Object pointsTo);
 
 void devfscore_unregisterMetadata(Devfscore* fscore, Index64 mappingIndex);
 

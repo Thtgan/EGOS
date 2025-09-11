@@ -88,7 +88,7 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
 
     hashTable_initStruct(&devfscore->metadataTable, DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM, devfscore->metadataTableChains, hashTable_defaultHashFunc);
 
-    Index64 mappingIndex = devfscore_registerMetadata(devfscore, fscore->rootFSnode, 0, (Object)NULL);
+    Index64 mappingIndex = devfscore_registerMetadata(devfscore, 0, (Object)NULL);
 
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
@@ -135,14 +135,13 @@ void devfs_close(FS* fs) {
     mm_free(fs->fscore);
 }
 
-Index64 devfscore_registerMetadata(Devfscore* fscore, fsNode* node, Size sizeInByte, Object pointsTo) {
+Index64 devfscore_registerMetadata(Devfscore* fscore, Size sizeInByte, Object pointsTo) {
     DevfsNodeMetadata* metadata = NULL;
     metadata = mm_allocate(sizeof(DevfsNodeMetadata));
     if (metadata == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    metadata->node = node;
     metadata->sizeInByte = sizeInByte;
 
     Index64 ret = _devfs_storageMappingFirstFree;

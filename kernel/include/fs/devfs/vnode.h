@@ -21,7 +21,7 @@ typedef struct DevfsDirectoryEntry {
     Index64     mappingIndex;
     Size        size;
     fsEntryType type;
-    ID          vnodeID;
+    Uint64      reserved;
 } DevfsDirectoryEntry;
 
 DEBUG_ASSERT_COMPILE(sizeof(DevfsDirectoryEntry) == 64);

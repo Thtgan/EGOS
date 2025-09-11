@@ -49,7 +49,6 @@ void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring nam
     entry->mappingIndex = mappingIndex;
     entry->size         = type == FS_ENTRY_TYPE_DEVICE ? (Size)-1 : 0;
     entry->type         = type;
-    entry->vnodeID      = 0;    //TODO: Remove this
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -173,7 +172,7 @@ static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, 
     bool isRealData = (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY);
     Object pointTo = isRealData ? (Object)NULL : (Object)deviceID;
 
-    Index64 mappingIndex = devfscore_registerMetadata(devfscore, NULL, isRealData ? 0 : INFINITE, pointTo);
+    Index64 mappingIndex = devfscore_registerMetadata(devfscore, isRealData ? 0 : INFINITE, pointTo);
     ERROR_GOTO_IF_ERROR(0);
 
     devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, name, type, mappingIndex, fscore);
@@ -348,7 +347,7 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
 
         directoryEntry.name         = devfsDirectoryEntry.name.data;
         directoryEntry.type         = devfsDirectoryEntry.type;
-        directoryEntry.vnodeID      = devfsDirectoryEntry.vnodeID;
+        directoryEntry.vnodeID      = 0;    //TODO: Re-implement vnode ID
         directoryEntry.mode         = DIRECTORY_ENTRY_MODE_ANY; //TODO: Support for mode
         if (fsEntryType_isDevice(directoryEntry.type)) {
             directoryEntry.size     = DIRECTORY_ENTRY_SIZE_ANY;

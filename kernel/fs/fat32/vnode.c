@@ -59,7 +59,7 @@ vNodeOperations* fat32_vNode_getOperations() {
 }
 
 Size fat32_vNode_touchDirectory(vNode* vnode) {
-    DEBUG_ASSERT_SILENT(vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY && !HOST_POINTER(vnode, FAT32vnode, vnode)->isTouched);
+    DEBUG_ASSERT_SILENT(vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
     
     void* clusterBuffer = NULL, * entriesBuffer = NULL;
     
@@ -104,18 +104,16 @@ Size fat32_vNode_touchDirectory(vNode* vnode) {
         fat32_directoryEntry_parse(entriesBuffer, &entryName, &attribute, &vnodeAttribute, &firstCluster, &size);
 
         fsEntryType entryType = TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY) ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE;
-        // ID entryVnodeID = fscore_allocateVnodeID(fscore);
         DirectoryEntry entry = (DirectoryEntry) {
             .name = entryName.data,
             .type = entryType,
-            // .vnodeID = entryVnodeID,
-            .vnodeID = 0,
+            .vnodeID = 0,   //TODO: Re-implement vnode ID
             .size = size,
             .mode = DIRECTORY_ENTRY_MODE_ANY,
             .deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY
         };
 
-        fat32FScore_registerMetadata(fat32fscore, &entry, vnode->fsNode, firstCluster, &vnodeAttribute);
+        fat32FScore_registerMetadata(fat32fscore, &entry, firstCluster, &vnodeAttribute);
         ERROR_GOTO_IF_ERROR(0);
         
         currentPointer += entriesLength;
