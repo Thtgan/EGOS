@@ -139,7 +139,13 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
         devfscore_setStorageMapping(vnode->fsNode->physicalPosition, (Object)newPages);
     }
 
-    vnode->sizeInByte = newSizeInByte;
+    DevfsNodeMetadata* metadata = devfscore_getMetadata(vnode, vnode->fsNode->physicalPosition);
+    if (metadata == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    metadata->sizeInByte = vnode->sizeInByte = newSizeInByte;
 
     return;
     ERROR_FINAL_BEGIN(0);

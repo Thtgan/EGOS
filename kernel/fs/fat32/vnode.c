@@ -393,8 +393,14 @@ static void __fat32_vNode_resize(vNode* vnode, Size newSizeInByte) {
         fat32_insertClusterChain(fat32fscore, tail, freeClusterChain);
     }
 
+    FAT32NodeMetadata* metadata = fat32FScore_getMetadataFromFirstCluster(vnode->fscore, fat32vnode->firstCluster);
+    if (metadata == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
     vnode->sizeInBlock = newSizeInCluster * BPB->sectorPerCluster;
-    vnode->sizeInByte = newSizeInByte;
+    metadata->size = vnode->sizeInByte = newSizeInByte;
 
     return;
     ERROR_FINAL_BEGIN(0);
