@@ -41,7 +41,7 @@ typedef struct FScoreOperations {
 typedef struct FScoreInitArgs {
     BlockDevice*        blockDevice;
     FScoreOperations*   operations;
-    Index64             rootFSnodePosition;
+    Index64             rootFSnodePointsTo;
 } FScoreInitArgs;
 
 //Stands for a mount instance in directory

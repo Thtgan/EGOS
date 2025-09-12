@@ -49,7 +49,7 @@ static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(file->vnode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(file->vnode->fsNode->entry.type != FS_ENTRY_TYPE_DIRECTORY);
 
     fs_fileRead(file, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
@@ -66,7 +66,7 @@ static int __syscall_fs_write(int fileDescriptor, const void* buffer, Size n) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(file->vnode->fsNode->type != FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(file->vnode->fsNode->entry.type != FS_ENTRY_TYPE_DIRECTORY);
 
     fs_fileWrite(file, buffer, n);
     ERROR_GOTO_IF_ERROR(0);
@@ -166,7 +166,7 @@ static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
     }
     
     node = directory->vnode->fsNode;
-    DEBUG_ASSERT_SILENT(node->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(node->entry.type == FS_ENTRY_TYPE_DIRECTORY);
     DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(node);
 
     spinlock_lock(&node->lock);
@@ -190,7 +190,7 @@ static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
         cstring_strcpy(syscallEntry->name, child->name.data);
 
         char* type = (char*)(currentBuffer + sizeof(__SyscallFSdirectoryEntry) + 1 + child->name.length);
-        switch (child->type) {
+        switch (child->entry.type) {
             case FS_ENTRY_TYPE_FILE: {
                 *type = __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_REGULAR;
                 break;

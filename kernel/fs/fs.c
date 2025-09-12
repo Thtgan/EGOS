@@ -400,7 +400,7 @@ void fs_fileStat(File* file, FS_fileStat* stat) {
     stat->nLink = 1;    //TODO: nLink not implemented actually
     Uint32 mode = file->mode;
 
-    fsEntryType type = vnode->fsNode->type;
+    fsEntryType type = vnode->fsNode->entry.type;
     switch (type) {
     case FS_ENTRY_TYPE_FILE:
         FS_FILE_STAT_MODE_SET_TYPE(mode, FS_FILE_STAT_MODE_TYPE_REGULAR_FILE);

@@ -93,7 +93,7 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
         .operations         = &__devfs_fscoreOperations,
-        .rootFSnodePosition = mappingIndex
+        .rootFSnodePointsTo = mappingIndex
         // .openedVnodeBucket  = __DEVFS_FSCORE_HASH_BUCKET,
         // .openedVnodeChains  = openedVnodeChains
     };
@@ -220,23 +220,24 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     }
 
     Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
+    DirectoryEntry* nodeEntry = &node->entry;
 
     vNode* vnode = &devfsVnode->vnode;
-    DevfsNodeMetadata* metadata = devfscore_getMetadata(devfscore, (ID)node->physicalPosition);
+    DevfsNodeMetadata* metadata = devfscore_getMetadata(devfscore, nodeEntry->pointsTo);
     ERROR_GOTO_IF_ERROR(0);
 
     vnode->signature        = VNODE_SIGNATURE;
     vnode->vnodeID          = (ID)vnode;    //TODO: Ugly code
-    fsEntryType type = node->type;
+    fsEntryType type = nodeEntry->type;
     if (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY) {
         vnode->sizeInByte   = metadata->sizeInByte;
         vnode->sizeInBlock  = 0;
         vnode->deviceID     = INVALID_ID;
-        devfsVnode->data    = (void*)devfscore_getStorageMapping(node->physicalPosition);
+        devfsVnode->data    = (void*)devfscore_getStorageMapping(nodeEntry->pointsTo);
     } else {
         vnode->sizeInByte   = INFINITE;
         vnode->sizeInBlock  = INFINITE;
-        vnode->deviceID     = (ID)devfscore_getStorageMapping(node->physicalPosition);
+        vnode->deviceID     = (ID)devfscore_getStorageMapping(nodeEntry->pointsTo);
         devfsVnode->data    = NULL;
     }
 

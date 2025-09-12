@@ -59,7 +59,8 @@ vNodeOperations* devfs_vNode_getOperations() {
 }
 
 static void __devfs_vNode_readData(vNode* vnode, Index64 begin, void* buffer, Size byteN) {
-    if (vnode->fsNode->type == FS_ENTRY_TYPE_FILE || vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY) {
+    DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
+    if (nodeEntry->type == FS_ENTRY_TYPE_FILE || nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY) {
         if (begin + byteN > vnode->sizeInByte) {
             ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
         }
@@ -82,7 +83,8 @@ static void __devfs_vNode_readData(vNode* vnode, Index64 begin, void* buffer, Si
 }
 
 static void __devfs_vNode_writeData(vNode* vnode, Index64 begin, const void* buffer, Size byteN) {
-    if (vnode->fsNode->type == FS_ENTRY_TYPE_FILE || vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY) {
+    DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
+    if (nodeEntry->type == FS_ENTRY_TYPE_FILE || nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY) {
         if (begin + byteN > vnode->sizeInByte) {
             ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
         }
@@ -105,7 +107,8 @@ static void __devfs_vNode_writeData(vNode* vnode, Index64 begin, const void* buf
 }
 
 static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
-    if (!(vnode->fsNode->type == FS_ENTRY_TYPE_FILE || vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY)) {
+    DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
+    if (!(nodeEntry->type == FS_ENTRY_TYPE_FILE || nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY)) {
         return;
     }
 
@@ -136,16 +139,16 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
         }
 
         devfsVnode->data = newPages;
-        devfscore_setStorageMapping(vnode->fsNode->physicalPosition, (Object)newPages);
+        devfscore_setStorageMapping(nodeEntry->pointsTo, (Object)newPages);
     }
 
-    DevfsNodeMetadata* metadata = devfscore_getMetadata(vnode, vnode->fsNode->physicalPosition);
+    DevfsNodeMetadata* metadata = devfscore_getMetadata(HOST_POINTER(vnode->fscore, Devfscore, fscore), nodeEntry->pointsTo);
     if (metadata == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
 
-    metadata->sizeInByte = vnode->sizeInByte = newSizeInByte;
+    metadata->sizeInByte = nodeEntry->size = vnode->sizeInByte = newSizeInByte;
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -247,8 +250,10 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
 }
 
 static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName) {
-    DEBUG_ASSERT_SILENT(vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
-    DEBUG_ASSERT_SILENT(moveTo->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
+    DirectoryEntry* moveToEntry = &moveTo->fsNode->entry;
+    DEBUG_ASSERT_SILENT(nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(moveToEntry->type == FS_ENTRY_TYPE_DIRECTORY);
     DEBUG_ASSERT_SILENT(vnode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
 
     void* remainingData = NULL;
@@ -262,7 +267,7 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
         vNode_rawReadData(vnode, currentPointer, &transplantDirEntry, sizeof(DevfsDirectoryEntry));
         ERROR_GOTO_IF_ERROR(0);
 
-        if (cstring_strcmp(entry->name.data, transplantDirEntry.name.data) == 0 && entry->type == transplantDirEntry.type) {
+        if (cstring_strcmp(entry->entry.name, transplantDirEntry.name.data) == 0 && entry->entry.type == transplantDirEntry.type) {
             found = true;
             break;
         }
@@ -296,7 +301,7 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
         vNode_rawReadData(moveTo, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
         ERROR_GOTO_IF_ERROR(0);
 
-        if (cstring_strcmp(entry->name.data, devfsDirectoryEntry.name.data) == 0 && entry->type == transplantDirEntry.type) {
+        if (cstring_strcmp(entry->entry.name, devfsDirectoryEntry.name.data) == 0 && entry->entry.type == transplantDirEntry.type) {
             found = true;
             break;
         }
@@ -323,6 +328,7 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
 }
 
 static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
+    DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
     DEBUG_ASSERT_SILENT(vnode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
 
     void* blockBuffer = NULL;
@@ -332,7 +338,7 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
     BlockDevice* targetBlockDevice = fscore->blockDevice;
     Device* device = &targetBlockDevice->device;
     Size blockSize = POWER_2(device->granularity);
-    DEBUG_ASSERT_SILENT(vnode->fsNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY);
     DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(vnode->fsNode);
     
     blockBuffer = mm_allocate(blockSize);
@@ -354,16 +360,11 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
         directoryEntry.name         = devfsDirectoryEntry.name.data;
         directoryEntry.type         = devfsDirectoryEntry.type;
         directoryEntry.vnodeID      = 0;    //TODO: Re-implement vnode ID
-        directoryEntry.mode         = DIRECTORY_ENTRY_MODE_ANY; //TODO: Support for mode
-        if (fsEntryType_isDevice(directoryEntry.type)) {
-            directoryEntry.size     = DIRECTORY_ENTRY_SIZE_ANY;
-            directoryEntry.deviceID = (DeviceID)devfscore_getStorageMapping(devfsDirectoryEntry.mappingIndex);
-        } else {
-            directoryEntry.size     = devfsDirectoryEntry.size;
-            directoryEntry.deviceID = DIRECTORY_ENTRY_DEVICE_ID_ANY;
-        }
+        directoryEntry.mode         = 0;    //TODO: Support for mode
+        directoryEntry.size         = fsEntryType_isDevice(directoryEntry.type) ? INFINITE : devfsDirectoryEntry.size;
+        directoryEntry.pointsTo     = devfscore_getStorageMapping(devfsDirectoryEntry.mappingIndex);
 
-        fsnode_create(directoryEntry.name, directoryEntry.type, &dirNode->node, devfsDirectoryEntry.mappingIndex);
+        fsnode_create(&directoryEntry, &dirNode->node);
         ERROR_GOTO_IF_ERROR(0);
         
         currentPointer += sizeof(DevfsDirectoryEntry);

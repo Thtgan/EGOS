@@ -20,25 +20,26 @@
 static fsNode* __fscore_getLocalFSnode(FScore* fscore, fsNode* baseNode, String* pathFromBase, bool isDirectory);
 
 void fscore_initStruct(FScore* fscore, FScoreInitArgs* args) {
-    ERROR_ASSERT_NONE();
     fscore->blockDevice     = args->blockDevice;
     fscore->operations      = args->operations;
-    fscore->rootFSnode      = fsnode_create("", FS_ENTRY_TYPE_DIRECTORY, NULL, args->rootFSnodePosition);
+
+    DirectoryEntry rootDirEntry = (DirectoryEntry) {
+        .name = "",
+        .type = FS_ENTRY_TYPE_DIRECTORY,
+        .mode = 0,
+        .vnodeID = 0,   //TODO: Re-implement vnode ID
+        .size = 0,
+        .pointsTo = args->rootFSnodePointsTo
+    };
+
+    fscore->rootFSnode      = fsnode_create(&rootDirEntry, NULL);
     linkedList_initStruct(&fscore->mounted);
 
     fsnode_requestVnode(fscore, fscore->rootFSnode);
 
-    // fscore->nextVnodeID = 0;
-
     return;
     ERROR_FINAL_BEGIN(0);
 }
-
-// ID fscore_allocateVnodeID(FScore* fscore) {
-//     ID ret = ATOMIC_FETCH_INC(&fscore->nextVnodeID);
-//     DEBUG_ASSERT(ret != INVALID_ID, "vNode allocation overflow\n");
-//     return ret;
-// }
 
 fsNode* fscore_getFSnode(FScore* fscore, fsIdentifier* identifier, FScore** finalFScoreOut, bool followMount) {
     DEBUG_ASSERT_SILENT(finalFScoreOut != NULL);
@@ -199,7 +200,7 @@ void fscore_genericMount(FScore* fscore, fsIdentifier* mountPoint, vNode* mountV
         ERROR_GOTO(0);
     }
     DEBUG_ASSERT_SILENT(fscore == finalFScore);
-    DEBUG_ASSERT_SILENT(mountPointNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(mountPointNode->entry.type == FS_ENTRY_TYPE_DIRECTORY);
 
     fsnode_setMount(mountPointNode, mountVnode);
     ERROR_GOTO_IF_ERROR(0);
@@ -259,7 +260,7 @@ void fscore_genericUnmount(FScore* fscore, fsIdentifier* mountPoint) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    DEBUG_ASSERT_SILENT(mountPointNode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(mountPointNode->entry.type == FS_ENTRY_TYPE_DIRECTORY);
 
     fsnode_setMount(mountPointNode, NULL);
     ERROR_GOTO_IF_ERROR(0);

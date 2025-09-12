@@ -5,6 +5,7 @@ typedef struct fsNode fsNode;
 typedef struct fsNodeDirPart fsNodeDirPart;
 typedef struct DirFSnode DirFSnode;
 
+#include<fs/directoryEntry.h>
 #include<fs/fscore.h>
 #include<kit/types.h>
 #include<kit/util.h>
@@ -17,7 +18,7 @@ typedef struct DirFSnode DirFSnode;
 
 typedef struct fsNode {
     String              name;
-    fsEntryType         type;
+    DirectoryEntry      entry;
 
     RefCounter32        refCounter; //How many instances requires this node to work
 
@@ -25,7 +26,6 @@ typedef struct fsNode {
     HashChainNode       childHashNode;
     fsNode*             parent;
 
-    Index64             physicalPosition;
     vNode*              vnode;
     vNode*              mount;
 
@@ -40,7 +40,7 @@ typedef struct fsNodeDirPart {
 #define FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM    (Uint32)-1
     Uint32              childrenNum;
     RefCounter32        livingChildNum; //Contained by refCounter
-#define FSNODE_DIR_PART_CHILDREN_HASH_CHAIN_SIZE    11
+#define FSNODE_DIR_PART_CHILDREN_HASH_CHAIN_SIZE    7
     SinglyLinkedList    childrenHashChains[FSNODE_DIR_PART_CHILDREN_HASH_CHAIN_SIZE];
 } fsNodeDirPart;
 
@@ -53,9 +53,7 @@ typedef struct DirFSnode {
 
 DEBUG_ASSERT_COMPILE(IS_POWER_2(sizeof(DirFSnode)));
 
-fsNode* fsnode_create(ConstCstring name, fsEntryType type, fsNode* parent, Index64 physicalPosition);
-
-// void fsnode_release(fsNode* node);
+fsNode* fsnode_create(DirectoryEntry* entry, fsNode* parent);
 
 void fsnode_refer(fsNode* node);
 

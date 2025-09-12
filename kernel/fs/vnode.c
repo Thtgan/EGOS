@@ -16,14 +16,23 @@
 void vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID) {
     fsNode* fsnode = vnode->fsNode, * found = NULL;
     DEBUG_ASSERT_SILENT(fsnode->vnode == vnode);
-    DEBUG_ASSERT_SILENT(fsnode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(fsnode->entry.type == FS_ENTRY_TYPE_DIRECTORY);
 
     spinlock_lock(&vnode->lock);
     
-    Index64 physicalPosition = vNode_rawAddDirectoryEntry(vnode, name, type, attr, deviceID);
+    Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, name, type, attr, deviceID);
     ERROR_GOTO_IF_ERROR(0);
+
+    DirectoryEntry newDirEntry = {
+        .name = name,
+        .type = type,
+        .mode = 0,
+        .vnodeID = 0,
+        .size = 0,
+        .pointsTo = pointsTo
+    };
     
-    fsnode_create(name, type, fsnode, physicalPosition);
+    fsnode_create(&newDirEntry, fsnode);
     ERROR_GOTO_IF_ERROR(0);
     
     spinlock_unlock(&vnode->lock);
@@ -38,7 +47,7 @@ void vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, 
 void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory) {
     fsNode* fsnode = vnode->fsNode, * found = NULL;
     DEBUG_ASSERT_SILENT(fsnode->vnode == vnode);
-    DEBUG_ASSERT_SILENT(fsnode->type == FS_ENTRY_TYPE_DIRECTORY);
+    DEBUG_ASSERT_SILENT(fsnode->entry.type == FS_ENTRY_TYPE_DIRECTORY);
 
     spinlock_lock(&vnode->lock);
     

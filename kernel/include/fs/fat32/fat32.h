@@ -75,11 +75,11 @@ void fat32_open(FS* fs, BlockDevice* blockDevice);
 
 void fat32_close(FS* fs);
 
-void fat32FScore_registerMetadata(FAT32fscore* fscore, DirectoryEntry* entry, Index64 firstCluster, vNodeAttribute* vnodeAttribute);
+void fat32FScore_registerMetadata(FAT32fscore* fscore, Size size, Index64 firstCluster, vNodeAttribute* vnodeAttribute);
 
 void fat32FScore_unregisterMetadata(FAT32fscore* fscore, Index64 firstCluster);
 
-FAT32NodeMetadata* fat32FScore_getMetadataFromFirstCluster(FAT32fscore* fscore, Index64 firstCluster);
+FAT32NodeMetadata* fat32FScore_getMetadata(FAT32fscore* fscore, Index64 firstCluster);
 
 Index32 fat32FScore_createFirstCluster(FAT32fscore* fscore);
 
