@@ -86,9 +86,10 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     vector_push(&_devfs_storageMapping, (Object)INVALID_INDEX64);
     _devfs_storageMappingFirstFree = 0;
 
-    hashTable_initStruct(&devfscore->metadataTable, DEVFS_FSCORE_VNODE_TABLE_CHAIN_NUM, devfscore->metadataTableChains, hashTable_defaultHashFunc);
+    Index64 mappingIndex = devfscore_allocateMappingIndex();
 
-    Index64 mappingIndex = devfscore_registerMetadata(devfscore, 0, (Object)NULL);
+    devfsDirectoryEntry_initStruct(&devfscore->rootDirEntry, "", FS_ENTRY_TYPE_DIRECTORY, mappingIndex, (Object)NULL);
+    devfscore_setStorageMapping(mappingIndex, &devfscore->rootDirEntry);
 
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
@@ -135,79 +136,29 @@ void devfs_close(FS* fs) {
     mm_free(fs->fscore);
 }
 
-Index64 devfscore_registerMetadata(Devfscore* fscore, Size sizeInByte, Object pointsTo) {
-    DevfsNodeMetadata* metadata = NULL;
-    metadata = mm_allocate(sizeof(DevfsNodeMetadata));
-    if (metadata == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-    metadata->sizeInByte = sizeInByte;
-
+Index64 devfscore_allocateMappingIndex() {
     Index64 ret = _devfs_storageMappingFirstFree;
     if (ret == INVALID_INDEX64) {
         ret = _devfs_storageMapping.size;
-        vector_push(&_devfs_storageMapping, (Object)pointsTo);
-        ERROR_GOTO_IF_ERROR(0);
     } else {
         _devfs_storageMappingFirstFree = vector_get(&_devfs_storageMapping, _devfs_storageMappingFirstFree);
-        vector_set(&_devfs_storageMapping, ret, (Object)pointsTo);
     }
-
-    hashTable_insert(&fscore->metadataTable, (Object)ret, &metadata->hashNode);
-    ERROR_CHECKPOINT({ 
-            ERROR_GOTO(0);
-        },
-        (ERROR_ID_ALREADY_EXIST, {
-            ERROR_CLEAR();
-            mm_free(metadata);
-        })
-    );
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
-    if (metadata != NULL) {
-        mm_free(metadata);
-    }
-
-    return INVALID_INDEX64;
 }
 
-void devfscore_unregisterMetadata(Devfscore* fscore, Index64 mappingIndex) {
-    HashChainNode* deleted = hashTable_delete(&fscore->metadataTable, mappingIndex);
-    if (deleted == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    DevfsNodeMetadata* node = HOST_POINTER(deleted, DevfsNodeMetadata, hashNode);
-
-    mm_free(node);
-
+void devfscore_releaseMappingIndex(Index64 mappingIndex) {
     vector_set(&_devfs_storageMapping, mappingIndex, _devfs_storageMappingFirstFree);
     _devfs_storageMappingFirstFree = mappingIndex;
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
-DevfsNodeMetadata* devfscore_getMetadata(Devfscore* fscore, Index64 mappingIndex) {
-    HashChainNode* found = hashTable_find(&fscore->metadataTable, mappingIndex);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
-
-    return HOST_POINTER(found, DevfsNodeMetadata, hashNode);
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
+DevfsDirectoryEntry* devfscore_getStorageMapping(Index64 mappingIndex) {
+    return (DevfsDirectoryEntry*)vector_get(&_devfs_storageMapping, mappingIndex);
 }
 
-Object devfscore_getStorageMapping(Index64 mappingIndex) {
-    return vector_get(&_devfs_storageMapping, mappingIndex);
-}
-
-void devfscore_setStorageMapping(Index64 mappingIndex, Object mapTo) {
-    vector_set(&_devfs_storageMapping, mappingIndex, mapTo);
+void devfscore_setStorageMapping(Index64 mappingIndex, DevfsDirectoryEntry* mapTo) {
+    DEBUG_ASSERT_SILENT(mapTo->mappingIndex == mappingIndex);
+    vector_set(&_devfs_storageMapping, mappingIndex, (Object)mapTo);
 }
 
 static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
@@ -223,21 +174,22 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     DirectoryEntry* nodeEntry = &node->entry;
 
     vNode* vnode = &devfsVnode->vnode;
-    DevfsNodeMetadata* metadata = devfscore_getMetadata(devfscore, nodeEntry->pointsTo);
-    ERROR_GOTO_IF_ERROR(0);
+
+    DevfsDirectoryEntry* dirEntry = devfscore_getStorageMapping(nodeEntry->pointsTo);
+    DEBUG_ASSERT_SILENT(dirEntry->mappingIndex == (Index64)nodeEntry->pointsTo && dirEntry->size == nodeEntry->size);
 
     vnode->signature        = VNODE_SIGNATURE;
-    vnode->vnodeID          = (ID)vnode;    //TODO: Ugly code
+    vnode->vnodeID          = 0;    //TODO: Re-implement vnode ID
+    vnode->sizeInByte       = nodeEntry->size;
+    
     fsEntryType type = nodeEntry->type;
     if (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY) {
-        vnode->sizeInByte   = metadata->sizeInByte;
         vnode->sizeInBlock  = 0;
         vnode->deviceID     = INVALID_ID;
-        devfsVnode->data    = (void*)devfscore_getStorageMapping(nodeEntry->pointsTo);
+        devfsVnode->data    = (void*)dirEntry->pointsTo;
     } else {
-        vnode->sizeInByte   = INFINITE;
         vnode->sizeInBlock  = INFINITE;
-        vnode->deviceID     = (ID)devfscore_getStorageMapping(nodeEntry->pointsTo);
+        vnode->deviceID     = (ID)dirEntry->pointsTo;
         devfsVnode->data    = NULL;
     }
 

@@ -43,12 +43,13 @@ static vNodeOperations _devfs_vNodeOperations = {
     .readDirectoryEntries       = __devfs_vNode_readDirectoryEntries
 };
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, FScore* fscore) {
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo) {
     string_initStructStr(&entry->name, name);
     ERROR_GOTO_IF_ERROR(0);
     entry->mappingIndex = mappingIndex;
-    entry->size         = type == FS_ENTRY_TYPE_DEVICE ? (Size)-1 : 0;
+    entry->size         = type == FS_ENTRY_TYPE_DEVICE ? INFINITE : 0;
     entry->type         = type;
+    entry->pointsTo     = pointsTo;
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -117,6 +118,7 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
     DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
     Size newPageNum = DIVIDE_ROUND_UP(newSizeInByte, PAGE_SIZE), oldPageNum = DIVIDE_ROUND_UP(vnode->sizeInByte, PAGE_SIZE);
     
+    DevfsDirectoryEntry* dirEntry = devfscore_getStorageMapping(nodeEntry->pointsTo);
     if (newPageNum != oldPageNum) {
         if (newPageNum != 0) {
             newPages = mm_allocatePages(newPageNum);
@@ -139,16 +141,10 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
         }
 
         devfsVnode->data = newPages;
-        devfscore_setStorageMapping(nodeEntry->pointsTo, (Object)newPages);
+        dirEntry->pointsTo = (Object)newPages;
     }
 
-    DevfsNodeMetadata* metadata = devfscore_getMetadata(HOST_POINTER(vnode->fscore, Devfscore, fscore), nodeEntry->pointsTo);
-    if (metadata == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    metadata->sizeInByte = nodeEntry->size = vnode->sizeInByte = newSizeInByte;
+    dirEntry->size = nodeEntry->size = vnode->sizeInByte = newSizeInByte;
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -181,16 +177,19 @@ static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, 
     bool isRealData = (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY);
     Object pointTo = isRealData ? (Object)NULL : (Object)deviceID;
 
-    Index64 mappingIndex = devfscore_registerMetadata(devfscore, isRealData ? 0 : INFINITE, pointTo);
+    Index64 mappingIndex = devfscore_allocateMappingIndex();
     ERROR_GOTO_IF_ERROR(0);
 
-    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, name, type, mappingIndex, fscore);
+    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, name, type, mappingIndex, pointTo);
 
     vNode_rawResize(vnode, vnode->sizeInByte + sizeof(DevfsDirectoryEntry));
     ERROR_GOTO_IF_ERROR(0);
 
     vNode_rawWriteData(vnode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
     ERROR_GOTO_IF_ERROR(0);
+
+    DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
+    devfscore_setStorageMapping(mappingIndex, (DevfsDirectoryEntry*)devfs_vNode_getDataPointer(devfsVnode, currentPointer));
 
     return mappingIndex;
     ERROR_FINAL_BEGIN(0);
@@ -225,8 +224,7 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
         ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
     }
 
-    devfscore_unregisterMetadata(devfscore, devfsDirectoryEntry.mappingIndex);
-    ERROR_GOTO_IF_ERROR(0);
+    devfscore_releaseMappingIndex(devfsDirectoryEntry.mappingIndex);
 
     if (currentPointer + sizeof(DevfsDirectoryEntry) < vnode->sizeInByte) {
         Size remainingDataSize = vnode->sizeInByte - currentPointer - sizeof(DevfsDirectoryEntry);
@@ -331,21 +329,8 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
     DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
     DEBUG_ASSERT_SILENT(vnode->sizeInByte % sizeof(DevfsDirectoryEntry) == 0);
 
-    void* blockBuffer = NULL;
-    
-    FScore* fscore = vnode->fscore;
-    Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
-    BlockDevice* targetBlockDevice = fscore->blockDevice;
-    Device* device = &targetBlockDevice->device;
-    Size blockSize = POWER_2(device->granularity);
     DEBUG_ASSERT_SILENT(nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY);
     DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(vnode->fsNode);
-    
-    blockBuffer = mm_allocate(blockSize);
-    if (blockBuffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
 
     DEBUG_ASSERT_SILENT(dirNode->dirPart.childrenNum == FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM);
     dirNode->dirPart.childrenNum = 0;
@@ -361,8 +346,8 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
         directoryEntry.type         = devfsDirectoryEntry.type;
         directoryEntry.vnodeID      = 0;    //TODO: Re-implement vnode ID
         directoryEntry.mode         = 0;    //TODO: Support for mode
-        directoryEntry.size         = fsEntryType_isDevice(directoryEntry.type) ? INFINITE : devfsDirectoryEntry.size;
-        directoryEntry.pointsTo     = devfscore_getStorageMapping(devfsDirectoryEntry.mappingIndex);
+        directoryEntry.size         = devfsDirectoryEntry.size;
+        directoryEntry.pointsTo     = (Object)devfsDirectoryEntry.mappingIndex;
 
         fsnode_create(&directoryEntry, &dirNode->node);
         ERROR_GOTO_IF_ERROR(0);
@@ -370,11 +355,6 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    mm_free(blockBuffer);
-
     return;
     ERROR_FINAL_BEGIN(0);
-    if (blockBuffer != NULL) {
-        mm_free(blockBuffer);
-    }
 }

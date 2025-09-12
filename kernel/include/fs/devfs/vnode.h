@@ -21,13 +21,17 @@ typedef struct DevfsDirectoryEntry {
     Index64     mappingIndex;
     Size        size;
     fsEntryType type;
-    Uint64      reserved;
+    Object      pointsTo;
 } DevfsDirectoryEntry;
 
 DEBUG_ASSERT_COMPILE(sizeof(DevfsDirectoryEntry) == 64);
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, FScore* fscore);
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo);
 
 vNodeOperations* devfs_vNode_getOperations();
+
+static inline void* devfs_vNode_getDataPointer(DevfsVnode* node, Index64 index) {
+    return node->data + index;
+}
 
 #endif // __FS_DEVFS_VNODE_H

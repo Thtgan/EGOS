@@ -14,7 +14,7 @@ typedef __PTRDIFF_TYPE__                Ptrdiff;
 
 #define offsetof(type, member)          __builtin_offsetof(type, member)
 
-#define INFINITE                        -2
+#define INFINITE                        -1
 
 typedef __INT8_TYPE__                   Int8;
 typedef __UINT8_TYPE__                  Uint8;

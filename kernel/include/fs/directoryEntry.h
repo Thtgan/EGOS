@@ -13,9 +13,9 @@ typedef struct DirectoryEntry {
     Uint32 type;
 #define DIRECTORY_ENTRY_MODE_ANY        ((Uint16)-1)
     Uint16 mode;    //TODO: Not used yet
-#define DIRECTORY_ENTRY_VNDOE_ID_ANY    ((ID)-1)
+#define DIRECTORY_ENTRY_VNDOE_ID_ANY    ((ID)0x7FFFFFFFFFFFFFFF)    //Differ from INVALID_ID
     ID vnodeID;
-#define DIRECTORY_ENTRY_SIZE_ANY        ((Size)-1)
+#define DIRECTORY_ENTRY_SIZE_ANY        ((Size)0x7FFFFFFFFFFFFFFF)  //Differ from INFINITE
     Size size;
 #define DIRECTORY_ENTRY_POINTS_TO_ANY   INVALID_INDEX64
     Index64 pointsTo;
