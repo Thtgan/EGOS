@@ -116,7 +116,16 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
 
     for (MajorDeviceID major = device_iterateMajor(DEVICE_INVALID_ID); major != DEVICE_INVALID_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
         for (Device* device = device_iterateMinor(major, DEVICE_INVALID_ID); device != NULL; device = device_iterateMinor(major, DEVICE_MINOR_FROM_ID(device->id))) {
-            vNode_addDirectoryEntry(rootVnode, device->name, FS_ENTRY_TYPE_DEVICE, &attribute, device->id);
+            DirectoryEntry newEntry = (DirectoryEntry) {
+                .name = device->name,
+                .type = FS_ENTRY_TYPE_DEVICE,
+                .mode = 0,  //TODO: mode not used yet
+                .vnodeID = 0,   //TODO: Re-implement vnode ID
+                .size = DIRECTORY_ENTRY_SIZE_ANY,
+                .pointsTo = device->id
+            };
+            // vNode_addDirectoryEntry(rootVnode, device->name, FS_ENTRY_TYPE_DEVICE, &attribute, device->id);
+            vNode_addDirectoryEntry(rootVnode, &newEntry, &attribute);
             ERROR_GOTO_IF_ERROR(0);
         }
     }

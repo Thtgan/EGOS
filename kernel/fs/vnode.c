@@ -13,27 +13,27 @@
 #include<debug.h>
 #include<error.h>
 
-void vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID) {
+void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr) {
     fsNode* node = vnode->fsNode, * found = NULL;
     DEBUG_ASSERT_SILENT(node->vnode == vnode);
     DEBUG_ASSERT_SILENT(node->entry.type == FS_ENTRY_TYPE_DIRECTORY);
 
     spinlock_lock(&vnode->lock);
     
-    Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, name, type, attr, deviceID);
+    Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, entry, attr);
     ERROR_GOTO_IF_ERROR(0);
 
     if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {  //If node has read children, append new node dynamically
-        DirectoryEntry newDirEntry = {
-            .name = name,
-            .type = type,
-            .mode = 0,
-            .vnodeID = 0,
-            .size = (type == FS_ENTRY_TYPE_DEVICE ? INFINITE : 0),
-            .pointsTo = pointsTo
-        };
+        // DirectoryEntry newDirEntry = {
+        //     .name = name,
+        //     .type = type,
+        //     .mode = 0,
+        //     .vnodeID = 0,
+        //     .size = (type == FS_ENTRY_TYPE_DEVICE ? INFINITE : 0),
+        //     .pointsTo = pointsTo
+        // };
         
-        fsnode_create(&newDirEntry, node);
+        fsnode_create(entry, node);
         ERROR_GOTO_IF_ERROR(0);
     }
     

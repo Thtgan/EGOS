@@ -54,7 +54,7 @@ typedef struct vNodeOperations {
 
     void (*writeAttr)(vNode* vnode, vNodeAttribute* attribute);
     //=========== Directory Functions ===========
-    Index64 (*addDirectoryEntry)(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID);
+    Index64 (*addDirectoryEntry)(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr);
 
     void (*removeDirectoryEntry)(vNode* vnode, ConstCstring name, bool isDirectory);
 
@@ -83,8 +83,8 @@ static inline void vNode_rawWriteAttr(vNode* vnode, vNodeAttribute* attribute) {
     vnode->operations->writeAttr(vnode, attribute);
 }
 
-static inline Index64 vNode_rawAddDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID) {
-    return vnode->operations->addDirectoryEntry(vnode, name, type, attr, deviceID);
+static inline Index64 vNode_rawAddDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr) {
+    return vnode->operations->addDirectoryEntry(vnode, entry, attr);
 }
 
 static inline void vNode_rawRemoveDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory) {
@@ -99,7 +99,7 @@ static inline void vNode_rawReadDirectoryEntries(vNode* vnode) {
     vnode->operations->readDirectoryEntries(vnode);
 }
 
-void vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID);
+void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr);
 
 void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory);
 

@@ -23,8 +23,8 @@ typedef struct DirectoryEntry {
 
 bool directoryEntry_isMatch(DirectoryEntry* entry1, DirectoryEntry* entry2);
 
-static inline bool directoryEntry_isDetailed(DirectoryEntry* entry) {
-    return entry->name != DIRECTORY_ENTRY_NAME_ANY && entry->type != DIRECTORY_ENTRY_TYPE_ANY && entry->mode != DIRECTORY_ENTRY_MODE_ANY && entry->vnodeID != DIRECTORY_ENTRY_VNDOE_ID_ANY && entry->size != DIRECTORY_ENTRY_SIZE_ANY && entry->pointsTo != DIRECTORY_ENTRY_POINTS_TO_ANY;
-}
+bool directoryEntry_isDetailed(DirectoryEntry* entry);
+
+bool directoryEntry_checkAdding(DirectoryEntry* entry);
 
 #endif // __FS_DIRECTORYENTRY_H

@@ -218,7 +218,17 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
         attr.lastAccessTime = timestamp.second;
         attr.lastModifyTime = timestamp.second;
 
-        vNode_addDirectoryEntry(dirVnode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
+        DirectoryEntry newEntry = (DirectoryEntry) {
+            .name = basename.data,
+            .type = isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE,
+            .mode = 0,  //TODO: mode not used yet
+            .vnodeID = 0,   //TODO: Re-implement vnode ID
+            .size = DIRECTORY_ENTRY_SIZE_ANY,
+            .pointsTo = DIRECTORY_ENTRY_POINTS_TO_ANY
+        };
+
+        // vNode_addDirectoryEntry(dirVnode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
+        vNode_addDirectoryEntry(dirVnode, &newEntry, &attr);
         ERROR_GOTO_IF_ERROR(0);
 
         vNode_rawReadAttr(dirVnode, &attr);

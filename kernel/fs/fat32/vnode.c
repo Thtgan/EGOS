@@ -28,7 +28,7 @@ static void __fat32_vNode_doWriteData(vNode* vnode, Index64 begin, const void* b
 
 static void __fat32_vNode_resize(vNode* vnode, Size newSizeInByte);
 
-static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID);
+static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr);
 
 static void __fat32_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory);
 
@@ -412,8 +412,9 @@ static void __fat32_vNode_resize(vNode* vnode, Size newSizeInByte) {
     }
 }
 
-static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, fsEntryType type, vNodeAttribute* attr, ID deviceID) {
-    if (!(type == FS_ENTRY_TYPE_DIRECTORY || type == FS_ENTRY_TYPE_FILE)) {
+static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr) {
+    DEBUG_ASSERT_SILENT(directoryEntry_checkAdding(entry));
+    if (!(entry->type == FS_ENTRY_TYPE_DIRECTORY || entry->type == FS_ENTRY_TYPE_FILE)) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
     }
     void* clusterBuffer = NULL, * entriesBuffer = NULL;
@@ -459,7 +460,7 @@ static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, 
         ERROR_GOTO_IF_ERROR(0);
 
         fat32_directoryEntry_parse(entriesBuffer, &entryName, &attribute, &vnodeAttribute, &firstCluster, &size);
-        if (cstring_strcmp(name, entryName.data) == 0 && (type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {            
+        if (cstring_strcmp(entry->name, entryName.data) == 0 && (entry->type == FS_ENTRY_TYPE_DIRECTORY) == TEST_FLAGS(attribute, FAT32_DIRECTORY_ENTRY_ATTRIBUTE_DIRECTORY)) {            
             found = true;
             break;
         }
@@ -479,7 +480,10 @@ static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, ConstCstring name, 
 
     //TODO: Add '.' and '..' for directory
 
-    entriesLength = fat32_directoryEntry_initEntries(entriesBuffer, name, type, attr, newFirstCluster, 0);
+    entry->pointsTo = (Index64)newFirstCluster;
+    entry->size = 0;
+
+    entriesLength = fat32_directoryEntry_initEntries(entriesBuffer, entry->name, entry->type, attr, newFirstCluster, 0);
     ERROR_GOTO_IF_ERROR(0);
 
     vNode_rawResize(vnode, vnode->sizeInByte + entriesLength);
