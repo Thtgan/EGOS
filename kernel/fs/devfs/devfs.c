@@ -124,7 +124,6 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
                 .size = DIRECTORY_ENTRY_SIZE_ANY,
                 .pointsTo = device->id
             };
-            // vNode_addDirectoryEntry(rootVnode, device->name, FS_ENTRY_TYPE_DEVICE, &attribute, device->id);
             vNode_addDirectoryEntry(rootVnode, &newEntry, &attribute);
             ERROR_GOTO_IF_ERROR(0);
         }
@@ -187,20 +186,21 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     DevfsDirectoryEntry* dirEntry = devfscore_getStorageMapping(nodeEntry->pointsTo);
     DEBUG_ASSERT_SILENT(dirEntry->mappingIndex == (Index64)nodeEntry->pointsTo && dirEntry->size == nodeEntry->size);
 
-    vnode->signature        = VNODE_SIGNATURE;
-    vnode->vnodeID          = 0;    //TODO: Re-implement vnode ID
-    vnode->sizeInByte       = nodeEntry->size;
+    vnode->signature            = VNODE_SIGNATURE;
+    vnode->vnodeID              = 0;    //TODO: Re-implement vnode ID
+    vnode->size                 = nodeEntry->size;
     
     fsEntryType type = nodeEntry->type;
     if (type == FS_ENTRY_TYPE_FILE || type == FS_ENTRY_TYPE_DIRECTORY) {
-        vnode->sizeInBlock  = 0;
-        vnode->deviceID     = INVALID_ID;
-        devfsVnode->data    = (void*)dirEntry->pointsTo;
+        vnode->tokenSpaceSize   = ALIGN_UP(dirEntry->size, PAGE_SIZE);
+        vnode->deviceID         = INVALID_ID;
+        devfsVnode->data        = (void*)dirEntry->pointsTo;
     } else {
-        vnode->sizeInBlock  = INFINITE;
-        vnode->deviceID     = (ID)dirEntry->pointsTo;
-        devfsVnode->data    = NULL;
+        vnode->tokenSpaceSize   = INFINITE;
+        vnode->deviceID         = (ID)dirEntry->pointsTo;
+        devfsVnode->data        = NULL;
     }
+    DEBUG_ASSERT_SILENT(vnode->size <= vnode->tokenSpaceSize);
 
     vnode->fscore           = fscore;
     vnode->operations       = devfs_vNode_getOperations();

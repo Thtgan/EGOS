@@ -162,8 +162,6 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
         .lastAccessTime = 0,
         .lastModifyTime = 0
     };
-
-    fat32FScore_registerMetadata(fat32fscore, 0, BPB->rootDirectoryClusterIndex, &rootDirAttribute);
     
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
@@ -215,61 +213,6 @@ void fat32_close(FS* fs) {
     ERROR_FINAL_BEGIN(0);
 }
 
-void fat32FScore_registerMetadata(FAT32fscore* fscore, Size size, Index64 firstCluster, vNodeAttribute* vnodeAttribute) {
-    FAT32NodeMetadata* metadata = NULL;
-    metadata = mm_allocate(sizeof(FAT32NodeMetadata));
-    if (metadata == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    ERROR_GOTO_IF_ERROR(0);
-    memory_memcpy(&metadata->vnodeAttribute, vnodeAttribute, sizeof(vNodeAttribute));
-    metadata->size = size;
-
-    hashTable_insert(&fscore->metadataTableFirstCluster, (Object)firstCluster, &metadata->hashNodeFirstCluster);
-    ERROR_CHECKPOINT({ 
-            ERROR_GOTO(0);
-        },
-        (ERROR_ID_ALREADY_EXIST, {
-            ERROR_CLEAR();
-            mm_free(metadata);
-        })
-    );
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    if (metadata != NULL) {
-        mm_free(metadata);
-    }
-}
-
-void fat32FScore_unregisterMetadata(FAT32fscore* fscore, Index64 firstCluster) {
-    HashChainNode* deleted = hashTable_delete(&fscore->metadataTableFirstCluster, firstCluster);
-    if (deleted == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    FAT32NodeMetadata* metadata = HOST_POINTER(deleted, FAT32NodeMetadata, hashNodeFirstCluster);
-
-    mm_free(metadata);
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-}
-
-FAT32NodeMetadata* fat32FScore_getMetadata(FAT32fscore* fscore, Index64 firstCluster) {
-    HashChainNode* found = hashTable_find(&fscore->metadataTableFirstCluster, firstCluster);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
-
-    return HOST_POINTER(found, FAT32NodeMetadata, hashNodeFirstCluster);
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
-}
-
 Index32 fat32FScore_createFirstCluster(FAT32fscore* fscore) {
     void* clusterBuffer = NULL;
     Index32 firstCluster = fat32_allocateClusterChain(fscore, 1);   //First cluster of new file/directory must be all 0
@@ -311,20 +254,17 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
     DirectoryEntry* nodeEntry = &node->entry;
 
     FAT32BPB* BPB               = fat32fscore->BPB;
-    FAT32NodeMetadata* metadata = fat32FScore_getMetadata(fat32fscore, nodeEntry->pointsTo);
-    if (metadata == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
 
     Device* fscoreDevice        = &fscore->blockDevice->device;
     fat32vnode->firstCluster    = nodeEntry->pointsTo;
 
     vNode* vnode = &fat32vnode->vnode;
-    vnode->sizeInByte       = metadata->size;
-    vnode->sizeInBlock      = fat32_getClusterChainLength(fat32fscore, fat32vnode->firstCluster) * BPB->sectorPerCluster;
+    vnode->size             = nodeEntry->size;
+    ERROR_GOTO_IF_ERROR(0);
+
     BlockDevice* fscoreBlockDevice = fscore->blockDevice;
-    DEBUG_ASSERT_SILENT(vnode->sizeInByte <= vnode->sizeInBlock * POWER_2(fscoreBlockDevice->device.granularity));
+    vnode->tokenSpaceSize   = fat32_getClusterChainLength(fat32fscore, fat32vnode->firstCluster) * BPB->sectorPerCluster * POWER_2(fscoreBlockDevice->device.granularity);
+    DEBUG_ASSERT_SILENT(vnode->size <= vnode->tokenSpaceSize);
     
     vnode->signature        = VNODE_SIGNATURE;
     vnode->vnodeID          = 0;    //TODO: Re-implement vnode ID
@@ -336,15 +276,19 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
 
     vnode->fsNode = node;
     
-    memory_memcpy(&vnode->attribute, &metadata->vnodeAttribute, sizeof(vNodeAttribute));
+    vnode->attribute        = (vNodeAttribute) {   //TODO: Ugly code
+        .uid = 0,
+        .gid = 0,
+        .createTime = 0,
+        .lastAccessTime = 0,
+        .lastModifyTime = 0
+    };
 
     vnode->deviceID         = INVALID_ID;
     vnode->lock             = SPINLOCK_UNLOCKED;
-    
+
     if (nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY) {
-        DEBUG_ASSERT_SILENT(vnode->sizeInByte == 0);
-        metadata->size = vnode->sizeInByte = fat32_vNode_touchDirectory(vnode);
-        ERROR_GOTO_IF_ERROR(0);
+        vnode->size         = fat32_vNode_touchDirectory(vnode);    //TODO: Kinda ungly code
     }
     
     return vnode;
@@ -362,6 +306,7 @@ static void __fat32_fscore_closeVnode(FScore* fscore, vNode* vnode) {
     }
     
     FAT32vnode* fat32vnode = HOST_POINTER(vnode, FAT32vnode, vnode);
+    //TODO: Update own entry if resized
 
     mm_free(fat32vnode);
 }

@@ -29,7 +29,7 @@ void fsEntry_clearStruct(fsEntry* entry) {
 }
 
 Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
-    if (seekTo > entry->vnode->sizeInByte) {
+    if (seekTo > entry->vnode->size) {
         return INVALID_INDEX64;
     }
     
@@ -39,7 +39,7 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
 void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     vNode* vnode = entry->vnode;
 
-    if (entry->pointer + n > vnode->sizeInByte) {
+    if (entry->pointer + n > vnode->size) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
@@ -53,7 +53,7 @@ void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
 void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
     vNode* vnode = entry->vnode;
 
-    if (entry->pointer + n > vnode->sizeInByte) {
+    if (entry->pointer + n > vnode->size) {
         vNode_rawResize(vnode, entry->pointer + n);
         ERROR_GOTO_IF_ERROR(0);
     }

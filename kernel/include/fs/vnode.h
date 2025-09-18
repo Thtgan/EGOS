@@ -27,8 +27,8 @@ typedef struct vNode {
     Uint32                  signature;
 #define VNODE_SIGNATURE     0x120DE516
     ID                      vnodeID;
-    Size                    sizeInBlock;
-    Size                    sizeInByte;
+    Size                    tokenSpaceSize;
+    Size                    size;
     FScore*                 fscore;
     vNodeOperations*        operations;
 

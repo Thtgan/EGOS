@@ -318,7 +318,7 @@ void fs_fileRead(File* file, void* buffer, Size n) {
         ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
     }
 
-    if (file->pointer + n > file->vnode->sizeInByte) {
+    if (file->pointer + n > file->vnode->size) {
         ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
     }
 
@@ -382,14 +382,14 @@ Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
         case FS_FILE_SEEK_CURRENT:
             break;
         case FS_FILE_SEEK_END:
-            base = file->vnode->sizeInByte;
+            base = file->vnode->size;
             break;
         default:
             break;
     }
     base += offset;
 
-    if ((Int64)base < 0 || base > file->vnode->sizeInByte) {
+    if ((Int64)base < 0 || base > file->vnode->size) {
         return INVALID_INDEX64;
     }
 
@@ -431,9 +431,9 @@ void fs_fileStat(File* file, FS_fileStat* stat) {
     if (type == FS_ENTRY_TYPE_DEVICE) {
         stat->rDevice = vnode->deviceID;
     }
-    stat->size = vnode->sizeInByte;
+    stat->size = vnode->size;
     stat->blockSize = POWER_2(fscore->blockDevice->device.granularity);
-    stat->blocks = vnode->sizeInBlock;
+    stat->blocks = vnode->tokenSpaceSize / stat->blockSize;
     stat->accessTime.second = vnode->attribute.lastAccessTime;
     stat->modifyTime.second = vnode->attribute.lastModifyTime;
     stat->createTime.second = vnode->attribute.createTime;

@@ -29,12 +29,6 @@ typedef struct FAT32fscore {
     SinglyLinkedList    metadataTableChainsFirstCluster[FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM];
 } FAT32fscore;
 
-typedef struct FAT32NodeMetadata {
-    HashChainNode   hashNodeFirstCluster;
-    vNodeAttribute  vnodeAttribute;
-    Size            size;
-} FAT32NodeMetadata;
-
 #define FAT32_NODE_METADATA_GET_FIRST_CLUSTER(__METADATA)   ((__METADATA)->hashNodeFirstCluster.key)
 
 typedef struct FAT32BPB {
@@ -74,12 +68,6 @@ bool fat32_checkType(BlockDevice* blockDevice);
 void fat32_open(FS* fs, BlockDevice* blockDevice);
 
 void fat32_close(FS* fs);
-
-void fat32FScore_registerMetadata(FAT32fscore* fscore, Size size, Index64 firstCluster, vNodeAttribute* vnodeAttribute);
-
-void fat32FScore_unregisterMetadata(FAT32fscore* fscore, Index64 firstCluster);
-
-FAT32NodeMetadata* fat32FScore_getMetadata(FAT32fscore* fscore, Index64 firstCluster);
 
 Index32 fat32FScore_createFirstCluster(FAT32fscore* fscore);
 

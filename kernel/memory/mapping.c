@@ -160,8 +160,8 @@ void mapping_msync(void* addr, Size length, Flags8 flags) {
                 Index64 absoluteOffset = info->offset + (ALIGN_DOWN((Uintptr)currentPointer, PAGE_SIZE) - info->range.begin);
                 void* frameRead = PAGING_CONVERT_KERNEL_MEMORY_P2V(p);
                 Index64 seeked = fs_fileSeek(file, absoluteOffset, FS_FILE_SEEK_BEGIN);
-                if (seeked < file->vnode->sizeInByte) {
-                    Size n = algorithms_umin64(file->vnode->sizeInByte - absoluteOffset, PAGE_SIZE);
+                if (seeked < file->vnode->size) {
+                    Size n = algorithms_umin64(file->vnode->size - absoluteOffset, PAGE_SIZE);
                     fs_fileWrite(file, frameRead, n);
                     ERROR_GOTO_IF_ERROR(0);
                 }
