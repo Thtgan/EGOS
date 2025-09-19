@@ -154,14 +154,6 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     fat32fscore->firstFreeCluster   = firstFreeCluster;
 
     hashTable_initStruct(&fat32fscore->metadataTableFirstCluster, FAT32_FSCORE_VNODE_TABLE_CHAIN_NUM, fat32fscore->metadataTableChainsFirstCluster, hashTable_defaultHashFunc);
-
-    vNodeAttribute rootDirAttribute = {
-        .uid = 0,
-        .gid = 0,
-        .createTime = 0,
-        .lastAccessTime = 0,
-        .lastModifyTime = 0
-    };
     
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
@@ -275,14 +267,6 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
     hashChainNode_initStruct(&vnode->openedNode);
 
     vnode->fsNode = node;
-    
-    vnode->attribute        = (vNodeAttribute) {   //TODO: Ugly code
-        .uid = 0,
-        .gid = 0,
-        .createTime = 0,
-        .lastAccessTime = 0,
-        .lastModifyTime = 0
-    };
 
     vnode->deviceID         = INVALID_ID;
     vnode->lock             = SPINLOCK_UNLOCKED;

@@ -15,7 +15,7 @@ static void __fat32_directoryEntry_parseLongName(FAT32LongNameEntry* entries, Si
 
 static void __fat32_directoryEntry_parseShortName(FAT32DirectoryEntry* entry, String* nameOut);
 
-static void __fat32_directoryEntry_parseEntry(FAT32DirectoryEntry* entry, Uint8* attributeOut, vNodeAttribute* vnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut);
+static void __fat32_directoryEntry_parseEntry(FAT32DirectoryEntry* entry, Uint8* attributeOut, FSnodeAttribute* fsnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut);
 
 static void __fat32_directoryEntry_convertDateFieldToRealTime(Uint16 date, RealTime* realTime);
 
@@ -25,7 +25,7 @@ static Uint16 __fat32_directoryEntry_convertRealTimeToDateField(RealTime* realTi
 
 static Uint16 __fat32_directoryEntry_convertRealTimeToTimeField(RealTime* realTime);
 
-void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nameOut, Flags8* attributeOut, vNodeAttribute* vnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut) {
+void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nameOut, Flags8* attributeOut, FSnodeAttribute* fsnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut) {
     DEBUG_ASSERT_SILENT(string_isAvailable(nameOut));
     DEBUG_ASSERT_SILENT(!fat32_directoryEntry_isEnd(entriesBegin));
     
@@ -39,13 +39,13 @@ void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nam
         ERROR_GOTO_IF_ERROR(0);
     }
 
-    __fat32_directoryEntry_parseEntry((FAT32DirectoryEntry*)((void*)entriesBegin + length - sizeof(FAT32DirectoryEntry)), attributeOut, vnodeAttributeOut, firstClusterOut, sizeOut);
+    __fat32_directoryEntry_parseEntry((FAT32DirectoryEntry*)((void*)entriesBegin + length - sizeof(FAT32DirectoryEntry)), attributeOut, fsnodeAttributeOut, firstClusterOut, sizeOut);
 
     return;
     ERROR_FINAL_BEGIN(0);
 }
 
-Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, ConstCstring name, fsEntryType type, vNodeAttribute* vnodeAttribute, Index32 firstCluster, Size size) {
+Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, ConstCstring name, fsEntryType type, FSnodeAttribute* attribute, Index32 firstCluster, Size size) {
     Size nameLength = cstring_strlen(name);
     if (nameLength > FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH) {
         ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
@@ -88,19 +88,19 @@ Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, Const
 
     RealTime realTime;
     Timestamp timestamp;
-    timestamp.second = vnodeAttribute->createTime;
+    timestamp.second = attribute->createTime;
     time_convertTimestampToRealTime(&timestamp, &realTime);
     directoryEntry->createTimeTengthSec = (realTime.second % 2) * 10;
     directoryEntry->createTime          = __fat32_directoryEntry_convertRealTimeToTimeField(&realTime);
     directoryEntry->createDate          = __fat32_directoryEntry_convertRealTimeToDateField(&realTime);
 
-    timestamp.second = vnodeAttribute->lastAccessTime;
+    timestamp.second = attribute->lastAccessTime;
     time_convertTimestampToRealTime(&timestamp, &realTime);
     directoryEntry->lastAccessDate      = __fat32_directoryEntry_convertRealTimeToDateField(&realTime);
 
     directoryEntry->clusterBeginHigh    = EXTRACT_VAL(firstCluster, 32, 16, 32);
 
-    timestamp.second = vnodeAttribute->lastModifyTime;
+    timestamp.second = attribute->lastModifyTime;
     time_convertTimestampToRealTime(&timestamp, &realTime);
     directoryEntry->lastModifyTime      = __fat32_directoryEntry_convertRealTimeToTimeField(&realTime);
     directoryEntry->lastModifyDate      = __fat32_directoryEntry_convertRealTimeToDateField(&realTime);
@@ -201,7 +201,7 @@ void __fat32_directoryEntry_parseShortName(FAT32DirectoryEntry* entry, String* n
     return;
 }
 
-void __fat32_directoryEntry_parseEntry(FAT32DirectoryEntry* entry, Uint8* attributeOut, vNodeAttribute* vnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut) {
+void __fat32_directoryEntry_parseEntry(FAT32DirectoryEntry* entry, Uint8* attributeOut, FSnodeAttribute* fsnodeAttributeOut, Index32* firstClusterOut, Size* sizeOut) {
     *attributeOut = entry->attribute;
     
     Uint64 createTime = 0, lastAccessTime = 0, lastModifyTime = 0;
@@ -225,7 +225,7 @@ void __fat32_directoryEntry_parseEntry(FAT32DirectoryEntry* entry, Uint8* attrib
     time_convertRealTimeToTimestamp(&realTime, &timestamp);
     lastModifyTime = timestamp.second;
     
-    *vnodeAttributeOut = (vNodeAttribute) {
+    *fsnodeAttributeOut = (FSnodeAttribute) {
         .uid = 0,
         .gid = 0,
         .createTime = createTime,

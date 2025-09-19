@@ -1,7 +1,6 @@
 #if !defined(__FS_VNODE_H)
 #define __FS_VNODE_H
 
-typedef struct vNodeAttribute vNodeAttribute;
 typedef struct vNode vNode;
 typedef struct vNodeOperations vNodeOperations;
 
@@ -14,14 +13,6 @@ typedef struct vNodeOperations vNodeOperations;
 #include<structs/hashTable.h>
 #include<structs/refCounter.h>
 #include<structs/singlyLinkedList.h>
-
-typedef struct vNodeAttribute {
-    Uint32 uid; //TODO: Not used yet
-    Uint32 gid; //TODO: Not used yet
-    Uint64 createTime;
-    Uint64 lastAccessTime;
-    Uint64 lastModifyTime;
-} vNodeAttribute;
 
 typedef struct vNode {
     Uint32                  signature;
@@ -36,8 +27,6 @@ typedef struct vNode {
     HashChainNode           openedNode;
     fsNode*                 fsNode;
 
-    vNodeAttribute          attribute;
-
     ID                      deviceID;
 
     Spinlock                lock;   //TODO: Use mutex?
@@ -49,12 +38,8 @@ typedef struct vNodeOperations {
     void (*writeData)(vNode* vnode, Index64 begin, const void* buffer, Size byteN);
 
     void (*resize)(vNode* vnode, Size newSizeInByte);   //TODO: Add Sync
-
-    void (*readAttr)(vNode* vnode, vNodeAttribute* attribute);
-
-    void (*writeAttr)(vNode* vnode, vNodeAttribute* attribute);
     //=========== Directory Functions ===========
-    Index64 (*addDirectoryEntry)(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr);
+    Index64 (*addDirectoryEntry)(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr);
 
     void (*removeDirectoryEntry)(vNode* vnode, ConstCstring name, bool isDirectory);
 
@@ -75,15 +60,7 @@ static inline void vNode_rawResize(vNode* vnode, Size newSizeInByte) {
     vnode->operations->resize(vnode, newSizeInByte);
 }
 
-static inline void vNode_rawReadAttr(vNode* vnode, vNodeAttribute* attribute) {
-    vnode->operations->readAttr(vnode, attribute);
-}
-
-static inline void vNode_rawWriteAttr(vNode* vnode, vNodeAttribute* attribute) {
-    vnode->operations->writeAttr(vnode, attribute);
-}
-
-static inline Index64 vNode_rawAddDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr) {
+static inline Index64 vNode_rawAddDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) {
     return vnode->operations->addDirectoryEntry(vnode, entry, attr);
 }
 
@@ -99,15 +76,11 @@ static inline void vNode_rawReadDirectoryEntries(vNode* vnode) {
     vnode->operations->readDirectoryEntries(vnode);
 }
 
-void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr);
+void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr);
 
 void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory);
 
 void vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName);
-
-void vNode_genericReadAttr(vNode* vnode, vNodeAttribute* attribute);
-
-void vNode_genericWriteAttr(vNode* vnode, vNodeAttribute* attribute);
 
 static inline Uint32 vNode_getReferenceCount(vNode* vnode) {
     return REF_COUNTER_GET(vnode->refCounter);

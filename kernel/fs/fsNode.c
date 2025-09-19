@@ -4,6 +4,7 @@
 #include<fs/path.h>
 #include<fs/vnode.h>
 #include<kit/util.h>
+#include<memory/memory.h>
 #include<memory/mm.h>
 #include<multitask/locks/spinlock.h>
 #include<structs/linkedList.h>
@@ -13,7 +14,7 @@
 #include<debug.h>
 #include<error.h>
 
-static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, fsNode* parent);
+static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent);
 
 static void __fsnode_release(fsNode* node);
 
@@ -37,7 +38,15 @@ static void __dirfsNode_addChildNode(DirFSnode* dirNode, fsNode* child);
 
 static fsNode* __dirfsNode_removeChildNode(DirFSnode* dirNode, ConstCstring name, bool isDirectory);
 
-fsNode* fsnode_create(DirectoryEntry* entry, fsNode* parent) {
+void fsnodeAttribute_initDefault(FSnodeAttribute* attribute) {
+    attribute->uid = 0;
+    attribute->gid = 0;
+    attribute->createTime = 0;  //Clock not initialized yet
+    attribute->lastAccessTime = 0;
+    attribute->lastModifyTime = 0;
+}
+
+fsNode* fsnode_create(DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent) {
     DEBUG_ASSERT_SILENT(directoryEntry_isDetailed(entry));
     DEBUG_ASSERT_SILENT(entry->type != FS_ENTRY_TYPE_DUMMY);
     
@@ -59,7 +68,7 @@ fsNode* fsnode_create(DirectoryEntry* entry, fsNode* parent) {
     }
     
     DEBUG_ASSERT_SILENT(parent == NULL || parent->entry.type == FS_ENTRY_TYPE_DIRECTORY);
-    __fsnode_initStruct(ret, entry, parent);
+    __fsnode_initStruct(ret, entry, attribute, parent);
 
     DEBUG_ASSERT_SILENT(__fsnode_isReadyToRelease(ret));
     
@@ -278,7 +287,7 @@ void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
     spinlock_unlock(&node->lock);
 }
 
-static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, fsNode* parent) {    
+static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent) {    
     string_initStructStr(&node->name, entry->name);
     ERROR_GOTO_IF_ERROR(0);
 
@@ -290,6 +299,8 @@ static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, fsNode* par
         .size = entry->size,
         .pointsTo = entry->pointsTo
     };
+
+    memory_memcpy(&node->attribute, attribute, sizeof(FSnodeAttribute));
 
     REF_COUNTER_INIT(node->refCounter, 0);  //Release should not be invoked by internal operations
 

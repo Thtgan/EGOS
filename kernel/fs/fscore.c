@@ -32,7 +32,10 @@ void fscore_initStruct(FScore* fscore, FScoreInitArgs* args) {
         .pointsTo = args->rootFSnodePointsTo
     };
 
-    fscore->rootFSnode      = fsnode_create(&rootDirEntry, NULL);
+    FSnodeAttribute rootDirectoryAttribute;
+    fsnodeAttribute_initDefault(&rootDirectoryAttribute);
+
+    fscore->rootFSnode      = fsnode_create(&rootDirEntry, &rootDirectoryAttribute, NULL);
     linkedList_initStruct(&fscore->mounted);
 
     fsnode_requestVnode(fscore, fscore->rootFSnode);

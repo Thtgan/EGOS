@@ -213,7 +213,7 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
     if (needCreate) {
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
-        vNodeAttribute attr;
+        FSnodeAttribute attr;
         attr.createTime = timestamp.second;
         attr.lastAccessTime = timestamp.second;
         attr.lastModifyTime = timestamp.second;
@@ -227,15 +227,10 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
             .pointsTo = DIRECTORY_ENTRY_POINTS_TO_ANY
         };
 
-        // vNode_addDirectoryEntry(dirVnode, basename.data, isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE, &attr, 0);
         vNode_addDirectoryEntry(dirVnode, &newEntry, &attr);
         ERROR_GOTO_IF_ERROR(0);
 
-        vNode_rawReadAttr(dirVnode, &attr);
-        ERROR_GOTO_IF_ERROR(0);
-        attr.lastModifyTime = timestamp.second;
-        vNode_rawWriteAttr(dirVnode, &attr);
-        ERROR_GOTO_IF_ERROR(0);
+        dirVnode->fsNode->attribute.lastModifyTime = timestamp.second;  //TODO: Write this back to directory data
 
         targetNode = fsnode_lookup(dirFSnode, basename.data, isDirectory, true);    //Refer targetNode once (if found)
         if (targetNode == NULL) {
@@ -327,16 +322,9 @@ void fs_fileRead(File* file, void* buffer, Size n) {
     fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->flags, FCNTL_OPEN_NOATIME)) {
-        vNodeAttribute attr;
-        vNode_rawReadAttr(file->vnode, &attr);
-        ERROR_GOTO_IF_ERROR(0);
-        
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
-        attr.lastAccessTime = timestamp.second;
-
-        vNode_rawWriteAttr(file->vnode, &attr);
-        ERROR_GOTO_IF_ERROR(0);
+        file->vnode->fsNode->attribute.lastAccessTime = timestamp.second;   //TODO: Write this back to directory data
     }
 
     return;
@@ -357,16 +345,9 @@ void fs_fileWrite(File* file, const void* buffer, Size n) {
     fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->flags, FCNTL_OPEN_NOATIME)) {
-        vNodeAttribute attr;
-        vNode_rawReadAttr(file->vnode, &attr);
-        ERROR_GOTO_IF_ERROR(0);
-        
         Timestamp timestamp;
         time_getTimestamp(&timestamp);
-        attr.lastAccessTime = timestamp.second;
-
-        vNode_rawWriteAttr(file->vnode, &attr);
-        ERROR_GOTO_IF_ERROR(0);
+        file->vnode->fsNode->attribute.lastAccessTime = timestamp.second;   //TODO: Write this back to directory data
     }
 
     return;
@@ -426,15 +407,16 @@ void fs_fileStat(File* file, FS_fileStat* stat) {
         break;
     }
     stat->mode = mode;
-    stat->uid = vnode->attribute.uid;  //TODO: User not implemented
-    stat->gid = vnode->attribute.gid;
+    FSnodeAttribute* attribute = &vnode->fsNode->attribute;
+    stat->uid = attribute->uid;  //TODO: User not implemented
+    stat->gid = attribute->gid;
     if (type == FS_ENTRY_TYPE_DEVICE) {
         stat->rDevice = vnode->deviceID;
     }
     stat->size = vnode->size;
     stat->blockSize = POWER_2(fscore->blockDevice->device.granularity);
     stat->blocks = vnode->tokenSpaceSize / stat->blockSize;
-    stat->accessTime.second = vnode->attribute.lastAccessTime;
-    stat->modifyTime.second = vnode->attribute.lastModifyTime;
-    stat->createTime.second = vnode->attribute.createTime;
+    stat->accessTime.second = attribute->lastAccessTime;
+    stat->modifyTime.second = attribute->lastModifyTime;
+    stat->createTime.second = attribute->createTime;
 }

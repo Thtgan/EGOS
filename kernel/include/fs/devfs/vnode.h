@@ -6,6 +6,7 @@ typedef struct DevfsDirectoryEntry DevfsDirectoryEntry;
 
 #include<debug.h>
 #include<fs/fsEntry.h>
+#include<fs/fsNode.h>
 #include<fs/vnode.h>
 #include<fs/fscore.h>
 #include<kit/types.h>
@@ -17,16 +18,15 @@ typedef struct DevfsVnode {
 } DevfsVnode;
 
 typedef struct DevfsDirectoryEntry {
-    String      name;
-    Index64     mappingIndex;
-    Size        size;
-    fsEntryType type;
-    Object      pointsTo;
+    String          name;
+    Index64         mappingIndex;
+    Size            size;
+    fsEntryType     type;
+    Object          pointsTo;
+    FSnodeAttribute attribute;
 } DevfsDirectoryEntry;
 
-DEBUG_ASSERT_COMPILE(sizeof(DevfsDirectoryEntry) == 64);
-
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo);
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo, FSnodeAttribute* attribute);
 
 vNodeOperations* devfs_vNode_getOperations();
 

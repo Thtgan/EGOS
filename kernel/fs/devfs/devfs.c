@@ -85,10 +85,12 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     }
     vector_push(&_devfs_storageMapping, (Object)INVALID_INDEX64);
     _devfs_storageMappingFirstFree = 0;
-
     Index64 mappingIndex = devfscore_allocateMappingIndex();
 
-    devfsDirectoryEntry_initStruct(&devfscore->rootDirEntry, "", FS_ENTRY_TYPE_DIRECTORY, mappingIndex, (Object)NULL);
+    FSnodeAttribute attribute;
+    fsnodeAttribute_initDefault(&attribute);
+
+    devfsDirectoryEntry_initStruct(&devfscore->rootDirEntry, "", FS_ENTRY_TYPE_DIRECTORY, mappingIndex, (Object)NULL, &attribute);
     devfscore_setStorageMapping(mappingIndex, &devfscore->rootDirEntry);
 
     FScoreInitArgs args = {
@@ -106,14 +108,6 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     fs->type = FS_TYPE_DEVFS;
 
     vNode* rootVnode = fscore_getVnode(fscore, fscore->rootFSnode, false);
-    vNodeAttribute attribute = (vNodeAttribute) {   //TODO: Ugly code
-        .uid = 0,
-        .gid = 0,
-        .createTime = 0,
-        .lastAccessTime = 0,
-        .lastModifyTime = 0
-    };
-
     for (MajorDeviceID major = device_iterateMajor(DEVICE_INVALID_ID); major != DEVICE_INVALID_ID; major = device_iterateMajor(major)) {    //TODO: What if device joins after boot?
         for (Device* device = device_iterateMinor(major, DEVICE_INVALID_ID); device != NULL; device = device_iterateMinor(major, DEVICE_MINOR_FROM_ID(device->id))) {
             DirectoryEntry newEntry = (DirectoryEntry) {
@@ -208,13 +202,6 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     REF_COUNTER_INIT(vnode->refCounter, 0);
     
     vnode->fsNode           = node;
-    vnode->attribute        = (vNodeAttribute) {   //TODO: Ugly code
-        .uid = 0,
-        .gid = 0,
-        .createTime = 0,
-        .lastAccessTime = 0,
-        .lastModifyTime = 0
-    };
     vnode->lock             = SPINLOCK_UNLOCKED;
 
     return vnode;

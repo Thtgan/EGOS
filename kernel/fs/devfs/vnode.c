@@ -5,6 +5,7 @@
 #include<fs/directoryEntry.h>
 #include<fs/vnode.h>
 #include<fs/fscore.h>
+#include<fs/fsNode.h>
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/memory.h>
@@ -23,7 +24,7 @@ static void __devfs_vNode_writeData(vNode* vnode, Index64 begin, const void* buf
 
 static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte);
 
-static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr);
+static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr);
 
 static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory);
 
@@ -35,21 +36,20 @@ static vNodeOperations _devfs_vNodeOperations = {
     .readData                   = __devfs_vNode_readData,
     .writeData                  = __devfs_vNode_writeData,
     .resize                     = __devfs_vNode_resize,
-    .readAttr                   = vNode_genericReadAttr,
-    .writeAttr                  = vNode_genericWriteAttr,
     .addDirectoryEntry          = __devfs_vNode_addDirectoryEntry,
     .removeDirectoryEntry       = __devfs_vNode_removeDirectoryEntry,
     .renameDirectoryEntry       = __devfs_vNode_renameDirectoryEntry,
     .readDirectoryEntries       = __devfs_vNode_readDirectoryEntries
 };
 
-void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo) {
+void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo, FSnodeAttribute* attribute) {
     string_initStructStr(&entry->name, name);
     ERROR_GOTO_IF_ERROR(0);
     entry->mappingIndex = mappingIndex;
     entry->size         = type == FS_ENTRY_TYPE_DEVICE ? INFINITE : 0;
     entry->type         = type;
     entry->pointsTo     = pointsTo;
+    memory_memcpy(&entry->attribute, attribute, sizeof(FSnodeAttribute));
 
     return;
     ERROR_FINAL_BEGIN(0);
@@ -155,7 +155,7 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
     return;
 }
 
-static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr) {
+static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) {
     DEBUG_ASSERT_SILENT(directoryEntry_checkAdding(entry));
     DEBUG_ASSERT_SILENT(vnode->size % sizeof(DevfsDirectoryEntry) == 0);
     
@@ -188,7 +188,7 @@ static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* ent
     Index64 mappingIndex = devfscore_allocateMappingIndex();
     ERROR_GOTO_IF_ERROR(0);
 
-    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, entry->name, entry->type, mappingIndex, pointsTo);
+    devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, entry->name, entry->type, mappingIndex, pointsTo, attr);
 
     entry->size = devfsDirectoryEntry.size;
 
@@ -359,7 +359,7 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
         directoryEntry.size         = devfsDirectoryEntry.size;
         directoryEntry.pointsTo     = (Object)devfsDirectoryEntry.mappingIndex;
 
-        fsnode_create(&directoryEntry, &dirNode->node);
+        fsnode_create(&directoryEntry, &devfsDirectoryEntry.attribute, &dirNode->node);
         ERROR_GOTO_IF_ERROR(0);
         
         currentPointer += sizeof(DevfsDirectoryEntry);

@@ -13,7 +13,7 @@
 #include<debug.h>
 #include<error.h>
 
-void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute* attr) {
+void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) {
     fsNode* node = vnode->fsNode, * found = NULL;
     DEBUG_ASSERT_SILENT(node->vnode == vnode);
     DEBUG_ASSERT_SILENT(node->entry.type == FS_ENTRY_TYPE_DIRECTORY);
@@ -24,16 +24,7 @@ void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, vNodeAttribute
     ERROR_GOTO_IF_ERROR(0);
 
     if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {  //If node has read children, append new node dynamically
-        // DirectoryEntry newDirEntry = {
-        //     .name = name,
-        //     .type = type,
-        //     .mode = 0,
-        //     .vnodeID = 0,
-        //     .size = (type == FS_ENTRY_TYPE_DEVICE ? INFINITE : 0),
-        //     .pointsTo = pointsTo
-        // };
-        
-        fsnode_create(entry, node);
+        fsnode_create(entry, attr, node);
         ERROR_GOTO_IF_ERROR(0);
     }
     
@@ -85,12 +76,4 @@ void vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, Cons
     if (spinlock_isLocked(&vnode->lock)) {
         spinlock_unlock(&vnode->lock);
     }
-}
-
-void vNode_genericReadAttr(vNode* vnode, vNodeAttribute* attribute) {
-    memory_memcpy(attribute, &vnode->attribute, sizeof(vNodeAttribute));
-}
-
-void vNode_genericWriteAttr(vNode* vnode, vNodeAttribute* attribute) {
-    memory_memcpy(&vnode->attribute, attribute, sizeof(vNodeAttribute));
 }

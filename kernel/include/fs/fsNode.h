@@ -1,6 +1,7 @@
 #if !defined(__FS_FSNODE_H)
 #define __FS_FSNODE_H
 
+typedef struct FSnodeAttribute FSnodeAttribute;
 typedef struct fsNode fsNode;
 typedef struct fsNodeDirPart fsNodeDirPart;
 typedef struct DirFSnode DirFSnode;
@@ -16,9 +17,20 @@ typedef struct DirFSnode DirFSnode;
 #include<structs/string.h>
 #include<structs/hashTable.h>
 
+typedef struct FSnodeAttribute {
+    Uint32 uid; //TODO: Not used yet
+    Uint32 gid; //TODO: Not used yet
+    Uint64 createTime;
+    Uint64 lastAccessTime;
+    Uint64 lastModifyTime;
+} FSnodeAttribute;
+
+void fsnodeAttribute_initDefault(FSnodeAttribute* attribute);
+
 typedef struct fsNode {
     String              name;
     DirectoryEntry      entry;
+    FSnodeAttribute     attribute;
 
     RefCounter32        refCounter; //How many instances requires this node to work
 
@@ -40,7 +52,7 @@ typedef struct fsNodeDirPart {
 #define FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM    (Uint32)-1
     Uint32              childrenNum;
     RefCounter32        livingChildNum; //Contained by refCounter
-#define FSNODE_DIR_PART_CHILDREN_HASH_CHAIN_SIZE    7
+#define FSNODE_DIR_PART_CHILDREN_HASH_CHAIN_SIZE    3
     SinglyLinkedList    childrenHashChains[FSNODE_DIR_PART_CHILDREN_HASH_CHAIN_SIZE];
 } fsNodeDirPart;
 
@@ -53,7 +65,7 @@ typedef struct DirFSnode {
 
 DEBUG_ASSERT_COMPILE(IS_POWER_2(sizeof(DirFSnode)));
 
-fsNode* fsnode_create(DirectoryEntry* entry, fsNode* parent);
+fsNode* fsnode_create(DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent);
 
 void fsnode_refer(fsNode* node);
 
