@@ -23,9 +23,8 @@ void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribut
     Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, entry, attr);
     ERROR_GOTO_IF_ERROR(0);
 
-    if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {  //If node has read children, append new node dynamically
-        fsnode_create(entry, attr, node);
-        ERROR_GOTO_IF_ERROR(0);
+    if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {
+        fsnode_forgetAllDirectoryEntries(node);
     }
     
     spinlock_unlock(&vnode->lock);
@@ -45,7 +44,7 @@ void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirector
     spinlock_lock(&vnode->lock);
     
     if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {
-        fsnode_forgetDirectoryEntry(node, name, isDirectory);
+        fsnode_forgetAllDirectoryEntries(node);
     }
 
     vNode_rawRemoveDirectoryEntry(vnode, name, isDirectory);
@@ -61,13 +60,21 @@ void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirector
 }
 
 void vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName) {
+    fsNode* node = vnode->fsNode;
+    DEBUG_ASSERT_SILENT(node->vnode == vnode);
+    DEBUG_ASSERT_SILENT(node->entry.type == FS_ENTRY_TYPE_DIRECTORY);
+
     spinlock_lock(&vnode->lock);
     
     vNode_rawRenameDirectoryEntry(vnode, entry, moveTo, newName);
     ERROR_GOTO_IF_ERROR(0);
-    
-    fsnode_move(entry, moveTo->fsNode, newName);
-    ERROR_GOTO_IF_ERROR(0);
+
+    fsnode_forgetAllDirectoryEntries(node);
+    if (moveTo != vnode) {
+        fsnode_forgetAllDirectoryEntries(moveTo->fsNode);
+        // fsnode_move(entry, moveTo->fsNode, newName);
+        // ERROR_GOTO_IF_ERROR(0);
+    }
     
     spinlock_unlock(&vnode->lock);
 

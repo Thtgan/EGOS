@@ -222,7 +222,7 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
             .name = basename.data,
             .type = isDirectory ? FS_ENTRY_TYPE_DIRECTORY : FS_ENTRY_TYPE_FILE,
             .mode = 0,  //TODO: mode not used yet
-            .vnodeID = 0,   //TODO: Re-implement vnode ID
+            .vnodeID = DIRECTORY_ENTRY_VNDOE_ID_ANY,
             .size = DIRECTORY_ENTRY_SIZE_ANY,
             .pointsTo = DIRECTORY_ENTRY_POINTS_TO_ANY
         };

@@ -716,7 +716,8 @@ static void __fat32_vNode_readDirectoryEntries(vNode* vnode) {
     BlockDevice* targetBlockDevice = fscore->blockDevice;
     Device* targetDevice = &targetBlockDevice->device;
     
-    clusterBuffer = mm_allocate(BPB->sectorPerCluster * POWER_2(targetDevice->granularity));
+    Size clusterSize = POWER_2(targetDevice->granularity) * BPB->sectorPerCluster;
+    clusterBuffer = mm_allocate(clusterSize);
     if (clusterBuffer == NULL) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
@@ -737,6 +738,9 @@ static void __fat32_vNode_readDirectoryEntries(vNode* vnode) {
     Size size = 0;
     Index64 currentPointer = 0;
     Size entriesLength = 0;
+
+    FAT32vnode* fat32vnode = HOST_POINTER(vnode, FAT32vnode, vnode);
+    Index32 currentClusterIndex = fat32_getCluster(fat32fscore, fat32vnode->firstCluster, 0);
 
     DEBUG_ASSERT_SILENT(dirNode->dirPart.childrenNum == FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM);
     dirNode->dirPart.childrenNum = 0;
@@ -760,14 +764,18 @@ static void __fat32_vNode_readDirectoryEntries(vNode* vnode) {
             .name = entryName.data,
             .type = type,
             .mode = 0,
-            .vnodeID = 0,   //TODO: Re-implement vnode ID
+            .vnodeID = currentClusterIndex * clusterSize | (currentPointer % clusterSize),
             .size = size,
             .pointsTo = (Index64)firstCluster
         };
 
         fsnode_create(&newDirEntry, &fsnodeAttribute, &dirNode->node);
 
+        Size stepClusterNum = DIVIDE_ROUND_DOWN(currentPointer + entriesLength, clusterSize) - DIVIDE_ROUND_DOWN(currentPointer, clusterSize);
         currentPointer += entriesLength;
+        if (stepClusterNum != 0) {
+            currentClusterIndex = fat32_getCluster(fat32fscore, currentClusterIndex, stepClusterNum);
+        }
     }
 
     mm_free(clusterBuffer);

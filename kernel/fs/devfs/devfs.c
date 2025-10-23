@@ -114,7 +114,7 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
                 .name = device->name,
                 .type = FS_ENTRY_TYPE_DEVICE,
                 .mode = 0,  //TODO: mode not used yet
-                .vnodeID = 0,   //TODO: Re-implement vnode ID
+                .vnodeID = DIRECTORY_ENTRY_VNDOE_ID_ANY,
                 .size = DIRECTORY_ENTRY_SIZE_ANY,
                 .pointsTo = device->id
             };
@@ -181,7 +181,7 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     DEBUG_ASSERT_SILENT(dirEntry->mappingIndex == (Index64)nodeEntry->pointsTo && dirEntry->size == nodeEntry->size);
 
     vnode->signature            = VNODE_SIGNATURE;
-    vnode->vnodeID              = 0;    //TODO: Re-implement vnode ID
+    vnode->vnodeID              = node->entry.vnodeID;
     vnode->size                 = nodeEntry->size;
     
     fsEntryType type = nodeEntry->type;

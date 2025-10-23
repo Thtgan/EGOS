@@ -37,5 +37,5 @@ bool directoryEntry_isDetailed(DirectoryEntry* entry) {
 }
 
 bool directoryEntry_checkAdding(DirectoryEntry* entry) {
-    return entry->name != DIRECTORY_ENTRY_NAME_ANY && entry->type != DIRECTORY_ENTRY_TYPE_ANY && entry->size == DIRECTORY_ENTRY_SIZE_ANY && !(entry->type == FS_ENTRY_TYPE_DEVICE && entry->pointsTo == DIRECTORY_ENTRY_POINTS_TO_ANY);
+    return entry->name != DIRECTORY_ENTRY_NAME_ANY && entry->type != DIRECTORY_ENTRY_TYPE_ANY && entry->vnodeID == DIRECTORY_ENTRY_VNDOE_ID_ANY && entry->size == DIRECTORY_ENTRY_SIZE_ANY && !(entry->type == FS_ENTRY_TYPE_DEVICE && entry->pointsTo == DIRECTORY_ENTRY_POINTS_TO_ANY);
 }

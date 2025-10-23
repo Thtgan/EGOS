@@ -41,6 +41,7 @@ typedef struct FScoreOperations {
 typedef struct FScoreInitArgs {
     BlockDevice*        blockDevice;
     FScoreOperations*   operations;
+    ID                  rootVnodeID;
     Index64             rootFSnodePointsTo;
 } FScoreInitArgs;
 

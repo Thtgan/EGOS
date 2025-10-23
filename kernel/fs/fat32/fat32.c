@@ -158,6 +158,7 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     FScoreInitArgs args = {
         .blockDevice        = blockDevice,
         .operations         = &__fat32_fscoreOperations,
+        .rootVnodeID        = 1,    //Dummy ID for root directory
         .rootFSnodePointsTo = BPB->rootDirectoryClusterIndex
         // .openedVnodeBucket  = __FS_FAT32_FSCORE_HASH_BUCKET,
         // .openedVnodeChains  = openedVnodeChains
@@ -259,7 +260,7 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
     DEBUG_ASSERT_SILENT(vnode->size <= vnode->tokenSpaceSize);
     
     vnode->signature        = VNODE_SIGNATURE;
-    vnode->vnodeID          = 0;    //TODO: Re-implement vnode ID
+    vnode->vnodeID          = node->entry.vnodeID;
     vnode->fscore           = fscore;
     vnode->operations       = fat32_vNode_getOperations();
     

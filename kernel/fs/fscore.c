@@ -27,7 +27,7 @@ void fscore_initStruct(FScore* fscore, FScoreInitArgs* args) {
         .name = "",
         .type = FS_ENTRY_TYPE_DIRECTORY,
         .mode = 0,
-        .vnodeID = 0,   //TODO: Re-implement vnode ID
+        .vnodeID = args->rootVnodeID,
         .size = 0,
         .pointsTo = args->rootFSnodePointsTo
     };

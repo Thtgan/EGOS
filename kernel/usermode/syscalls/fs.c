@@ -185,7 +185,7 @@ static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
         }
 
         __SyscallFSdirectoryEntry* syscallEntry = (__SyscallFSdirectoryEntry*)currentBuffer;
-        syscallEntry->vnodeID = INVALID_ID; //TODO: Bring back vnode ID
+        syscallEntry->vnodeID = child->entry.vnodeID;
         syscallEntry->off = 0;  //TODO: Not figured out yet
         cstring_strcpy(syscallEntry->name, child->name.data);
 

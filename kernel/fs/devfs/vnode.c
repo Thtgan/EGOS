@@ -1,6 +1,7 @@
 #include<fs/devfs/vnode.h>
 
 #include<devices/device.h>
+#include<devices/memoryBlockDevice.h>
 #include<fs/devfs/devfs.h>
 #include<fs/directoryEntry.h>
 #include<fs/vnode.h>
@@ -134,6 +135,7 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
                 memory_memcpy(newPages, devfsVnode->data, vnode->size);
                 memory_memset(newPages + vnode->size, 0, newPageNum * PAGE_SIZE - vnode->size);
             }
+            //TODO: What about storage mappings
         }
         
         if (oldPageNum != 0) {
@@ -345,6 +347,8 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
     DEBUG_ASSERT_SILENT(dirNode->dirPart.childrenNum == FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM);
     dirNode->dirPart.childrenNum = 0;
 
+    DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
+
     Size currentPointer = 0;
     DevfsDirectoryEntry devfsDirectoryEntry;
     DirectoryEntry directoryEntry;
@@ -354,7 +358,7 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
 
         directoryEntry.name         = devfsDirectoryEntry.name.data;
         directoryEntry.type         = devfsDirectoryEntry.type;
-        directoryEntry.vnodeID      = 0;    //TODO: Re-implement vnode ID
+        directoryEntry.vnodeID      = (ID)devfs_vNode_getDataPointer(devfsVnode, currentPointer);   //TODO: Very ugly vnode ID
         directoryEntry.mode         = 0;    //TODO: Support for mode
         directoryEntry.size         = devfsDirectoryEntry.size;
         directoryEntry.pointsTo     = (Object)devfsDirectoryEntry.mappingIndex;

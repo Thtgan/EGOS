@@ -249,6 +249,7 @@ static void printLOGO() {
     fs_fileStat(file, &stat);
     ERROR_CHECKPOINT();
 
+    print_printf("%lu\n", stat.vnodeID);
     print_printf("%lu\n", stat.createTime.second);
     print_printf("%lu\n", stat.accessTime.second);
     print_printf("%lu\n", stat.modifyTime.second);
