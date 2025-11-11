@@ -22,6 +22,8 @@ int* arr1, * arr2;
 
 static void printLOGO();
 
+static void printFileFromEXT2();
+
 Uint16 rootTID = 0;
 
 #include<kit/util.h>
@@ -117,6 +119,8 @@ void kernelMain(SystemInfo* info) {
     //     fs_fileWrite(&file, "TEST", 4);
     // }
     // fs_fileClose(&file);
+
+    printFileFromEXT2();
 
     Uint32 pciDeviceNum = pci_getDeviceNum();
     print_debugPrintf("%u PCI devices found\n", pciDeviceNum);
@@ -241,6 +245,29 @@ void kernelMain(SystemInfo* info) {
 static void printLOGO() {
     FS_fileStat stat;
     File* file = fs_fileOpen("/LOGO.txt", FCNTL_OPEN_READ_ONLY);    //TODO: What if file closed before munmap?
+    ERROR_CHECKPOINT();
+    void* addr = mapping_mmap(NULL, file->vnode->size, MAPPING_MMAP_PROT_READ, MAPPING_MMAP_FLAGS_TYPE_PRIVATE, file, 0);
+    print_printf("%s\n", addr);
+    mapping_munmap(addr, file->vnode->size);
+
+    fs_fileStat(file, &stat);
+    ERROR_CHECKPOINT();
+
+    print_printf("%lu\n", stat.vnodeID);
+    print_printf("%lu\n", stat.createTime.second);
+    print_printf("%lu\n", stat.accessTime.second);
+    print_printf("%lu\n", stat.modifyTime.second);
+
+    BlockDevice* device = file->vnode->fscore->blockDevice;
+    fs_fileClose(file);
+    ERROR_CHECKPOINT();
+    blockDevice_flush(device);
+    ERROR_CHECKPOINT();
+}
+
+static void printFileFromEXT2() {
+    FS_fileStat stat;
+    File* file = fs_fileOpen("/mnt/test_directory_a/test_file_b.txt", FCNTL_OPEN_READ_ONLY);    //TODO: What if file closed before munmap?
     ERROR_CHECKPOINT();
     void* addr = mapping_mmap(NULL, file->vnode->size, MAPPING_MMAP_PROT_READ, MAPPING_MMAP_FLAGS_TYPE_PRIVATE, file, 0);
     print_printf("%s\n", addr);

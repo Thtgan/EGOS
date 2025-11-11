@@ -171,10 +171,11 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
 }
 
 void blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferBlock* block) {
-    DEBUG_ASSERT_SILENT(blockIndex != INVALID_INDEX64);
     block->blockIndex = blockIndex;
-    hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode);
-    ERROR_GOTO_IF_ERROR(0);
+    if (blockIndex != INVALID_INDEX64) {
+        hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode);
+        ERROR_GOTO_IF_ERROR(0);
+    }
 
     linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
     SET_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_PRESENT);

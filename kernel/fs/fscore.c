@@ -35,7 +35,7 @@ void fscore_initStruct(FScore* fscore, FScoreInitArgs* args) {
     FSnodeAttribute rootDirectoryAttribute;
     fsnodeAttribute_initDefault(&rootDirectoryAttribute);
 
-    fscore->rootFSnode      = fsnode_create(&rootDirEntry, &rootDirectoryAttribute, NULL);
+    fscore->rootFSnode      = fsnode_create(&rootDirEntry, INFINITE, &rootDirectoryAttribute, NULL);
     linkedList_initStruct(&fscore->mounted);
 
     fsnode_requestVnode(fscore, fscore->rootFSnode);

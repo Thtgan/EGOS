@@ -44,6 +44,7 @@ void blockDevice_initStruct(BlockDevice* blockDevice, BlockDeviceInitArgs* args)
 
 void blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* buffer, Size n) {
     Device* device = &blockDevice->device;
+    DEBUG_ASSERT_SILENT(blockIndex != INVALID_INDEX64);
     if (device->operations->readUnits == NULL) {
         ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);   //TODO: Move this to raw call function?
     }
@@ -83,6 +84,7 @@ void blockDevice_readBlocks(BlockDevice* blockDevice, Index64 blockIndex, void* 
 
 void blockDevice_writeBlocks(BlockDevice* blockDevice, Index64 blockIndex, const void* buffer, Size n) {
     Device* device = &blockDevice->device;
+    DEBUG_ASSERT_SILENT(blockIndex != INVALID_INDEX64);
     if (TEST_FLAGS(device->flags, DEVICE_FLAGS_READONLY)) {
         ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
     }

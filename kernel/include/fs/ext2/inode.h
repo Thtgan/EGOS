@@ -1,12 +1,13 @@
 #if !defined(__FS_EXT2_INODE_H)
 #define __FS_EXT2_INODE_H
 
+typedef struct EXT2inode EXT2inode;
+typedef struct EXT2inodeOSspecific2Linux EXT2inodeOSspecific2Linux;
+
+#include<fs/ext2/ext2.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<debug.h>
-
-typedef struct EXT2inode EXT2inode;
-typedef struct EXT2inodeOSspecific2Linux EXT2inodeOSspecific2Linux;
 
 typedef struct EXT2inode {
 #define EXT2_INODE_TYPE_MASK                    0xF000
@@ -73,5 +74,13 @@ typedef struct EXT2inodeOSspecific2Linux {
 } __attribute__((packed)) EXT2inodeOSspecific2Linux;
 
 DEBUG_ASSERT_COMPILE(sizeof(EXT2inodeOSspecific2Linux) == 12);
+
+typedef void (*ext2InodeInterateFunc)(Index32 blockIndex, void* args);
+
+void ext2Inode_iterateBlockRange(EXT2inode* inode, EXT2fscore* fscore, Index64 begin, Size n, ext2InodeInterateFunc func, void* args);
+
+void ext2Inode_truncateTable(EXT2inode* inode, EXT2fscore* fscore, Index64 oldSize, Index64 newSize);
+
+void ext2Inode_expandTable(EXT2inode* inode, ID inodeID, EXT2fscore* fscore, Index64 oldSize, Index64 newSize);
 
 #endif // __FS_EXT2_INODE_H

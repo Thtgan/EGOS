@@ -769,7 +769,7 @@ static void __fat32_vNode_readDirectoryEntries(vNode* vnode) {
             .pointsTo = (Index64)firstCluster
         };
 
-        fsnode_create(&newDirEntry, &fsnodeAttribute, &dirNode->node);
+        fsnode_create(&newDirEntry, INFINITE, &fsnodeAttribute, &dirNode->node);
 
         Size stepClusterNum = DIVIDE_ROUND_DOWN(currentPointer + entriesLength, clusterSize) - DIVIDE_ROUND_DOWN(currentPointer, clusterSize);
         currentPointer += entriesLength;

@@ -110,15 +110,23 @@ void fs_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     fsIdentifier devfsMountPoint;
+    fsIdentifier ext2MountPoint;
 
     FScore* rootFScore = fs_rootFS->fscore;
     vNode* rootFSrootVnode = fscore_getVnode(rootFScore, rootFScore->rootFSnode, false);  //Refer rootFScore->rootFSnode
-    fsIdentifier_initStruct(&devfsMountPoint, rootFSrootVnode, "/dev", true);  //TODO: fails if dev not exist
+    fsIdentifier_initStruct(&devfsMountPoint, rootFSrootVnode, "/dev", true);   //TODO: fails if dev not exist
+    ERROR_GOTO_IF_ERROR(0);
+    fsIdentifier_initStruct(&ext2MountPoint, rootFSrootVnode, "/mnt", true);    //TODO: fails if mnt not exist
     ERROR_GOTO_IF_ERROR(0);
 
     FScore* devFScore = fs_devFS->fscore;
     vNode* devFSrootVnode = fscore_getVnode(devFScore, devFScore->rootFSnode, false);
     fscore_rawMount(rootFScore, &devfsMountPoint, devFSrootVnode, EMPTY_FLAGS);
+    ERROR_GOTO_IF_ERROR(0);
+    
+    FScore* ext2FScore = fs_ext2->fscore;
+    vNode* ext2rootVnode = fscore_getVnode(ext2FScore, ext2FScore->rootFSnode, false);
+    fscore_rawMount(rootFScore, &ext2MountPoint, ext2rootVnode, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(0);
 
     fscore_releaseVnode(rootFSrootVnode);

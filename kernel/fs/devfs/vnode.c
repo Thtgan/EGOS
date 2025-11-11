@@ -363,7 +363,7 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
         directoryEntry.size         = devfsDirectoryEntry.size;
         directoryEntry.pointsTo     = (Object)devfsDirectoryEntry.mappingIndex;
 
-        fsnode_create(&directoryEntry, &devfsDirectoryEntry.attribute, &dirNode->node);
+        fsnode_create(&directoryEntry, INFINITE, &devfsDirectoryEntry.attribute, &dirNode->node);
         ERROR_GOTO_IF_ERROR(0);
         
         currentPointer += sizeof(DevfsDirectoryEntry);

@@ -1,20 +1,16 @@
 #if !defined(__FS_EXT2_EXT2_H)
 #define __FS_EXT2_EXT2_H
 
+typedef struct EXT2SuperBlock EXT2SuperBlock;
+typedef struct EXT2fscore EXT2fscore;
+
 #include<devices/blockDevice.h>
+#include<fs/ext2/blockGroup.h>
 #include<fs/fs.h>
 #include<fs/fscore.h>
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
-
-typedef struct EXT2fscore EXT2fscore;
-typedef struct EXT2SuperBlock EXT2SuperBlock;
-
-typedef struct EXT2fscore {
-    FScore          fscore;
-    EXT2SuperBlock* superBlock;
-} EXT2fscore;
 
 typedef struct EXT2SuperBlock {
     Uint32 totalInodeNum;
@@ -23,9 +19,11 @@ typedef struct EXT2SuperBlock {
     Uint32 unallocatedBlockNum;
     Uint32 unallocatedInodeNum;
     Index32 superBlockBlock;
-#define EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(__SHIFT)  POWER_2((__SHIFT) + 10)
+#define EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE_SHIFT(__SHIFT)    ((__SHIFT) + 10)
+#define EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(__SHIFT)          POWER_2(EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE_SHIFT(__SHIFT))
     Uint32 blockSizeShift;
-#define EXT2_SUPERBLOCK_IN_STORAGE_GET_FRAGMENT_SIZE(__SHIFT)  POWER_2((__SHIFT) + 10)
+#define EXT2_SUPERBLOCK_IN_STORAGE_GET_FRAGMENT_SIZE_SHIFT(__SHIFT) ((__SHIFT) + 10)
+#define EXT2_SUPERBLOCK_IN_STORAGE_GET_FRAGMENT_SIZE(__SHIFT)       POWER_2(EXT2_SUPERBLOCK_IN_STORAGE_GET_FRAGMENT_SIZE_SHIFT(__SHIFT))
     Uint32 fragmentSizeShift;
     Uint32 blockGroupBlockNum;
     Uint32 blockGroupFragmentNum;
@@ -90,6 +88,37 @@ typedef struct EXT2SuperBlock {
 } __attribute__((packed)) EXT2SuperBlock;
 
 DEBUG_ASSERT_COMPILE(sizeof(EXT2SuperBlock) == 512);
+
+static inline Index32 ext2SuperBlock_inodeID2BlockGroupIndex(EXT2SuperBlock* superblock, Index32 inodeID) {
+    return (inodeID - 1) / superblock->blockGroupInodeNum;
+}
+
+static inline Size ext2SuperBlock_getBlockGroupNum(EXT2SuperBlock* superblock) {
+    return DIVIDE_ROUND_UP(superblock->totalBlockNum, superblock->blockGroupBlockNum);
+}
+
+static inline Index32 ext2SuperBlock_blockIndexDevice2fs(EXT2SuperBlock* superblock, Size deviceGranularity, Index32 deviceBlockIndex) {
+    return (deviceBlockIndex << deviceGranularity) >> EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE_SHIFT(superblock->blockSizeShift);
+}
+
+static inline Index32 ext2SuperBlock_blockIndexFS2device(EXT2SuperBlock* superblock, Size deviceGranularity, Index32 blockIndex, Index32 inBlockOffset) {
+    return ((blockIndex << EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE_SHIFT(superblock->blockSizeShift)) + inBlockOffset) >> deviceGranularity;
+}
+
+static inline Index32 ext2SuperBlock_blockOffsetFS2device(EXT2SuperBlock* superblock, Size deviceGranularity, Index32 blockIndex, Index32 inBlockOffset) {
+    return TRIM_VAL_SIMPLE((blockIndex << EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE_SHIFT(superblock->blockSizeShift)) + inBlockOffset, 32, deviceGranularity);
+}
+
+typedef struct EXT2fscore {
+    FScore                      fscore;
+    EXT2SuperBlock*             superBlock;
+    Size                        blockGroupNum;
+    EXT2blockGroupDescriptor*   blockGroupTables;
+} EXT2fscore;
+
+Index32 ext2fscore_allocateBlock(EXT2fscore* fscore, Index32 preferredBlockGroup);
+
+void ext2fscore_freeBlock(EXT2fscore* fscore, Index32 index);
 
 void ext2_init();
 

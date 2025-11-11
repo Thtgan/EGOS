@@ -14,7 +14,7 @@
 #include<debug.h>
 #include<error.h>
 
-static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent);
+static void __fsnode_initStruct(fsNode* node, Size nameN, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent);
 
 static void __fsnode_release(fsNode* node);
 
@@ -46,7 +46,7 @@ void fsnodeAttribute_initDefault(FSnodeAttribute* attribute) {
     attribute->lastModifyTime = 0;
 }
 
-fsNode* fsnode_create(DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent) {
+fsNode* fsnode_create(DirectoryEntry* entry, Size nameN, FSnodeAttribute* attribute, fsNode* parent) {
     DEBUG_ASSERT_SILENT(directoryEntry_isDetailed(entry));
     DEBUG_ASSERT_SILENT(entry->type != FS_ENTRY_TYPE_DUMMY);
     
@@ -68,7 +68,7 @@ fsNode* fsnode_create(DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode*
     }
     
     DEBUG_ASSERT_SILENT(parent == NULL || parent->entry.type == FS_ENTRY_TYPE_DIRECTORY);
-    __fsnode_initStruct(ret, entry, attribute, parent);
+    __fsnode_initStruct(ret, nameN, entry, attribute, parent);
 
     DEBUG_ASSERT_SILENT(__fsnode_isReadyToRelease(ret));
     
@@ -114,10 +114,11 @@ fsNode* fsnode_lookup(fsNode* node, ConstCstring name, bool isDirectory, bool au
     spinlock_lock(&node->lock);
     Object hash = __fsnode_nameHash(name, isDirectory);
     HashChainNode* hashNode = hashTable_find(&dirNode->dirPart.childrenHash, hash);
-    if (hashNode != NULL) {
-        ret = HOST_POINTER(hashNode, fsNode, childHashNode);
+    if (hashNode == NULL) {
+        return NULL;
     }
-
+    
+    ret = HOST_POINTER(hashNode, fsNode, childHashNode);
     spinlock_unlock(&node->lock);
     fsnode_refer(ret);  //Refer returned node
     return ret;
@@ -287,8 +288,8 @@ void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
     spinlock_unlock(&node->lock);
 }
 
-static void __fsnode_initStruct(fsNode* node, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent) {    
-    string_initStructStr(&node->name, entry->name);
+static void __fsnode_initStruct(fsNode* node, Size nameN, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent) {    
+    string_initStructStrN(&node->name, entry->name, nameN);
     ERROR_GOTO_IF_ERROR(0);
 
     node->entry = (DirectoryEntry) {

@@ -65,7 +65,7 @@ typedef struct DirFSnode {
 
 DEBUG_ASSERT_COMPILE(IS_POWER_2(sizeof(DirFSnode)));
 
-fsNode* fsnode_create(DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent);
+fsNode* fsnode_create(DirectoryEntry* entry, Size nameN, FSnodeAttribute* attribute, fsNode* parent);
 
 void fsnode_refer(fsNode* node);
 
