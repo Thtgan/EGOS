@@ -20,7 +20,7 @@ void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribut
 
     spinlock_lock(&vnode->lock);
     
-    Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, entry, attr);
+    Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, entry, attr);  //TODO: Seem fs are not setting vnodeID correctly
     ERROR_GOTO_IF_ERROR(0);
 
     if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {

@@ -120,6 +120,10 @@ Index32 ext2fscore_allocateBlock(EXT2fscore* fscore, Index32 preferredBlockGroup
 
 void ext2fscore_freeBlock(EXT2fscore* fscore, Index32 index);
 
+Index32 ext2fscore_allocateInode(EXT2fscore* fscore, Index32 preferredBlockGroup, bool isDirectory);
+
+void ext2fscore_freeInode(EXT2fscore* fscore, Index32 index);
+
 void ext2_init();
 
 bool ext2_checkType(BlockDevice* blockDevice);

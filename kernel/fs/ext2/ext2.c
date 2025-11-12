@@ -48,7 +48,6 @@ Index32 ext2fscore_allocateBlock(EXT2fscore* fscore, Index32 preferredBlockGroup
         }
 
         if ((ret = ext2blockGroupDescriptor_allocateBlock(&fscore->blockGroupTables[i], fscore)) != INVALID_INDEX32) {
-            --fscore->blockGroupTables[i].freeBlcokNum;
             break;
         }
     }
@@ -63,7 +62,34 @@ void ext2fscore_freeBlock(EXT2fscore* fscore, Index32 index) {
     Index32 inBlockIndex = index % superblock->blockGroupBlockNum;
 
     ext2blockGroupDescriptor_freeBlock(&fscore->blockGroupTables[blockGroupIndex], fscore, inBlockIndex);
-    ++fscore->blockGroupTables[blockGroupIndex].freeBlcokNum;
+}
+
+Index32 ext2fscore_allocateInode(EXT2fscore* fscore, Index32 preferredBlockGroup, bool isDirectory) {
+    Index32 ret = INVALID_INDEX32;
+    if (preferredBlockGroup < fscore->blockGroupNum && (ret = ext2blockGroupDescriptor_allocateInode(&fscore->blockGroupTables[preferredBlockGroup], fscore, isDirectory)) != INVALID_INDEX32) {
+        return ret;
+    }
+
+    for (int i = 0; i < fscore->blockGroupNum; ++i) {
+        if (i == preferredBlockGroup) {
+            continue;
+        }
+
+        if ((ret = ext2blockGroupDescriptor_allocateInode(&fscore->blockGroupTables[i], fscore, isDirectory)) != INVALID_INDEX32) {
+            break;
+        }
+    }
+
+    return ret;
+}
+
+void ext2fscore_freeInode(EXT2fscore* fscore, Index32 index) {
+    EXT2SuperBlock* superblock = fscore->superBlock;
+    Index32 blockGroupIndex = index / superblock->blockGroupInodeNum;
+    DEBUG_ASSERT_SILENT(blockGroupIndex < fscore->blockGroupNum);
+    Index32 inBlockIndex = index % superblock->blockGroupInodeNum;
+
+    ext2blockGroupDescriptor_freeInode(&fscore->blockGroupTables[blockGroupIndex], fscore, inBlockIndex);
 }
 
 void ext2_init() {

@@ -460,7 +460,7 @@ static Index64 __fat32_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* ent
     mm_free(clusterBuffer);
     mm_free(entriesBuffer);
 
-    return (Index64)firstCluster;
+    return (Index64)newFirstCluster;
     ERROR_FINAL_BEGIN(0);
     if (clusterBuffer != NULL) {
         mm_free(clusterBuffer);

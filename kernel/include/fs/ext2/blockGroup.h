@@ -23,4 +23,8 @@ Index32 ext2blockGroupDescriptor_allocateBlock(EXT2blockGroupDescriptor* descrip
 
 void ext2blockGroupDescriptor_freeBlock(EXT2blockGroupDescriptor* descriptor, EXT2fscore* fscore, Index32 index);
 
+Index32 ext2blockGroupDescriptor_allocateInode(EXT2blockGroupDescriptor* descriptor, EXT2fscore* fscore, bool isDirectory);
+
+void ext2blockGroupDescriptor_freeInode(EXT2blockGroupDescriptor* descriptor, EXT2fscore* fscore, Index32 index);
+
 #endif // __FS_EXT2_BLOCKGROUP_H

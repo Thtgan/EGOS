@@ -35,7 +35,7 @@ typedef struct __EXT2directoryEntry {
     char name[0];
 } __EXT2directoryEntry;
 
-static inline fsEntryType __ext2_directoryENtry_convertTypeFS(Uint8 ext2type) {
+static inline fsEntryType __ext2_directoryEntry_convertTypeFS(Uint8 ext2type) {
     switch (ext2type) {
         case __EXT2_DIRECTORY_ENTRY_UNKNOWN: {
             return FS_ENTRY_TYPE_DUMMY;
@@ -57,7 +57,7 @@ static inline fsEntryType __ext2_directoryENtry_convertTypeFS(Uint8 ext2type) {
     return FS_ENTRY_TYPE_DUMMY;
 }
 
-static inline Uint8 __ext2_directoryENtry_convertTypeExt2(fsEntryType fsType) {
+static inline Uint8 __ext2_directoryEntry_convertTypeExt2(fsEntryType fsType) {
     switch (fsType) {
         case FS_ENTRY_TYPE_DUMMY: {
             return __EXT2_DIRECTORY_ENTRY_UNKNOWN;
@@ -185,7 +185,7 @@ static void __ext2_vNode_writeData(vNode* vnode, Index64 begin, const void* buff
     Size blockSize = EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(superblock->blockSizeShift), blockDeviceSize = blockSize / POWER_2(blockDevice->device.granularity);
     Index32 inBlockOffset = begin % blockSize;
     Index32 currentIndex = begin;
-    void* currentBuffer = buffer;
+    void* currentBuffer = (void*)buffer;
     Size remainingN = byteN;
 
     Uint8 blockBuffer[blockSize];
@@ -257,19 +257,361 @@ static void __ext2_vNode_resize(vNode* vnode, Size newSizeInByte) {
     inode->sectorCnt = newSizeInBlock * deviceBlockNum;
 }
 
-static Index64 __ext2_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) {
+static Index64 __ext2_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) { //TODO: NOT TESTED YET
+    EXT2vnode* ext2vnode = HOST_POINTER(vnode, EXT2vnode, vnode);
+    EXT2fscore* ext2fscore = HOST_POINTER(vnode->fscore, EXT2fscore, fscore); 
     
+    EXT2SuperBlock* superblock = ext2fscore->superBlock;
+    EXT2inode* inode = &ext2vnode->inode;
+    DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(vnode->fsNode);
+
+    Size blockSize = EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(superblock->blockSizeShift);
+    Uint8 granularity = ext2fscore->fscore.blockDevice->device.granularity;
+    Size deviceBlockNum = blockSize / POWER_2(granularity);
+    Size blockNum = inode->sectorCnt / deviceBlockNum;
+
+    Index32 indexInBuffer = blockSize;
+
+    Uint8 deviceBlockBuffer[POWER_2(granularity)];
+    FSnodeAttribute fsnodeAttribute;
+
+    Size bufferSize = 2 * blockSize;
+    Uint8* buffer = NULL;
+    buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
+    if (buffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Size nameLength = cstring_strlen(entry->name);
+    Size requiredSpaceLength = ALIGN_UP(sizeof(__EXT2directoryEntry) + nameLength, 4);
+
+    Index32 blockGroupIndex = ext2SuperBlock_inodeID2BlockGroupIndex(superblock, vnode->vnodeID);
+    Index32 newInodeID = ext2fscore_allocateInode(ext2fscore, blockGroupIndex, entry->type == FS_ENTRY_TYPE_DIRECTORY);
+    Index32 currentIndex = 0;
+    Index32 lastIndex = 0;
+    __EXT2directoryEntry* lastEntry = NULL;
+    Size lastEntryActualSize = 0;
+    bool found = false;
+
+    for (Index32 i = 0; i < blockNum; ++i) {
+        vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
+        ERROR_GOTO_IF_ERROR(0);
+
+        while (!found) {    //TODO: Not covering the case of first entry deleted
+            __EXT2directoryEntry* currentEntry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
+            
+            if (indexInBuffer + 4 >= bufferSize || indexInBuffer + currentEntry->recordLength > bufferSize) {   //It works for EXT2 directory tail mechanism
+                memory_memcpy(buffer, buffer + blockSize, blockSize);
+                indexInBuffer -= blockSize;
+                break;
+            }   //TODO: Not considering record length is large (Larger then two blocks)
+
+            Size entryActualSize = ALIGN_UP(sizeof(__EXT2directoryEntry) + currentEntry->nameLength, 4);
+            Size holeSize = currentEntry->recordLength - entryActualSize;
+
+            if (holeSize >= requiredSpaceLength) {
+                __EXT2directoryEntry* newEntry = (__EXT2directoryEntry*)((void*)entry + entryActualSize);
+
+                newEntry->inodeID = newInodeID;
+                newEntry->recordLength = holeSize;
+                newEntry->nameLength = nameLength;
+                newEntry->type = __ext2_directoryEntry_convertTypeExt2(entry->type);
+                memory_memcpy(newEntry->name, entry->name, nameLength);
+                
+                currentEntry->recordLength = entryActualSize;
+
+                vNode_rawWriteData(vnode, currentIndex, currentEntry, currentEntry->recordLength + requiredSpaceLength);
+
+                found = true;
+            }
+
+            indexInBuffer += currentEntry->recordLength;
+            lastIndex = currentIndex;
+            currentIndex += currentEntry->recordLength;
+            lastEntry = currentEntry;
+            lastEntryActualSize = entryActualSize;
+        }
+
+        if (found) {
+            break;
+        }
+    }
+
+    if (!found) {
+        Size newTailEntriesSize = lastEntryActualSize + requiredSpaceLength;
+        vNode_rawResize(vnode, lastIndex + newTailEntriesSize);
+        DEBUG_ASSERT_SILENT(lastEntry != NULL);
+        void* newTailEntries = mm_allocate(newTailEntriesSize);
+        memory_memcpy(newTailEntries, lastEntry, lastEntryActualSize);
+
+        __EXT2directoryEntry* lastEntry = (__EXT2directoryEntry*)newTailEntries;
+        __EXT2directoryEntry* newEntry = (__EXT2directoryEntry*)((void*)entry + lastEntryActualSize);
+
+        newEntry->inodeID = newInodeID;
+        newEntry->recordLength = blockSize - ((lastIndex + lastEntryActualSize) % (blockSize + 1));
+        newEntry->nameLength = nameLength;
+        newEntry->type = __ext2_directoryEntry_convertTypeExt2(entry->type);
+
+        lastEntry->recordLength = lastEntryActualSize;
+
+        vNode_rawWriteData(vnode, lastIndex, newTailEntries, newTailEntriesSize);
+
+        mm_free(newTailEntries);
+    }
+
+    mm_freePages(buffer);
+    return (Index64)newInodeID;
+
+    ERROR_FINAL_BEGIN(0);
+
+    if (buffer != NULL) {
+        mm_freePages(buffer);
+    }
 }
 
-static void __ext2_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory) {
+static void __ext2_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory) {  //TODO: NOT TESTED YET
+    EXT2vnode* ext2vnode = HOST_POINTER(vnode, EXT2vnode, vnode);
+    EXT2fscore* ext2fscore = HOST_POINTER(vnode->fscore, EXT2fscore, fscore); 
     
+    EXT2SuperBlock* superblock = ext2fscore->superBlock;
+    EXT2inode* inode = &ext2vnode->inode;
+    DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(vnode->fsNode);
+
+    Size blockSize = EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(superblock->blockSizeShift);
+    Uint8 granularity = ext2fscore->fscore.blockDevice->device.granularity;
+    Size deviceBlockNum = blockSize / POWER_2(granularity);
+    Size blockNum = inode->sectorCnt / deviceBlockNum;
+
+    Index32 indexInBuffer = blockSize, lastIndexInBuffer = INVALID_INDEX32;
+    Index32 currentIndex = 0, lastCurrentIndex = INVALID_INDEX32;
+    Size lastEntryActualSize = 0, currentEntryActualSize = 0;
+
+    Uint8 deviceBlockBuffer[POWER_2(granularity)];
+    FSnodeAttribute fsnodeAttribute;
+
+    Size bufferSize = 2 * blockSize;
+    Uint8* buffer = NULL;
+    buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
+    if (buffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    bool found = false;
+    for (Index32 i = 0; i < blockNum; ++i) {
+        vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
+        ERROR_GOTO_IF_ERROR(0);
+
+        while (!found) {    //TODO: Not covering the case of first entry deleted
+            __EXT2directoryEntry* entry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
+            if (indexInBuffer + 4 >= bufferSize || indexInBuffer + entry->recordLength > bufferSize) {  //It works for EXT2 directory tail mechanism
+                memory_memcpy(buffer, buffer + blockSize, blockSize);
+                lastIndexInBuffer -= blockSize;
+                indexInBuffer -= blockSize;
+                break;
+            }   //TODO: Not considering record length is large
+
+            lastEntryActualSize = currentEntryActualSize;
+            currentEntryActualSize = ALIGN_UP(sizeof(__EXT2directoryEntry) + entry->nameLength, 4);
+
+            if (cstring_strncmp(entry->name, name, entry->nameLength) == 0 && isDirectory == (entry->type == __EXT2_DIRECTORY_ENTRY_DIRECTORY)) {
+                entry->inodeID = 0;
+                if (lastIndexInBuffer == INVALID_INDEX32) {
+                    vNode_rawWriteData(vnode, 0, entry, currentEntryActualSize);
+                } else {
+                    DEBUG_ASSERT_SILENT(0 <= lastIndexInBuffer && lastIndexInBuffer < bufferSize);
+                    __EXT2directoryEntry* lastEntry = (__EXT2directoryEntry*)(buffer + lastIndexInBuffer);
+                    lastEntry->recordLength += entry->recordLength;
+                    vNode_rawWriteData(vnode, lastCurrentIndex, entry, currentIndex - lastCurrentIndex + sizeof(__EXT2directoryEntry));
+                }
+                found = true;
+                break;
+            }
+
+            lastIndexInBuffer = indexInBuffer;
+            indexInBuffer += entry->recordLength;
+            lastCurrentIndex = currentIndex;
+            currentIndex += entry->recordLength;
+        }
+
+        if (found) {
+            break;
+        }
+    }
+
+    mm_freePages(buffer);
+    return;
+
+    ERROR_FINAL_BEGIN(0);
+
+    if (buffer != NULL) {
+        mm_freePages(buffer);
+    }
 }
 
-static void __ext2_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName) {
+static void __ext2_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, ConstCstring newName) {   //TODO: NOT TESTED YET
+    EXT2vnode* ext2vnode = HOST_POINTER(vnode, EXT2vnode, vnode);
+    EXT2fscore* ext2fscore = HOST_POINTER(vnode->fscore, EXT2fscore, fscore); 
     
+    EXT2SuperBlock* superblock = ext2fscore->superBlock;
+    EXT2inode* inode = &ext2vnode->inode;
+    DirFSnode* dirNode = FSNODE_GET_DIRFSNODE(vnode->fsNode);
+
+    Size blockSize = EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(superblock->blockSizeShift);
+    Uint8 granularity = ext2fscore->fscore.blockDevice->device.granularity;
+    Size deviceBlockNum = blockSize / POWER_2(granularity);
+    Size blockNum = inode->sectorCnt / deviceBlockNum;
+
+    Index32 indexInBuffer = blockSize, lastIndexInBuffer = INVALID_INDEX32;
+    Index32 currentIndex = 0, lastCurrentIndex = INVALID_INDEX32;
+    Size lastEntryActualSize = 0, currentEntryActualSize = 0;
+
+    Uint8 deviceBlockBuffer[POWER_2(granularity)];
+    FSnodeAttribute fsnodeAttribute;
+
+    Size bufferSize = 2 * blockSize;
+    Uint8* buffer = NULL;
+    void* movedEntry = NULL;
+    buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
+    if (buffer == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Size nameLength = cstring_strlen(newName);
+    Size requiredSpaceLength = ALIGN_UP(sizeof(__EXT2directoryEntry) + nameLength, 4);
+    movedEntry = mm_allocate(requiredSpaceLength);
+    memory_memcpy(((__EXT2directoryEntry*)movedEntry)->name, newName, nameLength);
+
+    bool found = false;
+    for (Index32 i = 0; i < blockNum; ++i) {
+        vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
+        ERROR_GOTO_IF_ERROR(0);
+
+        while (!found) {    //TODO: Not covering the case of first entry deleted
+            __EXT2directoryEntry* currentEntry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
+            if (indexInBuffer + 4 >= bufferSize || indexInBuffer + currentEntry->recordLength > bufferSize) {  //It works for EXT2 directory tail mechanism
+                memory_memcpy(buffer, buffer + blockSize, blockSize);
+                lastIndexInBuffer -= blockSize;
+                indexInBuffer -= blockSize;
+                break;
+            }   //TODO: Not considering record length is large
+
+            lastEntryActualSize = currentEntryActualSize;
+            currentEntryActualSize = ALIGN_UP(sizeof(__EXT2directoryEntry) + currentEntry->nameLength, 4);
+
+            if (cstring_strncmp(currentEntry->name, entry->entry.name, currentEntry->nameLength) == 0 && entry->entry.type == __ext2_directoryEntry_convertTypeFS(currentEntry->type)) {
+                memory_memcpy(movedEntry, currentEntry, sizeof(__EXT2directoryEntry));
+                currentEntry->inodeID = 0;
+                if (lastIndexInBuffer == INVALID_INDEX32) {
+                    vNode_rawWriteData(vnode, 0, entry, currentEntryActualSize);
+                } else {
+                    DEBUG_ASSERT_SILENT(0 <= lastIndexInBuffer && lastIndexInBuffer < bufferSize);
+                    __EXT2directoryEntry* lastEntry = (__EXT2directoryEntry*)(buffer + lastIndexInBuffer);
+                    lastEntry->recordLength += currentEntry->recordLength;
+                    vNode_rawWriteData(vnode, lastCurrentIndex, entry, currentIndex - lastCurrentIndex + sizeof(__EXT2directoryEntry));
+                }
+                found = true;
+                break;
+            }
+
+            lastIndexInBuffer = indexInBuffer;
+            indexInBuffer += currentEntry->recordLength;
+            lastCurrentIndex = currentIndex;
+            currentIndex += currentEntry->recordLength;
+        }
+
+        if (found) {
+            break;
+        }
+    }
+
+    if (!found) {
+        mm_freePages(buffer);
+        mm_free(movedEntry);
+        return;
+    }
+
+    indexInBuffer = blockSize, lastIndexInBuffer = INVALID_INDEX32;
+    currentIndex = 0, lastCurrentIndex = INVALID_INDEX32;
+    lastEntryActualSize = 0, currentEntryActualSize = 0;
+
+    __EXT2directoryEntry* lastEntry = NULL;
+    found = false;
+
+    for (Index32 i = 0; i < blockNum; ++i) {
+        vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
+        ERROR_GOTO_IF_ERROR(0);
+
+        while (!found) {    //TODO: Not covering the case of first entry deleted
+            __EXT2directoryEntry* currentEntry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
+            
+            if (indexInBuffer + 4 >= bufferSize || indexInBuffer + currentEntry->recordLength > bufferSize) {   //It works for EXT2 directory tail mechanism
+                memory_memcpy(buffer, buffer + blockSize, blockSize);
+                indexInBuffer -= blockSize;
+                break;
+            }   //TODO: Not considering record length is large (Larger then two blocks)
+
+            Size entryActualSize = ALIGN_UP(sizeof(__EXT2directoryEntry) + currentEntry->nameLength, 4);
+            Size holeSize = currentEntry->recordLength - entryActualSize;
+
+            if (holeSize >= requiredSpaceLength) {
+                __EXT2directoryEntry* newEntry = (__EXT2directoryEntry*)((void*)entry + entryActualSize);
+                memory_memcpy(newEntry, movedEntry, requiredSpaceLength);
+                newEntry->recordLength = holeSize;
+                
+                currentEntry->recordLength = entryActualSize;
+
+                vNode_rawWriteData(vnode, currentIndex, currentEntry, currentEntry->recordLength + requiredSpaceLength);
+
+                found = true;
+            }
+
+            indexInBuffer += currentEntry->recordLength;
+            lastCurrentIndex = currentIndex;
+            currentIndex += currentEntry->recordLength;
+            lastEntry = currentEntry;
+            lastEntryActualSize = entryActualSize;
+        }
+
+        if (found) {
+            break;
+        }
+    }
+
+    if (!found) {
+        Size newTailEntriesSize = lastEntryActualSize + requiredSpaceLength;
+        vNode_rawResize(vnode, lastCurrentIndex + newTailEntriesSize);
+        DEBUG_ASSERT_SILENT(lastEntry != NULL);
+        void* newTailEntries = mm_allocate(newTailEntriesSize);
+        memory_memcpy(newTailEntries, lastEntry, lastEntryActualSize);
+
+        __EXT2directoryEntry* lastEntry = (__EXT2directoryEntry*)newTailEntries;
+        __EXT2directoryEntry* newEntry = (__EXT2directoryEntry*)((void*)entry + lastEntryActualSize);
+
+        memory_memcpy(newEntry, movedEntry, requiredSpaceLength);
+        newEntry->recordLength = blockSize - ((lastCurrentIndex + lastEntryActualSize) % (blockSize + 1));
+
+        lastEntry->recordLength = lastEntryActualSize;
+
+        vNode_rawWriteData(vnode, lastCurrentIndex, newTailEntries, newTailEntriesSize);
+    }
+
+    mm_free(movedEntry);
+    mm_freePages(buffer);
+    return;
+
+    ERROR_FINAL_BEGIN(0);
+
+    if (movedEntry != NULL) {
+        mm_free(movedEntry);
+    }
+
+    if (buffer != NULL) {
+        mm_freePages(buffer);
+    }
 }
-
-
 
 static void __ext2_vNode_readDirectoryEntries(vNode* vnode) {
     EXT2vnode* ext2vnode = HOST_POINTER(vnode, EXT2vnode, vnode);
@@ -303,15 +645,15 @@ static void __ext2_vNode_readDirectoryEntries(vNode* vnode) {
         vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
         ERROR_GOTO_IF_ERROR(0);
 
-        while (true) {
+        while (true) {  //TODO: Not covering the case of first entry deleted
             __EXT2directoryEntry* entry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
-            if (indexInBuffer + 4 >= bufferSize || indexInBuffer + entry->recordLength >= bufferSize) {
+            if (indexInBuffer + 4 >= bufferSize || indexInBuffer + entry->recordLength > bufferSize) {  //It works for EXT2 directory tail mechanism
                 memory_memcpy(buffer, buffer + blockSize, blockSize);
                 indexInBuffer -= blockSize;
                 break;
             }   //TODO: Not considering record length is large
 
-            fsEntryType type = __ext2_directoryENtry_convertTypeFS(entry->type);
+            fsEntryType type = __ext2_directoryEntry_convertTypeFS(entry->type);
             DEBUG_ASSERT_SILENT(type != FS_ENTRY_TYPE_DUMMY);
 
             Index32 blockGroupID = ext2SuperBlock_inodeID2BlockGroupIndex(superblock, entry->inodeID);
@@ -345,10 +687,10 @@ static void __ext2_vNode_readDirectoryEntries(vNode* vnode) {
                 .mode = 0,
                 .vnodeID = entry->inodeID,
                 .size = size,
-                .pointsTo = INVALID_INDEX64
+                .pointsTo = entry->inodeID
             };
 
-            fsnode_create(&newDirEntry, entry->recordLength - sizeof(__EXT2directoryEntry), &fsnodeAttribute, &dirNode->node);
+            fsnode_create(&newDirEntry, entry->nameLength, &fsnodeAttribute, &dirNode->node);
 
             indexInBuffer += entry->recordLength;
         }
