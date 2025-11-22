@@ -1,4 +1,5 @@
 /.vscode
 /build
 /backup
+/files/boot/*
 /files/bin/*
