@@ -35,15 +35,15 @@ void* paging_fastTranslate(ExtendedPageTableRoot* pageTable, void* v);
 //Flush the TLB, If page table update not working, try this
 #define PAGING_FLUSH_TLB()   writeRegister_CR3_64(readRegister_CR3_64());
 
-static inline void* paging_convertAddressV2P(void* v, Uintptr base) {
+static inline __attribute__((always_inline)) void* paging_convertAddressV2P(void* v, Uintptr base) {
     return (void*)CLEAR_VAL((Uintptr)v, base);
 }
 
-static inline void* paging_convertAddressP2V(void* p, Uintptr base) {
+static inline __attribute__((always_inline)) void* paging_convertAddressP2V(void* p, Uintptr base) {
     return (void*)FILL_VAL((Uintptr)p, base);
 }
 
-static inline bool paging_isBasedAddress(void* v, Uintptr base) {
+static inline __attribute__((always_inline)) bool paging_isBasedAddress(void* v, Uintptr base) {
     return VAL_AND((Uintptr)v, base) == base;
 }
 

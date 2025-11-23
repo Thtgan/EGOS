@@ -15,7 +15,7 @@
 #define MOV(__LENGTH) MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, mov, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __READ_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH)                                      \
-static inline UINT(__LENGTH) MACRO_CONCENTRATE2(readMemory, __LENGTH) (Uintptr addr)
+static inline __attribute__((always_inline)) UINT(__LENGTH) MACRO_CONCENTRATE2(readMemory, __LENGTH) (Uintptr addr)
 
 #define __READ_MEMORY_FUNC_INLINE_ASM_NO_SEG(__LENGTH)  \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %1, %0"          \
@@ -31,7 +31,7 @@ __READ_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH) {                        \
 }
 
 #define __READ_MEMORY_FUNC_HEADER_SEG(__LENGTH, __SEGMENT)                                          \
-static inline UINT(__LENGTH) MACRO_CONCENTRATE3(readMemory, __SEGMENT, __LENGTH) (Uintptr addr)
+static inline __attribute__((always_inline)) UINT(__LENGTH) MACRO_CONCENTRATE3(readMemory, __SEGMENT, __LENGTH) (Uintptr addr)
 
 #define __READ_MEMORY_FUNC_INLINE_ASM_SEG(__LENGTH, __SEGMENT)                                              \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) ":%1, %0"  \
@@ -72,7 +72,7 @@ __READ_MEMORY_FUNC_SEG(32,  GS)
 __READ_MEMORY_FUNC_SEG(64,  GS)
 
 #define __WRITE_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH)                                                 \
-static inline void MACRO_CONCENTRATE2(writeMemory, __LENGTH) (Uintptr addr, UINT(__LENGTH) val)
+static inline __attribute__((always_inline)) void MACRO_CONCENTRATE2(writeMemory, __LENGTH) (Uintptr addr, UINT(__LENGTH) val)
 
 #define __WRITE_MEMORY_FUNC_INLINE_ASM_NO_SEG(__LENGTH) \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %1, %0"          \
@@ -86,7 +86,7 @@ __WRITE_MEMORY_FUNC_HEADER_NO_SEG(__LENGTH) {                       \
 }
 
 #define __WRITE_MEMORY_FUNC_HEADER_SEG(__LENGTH, __SEGMENT)                                                     \
-static inline void MACRO_CONCENTRATE3(writeMemory, __SEGMENT, __LENGTH) (Uintptr addr, UINT(__LENGTH) val)
+static inline __attribute__((always_inline)) void MACRO_CONCENTRATE3(writeMemory, __SEGMENT, __LENGTH) (Uintptr addr, UINT(__LENGTH) val)
 
 #define __WRITE_MEMORY_FUNC_INLINE_ASM_SEG(__LENGTH, __SEGMENT)                                             \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %1, %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) ":%0"  \
@@ -132,7 +132,7 @@ __WRITE_MEMORY_FUNC_SEG(64, GS);
 #define SEG_REG_INLINE_NAME(__REG) MACRO_RESCAN(MACRO_CONCENTRATE2(SEG_REG_INLINE_NAME_, __REG))
 
 #define __GET_SEGMENT_FUNC_HEADER(__SEGMENT)                \
-static inline Uint16 MACRO_CONCENTRATE2(get, __SEGMENT) ()
+static inline __attribute__((always_inline)) Uint16 MACRO_CONCENTRATE2(get, __SEGMENT) ()
 
 #define __GET_SEGMENT_FUNC_INLINE_ASM(__SEGMENT)                        \
 "movw %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) ", %0"  \
@@ -151,7 +151,7 @@ __GET_SEGMENT_FUNC(FS)
 __GET_SEGMENT_FUNC(GS)
 
 #define __SET_SEGMENT_FUNC_HEADER(__SEGMENT)                                                    \
-static inline void MACRO_CONCENTRATE2(set, __SEGMENT) (Uint16 SEG_REG_INLINE_NAME(__SEGMENT))
+static inline __attribute__((always_inline)) void MACRO_CONCENTRATE2(set, __SEGMENT) (Uint16 SEG_REG_INLINE_NAME(__SEGMENT))
 
 #define __SET_SEGMENT_FUNC_INLINE_ASM(__SEGMENT)                    \
 "movw %0, %%" MACRO_CALL(MACRO_STR, SEG_REG_INLINE_NAME(__SEGMENT)) \
@@ -169,7 +169,7 @@ __SET_SEGMENT_FUNC(FS)
 __SET_SEGMENT_FUNC(GS)
 
 #define __READ_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH)                                   \
-static inline UINT(__LENGTH) MACRO_CONCENTRATE4(readRegister_, __REGISTER, _, __LENGTH) ()
+static inline __attribute__((always_inline)) UINT(__LENGTH) MACRO_CONCENTRATE4(readRegister_, __REGISTER, _, __LENGTH) ()
 
 #define __READ_REGISTER_FUNC_INLINE_ASM(__REGISTER, __LENGTH)               \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %%" MACRO_STR(__REGISTER) ", %0"     \
@@ -196,7 +196,7 @@ __READ_REGISTER_FUNC(RSP, 64)
 __READ_REGISTER_FUNC(RBP, 64)
 
 #define __WRITE_REGISTER_FUNC_HEADER(__REGISTER, __LENGTH)                                          \
-static inline void MACRO_CONCENTRATE4(writeRegister_, __REGISTER, _, __LENGTH) (UINT(__LENGTH) val)
+static inline __attribute__((always_inline)) void MACRO_CONCENTRATE4(writeRegister_, __REGISTER, _, __LENGTH) (UINT(__LENGTH) val)
 
 #define __WRITE_REGISTER_FUNC_INLINE_ASM(__REGISTER, __LENGTH)          \
 MACRO_CALL(MACRO_STR, MOV(__LENGTH)) " %0, %%" MACRO_STR(__REGISTER)    \
@@ -222,7 +222,7 @@ __WRITE_REGISTER_FUNC(RBP, 64)
 #define IN(__LENGTH)    MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, in, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __IN_FUNC_HEADER(__LENGTH)                          \
-static inline UINT(__LENGTH) IN(__LENGTH) (Uint16 port)
+static inline __attribute__((always_inline)) UINT(__LENGTH) IN(__LENGTH) (Uint16 port)
 
 #define __IN_FUNC_INLINE_ASM(__LENGTH)          \
 MACRO_CALL(MACRO_STR, IN(__LENGTH)) " %1, %0"   \
@@ -243,7 +243,7 @@ __IN_FUNC(32)
 #define INS(__LENGTH)   MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, ins, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __INS_FUNC_HEADER(__LENGTH)                                     \
-static inline void INS(__LENGTH) (Uint16 port, void* addr, Size n)
+static inline __attribute__((always_inline)) void INS(__LENGTH) (Uint16 port, void* addr, Size n)
 
 #define __INS_FUNC_INLINE_ASM(__LENGTH)     \
 "rep " MACRO_CALL(MACRO_STR, INS(__LENGTH)) \
@@ -263,7 +263,7 @@ __INS_FUNC(32)
 #define OUT(__LENGTH)   MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, out, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __OUT_FUNC_HEADER(__LENGTH)                                     \
-static inline void OUT(__LENGTH) (Uint16 port, UINT(__LENGTH) value)
+static inline __attribute__((always_inline)) void OUT(__LENGTH) (Uint16 port, UINT(__LENGTH) value)
 
 #define __OUT_FUNC_INLINE_ASM(__LENGTH)         \
 MACRO_CALL(MACRO_STR, OUT(__LENGTH)) " %0, %1"  \
@@ -282,7 +282,7 @@ __OUT_FUNC(32)
 #define OUTS(__LENGTH)   MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, outs, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __OUTS_FUNC_HEADER(__LENGTH)                                            \
-static inline void OUTS(__LENGTH) (Uint16 port, const void* addr, Size n)
+static inline __attribute__((always_inline)) void OUTS(__LENGTH) (Uint16 port, const void* addr, Size n)
 
 #define __OUTS_FUNC_INLINE_ASM(__LENGTH)        \
 "rep " MACRO_CALL(MACRO_STR, OUTS(__LENGTH))    \
@@ -300,7 +300,7 @@ __OUTS_FUNC(16)
 __OUTS_FUNC(32)
 
 #define __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_HEADER(__INSTRUCTION) \
-static inline void __INSTRUCTION()
+static inline __attribute__((always_inline)) void __INSTRUCTION()
 
 #define __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC_INLINE_ASM(__INSTRUCTION)    MACRO_STR(__INSTRUCTION)
 
@@ -323,8 +323,7 @@ __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfl);   //Superisingly, this is not 
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(pushfq);
 __NO_PARAMETER_INSTRUCTION_NO_RETURN_FUNC(popfq);
 
-__attribute__((noreturn))
-static inline void die() {
+static inline __attribute__((noreturn, always_inline)) void die() {
     while (1) {
         hlt();
     }
@@ -333,7 +332,7 @@ static inline void die() {
 #define PUSH(__LENGTH) MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, push, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __PUSH_FUNC_HEADER(__LENGTH)                    \
-static inline void PUSH(__LENGTH)(UINT(__LENGTH) val)
+static inline __attribute__((always_inline)) void PUSH(__LENGTH)(UINT(__LENGTH) val)
 
 #define __PUSH_FUNC_INLINE_ASM(__LENGTH)    \
 MACRO_CALL(MACRO_STR, PUSH(__LENGTH)) " %0" \
@@ -354,7 +353,7 @@ __PUSH_FUNC(64)
 #define POP(__LENGTH) MACRO_RESCAN(MACRO_CALL(MACRO_CONCENTRATE2, pop, INSTRUCTION_LENGTH_SUFFIX(__LENGTH)))
 
 #define __POP_FUNC_HEADER(__LENGTH)             \
-static inline UINT(__LENGTH) POP(__LENGTH)()
+static inline __attribute__((always_inline)) UINT(__LENGTH) POP(__LENGTH)()
 
 #define __POP_FUNC_INLINE_ASM(__LENGTH)     \
 MACRO_CALL(MACRO_STR, POP(__LENGTH)) " %0"  \
@@ -375,7 +374,7 @@ __POP_FUNC(32)
 __POP_FUNC(64)
 
 #define __PUSH_REGISTER_HEADER(__REGISTER, __LENGTH)                                \
-static inline void MACRO_CONCENTRATE4(pushRegister_, __REGISTER, _, __LENGTH) ()
+static inline __attribute__((always_inline)) void MACRO_CONCENTRATE4(pushRegister_, __REGISTER, _, __LENGTH) ()
 
 #define __PUSH_REGISTER_INLINE_ASM(__REGISTER, __LENGTH)            \
 MACRO_CALL(MACRO_STR, PUSH(__LENGTH)) " %%" MACRO_STR(__REGISTER)   \
@@ -406,7 +405,7 @@ __PUSH_REGISTER_FUNC(RSP, 64);
 __PUSH_REGISTER_FUNC(RBP, 64);
 
 #define __POP_REGISTER_HEADER(__REGISTER, __LENGTH)                             \
-static inline void MACRO_CONCENTRATE4(popRegister_, __REGISTER, _, __LENGTH) ()
+static inline __attribute__((always_inline)) void MACRO_CONCENTRATE4(popRegister_, __REGISTER, _, __LENGTH) ()
 
 #define __POP_REGISTER_INLINE_ASM(__REGISTER, __LENGTH)             \
 MACRO_CALL(MACRO_STR, POP(__LENGTH)) " %%" MACRO_STR(__REGISTER)    \
@@ -436,7 +435,7 @@ __POP_REGISTER_FUNC(R15, 64);
 __POP_REGISTER_FUNC(RBP, 64)
 __POP_REGISTER_FUNC(RSP, 64)
 
-static inline void rdmsr(Uint32 addr, Uint32* edx, Uint32* eax) {
+static inline __attribute__((always_inline)) void rdmsr(Uint32 addr, Uint32* edx, Uint32* eax) {
     asm volatile(
         "rdmsr"
         : "=d" (*edx), "=a" (*eax)
@@ -444,13 +443,13 @@ static inline void rdmsr(Uint32 addr, Uint32* edx, Uint32* eax) {
     );
 }
 
-static inline Uint64 rdmsrl(Uint32 addr) {
+static inline __attribute__((always_inline)) Uint64 rdmsrl(Uint32 addr) {
     Uint32 edx, eax;
     rdmsr(addr, &edx, &eax);
     return ((Uint64)edx << 32) | eax;
 }
 
-static inline void wrmsr(Uint32 addr, Uint32 edx, Uint32 eax) {
+static inline __attribute__((always_inline)) void wrmsr(Uint32 addr, Uint32 edx, Uint32 eax) {
     asm volatile (
         "wrmsr"
         :
@@ -458,11 +457,11 @@ static inline void wrmsr(Uint32 addr, Uint32 edx, Uint32 eax) {
     );
 }
 
-static inline void wrmsrl(Uint32 addr, Uint64 value) {
+static inline __attribute__((always_inline)) void wrmsrl(Uint32 addr, Uint64 value) {
     wrmsr(addr, (Uint32)(value >> 32), (Uint32)value);
 }
 
-static inline Uint32 readEFlags32() {
+static inline __attribute__((always_inline)) Uint32 readEFlags32() {
     Uint32 ret;
 
     pushfl();
@@ -471,12 +470,12 @@ static inline Uint32 readEFlags32() {
     return ret;
 }
 
-static inline void writeEFlags32(Uint32 eflags) {
+static inline __attribute__((always_inline)) void writeEFlags32(Uint32 eflags) {
     pushl(eflags);
     popfl();
 }
 
-static inline Uint64 readEFlags64() {
+static inline __attribute__((always_inline)) Uint64 readEFlags64() {
     Uint64 ret;
 
     pushfq();
@@ -485,12 +484,12 @@ static inline Uint64 readEFlags64() {
     return ret;
 }
 
-static inline void writeEFlags64(Uint64 eflags) {
+static inline __attribute__((always_inline)) void writeEFlags64(Uint64 eflags) {
     pushq(eflags);
     popfq();
 }
 
-static inline Uint64 rdtsc(void) {
+static inline __attribute__((always_inline)) Uint64 rdtsc(void) {
 	Uint32 eax, edx;
     asm volatile (
         "rdtsc"
@@ -499,12 +498,12 @@ static inline Uint64 rdtsc(void) {
 	return ((Uint64)edx << 32) | eax;
 }
 
-static inline void barrier() {
+static inline __attribute__((always_inline)) void barrier() {
     asm volatile("" : : : "memory");
 }
 
 #define __FIRST_BIT_FUNC_HEADER(__LENGTH)                                                \
-static inline Index32 MACRO_CONCENTRATE2(firstBit, __LENGTH) (UINT(__LENGTH) val)
+static inline __attribute__((always_inline)) Index32 MACRO_CONCENTRATE2(firstBit, __LENGTH) (UINT(__LENGTH) val)
 
 #define __FIRST_BIT_FUNC_INLINE_ASM(__LENGTH)   \
 "bsf %1, %0"                                    \

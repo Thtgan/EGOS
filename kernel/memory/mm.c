@@ -197,7 +197,7 @@ void mm_free(void* p) {
 
     void* firstFrame = paging_fastTranslate(mm->extendedTable, p);
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
-    ERROR_CHECKPOINT();
+    ERROR_CHECKPOINT(); //TODO: If there is an error, system fails here
 
     DEBUG_ASSERT_SILENT(unit->belongToAllocator != NULL);
     if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR)) {

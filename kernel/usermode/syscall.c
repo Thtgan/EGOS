@@ -39,7 +39,8 @@ void syscall_init() {
 __attribute__((naked))
 static void __syscall_syscallHandler() {
     REGISTERS_SAVE();
-    register Registers* registers asm ("rbx") = NULL;
+    // register Registers* registers asm ("rbx") = NULL;
+    Registers* registers = NULL;
     asm volatile(
         "mov %1, %%ds;"
         "mov %1, %%es;"
@@ -48,17 +49,19 @@ static void __syscall_syscallHandler() {
         : "r"(SEGMENT_KERNEL_DATA)
     );
 
-    register void* handler asm(MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_4_ALT)) = _syscallHandlers[registers->rax];
+    // register void* handler asm(MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_4_ALT)) = _syscallHandlers[registers->rax];
+    void* handler = _syscallHandlers[registers->rax];
     if (handler == NULL) {
         registers->rax = (Uint64)-1;
     } else {
         asm volatile(
-            "mov %6, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_5) ";"
-            "mov %7, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_6) ";"
-            "call *%1;"
+            "mov %7, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_5) ";"
+            "mov %8, %%" MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_6) ";"
+            "call *%2;"
             "mov %%rax, %0;"
             : "=m"(registers->rax)
-            : "r"(handler),
+            : "b"(registers), "r"(handler),
+            // : "r"(handler),
             "D"(registers->REGISTER_ARGUMENTS_1), "S"(registers->REGISTER_ARGUMENTS_2),
             "d"(registers->REGISTER_ARGUMENTS_3), "c"(registers->REGISTER_ARGUMENTS_4_ALT),
             "m"(registers->REGISTER_ARGUMENTS_5), "m"(registers->REGISTER_ARGUMENTS_6)

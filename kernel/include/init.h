@@ -27,7 +27,7 @@ static inline void init_initKernelStack() {
         DEFAULT_MEMORY_OPERATIONS_TYPE_COW
     ), * oldStack = init_getBootStackBottom();
     DEBUG_ASSERT_SILENT(newStack != NULL);
-    DEBUG_ASSERT_SILENT(*(Uintptr*)readRegister_RBP_64() == INIT_BOOT_STACK_MAGIC);
+    DEBUG_ASSERT_SILENT(*((Uintptr*)readRegister_RBP_64()) == INIT_BOOT_STACK_MAGIC);
     
     memory_memset(newStack, 0, THREAD_DEFAULT_KERNEL_STACK_SIZE);
     memory_memcpy(newStack + THREAD_DEFAULT_KERNEL_STACK_SIZE - INIT_BOOT_STACK_SIZE, oldStack, INIT_BOOT_STACK_SIZE);
@@ -35,7 +35,7 @@ static inline void init_initKernelStack() {
     writeRegister_RSP_64(readRegister_RSP_64() + stackDiff);
     writeRegister_RBP_64(readRegister_RBP_64() + stackDiff);
 
-    DEBUG_ASSERT_SILENT(*(Uintptr*)readRegister_RBP_64() == INIT_BOOT_STACK_MAGIC);
+    DEBUG_ASSERT_SILENT(*((Uintptr*)readRegister_RBP_64()) == INIT_BOOT_STACK_MAGIC);
 
     schedule_setEarlyStackBottom(newStack);
 }

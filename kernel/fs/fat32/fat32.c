@@ -66,6 +66,11 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     ERROR_GOTO_IF_ERROR(0);
 
     FAT32BPB* BPB = (FAT32BPB*)BPBbuffer;
+
+    if (BPB->sectorPerCluster == 0) {
+        return false;
+    }
+    
     Uint32 clusterNum = (device->capacity - BPB->reservedSectorNum - BPB->FATnum * BPB->sectorPerFAT) / BPB->sectorPerCluster - BPB->rootDirectoryClusterIndex;
     bool ret = BPB->bytePerSector == POWER_2(device->granularity) && BPB->signature == __FS_FAT32_BPB_SIGNATURE && memory_memcmp(BPB->systemIdentifier, "FAT32   ", 8) == 0 && clusterNum > __FS_FAT32_MINIMUM_CLUSTER_NUM;
 

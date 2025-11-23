@@ -73,6 +73,8 @@ void error_init() {
     error_registerError(
         ERROR_ID_VERIFICATION_FAILED, "Verification Failed"
     );
+
+    errorRecord_setError(ERROR_ID_OK);
 }
 
 ErrorRecord* error_getCurrentRecord() {
