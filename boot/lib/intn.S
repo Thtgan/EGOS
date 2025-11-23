@@ -7,6 +7,10 @@
 ASM_FUNC_BEGIN(intn):
     push    %ebp
     mov     %esp, %ebp
+
+    mov     %cr0, %eax
+    mov     %eax, savedCR0
+
     mov     0x08(%ebp), %al
     mov     %al, intnNo         //Move the interrupt code to int instruction
 
@@ -19,6 +23,8 @@ ASM_FUNC_BEGIN(intn):
     //Save all the general registers
     pushal
     pushfl
+
+    cli
 
     sidt    IDTdesc
     lidt    realmodeIDTdesc
@@ -35,8 +41,14 @@ intnRealmode:
     mov     %ax, %gs
     mov     %ax, %ss
 
-    //Clear PE bit
     mov     %cr0, %eax
+    testl   $0x80000000, %eax
+    jz      noPagingDisabling
+
+    btr     $31, %eax
+    mov     %eax, %cr0
+noPagingDisabling:
+    //Clear PE bit
     btr     $0, %eax
     mov     %eax, %cr0
     //Jump to real mode
@@ -66,11 +78,11 @@ intnExecuteBegin:
     pop     %gs
     mov     %ss:espSave, %esp
 
-    cli
+    // cli
     .byte   0xCD                //Machine code of int instruction
 intnNo:                         //Awful but useful code 
     .byte   0x00
-    sti
+    // sti
 
     //If output struct is NULL, skip saving
     mov     %esp, %ss:espSave
@@ -113,14 +125,27 @@ intnExecuteEnd:
 
     lidt    IDTdesc
 
-    //Recover the general registers
+    mov     savedCR0, %ebx
+    testl   $0x80000000, %ebx
+    jz      noPagingEnabling    // If PG was 0 originally, skip
+    
+    mov     %cr0, %eax
+    bts     $31, %eax
+    mov     %eax, %cr0          // Write CR0: Re-enable Paging
+noPagingEnabling:
+
+    //This recovers interrupt flags as well
     popfl
+    //Recover the general registers
     popal
 
     leave
     ret
 ASM_FUNC_END(intn)
 
+.align 8
+savedCR0:
+    .long 0x00000000
 .align 8
 espSave:
     .long 0x00000000

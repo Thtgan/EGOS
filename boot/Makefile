@@ -13,7 +13,7 @@ CC_OPTIONS 					:= 	-nostdlib			\
 								-I./include			\
 								-I./include/lib		\
 								-I../include		\
-								-O2					\
+								-O0					\
 								-g					\
 								-MMD				\
 
