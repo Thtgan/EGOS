@@ -52,6 +52,8 @@ Uint16 rootTID = 0;
 
 #include<memory/mapping.h>
 
+#include<uart.h>
+
 Timer timer1, timer2, timer3;
 
 static void __timerFunc1(Timer* timer) {
@@ -85,6 +87,10 @@ void kernelMain(SystemInfo* info) {
     }
 
     INIT_KERNEL();
+
+    for (int i = 0 ; i < 5; ++i) {
+        uart_print("UART TEST\r\n");
+    }
 
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
     tty_switchDisplayMode(DISPLAY_MODE_VGA);

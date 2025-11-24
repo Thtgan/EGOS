@@ -19,6 +19,7 @@
 #include<time/time.h>
 #include<usermode/usermode.h>
 #include<error.h>
+#include<uart.h>
 
 typedef struct {
     void (*func)();
@@ -34,6 +35,7 @@ static void __init_disableInterrupt();  //TODO: Maybe remove these
 static void __init_initVideo();         //TODO: Maybe remove these
 
 static __InitFunc _initFuncs1[] = {
+    { uart_init                 ,   "UART"          },
     { error_init                ,   "Error"         },
     { display_init              ,   "Display"       },
     { tty_init                  ,   "Boot TTY"      },
