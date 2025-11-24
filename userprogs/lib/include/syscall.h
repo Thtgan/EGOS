@@ -14,6 +14,7 @@
 #define SYSCALL_SCHED_YIELD 0x18
 #define SYSCALL_GETPID      0x27
 #define SYSCALL_FORK        0x39
+#define SYSCALL_EXECVE      0x3B
 #define SYSCALL_EXIT        0x3C
 #define SYSCALL_TEST        0x1FF
 

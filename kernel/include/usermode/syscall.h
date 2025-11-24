@@ -67,7 +67,7 @@ typedef struct SyscallUnit {
 #define SYSCALL_INDEX_GETSOCKOPT        0x37    //TODO: Not implemented
 #define SYSCALL_INDEX_CLONE             0x38    //TODO: Not implemented
 #define SYSCALL_INDEX_FORK              0x39    //TODO: Use clone implementation
-#define SYSCALL_INDEX_EXECVE            0x3B    //TODO: Not implemented
+#define SYSCALL_INDEX_EXECVE            0x3B
 #define SYSCALL_INDEX_EXIT              0x3C    //TODO: Not implemented
 #define SYSCALL_INDEX_WAIT4             0x3D    //TODO: Not implemented
 #define SYSCALL_INDEX_KILL              0x3E    //TODO: Not implemented

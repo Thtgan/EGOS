@@ -12,6 +12,7 @@
 #include<multitask/schedule.h>
 #include<multitask/threadStack.h>
 #include<real/simpleAsmLines.h>
+#include<structs/vector.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
 #include<usermode/elf.h>
@@ -35,17 +36,17 @@ __attribute__((naked))
  */
 void __usermode_syscallHandlerExit(int ret);
 
-static int __usermode_doExecute(ConstCstring path, File* file);
+static int __usermode_doExecute(ConstCstring path, File* file, Cstring* argv, Cstring* envp);
 
 void usermode_init() {
     syscall_init();
 }
 
-int usermode_execute(ConstCstring path) {
+int usermode_execute(ConstCstring path, Cstring* argv, Cstring* envp) {
     File* file = fs_fileOpen(path, FCNTL_OPEN_READ_ONLY);
     ERROR_GOTO_IF_ERROR(0);
 
-    int ret = __usermode_doExecute(path, file);
+    int ret = __usermode_doExecute(path, file, argv, envp);
     ERROR_GOTO_IF_ERROR(0);
 
     fs_fileClose(file);
@@ -81,7 +82,7 @@ void __usermode_jumpToUserMode(void* programBegin, void* stackBottom) {
 extern char __usermode_executeReturn;
 void* usermode_executeReturn = &__usermode_executeReturn;
 
-static int __usermode_doExecute(ConstCstring path, File* file) {
+static int __usermode_doExecute(ConstCstring path, File* file, Cstring* argv, Cstring* envp) {
     Size loadedHeaderNum = 0;
     Size initedStackSize = 0;
     
@@ -107,15 +108,80 @@ static int __usermode_doExecute(ConstCstring path, File* file) {
         ERROR_GOTO_IF_ERROR(0);
     }
     
+    Thread* currentThread = schedule_getCurrentThread();
+
+    void* currentTheradTop = threadStack_getStackTop(&currentThread->userStack);
+    currentTheradTop = (void*)ALIGN_DOWN((Uintptr)currentTheradTop, 8);
+
+    Vector argvPointers;
+    Vector envpPointers;
     
+    int argc = 0;
+    if (argv != NULL) {
+        vector_initStruct(&argvPointers);
+        for (int i = 0; argv[i] != NULL; ++i) {
+            Size len = cstring_strlen(argv[i]) + 1;
+    
+            currentTheradTop -= len;
+            cstring_strcpy(currentTheradTop, argv[i]);
+            vector_push(&argvPointers, (Object)currentTheradTop);
+
+            ++argc;
+        }
+    
+        currentTheradTop = (void*)ALIGN_DOWN((Uintptr)currentTheradTop, 8);
+    }
+
+    if (envp != NULL) {
+        vector_initStruct(&envpPointers);
+        for (int i = 0; envp[i] != NULL; ++i) {
+            Size len = cstring_strlen(envp[i]) + 1;
+    
+            currentTheradTop -= len;
+            cstring_strcpy(currentTheradTop, envp[i]);
+            vector_push(&envpPointers, (Object)currentTheradTop);
+        }
+    
+        currentTheradTop = (void*)ALIGN_DOWN((Uintptr)currentTheradTop, 8);
+    }
+
+    if (envp != NULL) {
+        currentTheradTop -= sizeof(void*);
+        *(void**)currentTheradTop = NULL;
+    
+        for (int i = envpPointers.size - 1; i >= 0; --i) {
+            void* pointer = (void*)vector_get(&envpPointers, i);
+            currentTheradTop -= sizeof(void*);
+            *(void**)currentTheradTop = pointer;
+        }
+        
+        vector_clearStruct(&envpPointers);
+    }
+
+    if (argv != NULL) {
+        currentTheradTop -= sizeof(void*);
+        *(void**)currentTheradTop = NULL;
+    
+        for (int i = argvPointers.size - 1; i >= 0; --i) {
+            void* pointer = (void*)vector_get(&argvPointers, i);
+            currentTheradTop -= sizeof(void*);
+            *(void**)currentTheradTop = pointer;
+        }
+
+        vector_clearStruct(&argvPointers);
+    }
+
+    currentTheradTop -= sizeof(int);
+    *(int*)currentTheradTop = argc;
+
     barrier();
     pushq(0);   //Reserved for return value
     
     REGISTERS_SAVE();
-    
-    Thread* currentThread = schedule_getCurrentThread();
+
     currentThread->userExitStackTop = (void*)readRegister_RSP_64();
-    __usermode_jumpToUserMode((void*)header.entryVaddr, threadStack_getStackTop(&currentThread->userStack));
+
+    __usermode_jumpToUserMode((void*)header.entryVaddr, currentTheradTop);
     asm volatile (
         "__usermode_executeReturn: mov %%rax, %P0(%%rsp);"   //Save return value immediately
         :

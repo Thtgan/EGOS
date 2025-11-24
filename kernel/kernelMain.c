@@ -196,7 +196,13 @@ void kernelMain(SystemInfo* info) {
             print_printf("%s-%d\n", str, len);
         }
 
-        int ret = usermode_execute("/bin/test");
+        Cstring testArgv[] = {
+            "test", "arg1", "arg2", "arg3", NULL
+        };
+        Cstring testEnvp[] = {
+            "ENV1=114514", "ENV2=1919", "ENV3=810", NULL
+        };
+        int ret = usermode_execute("/bin/test", testArgv, testEnvp);
         print_printf("USER PROGRAM RETURNED %d\n", ret);
 
         semaphore_up(&sema2);
