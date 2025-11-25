@@ -116,7 +116,7 @@ static int __usermode_doExecute(ConstCstring path, File* file, Cstring* argv, Cs
     Vector argvPointers;
     Vector envpPointers;
     
-    int argc = 0;
+    Size argc = 0;
     if (argv != NULL) {
         vector_initStruct(&argvPointers);
         for (int i = 0; argv[i] != NULL; ++i) {
@@ -171,8 +171,8 @@ static int __usermode_doExecute(ConstCstring path, File* file, Cstring* argv, Cs
         vector_clearStruct(&argvPointers);
     }
 
-    currentTheradTop -= sizeof(int);
-    *(int*)currentTheradTop = argc;
+    currentTheradTop -= sizeof(Size);
+    *(Size*)currentTheradTop = argc;
 
     barrier();
     pushq(0);   //Reserved for return value

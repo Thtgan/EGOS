@@ -41,7 +41,15 @@ prepareFiles:
 	@$(MKDIR) -p $(FILES_DIR)/boot
 	@$(CP) -rf $(BUILD_KERNEL) $(FILES_DIR)/boot
 	@$(MKDIR) -p $(FILES_DIR)/bin
-	@$(CP) -rf $(BUILD_USERPROGS) $(FILES_DIR)/bin
+	@for i in $(filter-out lib, $(notdir $(patsubst %/,%, $(wildcard $(BUILD_USERPROGS_DIR)/*/)))); do	\
+		userprog="$(BUILD_USERPROGS_DIR)/$$i/$$i";	\
+		if [ -f "$$userprog" ]; then	\
+			cp "$$userprog"	"$(FILES_DIR)/bin";	\
+			echo "Found $$userprog";	\
+		else	\
+			echo "$$userprog not found";\
+		fi;	\
+	done;
 
 clean:
 	@$(RM) -rf $(BUILD_BASE_DIR)
