@@ -9,6 +9,7 @@
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<system/pageTable.h>
+#include<error.h>
 
 typedef struct __EXT2vnodeIterateFuncIO __EXT2vnodeIterateFuncIO;
 typedef struct __EXT2directoryEntry __EXT2directoryEntry;

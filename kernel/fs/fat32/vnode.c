@@ -17,6 +17,7 @@
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
 #include<cstring.h>
+#include<error.h>
 
 static void __fat32_vNode_readData(vNode* vnode, Index64 begin, void* buffer, Size byteN);
 

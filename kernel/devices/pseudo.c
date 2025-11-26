@@ -2,6 +2,7 @@
 
 #include<devices/charDevice.h>
 #include<devices/device.h>
+#include<devices/terminal/tty.h>
 #include<print.h>
 #include<kit/bit.h>
 #include<kit/types.h>
@@ -20,20 +21,8 @@ static DeviceOperations __pseudo_nullDevice_operations = (DeviceOperations) {
     .flush      = __pseudo_nullDevice_operations_flush
 };
 
-static void __pseudo_stdoutDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN);
-
-static void __pseudo_stdoutDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN);
-
-static void __pseudo_stdoutDevice_operations_flush(Device* device);
-
-static DeviceOperations __pseudo_stdoutDevice_operations = (DeviceOperations) {
-    .readUnits  = __pseudo_stdoutDevice_operations_readUnits,
-    .writeUnits = __pseudo_stdoutDevice_operations_writeUnits,
-    .flush      = __pseudo_stdoutDevice_operations_flush
-};
-
 static CharDevice _pseudo_nullDevice;
-static CharDevice _pseudo_stdoutDevice;
+static TeletypeDevice _pseudo_teletypeDevice;
 
 void pseudoDevice_init() {
     MajorDeviceID major = device_allocMajor();
@@ -64,26 +53,8 @@ void pseudoDevice_init() {
     device_registerDevice(&_pseudo_nullDevice.device);
     ERROR_GOTO_IF_ERROR(0);
 
-    minor = device_allocMinor(major);
-    if (minor == DEVICE_INVALID_ID) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
-    args = (CharDeviceInitArgs) {
-        .deviceInitArgs     = (DeviceInitArgs) {
-            .id             = DEVICE_BUILD_ID(major, minor),
-            .name           = "stdout",
-            .parent         = NULL,
-            .granularity    = 0,
-            .capacity       = INFINITE,
-            .operations     = &__pseudo_stdoutDevice_operations,
-            .flags          = EMPTY_FLAGS
-        },
-    };
-
-    charDevice_initStruct(&_pseudo_stdoutDevice, &args);
-    device_registerDevice(&_pseudo_stdoutDevice.device);
+    teletypeDevice_initStruct(&_pseudo_teletypeDevice, tty_getCurrentTTY());
+    device_registerDevice(&_pseudo_teletypeDevice.device.device);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -98,14 +69,4 @@ static void __pseudo_nullDevice_operations_writeUnits(Device* device, Index64 un
 }
 
 static void __pseudo_nullDevice_operations_flush(Device* device) {
-}
-
-static void __pseudo_stdoutDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {
-}
-
-static void __pseudo_stdoutDevice_operations_writeUnits(Device* device, Index64 unitIndex, const void* buffer, Size unitN) {
-    print_printf(buffer);
-}
-
-static void __pseudo_stdoutDevice_operations_flush(Device* device) {
 }

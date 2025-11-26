@@ -15,7 +15,6 @@ typedef Uint32 MinorDeviceID;
 #include<kit/oop.h>
 #include<structs/RBtree.h>
 #include<structs/singlyLinkedList.h>
-#include<error.h>
 
 #define DEVICE_ID_MAJOR_SHIFT   20
 #define DEVICE_NAME_MAX_LENGTH  31

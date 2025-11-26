@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/mm.h>
+#include<error.h>
 #include<print.h>
 
 typedef struct __MBRpartitionEntry {

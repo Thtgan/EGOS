@@ -22,6 +22,7 @@
 #include<structs/refCounter.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
+#include<error.h>
 
 __attribute__((naked))
 static void __thread_switchContext(Thread* from, Thread* to);

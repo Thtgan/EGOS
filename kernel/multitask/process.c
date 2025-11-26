@@ -41,7 +41,7 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
     vector_initStruct(&process->fsEntries);
     ERROR_GOTO_IF_ERROR(0);
 
-    File* stdout = fs_fileOpen("/dev/stdout", FCNTL_OPEN_WRITE_ONLY);
+    File* stdout = fs_fileOpen("/dev/tty0", FCNTL_OPEN_WRITE_ONLY);
     ERROR_GOTO_IF_ERROR(1);
     
     vector_push(&process->fsEntries, (Object)stdout);

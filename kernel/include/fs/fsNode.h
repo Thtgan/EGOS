@@ -16,6 +16,7 @@ typedef struct DirFSnode DirFSnode;
 #include<structs/singlyLinkedList.h>
 #include<structs/string.h>
 #include<structs/hashTable.h>
+#include<debug.h>
 
 typedef struct FSnodeAttribute {
     Uint32 uid; //TODO: Not used yet

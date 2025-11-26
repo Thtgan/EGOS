@@ -1,12 +1,13 @@
 #include<devices/terminal/inputBuffer.h>
 
-#include<debug.h>
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<memory/paging.h>
 #include<structs/queue.h>
 #include<system/pageTable.h>
+#include<debug.h>
+#include<error.h>
 
 #define __INPUT_BUFFER_NODE_BUFFER_SIZE  (PAGE_SIZE - sizeof(QueueNode) - 2 * sizeof(Uint16))
 
