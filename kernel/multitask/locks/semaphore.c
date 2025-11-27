@@ -26,12 +26,15 @@ void semaphore_initStruct(Semaphore* sema, int count) {
     sema->counter = count;
     sema->queueLock = SPINLOCK_UNLOCKED;
     wait_initStruct(&sema->wait, &_semaphore_waitOperations);
+    sema->holdBy = NULL;
 }
 
 void semaphore_down(Semaphore* sema) {
     Wait* wait = &sema->wait;
     Thread* currentThread = schedule_getCurrentThread();
+
     if (wait_rawTryTake(wait, currentThread)) {
+        sema->holdBy = currentThread;
         return;
     }
     thread_sleep(currentThread, wait);
@@ -46,6 +49,9 @@ void semaphore_up(Semaphore* sema) {
             Thread* thread = HOST_POINTER(linkedListNode_getNext(&wait->waitList), Thread, waitNode);
             linkedListNode_delete(&thread->waitNode);
             thread_wakeup(thread);
+            sema->holdBy = thread;
+        } else {
+            sema->holdBy = NULL;
         }
 
         spinlock_unlock(&sema->queueLock);
@@ -59,7 +65,9 @@ static bool __semaphore_waitOperations_tryTake(Wait* wait, Thread* thread) {
 
 static bool __semaphore_waitOperations_shouldWait(Wait* wait, Thread* thread) {
     Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
-    return ATOMIC_LOAD(&sema->counter) < 0;
+    int counter = ATOMIC_LOAD(&sema->counter);
+    //If counter is 0, thread might be allowed to run, must check is sema hold by current thread
+    return counter == 0 ? sema->holdBy != thread : counter < 0;
 }
 
 static void __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {

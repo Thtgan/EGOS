@@ -126,6 +126,8 @@ void virtualTeletype_collectData(VirtualTeletype* tty, const void* data, Size n)
         __virtualTTY_putCharacter(tty, ch);
     }
     semaphore_up(&tty->outputLock);
+
+    teletype_rawFlush(&tty->tty);
 }
 
 static Size __virtualTTY_read(Teletype* tty, void* buffer, Size n) {

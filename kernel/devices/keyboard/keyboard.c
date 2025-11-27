@@ -137,9 +137,6 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
             char ch = __keyboard_keyToASCII(key);
             virtualTeletype_collectData(virtualTTY, &ch, 1);
             ERROR_CHECKPOINT();
-
-            teletype_rawFlush(tty);
-            ERROR_CHECKPOINT();
         } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, KEYPAD)) {
             switch (key) {
                 case KEYBOARD_KEY_KEYPAD_3: {

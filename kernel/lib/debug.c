@@ -117,6 +117,8 @@ void debug_dump_stack(void* rbp, Size maxDepth) {
 }
 
 Uintptr debug_getCurrentRIP() {
-    Uintptr* stackFrame = (Uintptr*)readRegister_RSP_64();
-    return *(stackFrame);
+    asm volatile(
+        "mov (%rsp), %rax;"
+        "ret;"
+    );
 }
