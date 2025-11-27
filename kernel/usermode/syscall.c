@@ -39,7 +39,6 @@ void syscall_init() {
 __attribute__((naked))
 static void __syscall_syscallHandler() {
     REGISTERS_SAVE();
-    // register Registers* registers asm ("rbx") = NULL;
     Registers* registers = NULL;
     asm volatile(
         "mov %1, %%ds;"
@@ -49,7 +48,6 @@ static void __syscall_syscallHandler() {
         : "r"(SEGMENT_KERNEL_DATA)
     );
 
-    // register void* handler asm(MACRO_CALL(MACRO_STR, REGISTER_ARGUMENTS_4_ALT)) = _syscallHandlers[registers->rax];
     void* handler = _syscallHandlers[registers->rax];
     if (handler == NULL) {
         registers->rax = (Uint64)-1;
@@ -61,7 +59,6 @@ static void __syscall_syscallHandler() {
             "mov %%rax, %0;"
             : "=m"(registers->rax)
             : "b"(registers), "r"(handler),
-            // : "r"(handler),
             "D"(registers->REGISTER_ARGUMENTS_1), "S"(registers->REGISTER_ARGUMENTS_2),
             "d"(registers->REGISTER_ARGUMENTS_3), "c"(registers->REGISTER_ARGUMENTS_4_ALT),
             "m"(registers->REGISTER_ARGUMENTS_5), "m"(registers->REGISTER_ARGUMENTS_6)
