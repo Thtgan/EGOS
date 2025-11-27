@@ -41,10 +41,18 @@ void process_initStruct(Process* process, Uint16 pid, ConstCstring name, Extende
     vector_initStruct(&process->fsEntries);
     ERROR_GOTO_IF_ERROR(0);
 
+    File* stdin = fs_fileOpen("/dev/tty0", FCNTL_OPEN_READ_ONLY);
+    ERROR_GOTO_IF_ERROR(1);
     File* stdout = fs_fileOpen("/dev/tty0", FCNTL_OPEN_WRITE_ONLY);
     ERROR_GOTO_IF_ERROR(1);
+    File* stderr = fs_fileOpen("/dev/tty0", FCNTL_OPEN_WRITE_ONLY); //TODO: DO NOT BUFFER THIS
+    ERROR_GOTO_IF_ERROR(1);
     
+    vector_push(&process->fsEntries, (Object)stdin);
+    ERROR_GOTO_IF_ERROR(2);
     vector_push(&process->fsEntries, (Object)stdout);
+    ERROR_GOTO_IF_ERROR(2);
+    vector_push(&process->fsEntries, (Object)stderr);
     ERROR_GOTO_IF_ERROR(2);
 
     linkedList_initStruct(&process->childProcesses);
