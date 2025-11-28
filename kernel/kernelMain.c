@@ -148,7 +148,7 @@ void kernelMain(SystemInfo* info) {
     }
 
     semaphore_initStruct(&sema1, 0);
-    semaphore_initStruct(&sema2, -1);
+    semaphore_initStruct(&sema2, 0);
 
     buddyHeapAllocator_initStruct(&cowTestAllocator, mm->frameAllocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
 
@@ -184,7 +184,6 @@ void kernelMain(SystemInfo* info) {
         arr1[0] = 2, arr2[0] = 1919810;
         *mapped = 114514;
         print_printf("DONE 1, arr1: %d, arr2: %d, mapped: %d\n", arr1[0], arr2[0], *mapped);
-        semaphore_up(&sema2);
         while (true) {
             print_printf("Waiting for input: ");
             int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE);

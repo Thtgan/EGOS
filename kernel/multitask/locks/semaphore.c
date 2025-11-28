@@ -23,6 +23,7 @@ static WaitOperations _semaphore_waitOperations = {
 };
 
 void semaphore_initStruct(Semaphore* sema, int count) {
+    DEBUG_ASSERT_SILENT(count >= 0);
     sema->counter = count;
     sema->queueLock = SPINLOCK_UNLOCKED;
     wait_initStruct(&sema->wait, &_semaphore_waitOperations);
@@ -64,10 +65,7 @@ static bool __semaphore_waitOperations_tryTake(Wait* wait, Thread* thread) {
 }
 
 static bool __semaphore_waitOperations_shouldWait(Wait* wait, Thread* thread) {
-    Semaphore* sema = HOST_POINTER(wait, Semaphore, wait);
-    int counter = ATOMIC_LOAD(&sema->counter);
-    //If counter is 0, thread might be allowed to run, must check is sema hold by current thread
-    return counter == 0 ? sema->holdBy != thread : counter < 0;
+    return false;   //Once woke up, it should not fall asleep unless it calls down
 }
 
 static void __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {
