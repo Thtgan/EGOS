@@ -78,7 +78,7 @@ static inline bool queue_pop(Queue* q) {
  * @param q Queue
  * @return QueueNode* Head node of queue, NULL if queue is empty
  */
-static inline QueueNode* queue_front(Queue* q) {
+static inline QueueNode* queue_peek(Queue* q) {
     return singlyLinkedList_isEmpty(&q->q) ? NULL : singlyLinkedList_getNext(&q->q);
 }
 

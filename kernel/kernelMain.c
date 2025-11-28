@@ -188,6 +188,7 @@ void kernelMain(SystemInfo* info) {
             print_printf("Waiting for input: ");
             int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE);
             ERROR_CHECKPOINT();
+            str[--len] = '\0';
 
             if (cstring_strcmp(str, "PASS") == 0 || len == 0) {
                 break;

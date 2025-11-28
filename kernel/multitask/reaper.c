@@ -63,7 +63,7 @@ Thread* __reaper_takeThread(__ThreadReaper* reaper) {
 
     spinlock_lock(lock);
     DEBUG_ASSERT_SILENT(!queue_isEmpty(q));
-    QueueNode* node = queue_front(q);
+    QueueNode* node = queue_peek(q);
     queue_pop(q);
     spinlock_unlock(lock);
 

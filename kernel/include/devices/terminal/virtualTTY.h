@@ -4,7 +4,7 @@
 typedef struct VirtualTeletype VirtualTeletype;
 
 #include<devices/display/display.h>
-#include<devices/terminal/inputBuffer.h>
+#include<devices/terminal/inputFIFO.h>
 #include<devices/terminal/textBuffer.h>
 #include<devices/terminal/tty.h>
 #include<kit/types.h>
@@ -26,7 +26,7 @@ typedef struct VirtualTeletype {
     bool inputMode;
     int inputLength;
     Semaphore inputLock;                            //Lock for input, used to block output when inputting
-    InputBuffer inputBuffer;
+    InputFIFO input;
 } VirtualTeletype;
 
 void virtualTeletype_initStruct(VirtualTeletype* tty, DisplayContext* displayContext, Size lineCapacity);

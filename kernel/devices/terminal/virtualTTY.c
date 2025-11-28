@@ -1,7 +1,7 @@
 #include<devices/terminal/virtualTTY.h>
 
 #include<devices/display/display.h>
-#include<devices/terminal/inputBuffer.h>
+#include<devices/terminal/inputFIFO.h>
 #include<devices/terminal/textBuffer.h>
 #include<devices/terminal/tty.h>
 #include<kit/types.h>
@@ -69,7 +69,7 @@ void virtualTeletype_initStruct(VirtualTeletype* tty, DisplayContext* displayCon
     tty->inputMode = false;
     tty->inputLength = 0;
     semaphore_initStruct(&tty->inputLock, 1);
-    inputBuffer_initStruct(&tty->inputBuffer);
+    inputFIFO_initStruct(&tty->input);
     ERROR_GOTO_IF_ERROR(0);
 
     return;
@@ -116,13 +116,13 @@ void virtualTeletype_collectData(VirtualTeletype* tty, const void* data, Size n)
     semaphore_down(&tty->outputLock);
 
     ConstCstring str = (ConstCstring)data;
-    for (int i = 0; i < n; ++i) {
+    for (int i = 0; i < n; ++i) {   //TODO: Optimize this
         char ch = str[i];
         if (ch == '\b' && tty->inputLength == 0) {
             continue;
         }
 
-        inputBuffer_inputChar(&tty->inputBuffer, ch);
+        inputFIFO_inputChar(&tty->input, ch);
         __virtualTTY_putCharacter(tty, ch);
     }
     semaphore_up(&tty->outputLock);
@@ -134,7 +134,7 @@ static Size __virtualTTY_read(Teletype* tty, void* buffer, Size n) {
     VirtualTeletype* virtualTeletype = HOST_POINTER(tty, VirtualTeletype, tty);
     virtualTeletype_switchInputMode(virtualTeletype, true);
     __virtualTTY_switchCursor(virtualTeletype, true);
-    Size ret = inputBuffer_getLine(&virtualTeletype->inputBuffer, buffer, n);
+    Size ret = inputFIFO_getLine(&virtualTeletype->input, buffer, n);
     __virtualTTY_switchCursor(virtualTeletype, false);
     virtualTeletype_switchInputMode(virtualTeletype, false);
 
