@@ -27,6 +27,8 @@ $(BUILD_TARGET): bootBuild kernelBuild userPrograms prepareFiles
 
 buildDir:
 	@$(MKDIR) -p $(BUILD_BASE_DIR)
+	@$(MKDIR) -p $(FILES_DIR)/dev
+	@$(MKDIR) -p $(FILES_DIR)/mnt
 
 bootBuild:
 	@$(MAKE) -C ./boot RELATIVE_BASE=$(shell realpath --relative-to ./boot .)/$(RELATIVE_BASE)
@@ -53,8 +55,8 @@ prepareFiles:
 
 clean:
 	@$(RM) -rf $(BUILD_BASE_DIR)
-	@$(RM) -rf ./files/boot/*
-	@$(RM) -rf ./files/bin/*
+	@$(RM) -rf $(FILES_DIR)/boot/*
+	@$(RM) -rf $(FILES_DIR)/bin/*
 
 updateBootloader: bootBuild
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))
