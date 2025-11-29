@@ -257,28 +257,23 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
     fat32vnode->firstCluster    = nodeEntry->pointsTo;
 
     vNode* vnode = &fat32vnode->vnode;
-    vnode->size             = nodeEntry->size;
-    ERROR_GOTO_IF_ERROR(0);
 
     BlockDevice* fscoreBlockDevice = fscore->blockDevice;
-    vnode->tokenSpaceSize   = fat32_getClusterChainLength(fat32fscore, fat32vnode->firstCluster) * BPB->sectorPerCluster * POWER_2(fscoreBlockDevice->device.granularity);
-    DEBUG_ASSERT_SILENT(vnode->size <= vnode->tokenSpaceSize);
-    
-    vnode->signature        = VNODE_SIGNATURE;
-    vnode->vnodeID          = node->entry.vnodeID;
-    vnode->fscore           = fscore;
-    vnode->operations       = fat32_vNode_getOperations();
-    
-    REF_COUNTER_INIT(vnode->refCounter, 0);
-    hashChainNode_initStruct(&vnode->openedNode);
 
-    vnode->fsNode = node;
+    vNodeInitArgs args = {
+        .vnodeID        = node->entry.vnodeID,
+        .tokenSpaceSize = fat32_getClusterChainLength(fat32fscore, fat32vnode->firstCluster) * BPB->sectorPerCluster * POWER_2(fscoreBlockDevice->device.granularity),
+        .size           = nodeEntry->size,
+        .fscore         = fscore,
+        .operations     = fat32_vNode_getOperations(),
+        .fsNode         = node,
+        .deviceID       = INVALID_ID
+    };
 
-    vnode->deviceID         = INVALID_ID;
-    vnode->lock             = SPINLOCK_UNLOCKED;
+    vNode_initStruct(vnode, &args);
 
     if (nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY) {
-        vnode->size         = fat32_vNode_touchDirectory(vnode);    //TODO: Kinda ungly code
+        vnode->size = fat32_vNode_touchDirectory(vnode);    //TODO: Kinda ugly code
     }
     
     return vnode;

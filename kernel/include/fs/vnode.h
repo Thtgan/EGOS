@@ -3,6 +3,7 @@
 
 typedef struct vNode vNode;
 typedef struct vNodeOperations vNodeOperations;
+typedef struct vNodeInitArgs vNodeInitArgs;
 
 #include<fs/directoryEntry.h>
 #include<fs/fsEntry.h>
@@ -31,6 +32,16 @@ typedef struct vNode {
 
     Spinlock                lock;   //TODO: Use mutex?
 } vNode;
+
+typedef struct vNodeInitArgs {
+    ID vnodeID;
+    Size tokenSpaceSize;
+    Size size;
+    FScore* fscore;
+    vNodeOperations* operations;
+    fsNode* fsNode;
+    ID deviceID;
+} vNodeInitArgs;
 
 typedef struct vNodeOperations {
     void (*readData)(vNode* vnode, Index64 begin, void* buffer, Size byteN);
@@ -75,6 +86,8 @@ static inline void vNode_rawRenameDirectoryEntry(vNode* vnode, fsNode* entry, vN
 static inline void vNode_rawReadDirectoryEntries(vNode* vnode) {
     vnode->operations->readDirectoryEntries(vnode);
 }
+
+void vNode_initStruct(vNode* vnode, vNodeInitArgs* args);
 
 void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr);
 

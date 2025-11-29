@@ -104,13 +104,11 @@ bool ext2_checkType(BlockDevice* blockDevice) {
     Device* device = &blockDevice->device;
     Size deviceBlockSize = POWER_2(device->granularity);
     Uint8 superBlockBuffer[algorithms_umax64(deviceBlockSize, sizeof(EXT2SuperBlock))];
-    // EXT2SuperBlock superBlock;
 
     DEBUG_ASSERT_SILENT(__EXT2_SUPERBLOCK_OFFSET % deviceBlockSize == 0);
     Index64 superBlockIndex = __EXT2_SUPERBLOCK_OFFSET / deviceBlockSize;
     Size superBlockN = DIVIDE_ROUND_UP(sizeof(EXT2SuperBlock), deviceBlockSize);
 
-    // blockDevice_readBlocks(blockDevice, superBlockIndex, (void*)superBlockBuffer, 1);   //TODO: One block?
     blockDevice_readBlocks(blockDevice, superBlockIndex, (void*)superBlockBuffer, superBlockN);
     ERROR_GOTO_IF_ERROR(0);
 
@@ -256,27 +254,23 @@ static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node) {
     vNode* vnode = &ext2vnode->vnode;
     DirectoryEntry* nodeEntry = &node->entry;
 
+    vNodeInitArgs args = {
+        .vnodeID        = node->entry.vnodeID,
+        .tokenSpaceSize = inode->sectorCnt * deviceBlockSize,
+        .fscore         = fscore,
+        .operations     = ext2_vNode_getOperations(),
+        .fsNode         = node,
+        .deviceID       = INVALID_ID
+    };
+
     if (nodeEntry->type == FS_ENTRY_TYPE_FILE) {
-        vnode->size         = nodeEntry->size;
-        DEBUG_ASSERT_SILENT(vnode->size == (((Size)inode->h32Size << 32) | inode->l32Size));
+        args.size       = nodeEntry->size;
+        DEBUG_ASSERT_SILENT(args.size == (((Size)inode->h32Size << 32) | inode->l32Size));
     } else {
-        vnode->size         = inode->l32Size;
+        args.size       = inode->l32Size;
     }
-    vnode->tokenSpaceSize   = inode->sectorCnt * deviceBlockSize;
-    DEBUG_ASSERT_SILENT(vnode->tokenSpaceSize % blockSize == 0);
 
-    vnode->signature        = VNODE_SIGNATURE;
-    vnode->vnodeID          = node->entry.vnodeID;
-    vnode->fscore           = fscore;
-    vnode->operations       = ext2_vNode_getOperations();
-
-    REF_COUNTER_INIT(vnode->refCounter, 0);
-    hashChainNode_initStruct(&vnode->openedNode);
-
-    vnode->fsNode           = node;
-
-    vnode->deviceID         = INVALID_ID;
-    vnode->lock             = SPINLOCK_UNLOCKED;
+    vNode_initStruct(vnode, &args);
     
     return vnode;
     ERROR_FINAL_BEGIN(0);

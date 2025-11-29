@@ -9,9 +9,29 @@
 #include<multitask/process.h>
 #include<multitask/schedule.h>
 #include<structs/hashTable.h>
+#include<structs/refCounter.h>
 #include<structs/singlyLinkedList.h>
 #include<debug.h>
 #include<error.h>
+
+void vNode_initStruct(vNode* vnode, vNodeInitArgs* args) {
+    vnode->signature        = VNODE_SIGNATURE;
+    vnode->vnodeID          = args->vnodeID;
+    vnode->size             = args->size;
+    vnode->tokenSpaceSize   = args->tokenSpaceSize;
+    vnode->deviceID         = args->deviceID;
+    DEBUG_ASSERT_SILENT(vnode->size <= vnode->tokenSpaceSize);
+
+    vnode->fscore           = args->fscore;
+    vnode->operations       = args->operations;
+
+    REF_COUNTER_INIT(vnode->refCounter, 0);
+
+    hashChainNode_initStruct(&vnode->openedNode);
+    
+    vnode->fsNode           = args->fsNode;
+    vnode->lock             = SPINLOCK_UNLOCKED;
+}
 
 void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) {
     fsNode* node = vnode->fsNode, * found = NULL;
