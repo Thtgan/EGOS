@@ -145,7 +145,7 @@ void* mm_allocatePages(Size n) {
 
 void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
-    void* firstFrame = paging_fastTranslate(mm->extendedTable, p);
+    void* firstFrame = paging_fastTranslate(mapTo, p);
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
     ERROR_CHECKPOINT();
 
