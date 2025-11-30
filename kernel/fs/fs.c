@@ -130,6 +130,8 @@ void fs_init() {
     ERROR_GOTO_IF_ERROR(0);
 
     fscore_releaseVnode(rootFSrootVnode);
+    fscore_releaseVnode(devFSrootVnode);
+    fscore_releaseVnode(ext2rootVnode);
 
     return;
     ERROR_FINAL_BEGIN(0);

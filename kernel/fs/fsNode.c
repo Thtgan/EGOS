@@ -90,7 +90,7 @@ bool fsnode_derefer(fsNode* node) {
         return true;
     }
 
-    if (REF_COUNTER_DEREFER(node->refCounter) == 0) {
+    if (REF_COUNTER_DEREFER(node->refCounter) == 0 && node->parent != NULL) {
         DirFSnode* parentFSnode = FSNODE_GET_DIRFSNODE(node->parent);
         __dirFSnode_removeLivingChild(parentFSnode);
     }

@@ -141,20 +141,34 @@ void fscore_releaseFSnode(fsNode* node) {
 vNode* fscore_getVnode(FScore* fscore, fsNode* node, bool followMount) {
     if (node->mount != NULL && followMount) {
         vNode* ret = node->mount;
-        fsnode_requestVnode(ret->fscore, ret->fsNode);
+        DEBUG_ASSERT_SILENT(ret != NULL && REF_COUNTER_GET(ret->fsNode) > 0);
+        if (REF_COUNTER_REFER(ret->refCounter) == 1) {
+            fsnode_requestVnode(ret->fscore, ret->fsNode);  //Pin this vnode
+            ERROR_GOTO_IF_ERROR(0);
+        }
         return ret;
     }
 
-    fsnode_requestVnode(fscore, node);
-    ERROR_GOTO_IF_ERROR(0);
+    vNode* ret = node->vnode;
+    if (ret == NULL) {
+        fsnode_requestVnode(fscore, node);
+        ERROR_GOTO_IF_ERROR(0);
+        ret = node->vnode;
+        DEBUG_ASSERT_SILENT(REF_COUNTER_REFER(ret->refCounter) == 1);
+    } else if (REF_COUNTER_REFER(ret->refCounter) == 1) {
+        fsnode_requestVnode(fscore, node);
+        ERROR_GOTO_IF_ERROR(0);
+    }
 
-    return node->vnode;
+    return ret;
     ERROR_FINAL_BEGIN(0);
     return NULL;
 }
 
 void fscore_releaseVnode(vNode* vnode) {
-    fsnode_releaseVnode(vnode->fscore, vnode->fsNode);
+    if (REF_COUNTER_DEREFER(vnode->refCounter) == 0) {
+        fsnode_releaseVnode(vnode->fscore, vnode->fsNode);
+    }
 }
 
 fsEntry* fscore_genericOpenFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
@@ -318,6 +332,7 @@ static fsNode* __fscore_getLocalFSnode(FScore* fscore, fsNode* baseNode, String*
 
         fsNode* lastNode = currentNode;
         currentNode = fsnode_lookup(currentNode, walked.data, (currentIndex == INVALID_INDEX64) ? isDirectory : true, true);    //Refer 'currentNode' once
+        //TODO: Check need release here
         if (currentNode == NULL) {
             return NULL;
         }
