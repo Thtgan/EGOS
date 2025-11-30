@@ -282,9 +282,7 @@ static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node) {
 }
 
 static void __ext2_fscore_closeVnode(FScore* fscore, vNode* vnode) {
-    if (REF_COUNTER_DEREFER(vnode->refCounter) != 0) {
-        return;
-    }
+    DEBUG_ASSERT_SILENT(REF_COUNTER_GET(vnode->refCounter) == 0);
 
     EXT2vnode* ext2vnode = HOST_POINTER(vnode, EXT2vnode, vnode);
     EXT2fscore* ext2fscore = HOST_POINTER(fscore, EXT2fscore, fscore);

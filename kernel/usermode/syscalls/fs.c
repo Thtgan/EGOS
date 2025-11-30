@@ -106,10 +106,7 @@ static int __syscall_fs_close(int fileDescriptor) {
         ERROR_GOTO(0);
     }
     
-    if (vNode_getReferenceCount(file->vnode) == 1) {
-        fs_fileClose(file);
-        ERROR_GOTO_IF_ERROR(0);
-    } 
+    fs_fileClose(file);
 
     return 0;
     ERROR_FINAL_BEGIN(0);

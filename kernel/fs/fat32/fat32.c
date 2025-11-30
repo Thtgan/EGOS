@@ -286,9 +286,7 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
 }
 
 static void __fat32_fscore_closeVnode(FScore* fscore, vNode* vnode) {
-    if (REF_COUNTER_DEREFER(vnode->refCounter) != 0) {
-        return;
-    }
+    DEBUG_ASSERT_SILENT(REF_COUNTER_GET(vnode->refCounter) == 0);
     
     FAT32vnode* fat32vnode = HOST_POINTER(vnode, FAT32vnode, vnode);
     //TODO: Update own entry if resized
