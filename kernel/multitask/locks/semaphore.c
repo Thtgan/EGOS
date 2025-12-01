@@ -38,6 +38,8 @@ void semaphore_down(Semaphore* sema) {
         sema->holdBy = currentThread;
         return;
     }
+
+    schedule_enterCritical();
     thread_sleep(currentThread, wait);
 }
 
@@ -77,6 +79,11 @@ static void __semaphore_waitOperations_wait(Wait* wait, Thread* thread) {
     spinlock_lock(&sema->queueLock);
     linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
     spinlock_unlock(&sema->queueLock);
+
+    if (schedule_isInCritical()) {
+        schedule_leaveCritical();
+        DEBUG_ASSERT_SILENT(!schedule_isInCritical());
+    }
 
     schedule_yield();
 }

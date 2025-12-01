@@ -46,6 +46,7 @@ bool mutex_acquire(Mutex* mutex) {
         return false;
     }
 
+    schedule_enterCritical();
     thread_sleep(currentThread, wait);
 
     return true;
@@ -121,6 +122,11 @@ static void __mutex_waitOperations_wait(Wait* wait, Thread* thread) {
     DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(mutex->flags, MUTEX_FLAG_TRY));
     
     linkedListNode_insertFront(&wait->waitList, &thread->waitNode);
+
+    if (schedule_isInCritical()) {
+        schedule_leaveCritical();
+        DEBUG_ASSERT_SILENT(!schedule_isInCritical());
+    }
 
     schedule_yield();
 }

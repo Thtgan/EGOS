@@ -151,7 +151,7 @@ void thread_sleep(Thread* thread, Wait* wait) {
         thread->waittingFor = wait;
         
         thread_unlock(thread);
-        wait_rawWait(wait, thread);
+        wait_rawWait(wait, thread); //TODO: Split operations before actual wait(Adding to wait queue), and move before unlock
         thread_lock(thread);
     } while (wait_rawShouldWait(wait, thread));
     
