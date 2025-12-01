@@ -32,6 +32,9 @@ extern void (*stubs[256])();
 static void __idt_setEntry(Uint8 vector, void* isr, Uint8 ist, Uint8 attributes);
 
 ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
+    if (vec == 1) {
+        return;
+    }
     cli();
     print_debugPrintf("%#04X Interrupt triggered!\n", vec);
     print_debugPrintf("CURRENT STACK: %#018llX\n", readRegister_RSP_64());
