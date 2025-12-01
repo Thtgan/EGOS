@@ -56,6 +56,22 @@ Uint16 rootTID = 0;
 
 Timer timer1, timer2, timer3;
 
+#include<multitask/locks/conditionVar.h>
+#include<multitask/locks/mutex.h>
+
+ConditionVar var1, var2;
+Timer condTimer;
+bool flag1 = false, flag2 = false;
+Mutex conditionLock;
+
+bool __conditionVarFunc1(void* arg) {
+    return flag1;
+}
+
+bool __conditionVarFunc2(void* arg) {
+    return flag2;
+}
+
 static void __timerFunc1(Timer* timer) {
     print_printf("HANDLER CALL FROM TIMER1\n");
 }
@@ -158,13 +174,52 @@ void kernelMain(SystemInfo* info) {
     print_printf("%p\n", mapped);
     arr1[0] = 1, arr2[0] = 114514;
     rootTID = schedule_getCurrentThread()->tid;
+
+    mutex_initStruct(&conditionLock, EMPTY_FLAGS);
+
+    conditionVar_initStruct(&var1);
+    conditionVar_initStruct(&var2);
+
+    timer_initStruct(&condTimer, 1, TIME_UNIT_SECOND);
+    SET_FLAG_BACK(condTimer.flags, TIMER_FLAGS_SYNCHRONIZE);
+
     Process* forked = schedule_fork();
     if (forked != NULL) {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is main thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
+
+        timer_start(&condTimer);
+        
+        mutex_acquire(&conditionLock);
+        flag1 = true;
+        conditionVar_notify(&var1);
+        mutex_release(&conditionLock);
+
+        print_printf("Condition Variable test-1\n");
+        
+        mutex_acquire(&conditionLock);
+        conditionVar_wait(&var2, &conditionLock, __conditionVarFunc2, NULL);
+        mutex_release(&conditionLock);
+
+        print_printf("Condition Variable test-3\n");
     } else {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is child thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
+        
+        mutex_acquire(&conditionLock);
+        conditionVar_wait(&var1, &conditionLock, __conditionVarFunc1, NULL);
+        mutex_release(&conditionLock);
+
+        print_printf("Condition Variable test-2\n");
+
+        timer_start(&condTimer);
+        
+        mutex_acquire(&conditionLock);
+        flag2 = true;
+        conditionVar_notify(&var2);
+        mutex_release(&conditionLock);
+
+        print_printf("Condition Variable test-4\n");
     }
 
     Thread* currentThread = schedule_getCurrentThread();

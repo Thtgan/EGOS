@@ -43,6 +43,8 @@ void schedule_enterCritical();
 
 void schedule_leaveCritical();
 
+bool schedule_isInCritical();
+
 void schedule_yieldIfStopped();
 
 Process* schedule_fork();

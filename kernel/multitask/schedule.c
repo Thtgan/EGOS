@@ -277,10 +277,14 @@ void schedule_enterCritical() {
 }
 
 void schedule_leaveCritical() {
-    DEBUG_ASSERT_SILENT(ATOMIC_LOAD(&_schedule_criticalCount) > 0);
+    DEBUG_ASSERT_SILENT(schedule_isInCritical());
     if (ATOMIC_DEC_FETCH(&_schedule_criticalCount) == 0) {
         sti();
     }
+}
+
+bool schedule_isInCritical() {
+    return ATOMIC_LOAD(&_schedule_criticalCount) > 0;
 }
 
 void schedule_yieldIfStopped() {    //TODO: Remove this?
