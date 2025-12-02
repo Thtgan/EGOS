@@ -58,11 +58,14 @@ Timer timer1, timer2, timer3;
 
 #include<multitask/locks/conditionVar.h>
 #include<multitask/locks/mutex.h>
+#include<multitask/ipc.h>
 
 ConditionVar var1, var2;
 Timer condTimer;
 bool flag1 = false, flag2 = false;
 Mutex conditionLock;
+
+char pipeBuffer[16];
 
 bool __conditionVarFunc1(void* arg) {
     return flag1;
@@ -84,7 +87,7 @@ static void __timerFunc2(Timer* timer) {
 }
 
 static void __timerFunc3(Timer* timer) {
-    print_printf("HANDLER CALL FROM TIMER3\n");
+    print_printf("HANDLER CALL FROM TIMER3\n"); //TODO: TTY output semaphore may fall into sleep in ISR
     if (--timer->data == 0) {
         CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
     }
@@ -183,6 +186,9 @@ void kernelMain(SystemInfo* info) {
     timer_initStruct(&condTimer, 1, TIME_UNIT_SECOND);
     SET_FLAG_BACK(condTimer.flags, TIMER_FLAGS_SYNCHRONIZE);
 
+    int writeFD, readFD;
+    ipc_pipe(&writeFD, &readFD);
+
     Process* forked = schedule_fork();
     if (forked != NULL) {
         Thread* currentThread = schedule_getCurrentThread();
@@ -202,6 +208,11 @@ void kernelMain(SystemInfo* info) {
         mutex_release(&conditionLock);
 
         print_printf("Condition Variable test-3\n");
+
+        Process* process = schedule_getCurrentProcess();
+        File* pipeFile = process_getFSentry(process, writeFD);
+        process_removeFSentry(process, writeFD);
+        fs_fileClose(pipeFile);
     } else {
         Thread* currentThread = schedule_getCurrentThread();
         print_printf("This is child thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
@@ -220,12 +231,23 @@ void kernelMain(SystemInfo* info) {
         mutex_release(&conditionLock);
 
         print_printf("Condition Variable test-4\n");
+
+        Process* process = schedule_getCurrentProcess();
+        File* pipeFile = process_getFSentry(process, readFD);
+        process_removeFSentry(process, readFD);
+        fs_fileClose(pipeFile);
     }
 
     Thread* currentThread = schedule_getCurrentThread();
     if (rootTID == currentThread->tid) {
         arr1[0] = 3;
         semaphore_up(&sema1);
+
+        File* pipeFile = process_getFSentry(schedule_getCurrentProcess(), readFD);
+        fs_fileRead(pipeFile, pipeBuffer, 16);
+        pipeBuffer[6] = '\0';
+        print_printf("Received from pipe: %s\n", pipeBuffer);
+
         semaphore_down(&sema2);
         print_printf("DONE 0, arr1: %d, arr2: %d, mapped: %d\n", arr1[0], arr2[0], *mapped);
     } else {
@@ -250,6 +272,9 @@ void kernelMain(SystemInfo* info) {
             }
             print_printf("%s-%d\n", str, len);
         }
+
+        File* pipeFile = process_getFSentry(schedule_getCurrentProcess(), writeFD);
+        fs_fileWrite(pipeFile, "415411", 6);
 
         Cstring testArgv[] = {
             "test", "arg1", "arg2", "arg3", NULL

@@ -296,10 +296,12 @@ fsEntry* process_getFSentry(Process* process, int fd) {
 Index32 process_addFSentry(Process* process, fsEntry* entry) {
     schedule_enterCritical();
     Vector* entries = &process->fsEntries;
-    Index32 ret = entries->size - 1;
+    Index32 ret = entries->size;
 
     vector_push(entries, (Object)entry);
     ERROR_GOTO_IF_ERROR(0);
+
+    schedule_leaveCritical();
 
     return ret;
     ERROR_FINAL_BEGIN(0);
@@ -337,9 +339,9 @@ static void __process_doClone(Process* process, Uint16 pid, Process* cloneFrom, 
     ERROR_GOTO_IF_ERROR(0);
 
     vector_resize(&process->fsEntries, cloneFrom->fsEntries.capacity);
-    Size fsEntryNum = process->fsEntries.size;
-    for (int i = 0; i < fsEntryNum; ++i) {
-        Object entry = vector_get(&process->fsEntries, i);
+    Size fsEntryNum = cloneFrom->fsEntries.size;
+    for (int i = 3; i < fsEntryNum; ++i) {
+        Object entry = vector_get(&cloneFrom->fsEntries, i);
         ERROR_GOTO_IF_ERROR(0);
 
         if (entry == OBJECT_NULL) {

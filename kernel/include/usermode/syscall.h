@@ -33,7 +33,7 @@ typedef struct SyscallUnit {
 #define SYSCALL_INDEX_READV             0x13    //TODO: Not implemented
 #define SYSCALL_INDEX_WRITEV            0x14    //TODO: Not implemented
 #define SYSCALL_INDEX_ACCESS            0x15    //TODO: Not implemented
-#define SYSCALL_INDEX_PIPE              0x16    //TODO: Not implemented
+#define SYSCALL_INDEX_PIPE              0x16
 #define SYSCALL_INDEX_SELECT            0x17    //TODO: Not implemented
 #define SYSCALL_INDEX_SCHED_YIELD       0x18
 #define SYSCALL_INDEX_MREMAP            0x19    //TODO: Not implemented

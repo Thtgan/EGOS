@@ -11,6 +11,7 @@
 #define SYSCALL_FSTAT       0x05
 #define SYSCALL_MMAP        0x09
 #define SYSCALL_MUNMAP      0x0B
+#define SYSCALL_PIPE        0x16
 #define SYSCALL_SCHED_YIELD 0x18
 #define SYSCALL_GETPID      0x27
 #define SYSCALL_FORK        0x39

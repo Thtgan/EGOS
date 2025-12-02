@@ -5,7 +5,8 @@ typedef enum {
     FS_ENTRY_TYPE_DUMMY,
     FS_ENTRY_TYPE_FILE,
     FS_ENTRY_TYPE_DIRECTORY,
-    FS_ENTRY_TYPE_DEVICE
+    FS_ENTRY_TYPE_DEVICE,
+    FS_ENTRY_TYPE_PIPE,
 } fsEntryType;
 
 typedef struct fsEntry fsEntry;
