@@ -43,7 +43,7 @@ void debug_blowup(ConstCstring format, ...) {   //TODO: Cannot print long senten
     va_list args;
     va_start(args, format);
 
-    print_debugVprintf(format, args);
+    print_debugVprintf(format, &args);
 
     va_end(args);
 

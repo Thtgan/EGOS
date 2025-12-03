@@ -36,9 +36,9 @@ int print_sprintf(char* buffer, const char* format, ...);
  * @param args Data
  * @return The length of final string printed
  */
-int print_vprintf(const char* format, va_list args);
+int print_vprintf(const char* format, va_list* args);
 
-int print_debugVprintf(const char* format, va_list args);
+int print_debugVprintf(const char* format, va_list* args);
 
 /**
  * @brief Write the string to buffer with given data in format
@@ -48,7 +48,7 @@ int print_debugVprintf(const char* format, va_list args);
  * @param args Data
  * @return int The length of final string printed
  */
-int print_vsprintf(char* buffer, const char* format, va_list args);
+int print_vsprintf(char* buffer, const char* format, va_list* args);
 
 /**
  * @brief Print a character to screen
