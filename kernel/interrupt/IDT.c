@@ -1,17 +1,16 @@
 #include<interrupt/IDT.h>
 
-#include<debug.h>
 #include<interrupt/ISR.h>
 #include<interrupt/PIC.h>
 #include<kit/bit.h>
 #include<memory/paging.h>
 #include<multitask/context.h>
-#include<print.h>
 #include<real/flags/eflags.h>
 #include<real/ports/PIC.h>
 #include<real/simpleAsmLines.h>
 #include<system/GDT.h>
 #include<system/pageTable.h>
+#include<debug.h>
 
 void (*handlers[256]) (Uint8 vec, HandlerStackFrame* handlerStackFrame, Registers* registers) = {};
 
@@ -36,11 +35,11 @@ ISR_FUNC_HEADER(__defaultInterruptHandler) {    //Just die
         return;
     }
     cli();
-    print_debugPrintf("%#04X Interrupt triggered!\n", vec);
-    print_debugPrintf("CURRENT STACK: %#018llX\n", readRegister_RSP_64());
-    print_debugPrintf("FRAME: %#018llX\n", handlerStackFrame);
-    print_debugPrintf("ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
-    print_debugPrintf("EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
+    debug_printf("%#04X Interrupt triggered!\n", vec);
+    debug_printf("CURRENT STACK: %#018llX\n", readRegister_RSP_64());
+    debug_printf("FRAME: %#018llX\n", handlerStackFrame);
+    debug_printf("ERRORCODE: %#018llX RIP: %#018llX CS: %#018llX\n", handlerStackFrame->errorCode, handlerStackFrame->rip, handlerStackFrame->cs);
+    debug_printf("EFLAGS: %#018llX RSP: %#018llX SS: %#018llX\n", handlerStackFrame->eflags, handlerStackFrame->rsp, handlerStackFrame->ss);
     debug_dump_registers(registers);
     debug_dump_stack((void*)registers->rbp, INFINITE);
     debug_blowup("DEAD\n");

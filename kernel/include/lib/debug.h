@@ -9,7 +9,11 @@
 
 void debug_init();
 
-Teletype* debug_getTTY();
+// Teletype* debug_getTTY();
+
+int debug_printf(ConstCstring format, ...);
+
+int debug_putchar(int ch);
 
 __attribute__((noreturn))
 /**
@@ -27,7 +31,7 @@ void debug_dump_stack(void* rbp, Size maxDepth);
 
 Uintptr __attribute__((naked)) debug_getCurrentRIP();   //TODO: IDK where this should go
 
-#define DEBUG_MARK_PRINT(__FORMAT, ...)                 print_debugPrintf("[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
+#define DEBUG_MARK_PRINT(__FORMAT, ...)                 debug_printf("[" __FILE__ ":%d] " __FORMAT, __LINE__ __VA_OPT__(,) __VA_ARGS__)
 
 #define DEBUG_ASSERT_SILENT(__EXPRESSION)               do { if (!(__EXPRESSION)) debug_blowup("Assertion failed at %s, line %d\n", __FILE__, __LINE__); } while(0)
 

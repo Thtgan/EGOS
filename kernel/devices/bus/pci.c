@@ -7,6 +7,7 @@
 #include<real/ports/pci.h>
 #include<real/simpleAsmLines.h>
 #include<structs/vector.h>
+#include<debug.h>
 #include<error.h>
 
 static void __pci_probe();
@@ -29,7 +30,7 @@ void pci_init() {
     if (pci_checkExist()) {
         __pci_probe();
     } else {
-        print_debugPrintf("PCI not supported\n");
+        debug_printf("PCI not supported\n");
     }
 }
 

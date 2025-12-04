@@ -108,7 +108,7 @@ void kernelMain(SystemInfo* info) {
     INIT_KERNEL();
 
     for (int i = 0 ; i < 5; ++i) {
-        uart_print("UART TEST\r\n");
+        uart_print("UART TEST\n");
     }
 
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
@@ -148,12 +148,12 @@ void kernelMain(SystemInfo* info) {
     printFileFromEXT2();
 
     Uint32 pciDeviceNum = pci_getDeviceNum();
-    print_debugPrintf("%u PCI devices found\n", pciDeviceNum);
+    debug_printf("%u PCI devices found\n", pciDeviceNum);
     if (pciDeviceNum != 0) {
-        print_debugPrintf("Bus Dev Func Vendor Device Class SubClass\n");
+        debug_printf("Bus Dev Func Vendor Device Class SubClass\n");
         for (int i = 0; i < pciDeviceNum; ++i) {
             PCIdevice* device = pci_getDevice(i);
-            print_debugPrintf(
+            debug_printf(
                 "%02X  %02X  %02X   %04X   %04X   %02X    %02X\n",
                 PCI_BUS_NUMBER_FROM_ADDR(device->baseAddr),
                 PCI_DEVICE_NUMBER_FROM_ADDR(device->baseAddr),

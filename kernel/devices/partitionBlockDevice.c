@@ -56,7 +56,7 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
             continue;
         }
 
-        print_sprintf(nameBuffer, "%s-p%d", device->name, i);    //TODO: sprintf not working correctly
+        print_snprintf(nameBuffer, sizeof(nameBuffer) - 1, "%s-p%d", device->name, i);
 
         MajorDeviceID major = DEVICE_MAJOR_FROM_ID(device->id);
         MinorDeviceID minor = device_allocMinor(major);

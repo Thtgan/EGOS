@@ -8,6 +8,7 @@ typedef struct TeletypeDevice TeletypeDevice;
 #include<devices/display/display.h>
 #include<devices/charDevice.h>
 #include<kit/types.h>
+#include<print.h>
 
 typedef struct Teletype {
     TeletypeOperations* operations;
@@ -44,7 +45,9 @@ void tty_initVirtTTY();
 
 void tty_switchDisplayMode(DisplayMode mode);
 
-Teletype* tty_getCurrentTTY();
+Teletype* tty_getCurrentTTY();  //TODO: Remove this
+
+PrintHandler* tty_getPrintHandler();
 
 void teletypeDevice_initStruct(TeletypeDevice* device, Teletype* tty);
 

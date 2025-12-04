@@ -89,7 +89,7 @@ void ata_initDevices() {
             }
 
             memory_memset(ataDevice->name, 0, sizeof(ataDevice->name));
-            print_sprintf(ataDevice->name, "HD%c", 'A' + (i << 1) + j);
+            print_snprintf(ataDevice->name, sizeof(ataDevice->name), "HD%c", 'A' + (i << 1) + j);
             ataDevice->channel = channel;
             ataDevice->type = __ata_getDeviceType(channel, j);
 

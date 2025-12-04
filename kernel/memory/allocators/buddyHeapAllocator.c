@@ -9,8 +9,8 @@
 #include<structs/singlyLinkedList.h>
 #include<system/memoryLayout.h>
 #include<algorithms.h>
+#include<debug.h>
 #include<error.h>
-#include<print.h>
 
 typedef struct {
     Size    size;
@@ -309,11 +309,11 @@ static void __buddyHeapAllocator_free(HeapAllocator* allocator, void* ptr) {
     return;
 
     ERROR_FINAL_BEGIN(1);
-    print_debugPrintf("%p: Memory header %p magic not match!\n", ptr, header);
+    debug_printf("%p: Memory header %p magic not match!\n", ptr, header);
     ERROR_GOTO(0);
 
     ERROR_FINAL_BEGIN(2);
-    print_debugPrintf("%p: Memory tail %p magic not match!\n", ptr, tail);
+    debug_printf("%p: Memory tail %p magic not match!\n", ptr, tail);
     ERROR_GOTO(0);
 }
 

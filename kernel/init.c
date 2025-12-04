@@ -13,11 +13,11 @@
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<multitask/schedule.h>
-#include<print.h>
 #include<real/simpleAsmLines.h>
 #include<realmode.h>
 #include<time/time.h>
 #include<usermode/usermode.h>
+#include<debug.h>
 #include<error.h>
 #include<uart.h>
 
@@ -36,6 +36,7 @@ static void __init_initVideo();         //TODO: Maybe remove these
 
 static __InitFunc _initFuncs1[] = {
     { uart_init                 ,   "UART"          },
+    { debug_init                ,   "Debug"         },
     { error_init                ,   "Error"         },
     { display_init              ,   "Display"       },
     { tty_init                  ,   "Boot TTY"      },
@@ -47,7 +48,6 @@ static __InitFunc _initFuncs1[] = {
 
 static __InitFunc _initFuncs2[] = {
     { tty_initVirtTTY           ,   "Virtual TTY"   },
-    { debug_init                ,   "Debug"         },
     { tss_init                  ,   "TSS"           },
     { keyboard_init             ,   "Keyboard"      },
     { device_init               ,   "Device"        },
@@ -76,9 +76,9 @@ void init_initKernelStage1() {
 
         ERROR_CHECKPOINT({
             if (_initFuncs1[i].name != NULL) {
-                print_debugPrintf("Initialization of %s failed\n", _initFuncs1[i].name);
+                debug_printf("Initialization of %s failed\n", _initFuncs1[i].name);
             } else {
-                print_debugPrintf("Initialization failed");
+                debug_printf("Initialization failed");
             }
             error_unhandledRecord(error_getCurrentRecord());
         });
@@ -92,15 +92,15 @@ void init_initKernelStage2() {
 
         ERROR_CHECKPOINT({
             if (_initFuncs2[i].name != NULL) {
-                print_debugPrintf("Initialization of %s failed\n", _initFuncs2[i].name);
+                debug_printf("Initialization of %s failed\n", _initFuncs2[i].name);
             } else {
-                print_debugPrintf("Initialization failed");
+                debug_printf("Initialization failed");
             }
             error_unhandledRecord(error_getCurrentRecord());
         });
     }
 
-    print_debugPrintf("All Initializations passed\n");
+    debug_printf("All Initializations passed\n");
     return;
 }
 
