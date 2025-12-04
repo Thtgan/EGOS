@@ -65,8 +65,6 @@ static Size __format_calculateStringLength(ConstCstring str, __FormatArgs* print
 
 static void __format_formatInteger(Cstring output, Uint64 num, int base, __FormatArgs* printArgs);
 
-static Size __format_calculatePaddedLength(Size inputN, __FormatArgs* printArgs);
-
 static void __format_formatPadding(Cstring output, ConstCstring input, Size inputN, Size fullLength, __FormatArgs* printArgs);
 
 int format_process(Cstring buffer, Size bufferSize, ConstCstring format, ...) {
@@ -93,7 +91,7 @@ int format_vProcess(Cstring buffer, Size bufferSize, ConstCstring format, va_lis
         }
 
         Flags8 flags = EMPTY_FLAGS;
-        int width = 0, precision = -1;  //-1 means precision not specified
+        int width = -1, precision = -1; //-1 means not specified
         //TODO: I failed to figure out how printf handles negative width or precision, so I ignored them
         __FormatLengthModifier modifier = FORMAT_LENGTH_MODIFIER_NONE;
 
@@ -274,7 +272,7 @@ static ConstCstring __format_readModifier(ConstCstring format, __FormatLengthMod
 
 static int __format_handleCharacter(Cstring output, Size outputN, int ch, __FormatArgs* printArgs) {
     __format_processDefaultPrecision(printArgs);
-    Size fullLen = __format_calculatePaddedLength(1, printArgs);
+    Size fullLen = algorithms_max32(1, printArgs->width);
     if (fullLen > outputN) {
         return -1;
     }
@@ -295,8 +293,9 @@ static int __format_handleCharacter(Cstring output, Size outputN, int ch, __Form
 
 static int __format_handleString(Cstring output, Size outputN, ConstCstring str, __FormatArgs* printArgs) {
     __format_processDefaultPrecision(printArgs);
+
     Size strLen = __format_calculateStringLength(str, printArgs);
-    Size fullLen = __format_calculatePaddedLength(strLen, printArgs);
+    Size fullLen = algorithms_max32(strLen, printArgs->width);
     if (fullLen > outputN) {
         return -1;
     }
@@ -344,7 +343,7 @@ static int __format_handleInteger(Cstring output, Size outputN, Uint64 num, int 
     __format_processDefaultPrecision(printArgs);
 
     Size numberLen = __format_calculateIntegerLength(num, base, printArgs);
-    Size fullLen = __format_calculatePaddedLength(numberLen, printArgs);
+    Size fullLen = algorithms_max32(numberLen, printArgs->width);;
     if (fullLen > outputN) {
         return -1;
     }
@@ -390,15 +389,15 @@ static void __format_handleCount(__FormatLengthModifier modifier, int ret, va_li
 }
 
 static void __format_processDefaultPrecision(__FormatArgs* printArgs) {
-    if (printArgs->precision == -1) {
-        printArgs->precision = TEST_FLAGS(printArgs->flags, __FORMAT_FLAGS_NUMBER) ? 1 : 0x7FFFFFFF;    //1 for only print minimal numbers, 0x7FFFFFFF for print full string
+    if (TEST_FLAGS(printArgs->flags, __FORMAT_FLAGS_NUMBER) && printArgs->precision != -1) {
+        SET_FLAG_BACK(printArgs->flags, __FORMAT_FLAGS_LEADING_ZERO);
     }
 }
 
 static Size __format_calculateIntegerLength(Uint64 num, int base, __FormatArgs* printArgs) {
     DEBUG_ASSERT_SILENT(base == 8 || base == 10 || base == 16);
 
-    int precision = printArgs->precision;
+    int width = printArgs->width, precision = printArgs->precision;
     Flags8 flags = printArgs->flags;
     
     Size ret = 0;
@@ -430,14 +429,23 @@ static Size __format_calculateIntegerLength(Uint64 num, int base, __FormatArgs* 
         }
     }
 
-    ret += algorithms_max32(precision, actualLen);
+    if (precision != -1) {
+        ret += algorithms_max32(precision, actualLen);
+    } else if (width != -1) {
+        ret += actualLen;
+        ret = TEST_FLAGS(flags, __FORMAT_FLAGS_LEADING_ZERO) ? algorithms_max32(ret, width) : ret;
+    } else {
+        ret += actualLen;
+    }
 
     return ret;
 }
 
 static Size __format_calculateStringLength(ConstCstring str, __FormatArgs* printArgs) {
     Size ret = cstring_strlen(str);
-    ret = algorithms_umin64(ret, printArgs->precision);
+    if (printArgs->precision != -1) {
+        ret = algorithms_umin64(ret, printArgs->precision);
+    }
     return ret;
 }
 
@@ -445,7 +453,7 @@ static ConstCstring _print_digits = "0123456789ABCDEF";
 static void __format_formatInteger(Cstring output, Uint64 num, int base, __FormatArgs* printArgs) {
     DEBUG_ASSERT_SILENT(base == 8 || base == 10 || base == 16);
 
-    int precision = printArgs->precision;
+    int width = printArgs->width, precision = printArgs->precision;
     Flags8 flags = printArgs->flags;
     
     int index = 0;
@@ -483,7 +491,13 @@ static void __format_formatInteger(Cstring output, Uint64 num, int base, __Forma
         }
     }
 
-    int leadingZeroNum = precision - actualLen;
+    int leadingZeroNum = 0;
+    if (precision != -1) {
+        leadingZeroNum = algorithms_max32(precision - actualLen, 0);
+    } else if (width != -1) {
+        leadingZeroNum = TEST_FLAGS(flags, __FORMAT_FLAGS_LEADING_ZERO) ? algorithms_max32(width - index - actualLen, 0) : 0;
+    }
+
     for (int i = 0; i < leadingZeroNum; ++i) {
         output[index++] = '0';
     }
@@ -491,18 +505,6 @@ static void __format_formatInteger(Cstring output, Uint64 num, int base, __Forma
     for (int i = actualLen - 1; i >= 0; --i) {
         output[index++] = tmp[i];
     }
-}
-
-static Size __format_calculatePaddedLength(Size inputN, __FormatArgs* printArgs) {
-    Size fullLength = inputN; //Length of actual content and padding space
-    if (TEST_FLAGS(printArgs->flags, __FORMAT_FLAGS_NUMBER)) {
-        fullLength = algorithms_umax32(fullLength, printArgs->precision);
-    } else {
-        fullLength = algorithms_umin32(fullLength, printArgs->precision);
-    }
-    fullLength = algorithms_umax32(fullLength, printArgs->width);
-
-    return fullLength;
 }
 
 static void __format_formatPadding(Cstring output, ConstCstring input, Size inputN, Size fullLength, __FormatArgs* printArgs) {
