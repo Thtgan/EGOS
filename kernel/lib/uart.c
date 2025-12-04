@@ -1,5 +1,6 @@
 #include<uart.h>
 
+#include<kit/types.h>
 #include<real/simpleAsmLines.h>
 
 #define COM1 0x3F8
@@ -35,11 +36,18 @@ void uart_init() {
 
 void uart_put(char c) {
     while (!__uart_is_transmit_empty());
+    if (c == '\n') {
+        outb(COM1, '\r');
+    }
     outb(COM1, c);
 }
 
-void uart_print(const char* str) {
-    for (int i = 0; str[i] != '\0'; i++) {
+void uart_print(ConstCstring str) {
+    uart_printN(str, INFINITE);
+}
+
+void uart_printN(ConstCstring str, Size n) {
+    for (int i = 0; str[i] != '\0' && i < n; i++) {
         uart_put(str[i]);
     }
 }
