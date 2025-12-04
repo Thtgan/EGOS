@@ -18,7 +18,6 @@ typedef struct __FormatArgs __FormatArgs;
 #define __FORMAT_FLAGS_LEADING_ZERO     FLAG8(4)
 #define __FORMAT_FLAGS_SIGNED           FLAG8(5)
 #define __FORMAT_FLAGS_LOWERCASE        FLAG8(6)
-#define __FORMAT_FLAGS_NUMBER           FLAG8(7)
 
 #define __FORMAT_IS_DIGIT(__CH)      ('0' <= (__CH) && (__CH) <= '9')
 
@@ -56,8 +55,6 @@ static Uint64 __format_takeInteger(__FormatLengthModifier modifier, va_list* arg
 static int __format_handleInteger(Cstring output, Size outputN, Uint64 num, int base, __FormatArgs* printArgs);
 
 static void __format_handleCount(__FormatLengthModifier modifier, int ret, va_list* args);
-
-static void __format_processDefaultPrecision(__FormatArgs* printArgs);
 
 static Size __format_calculateIntegerLength(Uint64 num, int base, __FormatArgs* printArgs);
 
@@ -165,7 +162,7 @@ int format_vProcess(Cstring buffer, Size bufferSize, ConstCstring format, va_lis
                 base = 16;
                 SET_FLAG_BACK(printArgs.flags, __FORMAT_FLAGS_SPECIFIER);
 numberHandleLabel:
-                SET_FLAG_BACK(printArgs.flags, __FORMAT_FLAGS_NUMBER);
+                // SET_FLAG_BACK(printArgs.flags, __FORMAT_FLAGS_NUMBER);
                 Uint64 num = __format_takeInteger(modifier, args);
                 res = __format_handleInteger(currentBuffer, currentBufferSize, num, base, &printArgs);
                 break;
@@ -271,7 +268,6 @@ static ConstCstring __format_readModifier(ConstCstring format, __FormatLengthMod
 }
 
 static int __format_handleCharacter(Cstring output, Size outputN, int ch, __FormatArgs* printArgs) {
-    __format_processDefaultPrecision(printArgs);
     Size fullLen = algorithms_max32(1, printArgs->width);
     if (fullLen > outputN) {
         return -1;
@@ -292,8 +288,6 @@ static int __format_handleCharacter(Cstring output, Size outputN, int ch, __Form
 }
 
 static int __format_handleString(Cstring output, Size outputN, ConstCstring str, __FormatArgs* printArgs) {
-    __format_processDefaultPrecision(printArgs);
-
     Size strLen = __format_calculateStringLength(str, printArgs);
     Size fullLen = algorithms_max32(strLen, printArgs->width);
     if (fullLen > outputN) {
@@ -340,7 +334,9 @@ static Uint64 __format_takeInteger(__FormatLengthModifier modifier, va_list* arg
 }
 
 static int __format_handleInteger(Cstring output, Size outputN, Uint64 num, int base, __FormatArgs* printArgs) {
-    __format_processDefaultPrecision(printArgs);
+    if (printArgs->precision != -1) {
+        SET_FLAG_BACK(printArgs->flags, __FORMAT_FLAGS_LEADING_ZERO);
+    }
 
     Size numberLen = __format_calculateIntegerLength(num, base, printArgs);
     Size fullLen = algorithms_max32(numberLen, printArgs->width);;
@@ -385,12 +381,6 @@ static void __format_handleCount(__FormatLengthModifier modifier, int ret, va_li
             *((Ptrdiff*)va_arg(*args, Uintptr*)) = ret;
             break;
         default:
-    }
-}
-
-static void __format_processDefaultPrecision(__FormatArgs* printArgs) {
-    if (TEST_FLAGS(printArgs->flags, __FORMAT_FLAGS_NUMBER) && printArgs->precision != -1) {
-        SET_FLAG_BACK(printArgs->flags, __FORMAT_FLAGS_LEADING_ZERO);
     }
 }
 
