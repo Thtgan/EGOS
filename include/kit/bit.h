@@ -8,18 +8,18 @@
 #define FULL_MASK(__LENGTH)                                         (UINT(__LENGTH))-1
 #define EMPTY_FLAGS                                                 0
 
-#define LOGIC_EQUAL(__X, __Y)                                       (MACRO_EXPRESSION(__X) == MACRO_EXPRESSION(__Y))
-#define LOGIC_NOT_EQUAL(__X, __Y)                                   (MACRO_EXPRESSION(__X) != MACRO_EXPRESSION(__Y))
-#define LOGIC_AND(__X, __Y)                                         (MACRO_EXPRESSION(__X) && MACRO_EXPRESSION(__Y))
-#define LOGIC_OR(__X, __Y)                                          (MACRO_EXPRESSION(__X) || MACRO_EXPRESSION(__Y))
-#define LOGIC_NOT(__X)                                              (!MACRO_EXPRESSION(__X))
+#define LOGIC_EQUAL(__X, __Y)                                       ((__X) == (__Y))
+#define LOGIC_NOT_EQUAL(__X, __Y)                                   ((__X) != (__Y))
+#define LOGIC_AND(__X, __Y)                                         ((__X) && (__Y))
+#define LOGIC_OR(__X, __Y)                                          ((__X) || (__Y))
+#define LOGIC_NOT(__X)                                              (!(__X))
 
-#define VAL_AND(__X, __Y)                                           (MACRO_EXPRESSION(__X) & MACRO_EXPRESSION(__Y))
-#define VAL_OR(__X, __Y)                                            (MACRO_EXPRESSION(__X) | MACRO_EXPRESSION(__Y))
-#define VAL_NOT(__X)                                                (~MACRO_EXPRESSION(__X))
-#define VAL_XOR(__X, __Y)                                           (MACRO_EXPRESSION(__X) ^ MACRO_EXPRESSION(__Y))
-#define VAL_LEFT_SHIFT(__X, __Y)                                    (MACRO_EXPRESSION(__X) << MACRO_EXPRESSION(__Y))
-#define VAL_RIGHT_SHIFT(__X, __Y)                                   (MACRO_EXPRESSION(__X) >> MACRO_EXPRESSION(__Y))
+#define VAL_AND(__X, __Y)                                           ((__X) & (__Y))
+#define VAL_OR(__X, __Y)                                            ((__X) | (__Y))
+#define VAL_NOT(__X)                                                (~(__X))
+#define VAL_XOR(__X, __Y)                                           ((__X) ^ (__Y))
+#define VAL_LEFT_SHIFT(__X, __Y)                                    ((__X) << (__Y))
+#define VAL_RIGHT_SHIFT(__X, __Y)                                   ((__X) >> (__Y))
 
 #define FLAG(__FULL_LENGTH, __INDEX)                                VAL_LEFT_SHIFT(ONE(__FULL_LENGTH),  __INDEX)
 #define FLAG8(__INDEX)                                              FLAG(8,     __INDEX)

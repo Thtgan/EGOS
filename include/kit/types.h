@@ -34,9 +34,9 @@ typedef __UINTPTR_TYPE__                Uintptr;
 typedef __INTMAX_TYPE__                 Intmax;
 typedef __UINTMAX_TYPE__                Uintmax;
 
-#define UINT(__LENGTH)                  MACRO_RESCAN(MACRO_CONCENTRATE2(Uint, __LENGTH))
+#define UINT(__LENGTH)                  MACRO_CONCENTRATE2(Uint, __LENGTH)
 
-#define PTR(__LENGTH)                   MACRO_RESCAN(MACRO_CONCENTRATE2(PTR, __LENGTH))
+#define PTR(__LENGTH)                   MACRO_CONCENTRATE2(PTR, __LENGTH)
 
 #define PTR8(__PTR)                     (*((Uint8*)(__PTR)))
 #define PTR16(__PTR)                    (*((Uint16*)(__PTR)))
