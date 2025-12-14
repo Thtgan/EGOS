@@ -16,7 +16,7 @@
 #define MACRO_CALL_MAX(__MACRO, ...)    MACRO_EVAL_1024(__MACRO(__VA_ARGS__))
 
 #define MACRO_EMPTY()
-#define MACRO_DEFER(__ID) __ID MACRO_EMPTY()
+#define MACRO_DEFER(__MACRO)    __MACRO MACRO_EMPTY()
 
 #define MACRO_EVAL(...)         MACRO_EVAL_1024(__VA_ARGS__)
 
@@ -32,11 +32,36 @@
 #define MACRO_EVAL_2(...)       MACRO_EVAL_1(MACRO_EVAL_1(__VA_ARGS__))
 #define MACRO_EVAL_1(...)       __VA_ARGS__
 
-#define MACRO_FOREACH_CALL(__MACRO, __CONNECTOR, ...) __VA_OPT__(MACRO_EVAL(__MACRO_FOREACH_CALL_HELPER(__MACRO, __CONNECTOR, __VA_ARGS__)))
+#define MACRO_FOREACH_CALL(__MACRO, __CONNECTOR, ...)   __VA_OPT__(MACRO_EVAL(__MACRO_FOREACH_CALL_HELPER(__MACRO, __CONNECTOR, __VA_ARGS__)))
 
-#define __MACRO_FOREACH_CALL_HELPER(__MACRO, __CONNECTOR, __ARG1, ...) __MACRO(__ARG1) __VA_OPT__(__CONNECTOR MACRO_DEFER(__MACRO_FOREACH_CALL_RECURSIVE)() (__MACRO, __CONNECTOR, __VA_ARGS__))
+#define __MACRO_FOREACH_CALL_HELPER(__MACRO, __CONNECTOR, __ARG1, ...)  \
+__MACRO(__ARG1) __VA_OPT__(                                             \
+    __CONNECTOR MACRO_DEFER(__MACRO_FOREACH_CALL_RECURSIVE)() (         \
+        __MACRO, __CONNECTOR, __VA_ARGS__                               \
+    )                                                                   \
+)
 
-#define __MACRO_FOREACH_CALL_RECURSIVE()  __MACRO_FOREACH_CALL_HELPER
+#define __MACRO_FOREACH_CALL_RECURSIVE()    __MACRO_FOREACH_CALL_HELPER
+
+#define MACRO_FOREACH_CALL_WITH_INDEX(__MACRO, __CONNECTOR, ...)    __VA_OPT__(MACRO_EVAL(__MACRO_FOREACH_CALL_WITH_INDEX_HELPER(__MACRO, __CONNECTOR, (MACRO_SEQUENCE_0_63()), __VA_ARGS__)))
+
+#define __MACRO_FOREACH_CALL_WITH_INDEX_HELPER(__MACRO, __CONNECTOR, __INDEXES, __ARG1, ...)    \
+__MACRO(MACRO_HEAD __INDEXES, __ARG1) __VA_OPT__(                                               \
+    __CONNECTOR                                                                                 \
+    MACRO_DEFER(__MACRO_FOREACH_CALL_WITH_INDEX_RECURSIVE)() (                                  \
+        __MACRO, __CONNECTOR, (MACRO_TAIL __INDEXES), __VA_ARGS__                               \
+    )                                                                                           \
+)
+
+#define __MACRO_FOREACH_CALL_WITH_INDEX_RECURSIVE() __MACRO_FOREACH_CALL_WITH_INDEX_HELPER
+
+#define MACRO_HEAD(...)             __MACRO_HEAD_IMPL(__VA_ARGS__)
+#define __MACRO_HEAD_IMPL(__X, ...) __X
+
+#define MACRO_TAIL(...)             __MACRO_TAIL_IMPL(__VA_ARGS__)
+#define __MACRO_TAIL_IMPL(__X, ...) __VA_ARGS__
+
+#define MACRO_SEQUENCE_0_63() 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
 
 #define MACRO_COUNT(...) __MACRO_COUNT_IMPL(__VA_ARGS__, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 

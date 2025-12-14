@@ -19,12 +19,14 @@
 #include<usermode/usermode.h>
 #include<debug.h>
 #include<error.h>
+#include<test.h>
 #include<uart.h>
 
 typedef struct {
     void (*func)();
     ConstCstring name;
-} __InitFunc;
+    TestGroup* testGroup;
+} __Init_Task;
 
 static void __init_printBootSlogan();
 
@@ -34,33 +36,33 @@ static void __init_disableInterrupt();  //TODO: Maybe remove these
 
 static void __init_initVideo();         //TODO: Maybe remove these
 
-static __InitFunc _initFuncs1[] = {
-    { uart_init                 ,   "UART"          },
-    { debug_init                ,   "Debug"         },
-    { error_init                ,   "Error"         },
-    { display_init              ,   "Display"       },
-    { tty_init                  ,   "Boot TTY"      },
-    { __init_printBootSlogan    ,   NULL            },  //TODO: May crash after print slogan
-    { idt_init                  ,   "Interrupt"     },
-    { mm_init                   ,   "Memory"        },
+static __Init_Task _initFuncs1[] = {
+    { uart_init                 ,   "UART"          , NULL  },
+    { debug_init                ,   "Debug"         , NULL  },
+    { error_init                ,   "Error"         , NULL  },
+    { display_init              ,   "Display"       , NULL  },
+    { tty_init                  ,   "Boot TTY"      , NULL  },
+    { __init_printBootSlogan    ,   NULL            , NULL  },  //TODO: May crash after print slogan
+    { idt_init                  ,   "Interrupt"     , NULL  },
+    { mm_init                   ,   "Memory"        , NULL  },
     { NULL, NULL }
 };
 
-static __InitFunc _initFuncs2[] = {
-    { tty_initVirtTTY           ,   "Virtual TTY"   },
-    { tss_init                  ,   "TSS"           },
-    { keyboard_init             ,   "Keyboard"      },
-    { device_init               ,   "Device"        },
-    { pci_init                  ,   "PCI bus"       },
-    { __init_enableInterrupt    ,   NULL            },
-    { ata_initDevices           ,   "ATA Devices"   },
-    { fs_init                   ,   "File System"   },
-    { schedule_init             ,   "Schedule"      },
-    { time_init                 ,   "Time"          },
-    { realmode_init             ,   "Realmode"      },
-    { usermode_init             ,   "User Mode"     },
-    { __init_initVideo          ,   "Video"         },
-    { NULL, NULL }
+static __Init_Task _initFuncs2[] = {
+    { tty_initVirtTTY           ,   "Virtual TTY"   , NULL  },
+    { tss_init                  ,   "TSS"           , NULL  },
+    { keyboard_init             ,   "Keyboard"      , NULL  },
+    { device_init               ,   "Device"        , NULL  },
+    { pci_init                  ,   "PCI bus"       , NULL  },
+    { __init_enableInterrupt    ,   NULL            , NULL  },
+    { ata_initDevices           ,   "ATA Devices"   , NULL  },
+    { fs_init                   ,   "File System"   , NULL  },
+    { schedule_init             ,   "Schedule"      , NULL  },
+    { time_init                 ,   "Time"          , NULL  },
+    { realmode_init             ,   "Realmode"      , NULL  },
+    { usermode_init             ,   "User Mode"     , NULL  },
+    { __init_initVideo          ,   "Video"         , NULL  },
+    { NULL, NULL, NULL}
 };
 
 __attribute__((aligned(PAGE_SIZE)))
@@ -82,6 +84,16 @@ void init_initKernelStage1() {
             }
             error_unhandledRecord(error_getCurrentRecord());
         });
+
+        if (_initFuncs1[i].testGroup == NULL) {
+            continue;
+        }
+
+        bool testResult = test_exec(_initFuncs1[i].testGroup);
+
+        if (testResult) {
+            debug_blowup("Unit test failed\n");
+        }
     }
     return;
 }
