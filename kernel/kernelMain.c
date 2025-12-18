@@ -107,10 +107,6 @@ void kernelMain(SystemInfo* info) {
 
     INIT_KERNEL();
 
-    for (int i = 0 ; i < 5; ++i) {
-        uart_print("UART TEST\n");
-    }
-
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
     tty_switchDisplayMode(DISPLAY_MODE_VGA);
 

@@ -37,8 +37,8 @@ static void __init_disableInterrupt();  //TODO: Maybe remove these
 static void __init_initVideo();         //TODO: Maybe remove these
 
 static __Init_Task _initFuncs1[] = {
-    { uart_init                 ,   "UART"          , NULL  },
     { debug_init                ,   "Debug"         , NULL  },
+    { uart_init                 ,   "UART"          , &uart_testGroup   },
     { error_init                ,   "Error"         , NULL  },
     { display_init              ,   "Display"       , NULL  },
     { tty_init                  ,   "Boot TTY"      , NULL  },
@@ -91,7 +91,7 @@ void init_initKernelStage1() {
 
         bool testResult = test_exec(_initFuncs1[i].testGroup);
 
-        if (testResult) {
+        if (!testResult) {
             debug_blowup("Unit test failed\n");
         }
     }

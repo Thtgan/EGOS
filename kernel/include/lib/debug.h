@@ -15,6 +15,8 @@ int debug_printf(ConstCstring format, ...);
 
 int debug_putchar(int ch);
 
+int debug_getchar();
+
 __attribute__((noreturn))
 /**
  * @brief Blow up the system, print info before that

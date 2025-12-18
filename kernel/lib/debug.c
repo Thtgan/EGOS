@@ -41,6 +41,10 @@ int debug_putchar(int ch) {
     return ch;
 }
 
+int debug_getchar() {
+    uart_get(); //TODO: Make it variable
+}
+
 static char _debug_kernelBlowupString[] = "Kernel blowed up";
 
 __attribute__((noreturn))
