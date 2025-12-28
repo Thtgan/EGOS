@@ -38,7 +38,7 @@ static void __init_initVideo();         //TODO: Maybe remove these
 
 static __Init_Task _initFuncs1[] = {
     { debug_init                ,   "Debug"         , NULL  },
-    { uart_init                 ,   "UART"          , &uart_testGroup   },
+    { uart_init                 ,   "UART"          , UNIT_TEST_GROUP_UART  },
     { error_init                ,   "Error"         , NULL  },
     { display_init              ,   "Display"       , NULL  },
     { tty_init                  ,   "Boot TTY"      , NULL  },

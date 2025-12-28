@@ -3,3 +3,5 @@
 /backup
 /files/boot/*
 /files/bin/*
+/include/kit/config.h
+/.config*

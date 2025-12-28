@@ -3,11 +3,13 @@ RELATIVE_BASE				:=	.
 include $(RELATIVE_BASE)/global.mk
 include $(RELATIVE_BASE)/tools.mk
 
-.PHONY: all clean updateBootloader updateKernel
+.PHONY: all clean updateBootloader updateKernel menuconfig
+
+-include .config
 
 all: preBuild build postBuild
 
-preBuild: buildDir
+preBuild: buildDir ./include/kit/config.h
 
 build: $(BUILD_TARGET)
 
@@ -57,9 +59,19 @@ clean:
 	@$(RM) -rf $(BUILD_BASE_DIR)
 	@$(RM) -rf $(FILES_DIR)/boot/*
 	@$(RM) -rf $(FILES_DIR)/bin/*
+	@$(RM) ./include/kit/config.h
 
 updateBootloader: bootBuild
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))
 
 updateKernel: kernelBuild
-	
+
+menuconfig:
+	KCONFIG_CONFIG=.config menuconfig Kconfig
+	KCONFIG_CONFIG=.config genconfig --header-path ./include/kit/config.h Kconfig
+
+./include/kit/config.h:
+	@if ! [ -f .config ]; then \
+		echo "Please run 'make menuconfig' first."; \
+		exit 1; \
+	fi

@@ -1,0 +1,16 @@
+# EGOS emnuconfig Kconfig file
+mainmenu "EGOS Configuration Menu"
+
+menu "Debug"
+    menu "Unit test"
+        
+        comment "Enable specific test suites below"
+
+        config UNIT_TEST_UART
+            bool "UART"
+            default n
+            help
+                Unit Tests for UART I/O.
+    endmenu
+
+endmenu
