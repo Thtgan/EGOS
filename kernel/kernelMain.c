@@ -48,7 +48,7 @@ Uint16 rootTID = 0;
 
 #include<devices/terminal/tty.h>
 
-#include<memory/allocators/buddyHeapAllocator.h>
+#include<memory/allocators/slabHeapAllocator.h>
 
 #include<memory/mapping.h>
 
@@ -97,7 +97,7 @@ static void __testSigaction(int signal) {
     print_printf("Signal %s triggered\n", signal_names[signal]);
 }
 
-static BuddyHeapAllocator cowTestAllocator;
+static SlabHeapAllocator cowTestAllocator;
 
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
@@ -165,7 +165,7 @@ void kernelMain(SystemInfo* info) {
     semaphore_initStruct(&sema1, 0);
     semaphore_initStruct(&sema2, 0);
 
-    buddyHeapAllocator_initStruct(&cowTestAllocator, mm->frameAllocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
+    slabHeapAllocator_initStruct(&cowTestAllocator, 32, mm->frameAllocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
 
     arr1 = mm_allocate(1 * sizeof(int)), arr2 = mm_allocateDetailed(1 * sizeof(int), &cowTestAllocator.allocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
     int* mapped = mapping_mmap(NULL, sizeof(int), MAPPING_MMAP_PROT_READ | MAPPING_MMAP_PROT_WRITE, MAPPING_MMAP_FLAGS_ANON | MAPPING_MMAP_FLAGS_TYPE_SHARED, NULL, 0);

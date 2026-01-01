@@ -22,6 +22,4 @@ TEST_EXPOSE_GROUP(uart_testGroup);
 #define UNIT_TEST_GROUP_UART    NULL
 #endif
 
-
-
 #endif // __LIB_UART_H

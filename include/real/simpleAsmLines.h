@@ -502,25 +502,48 @@ static inline __attribute__((always_inline)) void barrier() {
     asm volatile("" : : : "memory");
 }
 
-#define __FIRST_BIT_FUNC_HEADER(__LENGTH)                                                \
-static inline __attribute__((always_inline)) Index32 MACRO_CONCENTRATE2(firstBit, __LENGTH) (UINT(__LENGTH) val)
+#define BSF(__LENGTH) MACRO_CALL(MACRO_CONCENTRATE2, bsf, INSTRUCTION_LENGTH_SUFFIX(__LENGTH))
 
-#define __FIRST_BIT_FUNC_INLINE_ASM(__LENGTH)   \
-"bsf %1, %0"                                    \
+#define __BSF_FUNC_HEADER(__LENGTH) \
+static inline __attribute__((always_inline)) UINT(__LENGTH) BSF(__LENGTH) (UINT(__LENGTH) val)
+
+#define __BSF_FUNC_INLINE_ASM(__LENGTH)         \
+MACRO_CALL(MACRO_STR, BSF(__LENGTH)) " %1, %0"  \
 : "=r" (ret)                                    \
 : "r" (val)                                     \
-: "memory"
+: "cc"
 
-#define __FIRST_BIT_FUNC(__LENGTH)                          \
-__FIRST_BIT_FUNC_HEADER(__LENGTH) {                         \
-    Index32 ret;                                             \
-    asm volatile(__FIRST_BIT_FUNC_INLINE_ASM(__LENGTH));    \
-    return ret;                                             \
+#define __BSF_FUNC(__LENGTH)                        \
+__BSF_FUNC_HEADER(__LENGTH) {                       \
+    UINT(__LENGTH) ret;                             \
+    asm volatile(__BSF_FUNC_INLINE_ASM(__LENGTH));  \
+    return ret;                                     \
 }
 
-__FIRST_BIT_FUNC(8)
-__FIRST_BIT_FUNC(16)
-__FIRST_BIT_FUNC(32)
-__FIRST_BIT_FUNC(64)
+__BSF_FUNC(16)
+__BSF_FUNC(32)
+__BSF_FUNC(64)
+
+#define BSR(__LENGTH) MACRO_CALL(MACRO_CONCENTRATE2, bsr, INSTRUCTION_LENGTH_SUFFIX(__LENGTH))
+
+#define __BSR_FUNC_HEADER(__LENGTH) \
+static inline __attribute__((always_inline)) UINT(__LENGTH) BSR(__LENGTH) (UINT(__LENGTH) val)
+
+#define __BSR_FUNC_INLINE_ASM(__LENGTH)         \
+MACRO_CALL(MACRO_STR, BSR(__LENGTH)) " %1, %0"  \
+: "=r" (ret)                                    \
+: "r" (val)                                     \
+: "cc"
+
+#define __BSR_FUNC(__LENGTH)                        \
+__BSR_FUNC_HEADER(__LENGTH) {                       \
+    UINT(__LENGTH) ret;                             \
+    asm volatile(__BSR_FUNC_INLINE_ASM(__LENGTH));  \
+    return ret;                                     \
+}
+
+__BSR_FUNC(16)
+__BSR_FUNC(32)
+__BSR_FUNC(64)
 
 #endif // __REAL_SIMPLEASMLINES_H

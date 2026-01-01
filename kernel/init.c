@@ -42,10 +42,10 @@ static __Init_Task _initFuncs1[] = {
     { error_init                ,   "Error"         , NULL  },
     { display_init              ,   "Display"       , NULL  },
     { tty_init                  ,   "Boot TTY"      , NULL  },
-    { __init_printBootSlogan    ,   NULL            , NULL  },  //TODO: May crash after print slogan
+    { __init_printBootSlogan    ,   NULL            , NULL  },
     { idt_init                  ,   "Interrupt"     , NULL  },
-    { mm_init                   ,   "Memory"        , NULL  },
-    { NULL, NULL }
+    { mm_init                   ,   "Memory Manager", UNIT_TEST_GROUP_MM  },
+    { NULL, NULL, NULL }
 };
 
 static __Init_Task _initFuncs2[] = {
@@ -62,7 +62,7 @@ static __Init_Task _initFuncs2[] = {
     { realmode_init             ,   "Realmode"      , NULL  },
     { usermode_init             ,   "User Mode"     , NULL  },
     { __init_initVideo          ,   "Video"         , NULL  },
-    { NULL, NULL, NULL}
+    { NULL, NULL, NULL }
 };
 
 __attribute__((aligned(PAGE_SIZE)))

@@ -11,6 +11,12 @@ menu "Debug"
             default n
             help
                 Unit Tests for UART I/O.
+        
+        config UNIT_TEST_MM
+            bool "Memory Manager"
+            default n
+            help
+                Unit Tests for Memory Manager.
     endmenu
 
 endmenu

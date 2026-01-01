@@ -56,7 +56,7 @@ void mm_init() {
 
     kernelHeapAllocator_initStruct(&_kernelHeapAllocator, mm->frameAllocator);
     
-    mm->defaultAllocator = &_kernelHeapAllocator.parentAllocator;
+    mm->defaultAllocator = &_kernelHeapAllocator.allocator;
 
     mm->initialized = true;
     return;
@@ -120,15 +120,15 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
         ERROR_GOTO(0);
     }
 
-    void* ret = paging_convertAddressP2V(frames, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN);
+    void* ret = isUser ? PAGING_CONVERT_COLORFUL_SPACE_P2V(frames) : PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
     frameMetadata_assignToHeapAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
     ERROR_GOTO_IF_ERROR(1);
 
-    Flags64 prot = PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_XD;
-    if (isUser) {
+    if (isUser) {   //TODO: Bad codes
+        Flags64 prot = PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_XD;
         SET_FLAG_BACK(prot, PAGING_ENTRY_FLAG_US);
+        extendedPageTableRoot_draw(mapTo, ret, frames, n, operationsID, prot, EMPTY_FLAGS);
     }
-    extendedPageTableRoot_draw(mapTo, ret, frames, n, operationsID, prot, EMPTY_FLAGS);
     ERROR_GOTO_IF_ERROR(1);
     
     return ret;

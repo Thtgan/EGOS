@@ -125,5 +125,5 @@ int signalQueue_getPending(SignalQueue* queue) {
         return 0;
     }
 
-    return firstBit32(pending);
+    return bsfl(pending);
 }

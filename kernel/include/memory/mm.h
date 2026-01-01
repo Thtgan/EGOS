@@ -4,12 +4,14 @@
 typedef struct MemoryManager MemoryManager;
 
 #include<kit/types.h>
+#include<kit/config.h>
 #include<memory/allocators/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>
 #include<memory/memoryOperations.h>
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
+#include<test.h>
 
 typedef struct MemoryManager {
     bool initialized;
@@ -52,5 +54,12 @@ void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, Index8 operation
 void* mm_allocate(Size n);
 
 void mm_free(void* p);
+
+#if defined(CONFIG_UNIT_TEST_MM)
+TEST_EXPOSE_GROUP(mm_testGroup);
+#define UNIT_TEST_GROUP_MM  &mm_testGroup
+#else
+#define UNIT_TEST_GROUP_MM  NULL
+#endif
 
 #endif // __MEMORY_MM_H

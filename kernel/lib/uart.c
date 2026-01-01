@@ -1,5 +1,6 @@
 #include<uart.h>
 
+#include<kit/config.h>
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
 #include<test.h>
@@ -13,10 +14,6 @@ static inline bool __uart_is_transmit_empty() {
 static inline bool __uart_is_received() {
     return (inb(__UART_COM1 + 5) & 1) != 0;
 }
-
-static bool __uart_test_output(void* ctx);
-
-static bool __uart_test_input(void* ctx);
 
 void uart_init() {
     //Disable interrupts (Will use polling for simplicity)
@@ -63,6 +60,19 @@ char uart_get() {
     return ch == '\r' ? '\n' : ch;
 }
 
+#if defined(CONFIG_UNIT_TEST_UART)
+
+static bool __uart_test_output(void* arg) {
+    uart_print("UART TESTING\n");
+    return true;
+}
+
+static bool __uart_test_input(void* arg) {
+    uart_print("Type ENTER to continue\n");
+
+    return uart_get() == '\n';
+}
+
 TEST_SETUP_LIST(
     UART,
     (1, __uart_test_output),
@@ -71,13 +81,4 @@ TEST_SETUP_LIST(
 
 TEST_SETUP_GROUP(uart_testGroup, NULL, UART, NULL);
 
-static bool __uart_test_output(void* ctx) {
-    uart_print("UART TESTING\n");
-    return true;
-}
-
-static bool __uart_test_input(void* ctx) {
-    uart_print("Type ENTER to continue\n");
-
-    return uart_get() == '\n';
-}
+#endif

@@ -111,7 +111,7 @@ void debug_dump_memory(void* data, Size n) {
     }
 }
 
-void debug_dump_stack(void* rbp, Size maxDepth) {
+void debug_dump_stack(void* rbp, Size maxDepth) {   //TODO: Limitation for stack dumping
     if (rbp == NULL) {
         rbp = (void*)readRegister_RBP_64();
     }

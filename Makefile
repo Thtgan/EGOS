@@ -59,7 +59,6 @@ clean:
 	@$(RM) -rf $(BUILD_BASE_DIR)
 	@$(RM) -rf $(FILES_DIR)/boot/*
 	@$(RM) -rf $(FILES_DIR)/bin/*
-	@$(RM) ./include/kit/config.h
 
 updateBootloader: bootBuild
 	@$(PY) ./tools/bootInstall/install.py -b $(shell realpath $(BUILD_BOOTLOADER)) -i $(shell realpath $(BUILD_TARGET))

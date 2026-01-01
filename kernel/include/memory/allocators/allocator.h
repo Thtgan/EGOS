@@ -54,8 +54,8 @@ typedef struct HeapAllocator {
     Uint8 operationsID;
 } HeapAllocator;
 
-#define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE        PAGE_SIZE
-#define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE_SHIFT  PAGE_SIZE_SHIFT
+#define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE_SHIFT  (PAGE_SIZE_SHIFT - 1)
+#define HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE        POWER_2(HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE_SHIFT)
 
 typedef struct HeapAllocatorOperations {
     void* (*allocate)(HeapAllocator* allocator, Size n);
@@ -76,5 +76,23 @@ static inline Size heapAllocator_getActualSize(HeapAllocator* allocator, Size n)
 }
 
 void heapAllocator_initStruct(HeapAllocator* allocator, FrameAllocator* frameAllocator, HeapAllocatorOperations* opeartions, Uint8 operationsID);
+
+static inline void heapAllocator_expand(HeapAllocator* allocator, Size unit, Size n) {
+    Size expanded = unit * n;
+    allocator->remaining += expanded;
+    allocator->total += expanded;
+}
+
+static inline bool heapAllocator_isReadyToClear(HeapAllocator* allocator) {
+    return allocator->remaining == allocator->total;
+}
+
+static inline void heapAllocator_allocateActualSize(HeapAllocator* allocator, Size actualSize) {
+    allocator->remaining -= actualSize;
+}
+
+static inline void heapAllocator_freeActualSize(HeapAllocator* allocator, Size actualSize) {
+    allocator->remaining += actualSize;
+}
 
 #endif // __MEMORY_ALLOCATORS_ALLOCATOR_H
