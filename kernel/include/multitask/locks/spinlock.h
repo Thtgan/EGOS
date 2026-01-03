@@ -24,21 +24,26 @@ static inline bool spinlock_isLocked(Spinlock* lock) {
  */
 
 static inline void spinlock_lock(Spinlock* lock) {
-    asm volatile(
-        "1:"
-        "mov %0, %%eax;"
-        "xor %%dl, %%dl;"
-        "2:"
-        "lock;"
-        "cmpxchgb %%dl, %0;"
-        "jz 3f;"
-        "pause;"
-        "jmp 2b;"
-        "3:"
-        : "=m" (lock->counter)
-        :
-        : "memory", "eax", "edx"
-    );
+    Uint8 expected, desired = 0;
+
+    while (true) {
+        expected = 1;
+        asm volatile(
+            "lock;"
+            "cmpxchgb %2, %0;"
+            : "+m" (lock->counter), "+a" (expected)
+            : "q"(desired)
+            : "memory", "cc"
+        );
+
+        if (expected == 1) {
+            break;
+        }
+
+        while (ATOMIC_LOAD(&lock->counter) == 0) {
+            asm volatile("pause;" ::: "memory");
+        }
+    }
 }
 
 /**
@@ -48,16 +53,16 @@ static inline void spinlock_lock(Spinlock* lock) {
  * @return bool True if lock succeeded
  */
 static inline bool spinlock_tryLock(Spinlock* lock) {
-    char ret = 0;
+    char val = 0;
     asm volatile(
         "lock;"
         "xchgb %0, %1"
-        : "=g" (ret), "=m" (lock->counter)
+        : "+q" (val), "+m" (lock->counter)
         :
         : "memory"
     );
 
-    return ret > 0;
+    return val == 1;
 }
 
 /**
