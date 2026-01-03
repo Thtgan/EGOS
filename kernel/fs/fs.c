@@ -202,7 +202,13 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
         ERROR_ASSERT_ANY();
         ERROR_GOTO(0);
     }
-    dirFSnode = dirVnode->fsNode;
+
+    if (dirFSnode != dirVnode->fsNode) {    //The fsNode we found is mounted, transfer pointer and refer count to actual one
+        fsnode_derefer(dirFSnode);
+        dirFSnode = dirVnode->fsNode;
+        fsnode_refer(dirFSnode);
+    }
+
     finalFScore = dirVnode->fscore;
     
     bool needCreate = false;
