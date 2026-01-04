@@ -15,16 +15,16 @@
 
 SystemInfo* sysInfo;
 
-Semaphore sema1, sema2;
+// Semaphore sema1, sema2;
 char str[128];
 
-int* arr1, * arr2;
+// int* arr1, * arr2;
 
 static void printLOGO();
 
 static void printFileFromEXT2();
 
-Uint16 rootTID = 0;
+// Uint16 rootTID = 0;
 
 #include<kit/util.h>
 #include<system/memoryLayout.h>
@@ -54,26 +54,7 @@ Uint16 rootTID = 0;
 
 #include<uart.h>
 
-Timer timer1, timer2, timer3;
-
-#include<multitask/locks/conditionVar.h>
-#include<multitask/locks/mutex.h>
-#include<multitask/ipc.h>
-
-ConditionVar var1, var2;
-Timer condTimer;
-bool flag1 = false, flag2 = false;
-Mutex conditionLock;
-
-char pipeBuffer[16];
-
-bool __conditionVarFunc1(void* arg) {
-    return flag1;
-}
-
-bool __conditionVarFunc2(void* arg) {
-    return flag2;
-}
+Timer timer1, timer2;
 
 static void __timerFunc1(Timer* timer) {
     print_printf("HANDLER CALL FROM TIMER1\n");
@@ -86,19 +67,6 @@ static void __timerFunc2(Timer* timer) {
     }
 }
 
-static void __timerFunc3(Timer* timer) {
-    print_printf("HANDLER CALL FROM TIMER3\n"); //TODO: TTY output semaphore may fall into sleep in ISR
-    if (--timer->data == 0) {
-        CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
-    }
-}
-
-static void __testSigaction(int signal) {
-    print_printf("Signal %s triggered\n", signal_names[signal]);
-}
-
-static SlabHeapAllocator cowTestAllocator;
-
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
     if (sysInfo->magic != SYSTEM_INFO_MAGIC) {
@@ -108,7 +76,7 @@ void kernelMain(SystemInfo* info) {
     INIT_KERNEL();
 
     vga_switchMode(vgaMode_getModeHeader(VGA_MODE_TYPE_TEXT_50X80_D4), false);
-    tty_switchDisplayMode(DISPLAY_MODE_VGA);
+    tty_switchDisplayMode(DISPLAY_MODE_VGA); 
 
     VGAmodeHeader* mode = vga_getCurrentMode();
     DisplayPosition p1 = {0, 0};
@@ -162,140 +130,25 @@ void kernelMain(SystemInfo* info) {
         }
     }
 
-    semaphore_initStruct(&sema1, 0);
-    semaphore_initStruct(&sema2, 0);
+    while (true) {
+        print_printf("Waiting for input: ");
+        int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE);
+        ERROR_CHECKPOINT();
+        str[--len] = '\0';
 
-    slabHeapAllocator_initStruct(&cowTestAllocator, 32, mm->frameAllocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
-
-    arr1 = mm_allocate(1 * sizeof(int)), arr2 = mm_allocateDetailed(1 * sizeof(int), &cowTestAllocator.allocator, DEFAULT_MEMORY_OPERATIONS_TYPE_COW);
-    int* mapped = mapping_mmap(NULL, sizeof(int), MAPPING_MMAP_PROT_READ | MAPPING_MMAP_PROT_WRITE, MAPPING_MMAP_FLAGS_ANON | MAPPING_MMAP_FLAGS_TYPE_SHARED, NULL, 0);
-    print_printf("%p %p\n", arr1, arr2);
-    print_printf("%p\n", mapped);
-    arr1[0] = 1, arr2[0] = 114514;
-    rootTID = schedule_getCurrentThread()->tid;
-
-    mutex_initStruct(&conditionLock, EMPTY_FLAGS);
-
-    conditionVar_initStruct(&var1);
-    conditionVar_initStruct(&var2);
-
-    timer_initStruct(&condTimer, 1, TIME_UNIT_SECOND);
-    SET_FLAG_BACK(condTimer.flags, TIMER_FLAGS_SYNCHRONIZE);
-
-    int writeFD, readFD;
-    ipc_pipe(&writeFD, &readFD);
-
-    Process* forked = schedule_fork();
-    if (forked != NULL) {
-        Thread* currentThread = schedule_getCurrentThread();
-        print_printf("This is main thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
-
-        timer_start(&condTimer);
-        
-        mutex_acquire(&conditionLock);
-        flag1 = true;
-        conditionVar_notify(&var1);
-        mutex_release(&conditionLock);
-
-        print_printf("Condition Variable test-1\n");
-        
-        mutex_acquire(&conditionLock);
-        conditionVar_wait(&var2, &conditionLock, __conditionVarFunc2, NULL);
-        mutex_release(&conditionLock);
-
-        print_printf("Condition Variable test-3\n");
-
-        Process* process = schedule_getCurrentProcess();
-        File* pipeFile = process_getFSentry(process, writeFD);
-        process_removeFSentry(process, writeFD);
-        fs_fileClose(pipeFile);
-    } else {
-        Thread* currentThread = schedule_getCurrentThread();
-        print_printf("This is child thread, TID: %u, PID: %u\n", currentThread->tid, currentThread->process->pid);
-        
-        mutex_acquire(&conditionLock);
-        conditionVar_wait(&var1, &conditionLock, __conditionVarFunc1, NULL);
-        mutex_release(&conditionLock);
-
-        print_printf("Condition Variable test-2\n");
-
-        timer_start(&condTimer);
-        
-        mutex_acquire(&conditionLock);
-        flag2 = true;
-        conditionVar_notify(&var2);
-        mutex_release(&conditionLock);
-
-        print_printf("Condition Variable test-4\n");
-
-        Process* process = schedule_getCurrentProcess();
-        File* pipeFile = process_getFSentry(process, readFD);
-        process_removeFSentry(process, readFD);
-        fs_fileClose(pipeFile);
-    }
-
-    Thread* currentThread = schedule_getCurrentThread();
-    if (rootTID == currentThread->tid) {
-        arr1[0] = 3;
-        semaphore_up(&sema1);
-
-        File* pipeFile = process_getFSentry(schedule_getCurrentProcess(), readFD);
-        fs_fileRead(pipeFile, pipeBuffer, 16);
-        pipeBuffer[6] = '\0';
-        print_printf("Received from pipe: %s\n", pipeBuffer);
-
-        semaphore_down(&sema2);
-        print_printf("DONE 0, arr1: %d, arr2: %d, mapped: %d\n", arr1[0], arr2[0], *mapped);
-    } else {
-        Sigaction sigaction = {
-            .handler = __testSigaction
-        };
-        
-        process_sigaction(schedule_getCurrentProcess(), SIGNAL_SIGTRAP, &sigaction, NULL);
-
-        semaphore_down(&sema1);
-        arr1[0] = 2, arr2[0] = 1919810;
-        *mapped = 114514;
-        print_printf("DONE 1, arr1: %d, arr2: %d, mapped: %d\n", arr1[0], arr2[0], *mapped);
-        while (true) {
-            print_printf("Waiting for input: ");
-            int len = teletype_rawRead(tty_getCurrentTTY(), str, INFINITE);
-            ERROR_CHECKPOINT();
-            str[--len] = '\0';
-
-            if (cstring_strcmp(str, "PASS") == 0 || len == 0) {
-                break;
-            }
-            print_printf("%s-%d\n", str, len);
+        if (cstring_strcmp(str, "PASS") == 0 || len == 0) {
+            break;
         }
-
-        File* pipeFile = process_getFSentry(schedule_getCurrentProcess(), writeFD);
-        fs_fileWrite(pipeFile, "415411", 6);
-
-        Cstring testArgv[] = {
-            "test", "arg1", "arg2", "arg3", NULL
-        };
-        Cstring testEnvp[] = {
-            "ENV1=114514", "ENV2=1919", "ENV3=810", NULL
-        };
-        int ret = usermode_execute("/bin/test", testArgv, testEnvp);
-        print_printf("USER PROGRAM RETURNED %d\n", ret);
-
-        semaphore_up(&sema2);
-
-        timer_initStruct(&timer3, 500, TIME_UNIT_MILLISECOND);
-        SET_FLAG_BACK(timer3.flags, TIMER_FLAGS_SYNCHRONIZE | TIMER_FLAGS_REPEAT);
-        timer3.data = 5;
-        timer3.handler = __timerFunc3;
-
-        timer_start(&timer3);   //TODO: What if process stopped by signal after starting timer?
-
-        print_printf("Killing self\n");
-        process_signal(schedule_getCurrentProcess(), SIGNAL_SIGKILL);
+        print_printf("%s-%d\n", str, len);
     }
 
-    mm_free(arr1);
-    mm_free(arr2);
+    Cstring testArgv[] = {
+        "test", "arg1", "arg2", "arg3", NULL
+    };
+    Cstring testEnvp[] = {
+        "ENV1=114514", "ENV2=1919", "ENV3=810", NULL
+    };
+    int ret = usermode_execute("/bin/test", testArgv, testEnvp);
 
     print_printf("FINAL %u\n", schedule_getCurrentThread()->tid);
 
@@ -315,13 +168,12 @@ void kernelMain(SystemInfo* info) {
     timer2.data = 5;
     timer2.handler = __timerFunc2;
 
-    process_signal(forked, SIGNAL_SIGTRAP);
-    process_signal(forked, SIGNAL_SIGSTOP);
     timer_start(&timer1);
     ERROR_CHECKPOINT();
     timer_start(&timer2);
     ERROR_CHECKPOINT();
-    process_signal(forked, SIGNAL_SIGCONT);
+    
+    print_printf("Closing FS\n");
 
     fs_close(fs_rootFS); //TODO: Move to better place
 

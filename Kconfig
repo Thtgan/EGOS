@@ -17,6 +17,12 @@ menu "Debug"
             default n
             help
                 Unit Tests for Memory Manager.
+
+        config UNIT_TEST_SCHEDULE
+            bool "Schedule"
+            default n
+            help
+                Unit Tests for Schedule Things like Process, Thread, Signal and IPC, etc.
     endmenu
 
 endmenu

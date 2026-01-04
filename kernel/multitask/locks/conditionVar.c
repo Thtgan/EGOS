@@ -35,7 +35,7 @@ void conditionVar_wait(ConditionVar* cond, Mutex* lock, ConditionVariableFunc fu
 void conditionVar_waitOnce(ConditionVar* cond, Mutex* lock) {
     Thread* currentThread = schedule_getCurrentThread();
     
-    DEBUG_ASSERT_SILENT(lock->acquiredBy == currentThread);
+    DEBUG_ASSERT_SILENT(mutex_isLocked(lock) && lock->acquiredBy == currentThread);
     
     schedule_enterCritical();
     

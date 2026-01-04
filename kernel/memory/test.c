@@ -1,8 +1,10 @@
 #include<kit/config.h>
+
+#if defined(CONFIG_UNIT_TEST_MM)
+
 #include<kit/types.h>
 #include<memory/memoryOperations.h>
 #include<memory/mm.h>
-#include<memory/test.h>
 #include<memory/allocators/slabHeapAllocator.h>
 #include<memory/allocators/kernelHeapAllocator.h>
 #include<real/simpleAsmLines.h>
@@ -10,8 +12,6 @@
 #include<system/pageTable.h>
 #include<algorithms.h>
 #include<test.h>
-
-#if defined(CONFIG_UNIT_TEST_MM)
 
 typedef struct __MemoryManagerTestContext {
     void* pointers[32];
@@ -134,6 +134,15 @@ static bool __mm_test_slabAllocator_clear(void* arg) {
     return true;
 }
 
+
+TEST_SETUP_LIST(
+    MM_SLAB_ALLOCATOR,
+    (1, __mm_test_slabAllocator_init),
+    (1, __mm_test_slabAllocator_allocate),
+    (1, __mm_test_slabAllocator_free),
+    (1, __mm_test_slabAllocator_clear)
+);
+
 static bool __mm_test_kernelAllocator_init(void* arg) {
     __MemoryManagerTestContext* ctx = (__MemoryManagerTestContext*)arg;
 
@@ -215,30 +224,6 @@ static bool __mm_test_kernelAllocator_clear(void* arg) {
     return true;
 }
 
-bool __mm_test_checkSlabHeapAllocator(SlabHeapAllocator* allocator, Uint8 operationsID, Size exceptedSlabSize) {
-    if (!__mm_test_checkBaseHeapAllocator(&allocator->allocator, operationsID)) {
-        return false;
-    }
-
-    if (!singlyLinkedList_isEmpty(&allocator->regionList)) {
-        return false;
-    }
-    
-    if (allocator->slabSize != exceptedSlabSize) {
-        return false;
-    }
-
-    return true;
-}
-
-TEST_SETUP_LIST(
-    MM_SLAB_ALLOCATOR,
-    (1, __mm_test_slabAllocator_init),
-    (1, __mm_test_slabAllocator_allocate),
-    (1, __mm_test_slabAllocator_free),
-    (1, __mm_test_slabAllocator_clear)
-);
-
 TEST_SETUP_LIST(
     MM_KERNEL_ALLOCATOR,
     (1, __mm_test_kernelAllocator_init),
@@ -253,7 +238,7 @@ TEST_SETUP_LIST(
     (0, &TEST_LIST_FULL_NAME(MM_KERNEL_ALLOCATOR))
 );
 
-TEST_SETUP_GROUP(mm_testGroup, __mm_test_testGroupPrepare, MM, NULL);
+TEST_SETUP_GROUP(mm_testGroup, EMPTY_FLAGS, __mm_test_testGroupPrepare, MM, NULL);
 
 bool __mm_test_checkBaseHeapAllocator(HeapAllocator* allocator, Uint8 operationsID) {
     if (!(allocator->total == 0 && allocator->remaining == 0)) {
@@ -272,6 +257,22 @@ bool __mm_test_checkBaseHeapAllocator(HeapAllocator* allocator, Uint8 operations
         return false;
     }
     
+    return true;
+}
+
+bool __mm_test_checkSlabHeapAllocator(SlabHeapAllocator* allocator, Uint8 operationsID, Size exceptedSlabSize) {
+    if (!__mm_test_checkBaseHeapAllocator(&allocator->allocator, operationsID)) {
+        return false;
+    }
+
+    if (!singlyLinkedList_isEmpty(&allocator->regionList)) {
+        return false;
+    }
+    
+    if (allocator->slabSize != exceptedSlabSize) {
+        return false;
+    }
+
     return true;
 }
 

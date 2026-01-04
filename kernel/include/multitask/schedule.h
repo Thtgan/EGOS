@@ -4,6 +4,7 @@
 #include<kit/types.h>
 #include<multitask/process.h>
 #include<multitask/thread.h>
+#include<test.h>
 
 void schedule_setEarlyStackBottom(void* stackBottom);
 
@@ -50,5 +51,12 @@ void schedule_yieldIfStopped();
 Process* schedule_fork();
 
 void schedule_collectOrphans(Process* process);
+
+#if defined(CONFIG_UNIT_TEST_SCHEDULE)
+TEST_EXPOSE_GROUP(schedule_testGroup);
+#define UNIT_TEST_GROUP_SCHEDULE    &schedule_testGroup
+#else
+#define UNIT_TEST_GROUP_SCHEDULE    NULL
+#endif
 
 #endif // __MULTITASK_SCHEDULE_H

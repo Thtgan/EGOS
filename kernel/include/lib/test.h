@@ -25,6 +25,9 @@ typedef struct TestList {
 } TestEntry;
 
 typedef struct TestGroup {
+#define TEST_GROUP_FLAGS_MULTITASK  FLAG8(0)
+    Flags8 flags;
+    void* originalProcess;
     TestGroupPrepare prepare;
     TestList* rootList;
     TestGroupClear clear;
@@ -57,11 +60,12 @@ static struct {                                                                 
 #define __TEST_SETUP_BUILD_LIST(__ENTRY)                    __TEST_SETUP_BUILD_LIST_HELPER __ENTRY
 #define __TEST_SETUP_BUILD_LIST_HELPER(__IS_FUNC, __ENTRY)  __ENTRY,
 
-#define TEST_SETUP_GROUP(__GROUP, __PREPARE, __ROOT_LIST_NAME, __CLEAR) \
-struct TestGroup __GROUP = {                                            \
-    .prepare = (__PREPARE),                                             \
-    .rootList = &TEST_LIST_FULL_NAME(__ROOT_LIST_NAME).list,            \
-    .clear = (__CLEAR)                                                  \
+#define TEST_SETUP_GROUP(__GROUP, __FLAGS, __PREPARE, __ROOT_LIST_NAME, __CLEAR)    \
+struct TestGroup __GROUP = {                                                        \
+    .flags = (__FLAGS),                                                             \
+    .prepare = (__PREPARE),                                                         \
+    .rootList = &TEST_LIST_FULL_NAME(__ROOT_LIST_NAME).list,                        \
+    .clear = (__CLEAR)                                                              \
 }
 
 #define TEST_EXPOSE_GROUP(__GROUP)  extern TestGroup __GROUP

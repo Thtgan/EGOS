@@ -306,6 +306,7 @@ Process* schedule_fork() {
     ERROR_GOTO_IF_ERROR(1);
 
     if (schedule_getCurrentThread()->tid == tid) {
+        process_setParent(newProcess, currentProcess);
         schedule_addProcess(newProcess);
         
         return newProcess;

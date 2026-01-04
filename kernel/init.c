@@ -57,8 +57,8 @@ static __Init_Task _initFuncs2[] = {
     { __init_enableInterrupt    ,   NULL            , NULL  },
     { ata_initDevices           ,   "ATA Devices"   , NULL  },
     { fs_init                   ,   "File System"   , NULL  },
-    { schedule_init             ,   "Schedule"      , NULL  },
     { time_init                 ,   "Time"          , NULL  },
+    { schedule_init             ,   "Schedule"      , UNIT_TEST_GROUP_SCHEDULE  },
     { realmode_init             ,   "Realmode"      , NULL  },
     { usermode_init             ,   "User Mode"     , NULL  },
     { __init_initVideo          ,   "Video"         , NULL  },
@@ -110,6 +110,16 @@ void init_initKernelStage2() {
             }
             error_unhandledRecord(error_getCurrentRecord());
         });
+
+        if (_initFuncs2[i].testGroup == NULL) {
+            continue;
+        }
+
+        bool testResult = test_exec(_initFuncs2[i].testGroup);
+
+        if (!testResult) {
+            debug_blowup("Unit test failed\n");
+        }
     }
 
     debug_printf("All Initializations passed\n");

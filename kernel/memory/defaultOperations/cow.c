@@ -38,6 +38,9 @@ static void __defaultMemoryOperations_cow_copyEntry(PagingLevel level, ExtendedP
             ERROR_GOTO(0);
         }
 
+        if (REF_COUNTER_CHECK(unit->refCounter, 0)) {   //TODO: It should be initialized to 1 at frmae metadata initialization
+            REF_COUNTER_INIT(unit->refCounter, 1);
+        }
         REF_COUNTER_REFER(unit->refCounter);
 
         CLEAR_FLAG_BACK(*srcEntry, PAGING_ENTRY_FLAG_RW);

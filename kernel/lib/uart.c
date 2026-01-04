@@ -79,6 +79,6 @@ TEST_SETUP_LIST(
     (1, __uart_test_input)
 );
 
-TEST_SETUP_GROUP(uart_testGroup, NULL, UART, NULL);
+TEST_SETUP_GROUP(uart_testGroup, EMPTY_FLAGS, NULL, UART, NULL);
 
 #endif
