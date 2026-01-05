@@ -1,7 +1,9 @@
 #if !defined(__USERMODE_USERMODE_H)
 #define __USERMODE_USERMODE_H
 
+#include<kit/config.h>
 #include<kit/types.h>
+#include<test.h>
 
 void usermode_init();
 
@@ -14,5 +16,12 @@ void usermode_init();
 int usermode_execute(ConstCstring path, Cstring* argv, Cstring* envp);
 
 extern void* usermode_executeReturn;
+
+#if defined(CONFIG_UNIT_TEST_USERMODE)
+TEST_EXPOSE_GROUP(usermode_testGroup);
+#define UNIT_TEST_GROUP_USERMODE    &usermode_testGroup
+#else
+#define UNIT_TEST_GROUP_USERMODE    NULL
+#endif
 
 #endif // __USERMODE_USERMODE_H

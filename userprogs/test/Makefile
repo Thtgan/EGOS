@@ -21,6 +21,11 @@ CC_OPTIONS 					= 	-nostdlib			\
 								-lgcc				\
 								-I../lib/include	\
 								-I.					\
+								-O0					\
+								-g					\
+
+BUILD_USERPROG_DUMP_NAME	:=	$(USERPROG_NAME)_dump.txt
+BUILD_USERPROG_DUMP			:=	$(BUILD_USERPROG_DIR)/$(BUILD_USERPROG_DUMP_NAME)
 
 .PHONY: all clean
 
@@ -32,6 +37,11 @@ buildDir:
 $(BUILD_USERPROG_TARGET): $(OBJ_FILES_C) $(OBJ_FILES_ASM)
 	@$(LD) $(OBJ_FILES_LIB) $(OBJ_FILES_C) $(OBJ_FILES_ASM) -o $@
 	@echo "LD -> $@"
+	@$(OBJDUMP) -d -S $@ > $(BUILD_USERPROG_DUMP)
+	@echo "OBJDUMP -> $(BUILD_USERPROG_DUMP)"
+	@$(OBJCOPY) --only-keep-debug $@ $@.dbg
+	@echo "OBJCOPY -> $@.dbg"
+	@$(OBJCOPY) --strip-debug $@
 
 $(eval $(call CC_COMPILE, $(SOURCE_FILES_C), $(OBJ_FILES_C), $(CC_OPTIONS)))
 

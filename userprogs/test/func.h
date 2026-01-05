@@ -1,8 +1,8 @@
 #if !defined(__FUNC_H)
 #define __FUNC_H
 
-void initFunc();
+int stoi(const char* str);
 
-int func(int index);
+int strncmp(const char* str1, const char* str2, unsigned long long n);
 
 #endif // __FUNC_H

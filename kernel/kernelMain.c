@@ -134,16 +134,6 @@ void kernelMain(SystemInfo* info) {
         print_printf("%s-%d\n", str, len);
     }
 
-    Cstring testArgv[] = {
-        "test", "arg1", "arg2", "arg3", NULL
-    };
-    Cstring testEnvp[] = {
-        "ENV1=114514", "ENV2=1919", "ENV3=810", NULL
-    };
-    int ret = usermode_execute("/bin/test", testArgv, testEnvp);
-
-    print_printf("FINAL %u\n", schedule_getCurrentThread()->tid);
-
     {
         File* file = fs_fileOpen("/dev/null", FCNTL_OPEN_READ_WRITE);
         ERROR_CHECKPOINT();

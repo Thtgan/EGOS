@@ -35,7 +35,7 @@ void* __time_timer_testGroupPrepare() {
     return &_time_test_context;
 }
 
-static bool __time_timer_test(void* arg) {
+static bool __time_test_timer_run(void* arg) {
     __TimeTestContext* ctx = (__TimeTestContext*)arg;
 
     Timer* timer1 = &ctx->timer1, * timer2 = &ctx->timer2;
@@ -52,7 +52,7 @@ static bool __time_timer_test(void* arg) {
 
 TEST_SETUP_LIST(
     TIME_TIMER,
-    (1, __time_timer_test)
+    (1, __time_test_timer_run)
 );
 
 TEST_SETUP_LIST(    //TODO: Add test for clocks

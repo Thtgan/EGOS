@@ -29,6 +29,12 @@ menu "Debug"
             default n
             help
                 Unit Tests for Schedule Things like Process, Thread, Signal and IPC, etc.
+
+        config UNIT_TEST_USERMODE
+            bool "Usermode"
+            default n
+            help
+                Unit Tests for User Mode.
     endmenu
 
 endmenu

@@ -100,9 +100,8 @@ bool elf_checkELF64ProgramHeader(ELF64ProgramHeader* programHeader) {
 void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
     void* frame = NULL;
     
-    Uintptr
-        pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT),
-        fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
+    Uintptr pageBegin = CLEAR_VAL_SIMPLE(programHeader->vAddr, 64, PAGE_SIZE_SHIFT);
+    //     fileBegin = CLEAR_VAL_SIMPLE(programHeader->offset, 64, PAGE_SIZE_SHIFT);
     
     Size
         readRemain = programHeader->segmentSizeInFile,
@@ -110,9 +109,11 @@ void elf_loadELF64Program(File* file, ELF64ProgramHeader* programHeader) {
 
     Process* currentProcess = schedule_getCurrentProcess();
     ExtendedPageTableRoot* extendedTable = currentProcess->extendedTable;
-    fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN);
+    // fs_fileSeek(file, fileBegin, FS_FILE_SEEK_BEGIN);
+    fs_fileSeek(file, programHeader->offset, FS_FILE_SEEK_BEGIN);
     
     Uintptr from = programHeader->vAddr, to = algorithms_min64(programHeader->vAddr + programHeader->segmentSizeInMemory, from + PAGE_SIZE);
+    // void* base = (void*)pageBegin;
     void* base = (void*)pageBegin;
     while (memoryRemain > 0) {
         void* translated = extendedPageTableRoot_translate(extendedTable, base);

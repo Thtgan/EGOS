@@ -13,7 +13,6 @@ _start:
 
     // Calculate envp (Environment variables)
     lea 8(%rsi, %rdi, 8), %rdx
-    add $8, %rdx
 
     // Calling main(argc, argc, envp)
     call main

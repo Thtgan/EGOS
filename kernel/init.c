@@ -63,7 +63,7 @@ static __Init_Task _initFuncs2[] = {
     { time_init                 ,   "Time"          , UNIT_TEST_GROUP_SCHEDULE  },  //TODO: Timer relies on schedule, decouple it in the future
     { __init_dummy              ,   NULL            , UNIT_TEST_GROUP_TIME      },
     { realmode_init             ,   "Realmode"      , NULL  },
-    { usermode_init             ,   "User Mode"     , NULL  },
+    { usermode_init             ,   "User Mode"     , UNIT_TEST_GROUP_USERMODE  },
     { __init_initVideo          ,   "Video"         , NULL  },
     { NULL, NULL, NULL }
 };
