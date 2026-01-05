@@ -18,6 +18,12 @@ menu "Debug"
             help
                 Unit Tests for Memory Manager.
 
+        config UNIT_TEST_TIME
+            bool "Time"
+            default n
+            help
+                Unit Tests for Clock and Timer.
+
         config UNIT_TEST_SCHEDULE
             bool "Schedule"
             default n

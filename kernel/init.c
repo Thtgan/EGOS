@@ -36,6 +36,8 @@ static void __init_disableInterrupt();  //TODO: Maybe remove these
 
 static void __init_initVideo();         //TODO: Maybe remove these
 
+static void __init_dummy();
+
 static __Init_Task _initFuncs1[] = {
     { debug_init                ,   "Debug"         , NULL  },
     { uart_init                 ,   "UART"          , UNIT_TEST_GROUP_UART  },
@@ -44,7 +46,7 @@ static __Init_Task _initFuncs1[] = {
     { tty_init                  ,   "Boot TTY"      , NULL  },
     { __init_printBootSlogan    ,   NULL            , NULL  },
     { idt_init                  ,   "Interrupt"     , NULL  },
-    { mm_init                   ,   "Memory Manager", UNIT_TEST_GROUP_MM  },
+    { mm_init                   ,   "Memory Manager", UNIT_TEST_GROUP_MM    },
     { NULL, NULL, NULL }
 };
 
@@ -57,8 +59,9 @@ static __Init_Task _initFuncs2[] = {
     { __init_enableInterrupt    ,   NULL            , NULL  },
     { ata_initDevices           ,   "ATA Devices"   , NULL  },
     { fs_init                   ,   "File System"   , NULL  },
-    { time_init                 ,   "Time"          , NULL  },
-    { schedule_init             ,   "Schedule"      , UNIT_TEST_GROUP_SCHEDULE  },
+    { schedule_init             ,   "Schedule"      , NULL  },
+    { time_init                 ,   "Time"          , UNIT_TEST_GROUP_SCHEDULE  },  //TODO: Timer relies on schedule, decouple it in the future
+    { __init_dummy              ,   NULL            , UNIT_TEST_GROUP_TIME      },
     { realmode_init             ,   "Realmode"      , NULL  },
     { usermode_init             ,   "User Mode"     , NULL  },
     { __init_initVideo          ,   "Video"         , NULL  },
@@ -140,4 +143,8 @@ static void __init_disableInterrupt() {
 
 static void __init_initVideo() {
     display_initMode(DISPLAY_MODE_VGA);
+}
+
+static void __init_dummy() {
+    asm volatile("nop");
 }

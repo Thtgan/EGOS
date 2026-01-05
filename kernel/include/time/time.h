@@ -11,8 +11,10 @@ typedef enum {
 typedef struct RealTime RealTime;
 typedef struct Timestamp Timestamp;
 
+#include<kit/config.h>
 #include<kit/types.h>
 #include<multitask/locks/spinlock.h>
+#include<test.h>
 
 typedef struct RealTime {
     Uint16  year;
@@ -42,5 +44,12 @@ Int64 timestamp_compare(Timestamp* ts1, Timestamp* ts2);
 void time_init();
 
 void time_getTimestamp(Timestamp* timestamp);
+
+#if defined(CONFIG_UNIT_TEST_TIME)
+TEST_EXPOSE_GROUP(time_testGroup);
+#define UNIT_TEST_GROUP_TIME    &time_testGroup
+#else
+#define UNIT_TEST_GROUP_TIME    NULL
+#endif
 
 #endif // __TIME_TIME_H

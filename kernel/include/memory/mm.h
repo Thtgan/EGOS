@@ -3,8 +3,8 @@
 
 typedef struct MemoryManager MemoryManager;
 
-#include<kit/types.h>
 #include<kit/config.h>
+#include<kit/types.h>
 #include<memory/allocators/allocator.h>
 #include<memory/extendedPageTable.h>
 #include<memory/frameMetadata.h>

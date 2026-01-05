@@ -45,7 +45,7 @@ bool test_ask(ConstCstring question) {
 static bool __test_doExecList(TestList* list, TestGroup* group, void* ctx, int level) {
     bool ret = true;
 
-    if (TEST_FLAGS(group->flags, TEST_GROUP_FLAGS_MULTITASK) && group->originalProcess == schedule_getCurrentProcess()) {
+    if (TEST_FLAGS_FAIL(group->flags, TEST_GROUP_FLAGS_MULTITASK) || group->originalProcess == schedule_getCurrentProcess()) {
         debug_printf("Level %d-Executing test list %s:\n", level, list->name);
     }
 
@@ -58,7 +58,7 @@ static bool __test_doExecList(TestList* list, TestGroup* group, void* ctx, int l
         }
     }
 
-    if (TEST_FLAGS(group->flags, TEST_GROUP_FLAGS_MULTITASK) && group->originalProcess == schedule_getCurrentProcess()) {
+    if (TEST_FLAGS_FAIL(group->flags, TEST_GROUP_FLAGS_MULTITASK) || group->originalProcess == schedule_getCurrentProcess()) {
         if (ret) {
             debug_printf("SUCCESS\n");
         } else {

@@ -1,6 +1,7 @@
 #if !defined(__MULTITASK_SCHEDULE_H)
 #define __MULTITASK_SCHEDULE_H
 
+#include<kit/config.h>
 #include<kit/types.h>
 #include<multitask/process.h>
 #include<multitask/thread.h>

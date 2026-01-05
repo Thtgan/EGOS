@@ -14,17 +14,11 @@
 #include<usermode/usermode.h>
 
 SystemInfo* sysInfo;
-
-// Semaphore sema1, sema2;
 char str[128];
-
-// int* arr1, * arr2;
 
 static void printLOGO();
 
 static void printFileFromEXT2();
-
-// Uint16 rootTID = 0;
 
 #include<kit/util.h>
 #include<system/memoryLayout.h>
@@ -53,8 +47,6 @@ static void printFileFromEXT2();
 #include<memory/mapping.h>
 
 #include<uart.h>
-
-Timer timer1, timer2;
 
 static void __timerFunc1(Timer* timer) {
     print_printf("HANDLER CALL FROM TIMER1\n");
@@ -160,19 +152,6 @@ void kernelMain(SystemInfo* info) {
         fs_fileClose(file);
     }
 
-    timer_initStruct(&timer1, 500, TIME_UNIT_MILLISECOND);
-    timer_initStruct(&timer2, 500, TIME_UNIT_MILLISECOND);
-    SET_FLAG_BACK(timer2.flags, TIMER_FLAGS_SYNCHRONIZE | TIMER_FLAGS_REPEAT);
-
-    timer1.handler = __timerFunc1;
-    timer2.data = 5;
-    timer2.handler = __timerFunc2;
-
-    timer_start(&timer1);
-    ERROR_CHECKPOINT();
-    timer_start(&timer2);
-    ERROR_CHECKPOINT();
-    
     print_printf("Closing FS\n");
 
     fs_close(fs_rootFS); //TODO: Move to better place
