@@ -5,3 +5,6 @@
 /files/bin/*
 /include/kit/config.h
 /.config*
+.roomodes
+/.roo
+/NOT_FOR_GIT

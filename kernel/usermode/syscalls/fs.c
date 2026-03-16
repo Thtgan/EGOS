@@ -40,6 +40,7 @@ typedef enum __FsSyscallDirentType {
     __FS_SYSCALL_DIRECTORY_ENTRY_TYPE_UNKNOWN
 } __FsSyscallDirentType;
 
+static Index64 __syscall_fs_lseek(int fileDescriptor, Int64 offset, Uint8 seekFrom);
 static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n);
 
 static int __syscall_fs_read(int fileDescriptor, void* buffer, Size n) {
@@ -220,10 +221,29 @@ static int __syscall_fs_getdents(int fileDescriptor, void* buffer, Size n) {
     return -1;
 }
 
+static Index64 __syscall_fs_lseek(int fileDescriptor, Int64 offset, Uint8 seekFrom) {
+    Process* currentProcess = schedule_getCurrentProcess();
+    File* file = process_getFSentry(currentProcess, fileDescriptor);
+    if (file == NULL) {
+        ERROR_ASSERT_ANY();
+        ERROR_GOTO(0);
+    }
+
+    Index64 ret = fs_fileSeek(file, offset, seekFrom);
+    if (ret == INVALID_INDEX64) {
+        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
+    }
+
+    return ret;
+    ERROR_FINAL_BEGIN(0);
+    return -1;
+}
+
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_READ,      __syscall_fs_read);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_WRITE,     __syscall_fs_write);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_OPEN,      __syscall_fs_open);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_CLOSE,     __syscall_fs_close);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_STAT,      __syscall_fs_stat);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_FSTAT,     __syscall_fs_fstat);
+SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_LSEEK,     __syscall_fs_lseek);
 SYSCALL_TABLE_REGISTER(SYSCALL_INDEX_GETDENTS,  __syscall_fs_getdents);

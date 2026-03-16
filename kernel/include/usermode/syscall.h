@@ -19,7 +19,7 @@ typedef struct SyscallUnit {
 #define SYSCALL_INDEX_FSTAT             0x05
 #define SYSCALL_INDEX_LSTAT             0x06    //TODO: Not implemented
 #define SYSCALL_INDEX_POLL              0x07    //TODO: Not implemented
-#define SYSCALL_INDEX_LSEEK             0x08    //TODO: Not implemented
+#define SYSCALL_INDEX_LSEEK             0x08
 #define SYSCALL_INDEX_MMAP              0x09
 #define SYSCALL_INDEX_MPROTECT          0x0A    //TODO: Not implemented
 #define SYSCALL_INDEX_MUNMAP            0x0B

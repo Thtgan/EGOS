@@ -9,6 +9,7 @@
 #define SYSCALL_CLOSE       0x03
 #define SYSCALL_STAT        0x04
 #define SYSCALL_FSTAT       0x05
+#define SYSCALL_LSEEK       0x08
 #define SYSCALL_MMAP        0x09
 #define SYSCALL_MUNMAP      0x0B
 #define SYSCALL_PIPE        0x16

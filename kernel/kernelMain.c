@@ -48,17 +48,6 @@ static void printFileFromEXT2();
 
 #include<uart.h>
 
-static void __timerFunc1(Timer* timer) {
-    print_printf("HANDLER CALL FROM TIMER1\n");
-}
-
-static void __timerFunc2(Timer* timer) {
-    print_printf("HANDLER CALL FROM TIMER2\n");
-    if (--timer->data == 0) {
-        CLEAR_FLAG_BACK(timer->flags, TIMER_FLAGS_REPEAT);
-    }
-}
-
 void kernelMain(SystemInfo* info) {
     sysInfo = (SystemInfo*)info;
     if (sysInfo->magic != SYSTEM_INFO_MAGIC) {
