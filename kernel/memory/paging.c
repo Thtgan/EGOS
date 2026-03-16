@@ -31,7 +31,6 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         PagingEntry entry = pageTable->tableEntries[index];
         ExtraPageTableEntry extraEntry = extraPageTable->tableEntries[index];
 
-        // if (TEST_FLAGS_FAIL(entry, PAGING_ENTRY_FLAG_PRESENT)) {
         if (extraEntry.tableEntryNum == 0) {
             break;
         }
