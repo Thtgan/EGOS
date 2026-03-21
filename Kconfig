@@ -38,3 +38,36 @@ menu "Debug"
     endmenu
 
 endmenu
+
+menu "Error Handling"
+
+    config ENABLE_POSIX_ERROR
+        bool "Enable POSIX-style error handling mechanism"
+        default n
+        help
+            Enable the new POSIX-style error handling mechanism with:
+            - 32-bit hierarchical error codes (Domain.Class.Severity.SubDomain.Code)
+            - Per-thread error context with stack-based error tracking
+            - Zero-overhead error checking on normal execution path
+            
+            This is a new feature and should be tested before enabling in production.
+            Existing code continues to use the legacy error handling mechanism.
+
+    config ERROR_FRAME_DEBUG
+        bool "Enable debug error frame format"
+        depends on ENABLE_POSIX_ERROR
+        default n
+        help
+            Include source file and line number in each error frame.
+            
+            Enable this option for debugging purposes. Disable for production builds to minimize memory usage.
+
+    config ERROR_STACK_SIZE
+        int "Error stack size per thread"
+        depends on ENABLE_POSIX_ERROR
+        default 4
+        range 2 16
+        help
+            Number of error frames stored in each thread's error context.
+
+endmenu

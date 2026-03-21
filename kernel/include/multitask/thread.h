@@ -14,6 +14,10 @@ typedef void (*ThreadEntryPoint)();
 #include<structs/queue.h>
 #include<structs/refCounter.h>
 
+#ifdef CONFIG_ENABLE_POSIX_ERROR
+#include <lib/errorPosix.h>
+#endif
+
 #define THREAD_DEFAULT_KERNEL_STACK_SIZE    4 * PAGE_SIZE
 #define THREAD_DEFAULT_USER_STACK_SIZE      4 * PAGE_SIZE
 
@@ -48,6 +52,11 @@ typedef struct Thread {
     bool isThreadActive;
 
     SignalQueue signalQueue;
+    
+#ifdef CONFIG_ENABLE_POSIX_ERROR
+    ErrorContext error_ctx;
+    ErrorFrame error_stack[CONFIG_ERROR_STACK_SIZE];
+#endif
 } Thread;
 
 void thread_initStruct(Thread* thread, Uint16 tid, Process* process);

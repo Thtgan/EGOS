@@ -231,8 +231,7 @@ void schedule_threadQuitSchedule(Thread* thread) {
 }
 
 Process* schedule_getCurrentProcess() {
-    DEBUG_ASSERT_SILENT(_schedule_started);
-    return _schedule_currentThread->process;
+    return _schedule_started ? _schedule_currentThread->process : NULL;
 }
 
 Process* schedule_getProcessFromPID(Uint16 pid) {
@@ -251,8 +250,7 @@ Process* schedule_getProcessFromPID(Uint16 pid) {
 }
 
 Thread* schedule_getCurrentThread() {
-    DEBUG_ASSERT_SILENT(_schedule_started);
-    return _schedule_currentThread;
+    return _schedule_started ? _schedule_currentThread : NULL;
 }
 
 Thread* schedule_getThreadFromTID(Uint16 tid) {
