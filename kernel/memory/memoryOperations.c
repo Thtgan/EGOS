@@ -9,7 +9,7 @@
 #include<memory/extendedPageTable.h>
 #include<memory/mm.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static MemoryOperations* __memoryOperations_defaultOperations[DEFAULT_MEMORY_OPERATIONS_TYPE_NUM] = {
     [DEFAULT_MEMORY_OPERATIONS_TYPE_SHARE]          = &defaultMemoryOperations_share,
@@ -27,9 +27,5 @@ void memoryOperations_registerDefault(ExtraPageTableContext* context) {
         MemoryOperations* operations = __memoryOperations_defaultOperations[i];
         Index8 index = extraPageTableContext_registerMemoryOperations(&mm->extraPageTableContext, operations);
         DEBUG_ASSERT_SILENT(index == i && extraPageTableContext_getMemoryOperations(context, i) == __memoryOperations_defaultOperations[i]);
-        ERROR_GOTO_IF_ERROR(0);
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }

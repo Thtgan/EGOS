@@ -111,13 +111,13 @@ void debug_dump_memory(void* data, Size n) {
     }
 }
 
-void debug_dump_stack(void* rbp, Size maxDepth) {   //TODO: Limitation for stack dumping
+void debug_dump_stack(void* rbp, Size maxDepth) {
     if (rbp == NULL) {
         rbp = (void*)readRegister_RBP_64();
     }
 
     Uintptr* stackFrame = (Uintptr*)rbp;
-    Size n = maxDepth;
+    Size n = algorithms_umin64(maxDepth, 64);
     while (VALUE_WITHIN(MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_BEGIN, MEMORY_LAYOUT_KERNEL_KERNEL_TEXT_END, *(stackFrame + 1), <=, <) && (maxDepth--) != 0) {
         debug_printf("Frame Base: %08p, Caller: %08p\n", stackFrame, (void*)*(stackFrame + 1));
         stackFrame = (Uintptr*)*stackFrame;

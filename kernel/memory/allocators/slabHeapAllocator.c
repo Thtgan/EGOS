@@ -9,7 +9,7 @@
 #include<memory/paging.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static void* __slabHeapAllocator_allocate(HeapAllocator* allocator, Size n);
 
@@ -52,13 +52,10 @@ void slabHeapAllocator_clearStruct(SlabHeapAllocator* allocator) {
 static void* __slabHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     SlabHeapAllocator* regionAllocator = HOST_POINTER(allocator, SlabHeapAllocator, allocator);
 
-    if (n > regionAllocator->slabSize) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF(n > regionAllocator->slabSize, ERROR_INVALID_ARGUMENT, error_out);
 
     if (allocator->remaining == 0) {
         __slabHeapAllocator_expand(regionAllocator);
-        ERROR_GOTO_IF_ERROR(0);
     }
 
     SinglyLinkedListNode* node = singlyLinkedList_getNext(&regionAllocator->regionList);
@@ -68,8 +65,7 @@ static void* __slabHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     heapAllocator_allocateActualSize(allocator, regionAllocator->slabSize);
     
     return (void*)node;
-
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -92,10 +88,7 @@ static Size __slabHeapAllocator_getActualSize(HeapAllocator* allocator, Size n) 
 static void __slabHeapAllocator_expand(SlabHeapAllocator* allocator) {
     HeapAllocator* baseAllocator = &allocator->allocator;
     void* page = mm_allocateHeapPages(1, mm->extendedTable, baseAllocator, baseAllocator->operationsID, false);
-    if (page == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(page == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     Size slabNum = PAGE_SIZE / allocator->slabSize;
     void* currentRegion = page;
@@ -105,7 +98,6 @@ static void __slabHeapAllocator_expand(SlabHeapAllocator* allocator) {
     }
 
     heapAllocator_expand(baseAllocator, slabNum, allocator->slabSize);
-
+error_out:
     return;
-    ERROR_FINAL_BEGIN(0);
 }

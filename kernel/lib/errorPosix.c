@@ -29,24 +29,34 @@ IsrErrorContext isr_error_context = {
     .lastIRQnumber = 0,
 };
 
-void error_posix_init(void) {
-    error_boot_context.hasError = false;
-    error_boot_context.depth = 0;
-    error_boot_context.stackTop = boot_error_frames;
-    error_boot_context.errorStack = boot_error_frames;
-    error_boot_context.deferredError = ERROR_OK;
+void error_posix_init() {
+#ifdef CONFIG_ENABLE_POSIX_ERROR
+    // Initialize boot context with its dedicated error stack buffer
+    error_ctx_init(&error_boot_context, boot_error_frames);
     
-    error_global_context.hasError = false;
-    error_global_context.depth = 0;
-    error_global_context.stackTop = NULL;
-    error_global_context.errorStack = NULL;
-    error_global_context.deferredError = ERROR_OK;
+    // Initialize global context (no dedicated error stack buffer)
+    error_ctx_init(&error_global_context, NULL);
+#endif
     
     ATOMIC_STORE(&isr_error_context.pendingError, ERROR_OK);
     ATOMIC_STORE(&isr_error_context.lastIRQnumber, 0);
 }
 
-ErrorContext* error_ctx_current(void) {
+void error_ctx_init(ErrorContext* ctx, ErrorFrame* error_stack) {
+#ifdef CONFIG_ENABLE_POSIX_ERROR
+    DEBUG_ASSERT_SILENT(ctx != NULL);
+    // Note: error_stack can be NULL for contexts like error_global_context
+    // that don't have a dedicated error stack buffer
+    
+    ctx->hasError = false;
+    ctx->depth = 0;
+    ctx->stackTop = error_stack;
+    ctx->errorStack = error_stack;
+    ctx->deferredError = ERROR_OK;
+#endif
+}
+
+ErrorContext* error_ctx_current() {
 #ifdef CONFIG_ENABLE_POSIX_ERROR
     Thread* current = schedule_getCurrentThread();
     if (current != NULL) {
@@ -56,7 +66,7 @@ ErrorContext* error_ctx_current(void) {
     return &error_boot_context;
 }
 
-void error_print_stack(void) {
+void error_print_stack() {
     ErrorContext* ctx = error_ctx_current();
     
     if (!ctx->hasError || ctx->depth == 0) {

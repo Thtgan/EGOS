@@ -12,7 +12,7 @@
 #include<structs/linkedList.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<debug.h>
 
 #define __FRAME_METADATA_PAGE_N(__N)    DIVIDE_ROUND_UP((sizeof(FrameMetadataHeader) + sizeof(FrameMetadata) * (__N)), PAGE_SIZE)
@@ -85,31 +85,26 @@ FrameMetadataHeader* frameMetadata_getHeader(FrameMetadata* metadata, Index32 fr
         }
     }
 
-    ERROR_THROW_NO_GOTO(ERROR_ID_NOT_FOUND);
     return NULL;
 }
 
 FrameMetadataUnit* frameMetadata_getUnit(FrameMetadata* metadata, Index32 frameIndex) {
     FrameMetadataHeader* header = frameMetadata_getHeader(&mm->frameMetadata, frameIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return NULL;
     }
     
     return frameMetadataHeader_getUnit(header, frameIndex);
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
 }
 
 void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n, FrameAllocator* allocator) {
     FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return;
     }
 
     if (!frameMetadataHeader_checkRangeContain(header, framesBeginIndex, n)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+        return;
     }
 
     FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, framesBeginIndex);
@@ -119,21 +114,16 @@ void frameMetadata_assignToFrameAllocator(FrameMetadata* metadata, Index32 frame
         SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR);
         unit->belongToAllocator = allocator;
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    return;
 }
 
 void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n, HeapAllocator* allocator) {
     FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return;
     }
 
     if (!frameMetadataHeader_checkRangeContain(header, framesBeginIndex, n)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+        return;
     }
 
     FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, framesBeginIndex);
@@ -143,21 +133,16 @@ void frameMetadata_assignToHeapAllocator(FrameMetadata* metadata, Index32 frames
         SET_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR);
         unit->belongToAllocator = allocator;
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    return;
 }
 
 void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, Index32 framesBeginIndex, Size n) {
     FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return;
     }
 
     if (!frameMetadataHeader_checkRangeContain(header, framesBeginIndex, n)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+        return;
     }
 
     FrameMetadataUnit* unitBegin = frameMetadataHeader_getUnit(header, framesBeginIndex);
@@ -167,23 +152,18 @@ void frameMetadata_clearAssignedAllocator(FrameMetadata* metadata, Index32 frame
         CLEAR_FLAG_BACK(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_FRAME_ALLOCATOR | FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR);
         unit->belongToAllocator = NULL;
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    return;
 }
 
 void frameMetadata_markCollected(FrameMetadata* metadata, Index32 framesBeginIndex, Size n) {
     FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return;
     }
 
     Index32 headIndex = framesBeginIndex,
             endIndex = headIndex + n - 1;
     if (!frameMetadataHeader_checkRangeContain(header, headIndex, n)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+        return;
     }
 
     FrameMetadataUnit* headUnit = frameMetadataHeader_getUnit(header, headIndex);
@@ -197,23 +177,18 @@ void frameMetadata_markCollected(FrameMetadata* metadata, Index32 framesBeginInd
         SET_FLAG_BACK(endUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
         endUnit->collectedAnotherSideIndex = headIndex;
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    return;
 }
 
 void frameMetadata_unmarkCollected(FrameMetadata* metadata, Index32 framesBeginIndex, Size n) {
     FrameMetadataHeader* header = frameMetadata_getHeader(metadata, framesBeginIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return;
     }
 
     Index32 headIndex = framesBeginIndex,
             endIndex = headIndex + n - 1;
     if (!frameMetadataHeader_checkRangeContain(header, headIndex, n)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+        return;
     }
 
     FrameMetadataUnit* headUnit = frameMetadataHeader_getUnit(header, headIndex);
@@ -227,21 +202,16 @@ void frameMetadata_unmarkCollected(FrameMetadata* metadata, Index32 framesBeginI
         CLEAR_FLAG_BACK(endUnit->flags, FRAME_METADATA_UNIT_FLAGS_COLLECTED_REGION_SIDE);
         endUnit->collectedAnotherSideIndex = 0;
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
-    return;
 }
 
 Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, Index32 frameIndex, bool direction) {
     FrameMetadataHeader* header = frameMetadata_getHeader(metadata, frameIndex);
     if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        return INVALID_INDEX32;
     }
 
     if (!frameMetadataHeader_checkContain(header, frameIndex)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
+        return INVALID_INDEX32;
     }
 
     FrameMetadataUnit* unit = frameMetadataHeader_getUnit(header, frameIndex);
@@ -311,6 +281,4 @@ Index32 frameMetadata_tryMergeNearbyCollected(FrameMetadata* metadata, Index32 f
     }
 
     return nearbyFramesBeginIndex;
-    ERROR_FINAL_BEGIN(0);
-    return INVALID_INDEX32;
 }

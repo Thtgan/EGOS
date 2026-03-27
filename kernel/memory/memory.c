@@ -3,7 +3,6 @@
 #include<kit/types.h>
 #include<kit/util.h>
 
-#include<error.h>
 
 void* memory_memset(void* dst, int byte, Size n) {
     void* ret = dst;

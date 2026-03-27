@@ -15,7 +15,7 @@
 #include<multitask/process.h>
 #include<structs/refCounter.h>
 #include<system/pageTable.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<debug.h>
 
 static void __defaultMemoryOperations_anon_private_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
@@ -50,29 +50,23 @@ static void __defaultMemoryOperations_anon_private_copyEntry(PagingLevel level, 
         if (TEST_FLAGS(*srcEntry, PAGING_ENTRY_FLAG_PRESENT)) { //Accessed, take it as a regular COW entry
             void* mapToFrame = pageTable_getNextLevelPage(level, *srcEntry);
             FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-            if (unit == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
-    
+            ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
+
             REF_COUNTER_REFER(unit->refCounter);
-    
+
             CLEAR_FLAG_BACK(*srcEntry, PAGING_ENTRY_FLAG_RW);
         }
         *desEntry = *srcEntry;
         *desExtraEntry = *srcExtraEntry;
     } else {
         void* newTableFrames = defaultMemoryOperations_genericCopyTableEntry(level, srcEntry, __defaultMemoryOperations_anon_private_copyEntry);
-        if (newTableFrames == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(newTableFrames == NULL, ERROR_OUT_OF_MEMORY, error_out);
         *desEntry = BUILD_ENTRY_PAGING_TABLE(newTableFrames, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_anon_private_faultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
@@ -85,10 +79,7 @@ static void __defaultMemoryOperations_anon_private_faultHandler(PagingLevel leve
         void* mapToFrame = mm_allocateFrames(span >> PAGE_SIZE_SHIFT);
         memory_memset(PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame), 0, span);
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-        if (unit == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
 
         REF_COUNTER_INIT(unit->refCounter, 1);
 
@@ -100,31 +91,25 @@ static void __defaultMemoryOperations_anon_private_faultHandler(PagingLevel leve
 
         void* mapToFrame = pageTable_getNextLevelPage(level, *entry);
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-        if (unit == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
-        
+        ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
+
         if (!REF_COUNTER_CHECK(unit->refCounter, 1)) {
             void* copyTo = mm_allocateFrames(span >> PAGE_SIZE_SHIFT);
             memory_memcpy(PAGING_CONVERT_KERNEL_MEMORY_P2V(copyTo), PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame), span);
-    
+
             REF_COUNTER_DEREFER(unit->refCounter);
             FrameMetadataUnit* copyToUnit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(copyTo));
-            if (copyToUnit == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
+            ERROR_THROW_NEW_IF(copyToUnit == NULL, ERROR_INVALID_STATE, error_out);
             REF_COUNTER_INIT(copyToUnit->refCounter, 1);
 
             *entry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), copyTo, FLAGS_FROM_PAGING_ENTRY(*entry));
         }
-    
+
         SET_FLAG_BACK(*entry, PAGING_ENTRY_FLAG_RW);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_anon_private_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper) {
@@ -139,10 +124,7 @@ static void __defaultMemoryOperations_anon_private_releaseEntry(PagingLevel leve
                 frameReaper_collect(reaper, mapToFrame, PAGING_SPAN(PAGING_NEXT_LEVEL(level)) / PAGE_SIZE);
                 REF_COUNTER_INIT(unit->refCounter, 0);
             } else {
-                if (unit == NULL) {
-                    ERROR_ASSERT_ANY();
-                    ERROR_GOTO(0);
-                }
+                ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
                 REF_COUNTER_DEREFER(unit->refCounter);
             }
         }
@@ -153,7 +135,7 @@ static void __defaultMemoryOperations_anon_private_releaseEntry(PagingLevel leve
     extendedPageTable_clearEntry(extendedTable, index);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_anon_shared_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index) {
@@ -164,11 +146,8 @@ static void __defaultMemoryOperations_anon_shared_copyEntry(PagingLevel level, E
         if (TEST_FLAGS(*srcEntry, PAGING_ENTRY_FLAG_PRESENT)) { //Accessed, take it as a regular COW entry
             void* mapToFrame = pageTable_getNextLevelPage(level, *srcEntry);
             FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-            if (unit == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
-    
+            ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
+
             REF_COUNTER_REFER(unit->refCounter);
         }
 
@@ -176,16 +155,13 @@ static void __defaultMemoryOperations_anon_shared_copyEntry(PagingLevel level, E
         *desExtraEntry = *srcExtraEntry;
     } else {
         void* newTableFrames = defaultMemoryOperations_genericCopyTableEntry(level, srcEntry, __defaultMemoryOperations_anon_shared_copyEntry);
-        if (newTableFrames == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(newTableFrames == NULL, ERROR_OUT_OF_MEMORY, error_out);
         *desEntry = BUILD_ENTRY_PAGING_TABLE(newTableFrames, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_anon_shared_faultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
@@ -201,29 +177,20 @@ static void __defaultMemoryOperations_anon_shared_faultHandler(PagingLevel level
     if (frameIndex == INVALID_INDEX32) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
         mapToFrame = mm_allocateFrames(span / PAGE_SIZE);
-        if (mapToFrame == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(mapToFrame == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
         memory_memset(PAGING_CONVERT_KERNEL_MEMORY_P2V(mapToFrame), 0, span);
         virtualMemoryRegion_setFrameIndex(vmr, v, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
 
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-        if (unit == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
 
         REF_COUNTER_INIT(unit->refCounter, 1);
     } else {
         mapToFrame = FRAME_METADATA_INDEX_TO_FRAME(frameIndex);
 
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-        if (unit == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
 
         REF_COUNTER_REFER(unit->refCounter);
     }
@@ -231,7 +198,7 @@ static void __defaultMemoryOperations_anon_shared_faultHandler(PagingLevel level
     *entry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), mapToFrame, FLAGS_FROM_PAGING_ENTRY(*entry) | PAGING_ENTRY_FLAG_PRESENT);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_anon_shared_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper) {
@@ -250,5 +217,5 @@ static void __defaultMemoryOperations_anon_shared_releaseEntry(PagingLevel level
     extendedPageTable_clearEntry(extendedTable, index);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }

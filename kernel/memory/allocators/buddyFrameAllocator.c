@@ -8,8 +8,7 @@
 #include<structs/singlyLinkedList.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<error.h>
-#include<print.h>
+#include<lib/errorPosix.h>
 
 static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Size n);
 
@@ -59,9 +58,7 @@ static void __buddyFrameList_initStruct(FrameBuddyList* list, int order) {
 }
 
 static void* __buddyFrameList_getFrames(FrameBuddyList* list) {
-    if (list->remaining == 0) {
-        ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
-    }
+    ERROR_THROW_NEW_IF(list->remaining == 0, ERROR_OUT_OF_MEMORY, error_out);
 
     SinglyLinkedListNode* node = (void*)list->list.next;
     singlyLinkedList_deleteNext(&list->list);
@@ -69,7 +66,7 @@ static void* __buddyFrameList_getFrames(FrameBuddyList* list) {
     --list->remaining;
 
     return PAGING_CONVERT_KERNEL_MEMORY_V2P(node);
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -84,21 +81,18 @@ static void __buddyFrameList_addFrames(FrameBuddyList* list, void* frames) {
 static void* __buddyFrameList_recursivelyGetFrames(FrameBuddyList* list) {
     if (list->remaining == 0) {
         if (list->order == BUDDY_FRAME_ALLOCATOR_MAX_ORDER) {
-            ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
+            ERROR_THROW_NEW(ERROR_OUT_OF_MEMORY, error_out);
         }
 
         void* framesPair = __buddyFrameList_recursivelyGetFrames(list + 1);
-        if (framesPair == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(framesPair == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
         __buddyFrameList_addFrames(list, framesPair + BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(list->order) * PAGE_SIZE);
         __buddyFrameList_addFrames(list, framesPair);
     }
 
     return __buddyFrameList_getFrames(list);
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -184,10 +178,7 @@ static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Siz
     for (order = 0; order <= BUDDY_FRAME_ALLOCATOR_MAX_ORDER && BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) < n; ++order);
 
     void* ret = __buddyFrameList_recursivelyGetFrames(&buddyAllocator->lists[order]);
-    if (ret == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(ret == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     if (BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) > n) {
         __buddyFrameList_recycleFrames(buddyAllocator, ret + n * PAGE_SIZE, BUDDY_FRAME_ALLOCATOR_ORDER_LENGTH(order) - n);
@@ -196,7 +187,7 @@ static void* __buddyFrameAllocator_allocateFrames(FrameAllocator* allocator, Siz
     allocator->remaining -= n;
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -216,13 +207,10 @@ static void __buddyFrameAllocator_freeFrames(FrameAllocator* allocator, void* fr
     allocator->remaining += n;
 
     frameMetadata_assignToFrameAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
-    ERROR_CHECKPOINT();
 }
 
 static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* frames, Size n) {
-    if ((Uintptr)frames % PAGE_SIZE != 0) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF((Uintptr)frames % PAGE_SIZE != 0, ERROR_INVALID_ARGUMENT, error_out);
     
     BuddyFrameAllocator* buddyAllocator = HOST_POINTER(allocator, BuddyFrameAllocator, allocator);
     __buddyFrameList_recycleFrames(buddyAllocator, frames, n);
@@ -231,8 +219,7 @@ static void __buddyFrameAllocator_addFrames(FrameAllocator* allocator, void* fra
     allocator->remaining += n;
 
     frameMetadata_assignToFrameAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
-    ERROR_GOTO_IF_ERROR(0);
-
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return;
 }

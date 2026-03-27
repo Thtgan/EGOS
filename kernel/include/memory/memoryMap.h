@@ -14,7 +14,7 @@ MemoryMapEntry* memoryMap_searchEntry(MemoryMap* mMap, Range* r, Flags8 flags, F
 
 MemoryMapEntry* memoryMap_splitEntry(MemoryMap* mMap, MemoryMapEntry* entry, Size splitlength);
 
-void memoryMap_combineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry);
+bool memoryMap_combineNextEntry(MemoryMap* mMap, MemoryMapEntry* entry);
 
 void memoryMap_tidyup(MemoryMap* mMap);
 

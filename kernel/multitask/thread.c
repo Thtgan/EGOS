@@ -56,6 +56,11 @@ void thread_initStruct(Thread* thread, Uint16 tid, Process* process) {
     thread->userExitStackTop = NULL;
     thread->dead = false;
     thread->isThreadActive = false;
+
+#ifdef CONFIG_ENABLE_POSIX_ERROR
+    // Initialize error context for this thread
+    error_ctx_init(&thread->error_ctx, thread->error_stack);
+#endif
 }
 
 void thread_initFirstThread(Thread* thread, Uint16 tid, Process* process, void* stackBottom, Size stackSize){

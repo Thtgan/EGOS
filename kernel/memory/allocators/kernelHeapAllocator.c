@@ -10,7 +10,7 @@
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static void* __kernelHeapAllocator_allocate(HeapAllocator* allocator, Size n);
 
@@ -55,19 +55,14 @@ void kernelHeapAllocator_clearStruct(KernelHeapAllocator* allocator) {
 
 static void* __kernelHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     Uint8 order = __kernelHeapAllocator_getOrder(n);
-    if (order == KERNEL_HEAP_ALLOCATOR_ORDER_NUM) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF(order == KERNEL_HEAP_ALLOCATOR_ORDER_NUM, ERROR_INVALID_ARGUMENT, error_out);
 
     KernelHeapAllocator* kernelAllocator = HOST_POINTER(allocator, KernelHeapAllocator, allocator);
     SlabHeapAllocator* subAllocator = &kernelAllocator->subAllocators[order];
 
     Size originCapacity = subAllocator->allocator.total;
     void* ret = heapAllocator_allocate(&subAllocator->allocator, n);
-    if (ret == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(ret == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     if (subAllocator->allocator.total != originCapacity) {
         DEBUG_ASSERT_SILENT(subAllocator->allocator.total > originCapacity);
@@ -77,7 +72,7 @@ static void* __kernelHeapAllocator_allocate(HeapAllocator* allocator, Size n) {
     heapAllocator_allocateActualSize(allocator, subAllocator->slabSize);
     
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 

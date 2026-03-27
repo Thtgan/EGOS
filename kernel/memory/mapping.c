@@ -15,7 +15,7 @@
 #include<multitask/schedule.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 #define __MAPPING_ROUND_RANGE(__BEGIN, __LENGTH)    do {            \
     Uintptr _l = (Uintptr)(__BEGIN), _r = _l + (Uintptr)(__LENGTH); \
@@ -91,18 +91,14 @@ void* mapping_mmap(void* prefer, Size length, Flags32 prot, Flags32 flags, File*
     __mapping_mmapSetupInfo(&info, addr, length, prot, flags, file, offset);
 
     virtualMemorySpace_draw(vms, &info);
-    ERROR_GOTO_IF_ERROR(0);
     virtualMemoryRegionInfo_drawToExtendedTable(&info, vms->pageTable, NULL);
-    ERROR_GOTO_IF_ERROR(0);
 
     return addr;
-    ERROR_FINAL_BEGIN(0);
-    return NULL;
 }
 
 void mapping_munmap(void* addr, Size length) {
     if (length == 0 || length > -PAGE_SIZE) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
+        ERROR_THROW_NEW(ERROR_INVALID_ARGUMENT, error_out);
     }
 
     __MAPPING_ROUND_RANGE(addr, length);
@@ -112,18 +108,17 @@ void mapping_munmap(void* addr, Size length) {
 
     extendedPageTableRoot_erase(vms->pageTable, addr, length / PAGE_SIZE);
     frameReaper_reap(&vms->pageTable->reaper);
-
+error_out:
     return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 void mapping_msync(void* addr, Size length, Flags8 flags) {
     if (TEST_FLAGS_CONTAIN(flags, MAPPING_MMAP_MSYNC_FLAGS_ASYNC | MAPPING_MMAP_MSYNC_FLAGS_INVALIDATE)) {  //TODO: Remove this if flags are supported
-        ERROR_THROW(ERROR_ID_NOT_SUPPORTED_OPERATION, 0);
+        ERROR_THROW_NEW(ERROR_NOT_SUPPORTED, error_out);
     }
 
     if (!TEST_FLAGS_CONTAIN(flags, MAPPING_MMAP_MSYNC_FLAGS_ASYNC | MAPPING_MMAP_MSYNC_FLAGS_SYNC)) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
+        ERROR_THROW_NEW(ERROR_INVALID_ARGUMENT, error_out);
     }
 
     __MAPPING_ROUND_RANGE(addr, length);
@@ -163,10 +158,8 @@ void mapping_msync(void* addr, Size length, Flags8 flags) {
                 if (seeked < file->vnode->size) {
                     Size n = algorithms_umin64(file->vnode->size - absoluteOffset, PAGE_SIZE);
                     fs_fileWrite(file, frameRead, n);
-                    ERROR_GOTO_IF_ERROR(0);
                 }
 
-                ERROR_GOTO_IF_ERROR(0);
                 currentPointer += PAGE_SIZE;    //TODO: Maybe not step by PAGE_SIZE
             }
 
@@ -176,7 +169,6 @@ void mapping_msync(void* addr, Size length, Flags8 flags) {
         currentRegion = virtualMemorySpace_getNextRegion(vms, currentRegion);
         currentPointer = currentRegion->info.range.begin;
     }
-
+error_out:
     return;
-    ERROR_FINAL_BEGIN(0);
 }

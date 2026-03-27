@@ -489,7 +489,7 @@ static inline __attribute__((always_inline)) void writeEFlags64(Uint64 eflags) {
     popfq();
 }
 
-static inline __attribute__((always_inline)) Uint64 rdtsc(void) {
+static inline __attribute__((always_inline)) Uint64 rdtsc() {
 	Uint32 eax, edx;
     asm volatile (
         "rdtsc"

@@ -11,7 +11,7 @@
 #include<structs/vector.h>
 #include<system/memoryLayout.h>
 #include<system/pageTable.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionSharedFrames* frames, Uintptr vBase, Size frameN);
 
@@ -176,10 +176,7 @@ void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src) {
     for (RBtreeNode* node = RBtree_getFirst(&src->regionTree); node != NULL; node = RBtree_getSuccessor(&src->regionTree, node)) {
         VirtualMemoryRegion* currentRegion = HOST_POINTER(node, VirtualMemoryRegion, treeNode);
         VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
-        if (newRegion == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(newRegion == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
         __virtualMemoryRegion_initStruct(des, newRegion, &currentRegion->info, currentRegion->sharedFrames);
         
@@ -190,15 +187,13 @@ void virtualMemorySpace_copy(VirtualMemorySpace* des, VirtualMemorySpace* src) {
 
         __virtualMemorySpace_addRegion(des, newRegion);
     }
-
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return;
 }
 
 VirtualMemoryRegion* virtualMemorySpace_draw(VirtualMemorySpace* vms, VirtualMemoryRegionInfo* info) {
-    if (!__virtualMemoryRegionInfo_isValid(info)) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF(!__virtualMemoryRegionInfo_isValid(info), ERROR_INVALID_ARGUMENT, error_out);
 
     Range* range = &info->range;
     DEBUG_ASSERT_SILENT(range->length % PAGE_SIZE == 0 && range->length > 0);
@@ -206,16 +201,14 @@ VirtualMemoryRegion* virtualMemorySpace_draw(VirtualMemorySpace* vms, VirtualMem
 
     Size mergeLength = 0;
     VirtualMemoryRegion* beginRegion = __virtualMemorySpace_splitToDraw(vms, info, &mergeLength);
-    ERROR_GOTO_IF_ERROR(0);
 
     __virtualMemoryRegion_clearFields(beginRegion);
     __virtualMemoryRegion_setFields(beginRegion, info, NULL);
-    ERROR_GOTO_IF_ERROR(0);
 
     VirtualMemoryRegion* ret = __virtualMemorySpace_mergeRange(vms, beginRegion, mergeLength);
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -272,15 +265,10 @@ void virtualMemorySpace_erase(VirtualMemorySpace* vms, void* begin, Size length)
     
     Size mergeLength = 0;
     VirtualMemoryRegion* beginRegion = __virtualMemorySpace_splitToDraw(vms, &info, &mergeLength);
-    ERROR_GOTO_IF_ERROR(0);
 
     __virtualMemoryRegion_clearFields(beginRegion);
 
     __virtualMemorySpace_mergeRange(vms, beginRegion, mergeLength);
-    ERROR_GOTO_IF_ERROR(0);
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 VirtualMemoryRegion* virtualMemorySpace_getPrevRegion(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr) {
@@ -303,9 +291,6 @@ static void __virtualMemoryRegionSharedFrames_initStruct(VirtualMemoryRegionShar
     for (int i = 0; i < dividedN; ++i) {
         vector_push(&frames->frames, INVALID_INDEX64);
     }
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 static void __virtualMemoryRegionSharedFrames_derefer(VirtualMemoryRegionSharedFrames* frames) {
@@ -319,9 +304,6 @@ static void __virtualMemoryRegionSharedFrames_derefer(VirtualMemoryRegionSharedF
 static void __virtualMemoryRegion_initStruct(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr, VirtualMemoryRegionInfo* info, VirtualMemoryRegionSharedFrames* sharedFrames) {
     RBtreeNode_initStruct(&vms->regionTree, &vmr->treeNode);
     __virtualMemoryRegion_setFields(vmr, info, sharedFrames);
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, VirtualMemoryRegionInfo* info, VirtualMemoryRegionSharedFrames* sharedFrames) {
@@ -344,12 +326,8 @@ static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, VirtualMem
     if (TEST_FLAGS(info->flags, VIRTUAL_MEMORY_REGION_INFO_FLAGS_SHARED)) {
         if (sharedFrames == NULL) {
             sharedFrames = mm_allocate(sizeof(VirtualMemoryRegionSharedFrames));
-            if (sharedFrames == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
+            ERROR_THROW_NEW_IF(sharedFrames == NULL, ERROR_OUT_OF_MEMORY, error_out);
             __virtualMemoryRegionSharedFrames_initStruct(sharedFrames, info->range.begin, info->range.length / PAGE_SIZE);
-            ERROR_GOTO_IF_ERROR(0);
         } else {
             __virtualMemoryRegionSharedFrames_refer(sharedFrames);
         }
@@ -357,9 +335,9 @@ static void __virtualMemoryRegion_setFields(VirtualMemoryRegion* vmr, VirtualMem
     } else {
         vmr->sharedFrames = NULL;
     }
-
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return;
 }
 
 static void __virtualMemoryRegion_clearFields(VirtualMemoryRegion* vmr) {
@@ -398,22 +376,17 @@ static int __virtualMemoryRegion_searchFunc(RBtreeNode* node, Object key) {
 
 static VirtualMemoryRegion* __virtualMemorySpace_createRegion(VirtualMemorySpace* vms, VirtualMemoryRegionInfo* info, VirtualMemoryRegionSharedFrames* sharedFrames) {
     VirtualMemoryRegion* newRegion = mm_allocate(sizeof(VirtualMemoryRegion));
-    if (newRegion == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(newRegion == NULL, ERROR_OUT_OF_MEMORY, error_outFree);
 
     __virtualMemoryRegion_initStruct(vms, newRegion, info, sharedFrames);
-    ERROR_GOTO_IF_ERROR(0);
 
     if (!__virtualMemorySpace_addRegion(vms, newRegion)) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 1);
+        mm_free(newRegion);
+        ERROR_THROW_NEW(ERROR_ALREADY_EXISTS, error_outFree);
     }
 
     return newRegion;
-    ERROR_FINAL_BEGIN(1);
-    mm_free(newRegion);
-    ERROR_FINAL_BEGIN(0);
+error_outFree:
     return NULL;
 }
 
@@ -443,12 +416,8 @@ static VirtualMemoryRegion* __virtualMemorySpace_split(VirtualMemorySpace* vms, 
     }
 
     VirtualMemoryRegion* ret = __virtualMemorySpace_createRegion(vms, &newRegionInfo, vmr->sharedFrames);
-    ERROR_GOTO_IF_ERROR(0);
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
-    range->length = frontLength + backLength;
-    return NULL;
 }
 
 static void __virtualMemorySpace_merge(VirtualMemorySpace* vms, VirtualMemoryRegion* vmr1, VirtualMemoryRegion* vmr2) {

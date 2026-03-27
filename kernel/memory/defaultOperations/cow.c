@@ -11,7 +11,7 @@
 #include<multitask/context.h>
 #include<structs/refCounter.h>
 #include<system/pageTable.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<debug.h>
 
 static void __defaultMemoryOperations_cow_copyEntry(PagingLevel level, ExtendedPageTable* srcExtendedTable, ExtendedPageTable* desExtendedTable, Index16 index);
@@ -33,10 +33,7 @@ static void __defaultMemoryOperations_cow_copyEntry(PagingLevel level, ExtendedP
     if (PAGING_IS_LEAF(level, *srcEntry)) {
         void* mapToFrame = pageTable_getNextLevelPage(level, *srcEntry);
         FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-        if (unit == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
 
         if (REF_COUNTER_CHECK(unit->refCounter, 0)) {   //TODO: It should be initialized to 1 at frmae metadata initialization
             REF_COUNTER_INIT(unit->refCounter, 1);
@@ -48,16 +45,13 @@ static void __defaultMemoryOperations_cow_copyEntry(PagingLevel level, ExtendedP
         *desExtraEntry = *srcExtraEntry;
     } else {
         void* newTableFrames = defaultMemoryOperations_genericCopyTableEntry(level, srcEntry, __defaultMemoryOperations_cow_copyEntry);
-        if (newTableFrames == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(newTableFrames == NULL, ERROR_OUT_OF_MEMORY, error_out);
         *desEntry = BUILD_ENTRY_PAGING_TABLE(newTableFrames, FLAGS_FROM_PAGING_ENTRY(*srcEntry));
         *desExtraEntry = *srcExtraEntry;
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_cow_faultHandler(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, HandlerStackFrame* handlerStackFrame, Registers* regs) {
@@ -68,10 +62,7 @@ static void __defaultMemoryOperations_cow_faultHandler(PagingLevel level, Extend
     
     void* mapToFrame = pageTable_getNextLevelPage(level, *entry);
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(mapToFrame));
-    if (unit == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
 
     if (!REF_COUNTER_CHECK(unit->refCounter, 1)) {
         Size span = PAGING_SPAN(PAGING_NEXT_LEVEL(level));
@@ -80,10 +71,7 @@ static void __defaultMemoryOperations_cow_faultHandler(PagingLevel level, Extend
 
         REF_COUNTER_DEREFER(unit->refCounter);
         FrameMetadataUnit* copyToUnit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(copyTo));
-        if (copyToUnit == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(copyToUnit == NULL, ERROR_INVALID_STATE, error_out);
         REF_COUNTER_INIT(copyToUnit->refCounter, 1);
         
         *entry = BUILD_ENTRY_PS(PAGING_NEXT_LEVEL(level), copyTo, FLAGS_FROM_PAGING_ENTRY(*entry));
@@ -92,7 +80,7 @@ static void __defaultMemoryOperations_cow_faultHandler(PagingLevel level, Extend
     SET_FLAG_BACK(*entry, PAGING_ENTRY_FLAG_RW);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __defaultMemoryOperations_cow_releaseEntry(PagingLevel level, ExtendedPageTable* extendedTable, Index16 index, void* v, FrameReaper* reaper) {
@@ -107,10 +95,7 @@ static void __defaultMemoryOperations_cow_releaseEntry(PagingLevel level, Extend
             frameToRelease = mapToFrame;
             frameReaper_collect(reaper, mapToFrame, PAGING_SPAN(PAGING_NEXT_LEVEL(level)) / PAGE_SIZE);
         } else {
-            if (unit == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
+            ERROR_THROW_NEW_IF(unit == NULL, ERROR_INVALID_STATE, error_out);
             REF_COUNTER_DEREFER(unit->refCounter);
         }
     } else {
@@ -120,5 +105,5 @@ static void __defaultMemoryOperations_cow_releaseEntry(PagingLevel level, Extend
     extendedPageTable_clearEntry(extendedTable, index);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }

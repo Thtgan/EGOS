@@ -14,7 +14,7 @@
 #include<system/memoryMap.h>
 #include<system/pageTable.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<kernel.h>
 
 /**
@@ -30,7 +30,7 @@ MemoryManager* mm;
 
 void mm_init() {
     if (_memoryManager.initialized) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
+        ERROR_THROW_NEW(ERROR_INVALID_STATE, error_out);
     }
 
     mm = &_memoryManager;
@@ -40,19 +40,14 @@ void mm_init() {
 
     frameMetadata_initStruct(&mm->frameMetadata);
     FrameMetadataHeader* header = frameMetadata_addFrames(&mm->frameMetadata, (void*)(mm->accessibleBegin * PAGE_SIZE), mm->accessibleEnd - mm->accessibleBegin);
-    if (header == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(header == NULL, ERROR_OUT_OF_RESOURCES, error_out);
 
     buddyFrameAllocator_initStruct(&_buddyFrameAllocator, &mm->frameMetadata);
     mm->frameAllocator = &_buddyFrameAllocator.allocator;
 
     frameAllocator_addFrames(mm->frameAllocator, frameMetadataHeader_getBase(header), header->frameNum);
-    ERROR_GOTO_IF_ERROR(0);
 
     paging_init();
-    ERROR_GOTO_IF_ERROR(0);
 
     kernelHeapAllocator_initStruct(&_kernelHeapAllocator, mm->frameAllocator);
     
@@ -60,18 +55,16 @@ void mm_init() {
 
     mm->initialized = true;
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return;
 }
 
 void* mm_allocateFrames(Size n) {
     void* ret = frameAllocator_allocateFrames(mm->frameAllocator, n);
-    if (ret == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
-
+    ERROR_THROW_NEW_IF(ret == NULL, ERROR_OUT_OF_MEMORY, error_out);
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return NULL;
 }
 
 void mm_freeFrames(void* p, Size n) {   //TODO: Get allocator from metadata?
@@ -84,10 +77,7 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
     }
 
     void* frames = frameAllocator_allocateFrames(allocator, n);
-    if (frames == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(frames == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     void* ret = paging_convertAddressP2V(frames, MEMORY_LAYOUT_COLORFUL_SPACE_BEGIN);
     Flags64 prot = PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_XD;
@@ -95,17 +85,13 @@ void* mm_allocatePagesDetailed(Size n, ExtendedPageTableRoot* mapTo, FrameAlloca
         SET_FLAG_BACK(prot, PAGING_ENTRY_FLAG_US);
     }
     extendedPageTableRoot_draw(mapTo, ret, frames, n, operationsID, prot, EMPTY_FLAGS);
-    ERROR_GOTO_IF_ERROR(1);
 
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames));
     unit->vRegionLength = n;
     
     return ret;
-
-    ERROR_FINAL_BEGIN(1);
-    frameAllocator_freeFrames(allocator, frames, n);
-    
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return NULL;
 }
 
 void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* allocator, Index8 operationsID, bool isUser) {
@@ -115,28 +101,20 @@ void* mm_allocateHeapPages(Size n, ExtendedPageTableRoot* mapTo, HeapAllocator* 
 
     FrameAllocator* frameAllocator = allocator->frameAllocator;
     void* frames = frameAllocator_allocateFrames(frameAllocator, n);
-    if (frames == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(frames == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     void* ret = isUser ? PAGING_CONVERT_COLORFUL_SPACE_P2V(frames) : PAGING_CONVERT_KERNEL_MEMORY_P2V(frames);
     frameMetadata_assignToHeapAllocator(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(frames), n, allocator);
-    ERROR_GOTO_IF_ERROR(1);
 
     if (isUser) {   //TODO: Bad codes
         Flags64 prot = PAGING_ENTRY_FLAG_RW | PAGING_ENTRY_FLAG_XD;
         SET_FLAG_BACK(prot, PAGING_ENTRY_FLAG_US);
         extendedPageTableRoot_draw(mapTo, ret, frames, n, operationsID, prot, EMPTY_FLAGS);
     }
-    ERROR_GOTO_IF_ERROR(1);
     
     return ret;
-
-    ERROR_FINAL_BEGIN(1);
-    frameAllocator_freeFrames(frameAllocator, frames, n);
-    
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    return NULL;
 }
 
 void* mm_allocatePages(Size n) {
@@ -147,15 +125,11 @@ void mm_freePagesDetailed(void* p, ExtendedPageTableRoot* mapTo) {
     DEBUG_ASSERT_SILENT(PAGING_IS_PAGE_ALIGNED(p));
     void* firstFrame = paging_fastTranslate(mapTo, p);
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
-    ERROR_CHECKPOINT();
 
     Size n = unit->vRegionLength;
     unit->vRegionLength = 0;    //TODO: Ugly solution for free frame collection
     extendedPageTableRoot_erase(mapTo, p, n);
     frameReaper_reap(&mapTo->reaper);
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 void mm_freeHeapPages(void* p, Size n, ExtendedPageTableRoot* mapTo) {
@@ -164,9 +138,6 @@ void mm_freeHeapPages(void* p, Size n, ExtendedPageTableRoot* mapTo) {
 
     extendedPageTableRoot_erase(mapTo, p, n);
     frameReaper_reap(&mapTo->reaper);
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 void mm_freePages(void* p) {
@@ -177,15 +148,12 @@ void* mm_allocateDetailed(Size n, HeapAllocator* heapAllocator, Index8 operation
     void* ret = NULL;
     if (heapAllocator == NULL || heapAllocator_getActualSize(heapAllocator, n) > HEAP_ALLOCATOR_MAXIMUM_ACTUAL_SIZE) {
         ret = mm_allocatePagesDetailed(DIVIDE_ROUND_UP(n, PAGE_SIZE), mm->extendedTable, mm->frameAllocator, operationsID, false);
-        ERROR_GOTO_IF_ERROR(0);
     } else {
         DEBUG_ASSERT_SILENT(heapAllocator != NULL);
         ret = heapAllocator_allocate(heapAllocator, n);
     }
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
-    return 0;
 }
 
 void* mm_allocate(Size n) {
@@ -197,7 +165,6 @@ void mm_free(void* p) {
 
     void* firstFrame = paging_fastTranslate(mm->extendedTable, p);
     FrameMetadataUnit* unit = frameMetadata_getUnit(&mm->frameMetadata, FRAME_METADATA_FRAME_TO_INDEX(firstFrame));
-    ERROR_CHECKPOINT(); //TODO: If there is an error, system fails here
 
     DEBUG_ASSERT_SILENT(unit->belongToAllocator != NULL);
     if (TEST_FLAGS(unit->flags, FRAME_METADATA_UNIT_FLAGS_USED_BY_HEAP_ALLOCATOR)) {

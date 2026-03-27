@@ -18,7 +18,7 @@
 #include<system/pageTable.h>
 #include<algorithms.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page faults for somehow
     void* v = (void*)readRegister_CR2_64();
@@ -41,20 +41,14 @@ ISR_FUNC_HEADER(__pageFaultHandler) { //TODO: This handler triggers double page 
         }
 
         extendedPageTableRoot_pageFaultHandler(mm->extendedTable, level, extendedPageTable, index, v, handlerStackFrame, registers);
-        bool fixed = true;
-        ERROR_CHECKPOINT({
+        if (error_pending()) {
             print_printf("Page handler failed at level %u\n", level);
-            fixed = false;
-        });
-
-        if (fixed) {
-            PAGING_FLUSH_TLB();
-            return;
+            break;
         }
 
-        break;
+        PAGING_FLUSH_TLB();
+        return;
     }
-    ERROR_CLEAR();
 
     debug_printf("CURRENT STACK: %#018llX\n", readRegister_RSP_64());
     debug_printf("FRAME: %#018llX\n", handlerStackFrame);
@@ -69,7 +63,6 @@ static ExtendedPageTableRoot _extendedPageTableRoot;
 
 void paging_init() {
     extraPageTableContext_initStruct(&mm->extraPageTableContext);
-    ERROR_GOTO_IF_ERROR(0);
 
     _extendedPageTableRoot.context = &mm->extraPageTableContext;
     frameReaper_initStruct(&_extendedPageTableRoot.reaper);
@@ -82,17 +75,15 @@ void paging_init() {
         PAGING_ENTRY_FLAG_RW,
         EMPTY_FLAGS
     );
-    ERROR_GOTO_IF_ERROR(0);
 
     extendedPageTableRoot_draw(
         &_extendedPageTableRoot,
-        (void*)MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE, 
+        (void*)MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN + PAGE_SIZE, (void*)PAGE_SIZE,
         algorithms_umin64(DIVIDE_ROUND_UP(MEMORY_LAYOUT_KERNEL_MEMORY_END - MEMORY_LAYOUT_KERNEL_MEMORY_BEGIN, PAGE_SIZE), mm->accessibleEnd) - 1,
         DEFAULT_MEMORY_OPERATIONS_TYPE_SHARE,
         PAGING_ENTRY_FLAG_RW,
         EMPTY_FLAGS
     );
-    ERROR_GOTO_IF_ERROR(0);
 
     mm_switchPageTable(&_extendedPageTableRoot);
 
@@ -104,9 +95,6 @@ void paging_init() {
     wrmsr(MSR_ADDR_EFER, edx, eax);
 
     writeRegister_CR0_64(readRegister_CR0_64() | CR0_WP); //Enable write protect
-
-    return;
-    ERROR_FINAL_BEGIN(0);
 }
 
 void* paging_fastTranslate(ExtendedPageTableRoot* pageTable, void* v) {
