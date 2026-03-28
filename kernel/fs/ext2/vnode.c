@@ -9,7 +9,7 @@
 #include<memory/memory.h>
 #include<memory/mm.h>
 #include<system/pageTable.h>
-#include<error.h>
+#include<errorPosix.h>
 
 typedef struct __EXT2vnodeIterateFuncIO __EXT2vnodeIterateFuncIO;
 typedef struct __EXT2directoryEntry __EXT2directoryEntry;
@@ -279,10 +279,7 @@ static Index64 __ext2_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entr
     Size bufferSize = 2 * blockSize;
     Uint8* buffer = NULL;
     buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
-    if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(buffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     Size nameLength = cstring_strlen(entry->name);
     Size requiredSpaceLength = ALIGN_UP(sizeof(__EXT2directoryEntry) + nameLength, 4);
@@ -297,7 +294,7 @@ static Index64 __ext2_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entr
 
     for (Index32 i = 0; i < blockNum; ++i) {
         vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         while (!found) {    //TODO: Not covering the case of first entry deleted
             __EXT2directoryEntry* currentEntry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
@@ -363,12 +360,11 @@ static Index64 __ext2_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entr
 
     mm_freePages(buffer);
     return (Index64)newInodeID;
-
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     if (buffer != NULL) {
         mm_freePages(buffer);
     }
+    return INVALID_INDEX64;
 }
 
 static void __ext2_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirectory) {  //TODO: NOT TESTED YET
@@ -394,15 +390,12 @@ static void __ext2_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, b
     Size bufferSize = 2 * blockSize;
     Uint8* buffer = NULL;
     buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
-    if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(buffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     bool found = false;
     for (Index32 i = 0; i < blockNum; ++i) {
         vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         while (!found) {    //TODO: Not covering the case of first entry deleted
             __EXT2directoryEntry* entry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
@@ -443,9 +436,7 @@ static void __ext2_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, b
 
     mm_freePages(buffer);
     return;
-
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     if (buffer != NULL) {
         mm_freePages(buffer);
     }
@@ -475,10 +466,7 @@ static void __ext2_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode
     Uint8* buffer = NULL;
     void* movedEntry = NULL;
     buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
-    if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(buffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     Size nameLength = cstring_strlen(newName);
     Size requiredSpaceLength = ALIGN_UP(sizeof(__EXT2directoryEntry) + nameLength, 4);
@@ -488,7 +476,7 @@ static void __ext2_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode
     bool found = false;
     for (Index32 i = 0; i < blockNum; ++i) {
         vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         while (!found) {    //TODO: Not covering the case of first entry deleted
             __EXT2directoryEntry* currentEntry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
@@ -543,7 +531,7 @@ static void __ext2_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode
 
     for (Index32 i = 0; i < blockNum; ++i) {
         vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         while (!found) {    //TODO: Not covering the case of first entry deleted
             __EXT2directoryEntry* currentEntry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
@@ -602,9 +590,7 @@ static void __ext2_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode
     mm_free(movedEntry);
     mm_freePages(buffer);
     return;
-
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     if (movedEntry != NULL) {
         mm_free(movedEntry);
     }
@@ -635,16 +621,13 @@ static void __ext2_vNode_readDirectoryEntries(vNode* vnode) {
     Size bufferSize = 2 * blockSize;
     Uint8* buffer = NULL;
     buffer = mm_allocatePages(DIVIDE_ROUND_UP(bufferSize, PAGE_SIZE));
-    if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(buffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     DEBUG_ASSERT_SILENT(dirNode->dirPart.childrenNum == FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM);
     dirNode->dirPart.childrenNum = 0;
     for (Index32 i = 0; i < blockNum; ++i) {
         vNode_rawReadData(vnode, i * blockSize, &buffer[blockSize], blockSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         while (true) {  //TODO: Not covering the case of first entry deleted
             __EXT2directoryEntry* entry = (__EXT2directoryEntry*)(buffer + indexInBuffer);
@@ -669,7 +652,7 @@ static void __ext2_vNode_readDirectoryEntries(vNode* vnode) {
             Index32 inodeDeviceBlockOffset = ext2SuperBlock_blockOffsetFS2device(superblock, granularity, inodeBlockIndex, inodeBlockOffset);
 
             blockDevice_readBlocks(ext2fscore->fscore.blockDevice, inodeDeviceBlockIndex, deviceBlockBuffer, 1);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
 
             EXT2inode* inode = (EXT2inode*)(deviceBlockBuffer + inodeDeviceBlockOffset);
 
@@ -699,9 +682,7 @@ static void __ext2_vNode_readDirectoryEntries(vNode* vnode) {
 
     mm_freePages(buffer);
     return;
-
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     if (buffer != NULL) {
         mm_freePages(buffer);
     }

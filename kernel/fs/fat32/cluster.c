@@ -4,7 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<debug.h>
-#include<error.h>
+#include<errorPosix.h>
 
 //TODO: These codes seems wrong
 FAT32ClusterType fat32_getClusterType(FAT32fscore* fscore, Index32 physicalClusterIndex) {
@@ -37,14 +37,12 @@ Index32 fat32_getCluster(FAT32fscore* fscore, Index32 firstCluster, Index32 inde
     Index32* FAT = fscore->FAT;
     Index32 currentCluster = firstCluster;
     for (int i = 0; i < index; ++i) {
-        if (currentCluster == FAT32_CLSUTER_END_OF_CHAIN) {
-            ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-        }
+        ERROR_THROW_NEW_IF(currentCluster == FAT32_CLSUTER_END_OF_CHAIN, ERROR_INVALID_ARGUMENT, error_out);
         currentCluster = PTR_TO_VALUE(32, FAT + currentCluster);
     }
 
     return currentCluster;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return INVALID_INDEX32;
 }
 
@@ -88,9 +86,7 @@ Index32 fat32_allocateClusterChain(FAT32fscore* fscore, Size length) {
     Index32* FAT = fscore->FAT;
     Index32 currentCluster = fscore->firstFreeCluster, last = INVALID_INDEX32;
     for (int i = 0; i < length; ++i) {
-        if (currentCluster == FAT32_CLSUTER_END_OF_CHAIN) {
-            ERROR_THROW(ERROR_ID_OUT_OF_MEMORY, 0);
-        }
+        ERROR_THROW_NEW_IF(currentCluster == FAT32_CLSUTER_END_OF_CHAIN, ERROR_OUT_OF_MEMORY, error_out);
 
         last = currentCluster;
         currentCluster = PTR_TO_VALUE(32, FAT + currentCluster);
@@ -101,7 +97,7 @@ Index32 fat32_allocateClusterChain(FAT32fscore* fscore, Size length) {
     PTR_TO_VALUE(32, FAT + last) = FAT32_CLSUTER_END_OF_CHAIN;
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return INVALID_INDEX32;
 }
 

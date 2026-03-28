@@ -4,7 +4,7 @@
 #include<memory/memory.h>
 #include<structs/string.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static bool __path_isPathValid(String* path);
 
@@ -31,39 +31,37 @@ void path_join(String* des, String* base, String* path) {
         return;
     } else if (base->length == 0) {
         string_copy(des, path);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         return;
     } else if (path->length == 0) {
         string_copy(des, base);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         return;
     }
 
     if (des != base) {
         string_copy(des, base);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     if (des->data[des->length - 1] == PATH_SEPERATOR && path->data[0] == PATH_SEPERATOR) {
         string_slice(des, des, 0, des->length - 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     } else if (des->data[des->length - 1] != PATH_SEPERATOR && path->data[0] != PATH_SEPERATOR) {
         string_append(des, des, PATH_SEPERATOR);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
     
     string_concat(des, des, path);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Index64 path_walk(String* path, Index64 beginIndex, String* walkedOut) {
     DEBUG_ASSERT_SILENT(string_isAvailable(path));
-    if (beginIndex >= path->length) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(beginIndex >= path->length, ERROR_INVALID_ARGUMENT, error_out);
 
     Index64 index1 = beginIndex;
     if (path->data[index1] == PATH_SEPERATOR) {
@@ -75,17 +73,16 @@ Index64 path_walk(String* path, Index64 beginIndex, String* walkedOut) {
     for (; index2 < path->length && path->data[index2] != PATH_SEPERATOR; ++index2);
 
     string_slice(walkedOut, path, index1, index2);
+    CHECK_ERROR(error_out);
     
     return index2 == path->length ? INVALID_INDEX64 : index2;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return INVALID_INDEX64;
 }
 
 void path_normalize(String* path) {
     DEBUG_ASSERT_SILENT(string_isAvailable(path) && path->length > 0 && path->data[0] == PATH_SEPERATOR);
-    if (!__path_isPathValid(path)) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0); //TODO: Invalid format error?
-    }
+    ERROR_THROW_NEW_IF(!__path_isPathValid(path), ERROR_INVALID_ARGUMENT, error_out); //TODO: Invalid format error?
 
     Index64 index1 = 0, index2 = 0;
 
@@ -109,7 +106,7 @@ void path_normalize(String* path) {
             } else if (partLength == 2 && path->data[index1] == '.') {
                 situation = __PATH_NORMALIZE_SITUATION_LAST_DIRECTORY;
             } else {
-                ERROR_THROW(ERROR_ID_UNKNOWN, 0);
+                ERROR_THROW_NEW(ERROR_INVALID_ARGUMENT, error_out);
             }
         } else {
             situation = __PATH_NORMALIZE_SITUATION_REGULAR;
@@ -133,7 +130,7 @@ void path_normalize(String* path) {
                 break;
             }
             default: {
-                ERROR_THROW(ERROR_ID_UNKNOWN, 0);
+                ERROR_THROW_NEW(ERROR_INVALID_ARGUMENT, error_out);
             }
         }
 
@@ -147,7 +144,7 @@ void path_normalize(String* path) {
     path->length = index2;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void path_basename(String* path, String* basenameOut) {
@@ -165,10 +162,10 @@ void path_basename(String* path, String* basenameOut) {
     }
 
     string_slice(basenameOut, path, begin + 1, path->length);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void path_dirname(String* path, String* dirnameOut) {
@@ -186,10 +183,10 @@ void path_dirname(String* path, String* dirnameOut) {
     }
 
     string_slice(dirnameOut, path, 0, end);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static bool __path_isPathValid(String* path) {

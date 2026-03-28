@@ -9,7 +9,7 @@
 #include<algorithms.h>
 #include<cstring.h>
 #include<debug.h>
-#include<error.h>
+#include<errorPosix.h>
 
 static void __fat32_directoryEntry_parseLongName(FAT32LongNameEntry* entries, Size longNameEntryNum, String* nameOut);
 
@@ -33,28 +33,24 @@ void fat32_directoryEntry_parse(FAT32UnknownTypeEntry* entriesBegin, String* nam
     if (length > sizeof(FAT32DirectoryEntry)) {
         Size longNameEntryNum = (length - sizeof(FAT32DirectoryEntry)) / sizeof(FAT32LongNameEntry);
         __fat32_directoryEntry_parseLongName((FAT32LongNameEntry*)entriesBegin, longNameEntryNum, nameOut);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     } else {
         __fat32_directoryEntry_parseShortName((FAT32DirectoryEntry*)entriesBegin, nameOut);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     __fat32_directoryEntry_parseEntry((FAT32DirectoryEntry*)((void*)entriesBegin + length - sizeof(FAT32DirectoryEntry)), attributeOut, fsnodeAttributeOut, firstClusterOut, sizeOut);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, ConstCstring name, fsEntryType type, FSnodeAttribute* attribute, Index32 firstCluster, Size size) {
     Size nameLength = cstring_strlen(name);
-    if (nameLength > FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF(nameLength > FAT32_DIRECTORY_ENTRY_NAME_MAXIMUM_LENGTH, ERROR_INVALID_ARGUMENT, error_out);
 
     for (int i = 0; i < nameLength; ++i) {
-        if (name[i] == '+' || name[i] == ',' || name[i] == ';' || name[i] == '=' || name[i] == '[' || name[i] == ']') {
-            ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-        }
+        ERROR_THROW_NEW_IF(name[i] == '+' || name[i] == ',' || name[i] == ';' || name[i] == '=' || name[i] == '[' || name[i] == ']', ERROR_INVALID_ARGUMENT, error_out);
     }
 
     Uint8 longNameEntryNum = DIVIDE_ROUND_UP(nameLength + 1, FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN);
@@ -139,7 +135,7 @@ Size fat32_directoryEntry_initEntries(FAT32UnknownTypeEntry* entriesBegin, Const
     }
 
     return longNameEntryNum * sizeof(FAT32LongNameEntry) + sizeof(FAT32DirectoryEntry);
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return 0;
 }
 
@@ -166,17 +162,15 @@ void __fat32_directoryEntry_parseLongName(FAT32LongNameEntry* entries, Size long
             namePartBuffer[namePartLength++] = (char)longNameEntry->doubleBytes3[i];
         }
 
-        if (namePartLength == FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN && notEnd) {
-            ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-        }
+        ERROR_THROW_NEW_IF(namePartLength == FAT32_DIRECTORY_ENTRY_LONG_NAME_LEN && notEnd, ERROR_INVALID_STATE, error_out);
 
         namePartBuffer[namePartLength] = '\0';
         string_cconcat(nameOut, nameOut, namePartBuffer);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void __fat32_directoryEntry_parseShortName(FAT32DirectoryEntry* entry, String* nameOut) {

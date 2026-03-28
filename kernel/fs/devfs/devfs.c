@@ -13,7 +13,7 @@
 #include<structs/hashTable.h>
 #include<structs/refCounter.h>
 #include<structs/vector.h>
-#include<error.h>
+#include<errorPosix.h>
 
 static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node);
 
@@ -61,17 +61,12 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
     DEBUG_ASSERT_SILENT(blockDevice == NULL);
     
     void* batchAllocated = NULL;
-    if (_devfs_opened) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(_devfs_opened, ERROR_INVALID_STATE, error_out);
 
     batchAllocated = mm_allocate(__DEVFS_BATCH_ALLOCATE_SIZE);
-    if (batchAllocated == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(batchAllocated == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
-    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
+    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated,
         // (Devfscore, devfscore, 1),
         // (SinglyLinkedList, openedVnodeChains, __DEVFS_FSCORE_HASH_BUCKET)
         (Devfscore, devfscore, 1)
@@ -119,15 +114,14 @@ void devfs_open(FS* fs, BlockDevice* blockDevice) {
                 .pointsTo = device->id
             };
             vNode_addDirectoryEntry(rootVnode, &newEntry, &attribute);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
         }
     }
     fscore_releaseVnode(rootVnode);
 
     _devfs_opened = true;
-    
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (batchAllocated != NULL) {
         mm_free(batchAllocated);
     }
@@ -167,10 +161,7 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     DevfsVnode* devfsVnode = NULL;
 
     devfsVnode = mm_allocate(sizeof(DevfsVnode));
-    if (devfsVnode == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(devfsVnode == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     Devfscore* devfscore = HOST_POINTER(fscore, Devfscore, fscore);
     DirectoryEntry* nodeEntry = &node->entry;
@@ -203,11 +194,10 @@ static vNode* __devfs_fscore_openVnode(FScore* fscore, fsNode* node) {
     DEBUG_ASSERT_SILENT(vnode->size <= vnode->tokenSpaceSize);
 
     return vnode;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (devfsVnode != NULL) {
         mm_free(devfsVnode);
     }
-
     return NULL;
 }
 
@@ -224,11 +214,11 @@ static void __devfs_fscore_sync(FScore* fscore) {
 
 static fsEntry* __devfs_fscore_openFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
     fsEntry* ret = fscore_genericOpenFSentry(fscore, vnode, flags);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     ret->operations = &_devfs_fsEntryOperations;
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }

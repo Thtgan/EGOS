@@ -9,7 +9,7 @@
 #include<memory/memory.h>
 #include<structs/refCounter.h>
 #include<algorithms.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node);
 
@@ -110,12 +110,12 @@ bool ext2_checkType(BlockDevice* blockDevice) {
     Size superBlockN = DIVIDE_ROUND_UP(sizeof(EXT2SuperBlock), deviceBlockSize);
 
     blockDevice_readBlocks(blockDevice, superBlockIndex, (void*)superBlockBuffer, superBlockN);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     EXT2SuperBlock* superBlock = (EXT2SuperBlock*)superBlockBuffer;
     bool ret = superBlock->signature == EXT2_SUPERBLOCK_IN_STORAGE_SIGNATURE && (EXT2_SUPERBLOCK_IN_STORAGE_GET_BLOCK_SIZE(superBlock->blockSizeShift) % deviceBlockSize) == 0;
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return false;
 }
 
@@ -132,12 +132,9 @@ void ext2_open(FS* fs, BlockDevice* blockDevice) {
     Uint8 superBlockBuffer[algorithms_umax64(deviceBlockSize, sizeof(EXT2SuperBlock))];
 
     batchAllocated = mm_allocate(__FS_EXT2_BATCH_ALLOCATE_SIZE);
-    if (batchAllocated == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(batchAllocated == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
-    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
+    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated,
         (EXT2fscore, ext2fscore, 1),
         (EXT2SuperBlock, ext2SuperBlock, 1)
         // (EXT2SuperBlock, ext2SuperBlock, 1),
@@ -147,7 +144,7 @@ void ext2_open(FS* fs, BlockDevice* blockDevice) {
     Index64 superBlockIndex = __EXT2_SUPERBLOCK_OFFSET / deviceBlockSize;
     Size superBlockN = DIVIDE_ROUND_UP(sizeof(EXT2SuperBlock), deviceBlockSize);
     blockDevice_readBlocks(blockDevice, superBlockIndex, (void*)superBlockBuffer, superBlockN);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     memory_memcpy(ext2SuperBlock, superBlockBuffer, sizeof(EXT2SuperBlock));
     ext2fscore->superBlock = ext2SuperBlock;
 
@@ -161,7 +158,7 @@ void ext2_open(FS* fs, BlockDevice* blockDevice) {
     Size remainingByteN = blockGroupNum * sizeof(EXT2blockGroupDescriptor);
     for (int i = 0; i < blockGroupDeviceBlockNum; ++i) {
         blockDevice_readBlocks(blockDevice, currentDeviceBlockIndex, (void*)deviceBlockBuffer, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         Size copyN = algorithms_umin64(remainingByteN, deviceBlockSize);
         memory_memcpy(currentPointer, deviceBlockBuffer, copyN);
@@ -180,14 +177,14 @@ void ext2_open(FS* fs, BlockDevice* blockDevice) {
     };
 
     fscore_initStruct(&ext2fscore->fscore, &args);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     fs->name    = __ext2_name;
     fs->type    = FS_TYPE_EXT2;
     fs->fscore  = &ext2fscore->fscore;
     
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     
     if (ext2fscore->blockGroupTables) {
         mm_free(ext2fscore->blockGroupTables);
@@ -203,14 +200,14 @@ void ext2_close(FS* fs) {
     EXT2fscore* ext2fscore = HOST_POINTER(fscore, EXT2fscore, fscore);
 
     fscore_rawSync(fscore);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     void* batchAllocated = ext2fscore; //TODO: Ugly code
     memory_memset(batchAllocated, 0, __FS_EXT2_BATCH_ALLOCATE_SIZE);
     mm_free(batchAllocated);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node) {
@@ -239,13 +236,10 @@ static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node) {
 
     Uint8 deviceBlockBuffer[deviceBlockSize];
     blockDevice_readBlocks(fscore->blockDevice, inodeDeviceBlockIndex, deviceBlockBuffer, 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     ext2vnode = mm_allocate(sizeof(EXT2vnode));
-    if (ext2vnode == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(ext2vnode == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     EXT2inode* inode = &ext2vnode->inode;
 
@@ -273,7 +267,7 @@ static vNode* __ext2_fscore_openVnode(FScore* fscore, fsNode* node) {
     vNode_initStruct(vnode, &args);
     
     return vnode;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (ext2vnode != NULL) {
         mm_free(ext2vnode);
     }
@@ -308,26 +302,26 @@ static void __ext2_fscore_closeVnode(FScore* fscore, vNode* vnode) {
 
     Uint8 deviceBlockBuffer[deviceBlockSize];
     blockDevice_readBlocks(fscore->blockDevice, inodeDeviceBlockIndex, deviceBlockBuffer, 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     memory_memcpy(deviceBlockBuffer + inodeDeviceBlockOffset, &ext2vnode->inode, sizeof(EXT2inode));
 
     blockDevice_writeBlocks(fscore->blockDevice, inodeDeviceBlockIndex, deviceBlockBuffer, 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     mm_free(ext2vnode);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static fsEntry* __ext2_fscore_openFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
     fsEntry* ret = fscore_genericOpenFSentry(fscore, vnode, flags);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     ret->operations = &_ext2_fsEntryOperations;
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }

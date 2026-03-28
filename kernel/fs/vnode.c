@@ -12,7 +12,7 @@
 #include<structs/refCounter.h>
 #include<structs/singlyLinkedList.h>
 #include<debug.h>
-#include<error.h>
+#include<errorPosix.h>
 
 void vNode_initStruct(vNode* vnode, vNodeInitArgs* args) {
     vnode->signature        = VNODE_SIGNATURE;
@@ -41,16 +41,15 @@ void vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribut
     spinlock_lock(&vnode->lock);
     
     Index64 pointsTo = vNode_rawAddDirectoryEntry(vnode, entry, attr);  //TODO: Seem fs are not setting vnodeID correctly
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     if (FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum != FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) {
         fsnode_forgetAllDirectoryEntries(node);
     }
     
     spinlock_unlock(&vnode->lock);
-    
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (spinlock_isLocked(&vnode->lock)) {
         spinlock_unlock(&vnode->lock);
     }
@@ -68,12 +67,11 @@ void vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, bool isDirector
     }
 
     vNode_rawRemoveDirectoryEntry(vnode, name, isDirectory);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     spinlock_unlock(&vnode->lock);
-    
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (spinlock_isLocked(&vnode->lock)) {
         spinlock_unlock(&vnode->lock);
     }
@@ -87,19 +85,19 @@ void vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNode* moveTo, Cons
     spinlock_lock(&vnode->lock);
     
     vNode_rawRenameDirectoryEntry(vnode, entry, moveTo, newName);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fsnode_forgetAllDirectoryEntries(node);
     if (moveTo != vnode) {
         fsnode_forgetAllDirectoryEntries(moveTo->fsNode);
         // fsnode_move(entry, moveTo->fsNode, newName);
-        // ERROR_GOTO_IF_ERROR(0);
+        // CHECK_ERROR(error_out);
     }
     
     spinlock_unlock(&vnode->lock);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (spinlock_isLocked(&vnode->lock)) {
         spinlock_unlock(&vnode->lock);
     }

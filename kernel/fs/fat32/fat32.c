@@ -20,7 +20,7 @@
 #include<structs/string.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<error.h>
+#include<errorPosix.h>
 
 static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node);
 
@@ -63,7 +63,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     Uint8 BPBbuffer[algorithms_umax64(POWER_2(device->granularity), sizeof(FAT32BPB))];
 
     blockDevice_readBlocks(blockDevice, 0, (void*)BPBbuffer, 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     FAT32BPB* BPB = (FAT32BPB*)BPBbuffer;
 
@@ -75,7 +75,7 @@ bool fat32_checkType(BlockDevice* blockDevice) {
     bool ret = BPB->bytePerSector == POWER_2(device->granularity) && BPB->signature == __FS_FAT32_BPB_SIGNATURE && memory_memcmp(BPB->systemIdentifier, "FAT32   ", 8) == 0 && clusterNum > __FS_FAT32_MINIMUM_CLUSTER_NUM;
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return false;
 }
 
@@ -86,12 +86,9 @@ bool fat32_checkType(BlockDevice* blockDevice) {
 void fat32_open(FS* fs, BlockDevice* blockDevice) {
     void* batchAllocated = NULL, * buffer = NULL;
     batchAllocated = mm_allocate(__FS_FAT32_BATCH_ALLOCATE_SIZE);
-    if (batchAllocated == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(batchAllocated == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
-    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated, 
+    BATCH_ALLOCATE_DEFINE_PTRS(batchAllocated,
         (FAT32fscore, fat32fscore, 1),
         (FAT32BPB, BPB, 1),
         // (SinglyLinkedList, openedVnodeChains, __FS_FAT32_FSCORE_HASH_BUCKET)
@@ -99,22 +96,17 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
 
     Device* device = &blockDevice->device;
     buffer = mm_allocate(POWER_2(device->granularity));
-    if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(buffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     blockDevice_readBlocks(blockDevice, 0, buffer, 1);  //TODO: One block?
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     memory_memcpy(BPB, buffer, sizeof(FAT32BPB));
 
     mm_free(buffer);
     buffer = NULL;
 
-    if (POWER_2(device->granularity) != BPB->bytePerSector) {
-        ERROR_THROW(ERROR_ID_DATA_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(POWER_2(device->granularity) != BPB->bytePerSector, ERROR_INVALID_ARGUMENT, error_out);
 
     fat32fscore->FATrange               = RANGE_N(BPB->FATnum, BPB->reservedSectorNum, BPB->sectorPerFAT);
 
@@ -130,13 +122,10 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     Size FATsizeInByte                  = BPB->sectorPerFAT * POWER_2(device->granularity);
 
     Index32* FAT = mm_allocate(FATsizeInByte);
-    if (FAT == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(FAT == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     blockDevice_readBlocks(blockDevice, fat32fscore->FATrange.begin, FAT, fat32fscore->FATrange.length);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fat32fscore->FAT                    = FAT;
 
@@ -176,7 +165,7 @@ void fat32_open(FS* fs, BlockDevice* blockDevice) {
     fs->fscore                          = &fat32fscore->fscore;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (FAT != NULL) {
         mm_free(FAT);
     }
@@ -195,7 +184,7 @@ void fat32_close(FS* fs) {
     FAT32fscore* fat32fscore = HOST_POINTER(fscore, FAT32fscore, fscore);
 
     fscore_rawSync(fscore);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     BlockDevice* fscoreBlockDevice = fscore->blockDevice;
     Device* fscoreDevice = &fscoreBlockDevice->device;
@@ -208,16 +197,13 @@ void fat32_close(FS* fs) {
     mm_free(batchAllocated);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Index32 fat32FScore_createFirstCluster(FAT32fscore* fscore) {
     void* clusterBuffer = NULL;
     Index32 firstCluster = fat32_allocateClusterChain(fscore, 1);   //First cluster of new file/directory must be all 0
-    if (firstCluster == INVALID_INDEX32) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(firstCluster == INVALID_INDEX32, ERROR_OUT_OF_MEMORY, error_out);
 
     FAT32BPB* BPB = fscore->BPB;
     BlockDevice* targetBlockDevice = fscore->fscore.blockDevice;
@@ -225,17 +211,14 @@ Index32 fat32FScore_createFirstCluster(FAT32fscore* fscore) {
     Size clusterSize = BPB->sectorPerCluster * POWER_2(targetDevice->granularity);
 
     clusterBuffer = mm_allocate(clusterSize);
-    if (clusterBuffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(clusterBuffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     memory_memset(clusterBuffer, 0, clusterSize);
     blockDevice_writeBlocks(targetBlockDevice, fscore->dataBlockRange.begin + (Index64)firstCluster * BPB->sectorPerCluster, clusterBuffer, BPB->sectorPerCluster);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return firstCluster;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return INVALID_INDEX32;
 }
 
@@ -243,10 +226,7 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
     FAT32vnode* fat32vnode = NULL;
 
     fat32vnode = mm_allocate(sizeof(FAT32vnode));
-    if (fat32vnode == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(fat32vnode == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     FAT32fscore* fat32fscore    = HOST_POINTER(fscore, FAT32fscore, fscore);
     DirectoryEntry* nodeEntry = &node->entry;
@@ -277,7 +257,7 @@ static vNode* __fat32_fscore_openVnode(FScore* fscore, fsNode* node) {
     }
     
     return vnode;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (fat32vnode != NULL) {
         mm_free(fat32vnode);
     }
@@ -306,10 +286,7 @@ static void __fat32_fscore_sync(FScore* fscore) {
     RangeN* fatRange = &fat32fscore->FATrange;
     Size FATsizeInByte = fatRange->length * POWER_2(fscoreDevice->granularity);
     FATcopy = mm_allocate(FATsizeInByte);
-    if (FATcopy == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(FATcopy == NULL, ERROR_OUT_OF_MEMORY, error_out);
     memory_memcpy(FATcopy, fat32fscore->FAT, FATsizeInByte);
 
     for (int i = fat32fscore->firstFreeCluster, next; i != FAT32_CLSUTER_END_OF_CHAIN; i = next) {
@@ -319,17 +296,17 @@ static void __fat32_fscore_sync(FScore* fscore) {
 
     for (int i = 0; i < fatRange->n; ++i) { //TODO: FAT is only saved here, maybe we can make it save at anytime
         blockDevice_writeBlocks(fscoreBlockDevice, fatRange->begin + i * fatRange->length, FATcopy, fatRange->length);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     mm_free(FATcopy);
     FATcopy = NULL;
 
     blockDevice_flush(fscoreBlockDevice);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (FATcopy != NULL) {
         mm_free(FATcopy);
     }
@@ -338,11 +315,11 @@ static void __fat32_fscore_sync(FScore* fscore) {
 
 static fsEntry* __fat32_fscore_openFSentry(FScore* fscore, vNode* vnode, FCNTLopenFlags flags) {
     fsEntry* ret = fscore_genericOpenFSentry(fscore, vnode, flags);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     ret->operations = &_fat32_fsEntryOperations;
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }

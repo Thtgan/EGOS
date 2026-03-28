@@ -12,7 +12,7 @@
 #include<structs/string.h>
 #include<cstring.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static void __fsnode_initStruct(fsNode* node, Size nameN, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent);
 
@@ -53,18 +53,12 @@ fsNode* fsnode_create(DirectoryEntry* entry, Size nameN, FSnodeAttribute* attrib
     fsNode* ret = NULL;
     if (entry->type == FS_ENTRY_TYPE_DIRECTORY) {
         DirFSnode* dirNode = mm_allocate(sizeof(DirFSnode));
-        if (dirNode == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(dirNode == NULL, ERROR_OUT_OF_MEMORY, error_out);
         __fsnodeDirPart_initStruct(&dirNode->dirPart);
         ret = &dirNode->node;
     } else {
         ret = mm_allocate(sizeof(fsNode));
-        if (ret == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(ret == NULL, ERROR_OUT_OF_MEMORY, error_out);
     }
     
     DEBUG_ASSERT_SILENT(parent == NULL || parent->entry.type == FS_ENTRY_TYPE_DIRECTORY);
@@ -73,7 +67,10 @@ fsNode* fsnode_create(DirectoryEntry* entry, Size nameN, FSnodeAttribute* attrib
     DEBUG_ASSERT_SILENT(__fsnode_isReadyToRelease(ret));
     
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    if (ret != NULL) {
+        mm_free(ret);
+    }
     return NULL;
 }
 
@@ -105,8 +102,9 @@ fsNode* fsnode_lookup(fsNode* node, ConstCstring name, bool isDirectory, bool au
     if (dirNode->dirPart.childrenNum == FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM) { //Children not read yet
         if (autoRead) {
             fsnode_readDirectoryEntries(node);
+            CHECK_ERROR(error_out);
         } else {
-            return NULL;
+            ERROR_THROW_NEW(ERROR_NOT_FOUND, error_out);
         }
     }
 
@@ -115,19 +113,20 @@ fsNode* fsnode_lookup(fsNode* node, ConstCstring name, bool isDirectory, bool au
     Object hash = __fsnode_nameHash(name, isDirectory);
     HashChainNode* hashNode = hashTable_find(&dirNode->dirPart.childrenHash, hash);
     if (hashNode == NULL) {
-        return NULL;
+        spinlock_unlock(&node->lock);
+        ERROR_THROW_NEW(ERROR_NOT_FOUND, error_out);
     }
     
     ret = HOST_POINTER(hashNode, fsNode, childHashNode);
     spinlock_unlock(&node->lock);
     fsnode_refer(ret);  //Refer returned node
     return ret;
+error_out:
+    return NULL;
 }
 
 void fsnode_setVnode(fsNode* node, vNode* vnode) {
-    if (node->vnode != NULL && vnode != NULL) {
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
-    }
+    ERROR_THROW_NEW_IF(node->vnode != NULL && vnode != NULL, ERROR_ALREADY_EXISTS, error_out);
 
     if (node->vnode == NULL && vnode == NULL) {
         return;
@@ -142,14 +141,12 @@ void fsnode_setVnode(fsNode* node, vNode* vnode) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fsnode_setMount(fsNode* node, vNode* mountVnode) {
     DEBUG_ASSERT_SILENT(node->entry.type == FS_ENTRY_TYPE_DIRECTORY);
-    if (node->mount != NULL && mountVnode != NULL) {   //TODO: Remount support
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
-    }
+    ERROR_THROW_NEW_IF(node->mount != NULL && mountVnode != NULL, ERROR_ALREADY_EXISTS, error_out);   //TODO: Remount support
 
     if (node->mount == NULL && mountVnode == NULL) {
         return;
@@ -161,11 +158,12 @@ void fsnode_setMount(fsNode* node, vNode* mountVnode) {
         fsnode_releaseVnode(mountVnode->fscore, mountVnode->fsNode);
     } else {
         fsnode_requestVnode(mountVnode->fscore, mountVnode->fsNode);
+        CHECK_ERROR(error_out);
         fsnode_refer(node);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fsnode_requestVnode(FScore* fscore, fsNode* node) {
@@ -174,15 +172,14 @@ void fsnode_requestVnode(FScore* fscore, fsNode* node) {
         fsnode_refer(node);
     } else {
         vNode* ret = fscore_rawOpenVnode(fscore, node);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         fsnode_setVnode(node, ret); //Refer node here
     }
 
     REF_COUNTER_REFER(node->vNodeRefCounter);
 
     return;
-    ERROR_FINAL_BEGIN(0);
-    return;
+error_out:
 }
 
 bool fsnode_releaseVnode(FScore* fscore, fsNode* node) {
@@ -202,10 +199,10 @@ void fsnode_readDirectoryEntries(fsNode* node) {
     DEBUG_ASSERT_SILENT(FSNODE_GET_DIRFSNODE(node)->dirPart.childrenNum == FSNODE_DIR_PART_UNKNOWN_CHILDREN_NUM);
 
     vNode_rawReadDirectoryEntries(node->vnode);   //Use fsnode_create to append children to node, refer node by number of child
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fsnode_forgetAllDirectoryEntries(fsNode* node) {
@@ -248,10 +245,10 @@ void fsnode_getAbsolutePath(fsNode* node, String* pathOut) {
     string_clear(pathOut);
     
     __fsnode_doGetAbsolutePath(node, pathOut);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
@@ -261,9 +258,7 @@ void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
     spinlock_lock(&node->parent->lock);
     spinlock_lock(&moveTo->lock);
 
-    if (!__fsnode_isReadyToRelease(node)) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(!__fsnode_isReadyToRelease(node), ERROR_INVALID_STATE, error_out);
 
     DirFSnode* originParentNode = FSNODE_GET_DIRFSNODE(node->parent);
     DirFSnode* newParentNode = FSNODE_GET_DIRFSNODE(moveTo);
@@ -272,7 +267,7 @@ void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
     if (newName != NULL) {
         string_clearStruct(&node->name);
         string_initStructStr(&node->name, newName);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);  // Changed from error_out_cleanup to error_out
     }
     __dirfsNode_addChildNode(newParentNode, node);
     
@@ -281,8 +276,7 @@ void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
     spinlock_unlock(&node->lock);
 
     return;
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     spinlock_unlock(&moveTo->lock);
     spinlock_unlock(&node->parent->lock);
     spinlock_unlock(&node->lock);
@@ -290,7 +284,7 @@ void fsnode_move(fsNode* node, fsNode* moveTo, ConstCstring newName) {
 
 static void __fsnode_initStruct(fsNode* node, Size nameN, DirectoryEntry* entry, FSnodeAttribute* attribute, fsNode* parent) {    
     string_initStructStrN(&node->name, entry->name, nameN);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     node->entry = (DirectoryEntry) {
         .name = node->name.data,
@@ -323,7 +317,7 @@ static void __fsnode_initStruct(fsNode* node, Size nameN, DirectoryEntry* entry,
     }
         
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __fsnode_release(fsNode* node) {
@@ -335,16 +329,16 @@ static void __fsnode_release(fsNode* node) {
 static void __fsnode_doGetAbsolutePath(fsNode* node, String* pathOut) {
     if (node->parent == NULL) {
         string_initStructStr(pathOut, PATH_SEPERATOR_STR);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     } else {
         __fsnode_doGetAbsolutePath(node->parent, pathOut);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         path_join(pathOut, pathOut, &node->name);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __fsnodeDirPart_initStruct(fsNodeDirPart* part) {

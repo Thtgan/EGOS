@@ -17,7 +17,7 @@
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
 #include<debug.h>
-#include<error.h>
+#include<errorPosix.h>
 
 static void __devfs_vNode_readData(vNode* vnode, Index64 begin, void* buffer, Size byteN);
 
@@ -45,7 +45,7 @@ static vNodeOperations _devfs_vNodeOperations = {
 
 void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring name, fsEntryType type, Index64 mappingIndex, Object pointsTo, FSnodeAttribute* attribute) {
     string_initStructStr(&entry->name, name);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     entry->mappingIndex = mappingIndex;
     entry->size         = type == FS_ENTRY_TYPE_DEVICE ? INFINITE : 0;
     entry->type         = type;
@@ -53,7 +53,7 @@ void devfsDirectoryEntry_initStruct(DevfsDirectoryEntry* entry, ConstCstring nam
     memory_memcpy(&entry->attribute, attribute, sizeof(FSnodeAttribute));
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 vNodeOperations* devfs_vNode_getOperations() {
@@ -63,49 +63,39 @@ vNodeOperations* devfs_vNode_getOperations() {
 static void __devfs_vNode_readData(vNode* vnode, Index64 begin, void* buffer, Size byteN) {
     DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
     if (nodeEntry->type == FS_ENTRY_TYPE_FILE || nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY) {
-        if (begin + byteN > vnode->size) {
-            ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-        }
+        ERROR_THROW_NEW_IF(begin + byteN > vnode->size, ERROR_INVALID_ARGUMENT, error_out);
         DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
         memory_memcpy(buffer, devfsVnode->data + begin, byteN);
         return;
     }
 
     Device* device = device_getDevice(vnode->deviceID);
-    if (device == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(device == NULL, ERROR_INVALID_STATE, error_out);
 
     device_read(device, begin, buffer, byteN);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __devfs_vNode_writeData(vNode* vnode, Index64 begin, const void* buffer, Size byteN) {
     DirectoryEntry* nodeEntry = &vnode->fsNode->entry;
     if (nodeEntry->type == FS_ENTRY_TYPE_FILE || nodeEntry->type == FS_ENTRY_TYPE_DIRECTORY) {
-        if (begin + byteN > vnode->size) {
-            ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-        }
+        ERROR_THROW_NEW_IF(begin + byteN > vnode->size, ERROR_INVALID_ARGUMENT, error_out);
         DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
         memory_memcpy(devfsVnode->data + begin, buffer, byteN);
         return;
     }
     
     Device* device = device_getDevice(vnode->deviceID);
-    if (device == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(device == NULL, ERROR_INVALID_STATE, error_out);
     
     device_write(device, begin, buffer, byteN);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
@@ -123,10 +113,7 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
     if (newPageNum != oldPageNum) {
         if (newPageNum != 0) {
             newPages = mm_allocatePages(newPageNum);
-            if (newPages == NULL) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
+            ERROR_THROW_NEW_IF(newPages == NULL, ERROR_OUT_OF_MEMORY, error_out);
             
             if (newPageNum < oldPageNum) {
                 memory_memcpy(newPages, devfsVnode->data, newSizeInByte);
@@ -150,11 +137,10 @@ static void __devfs_vNode_resize(vNode* vnode, Size newSizeInByte) {
     vnode->tokenSpaceSize = newPageNum * PAGE_SIZE;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (newPages != NULL) {
         mm_freePages(newPages);
     }
-    return;
 }
 
 static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* entry, FSnodeAttribute* attr) {
@@ -169,7 +155,7 @@ static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* ent
     bool found = false;
     while (currentPointer < vnode->size) {
         vNode_rawReadData(vnode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         if (cstring_strcmp(entry->name, devfsDirectoryEntry.name.data) == 0 && entry->type == devfsDirectoryEntry.type) {
             found = true;
@@ -179,33 +165,30 @@ static Index64 __devfs_vNode_addDirectoryEntry(vNode* vnode, DirectoryEntry* ent
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    if (found) {
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
-    }
+    ERROR_THROW_NEW_IF(found, ERROR_ALREADY_EXISTS, error_out);
     
     bool isRealData = (entry->type == FS_ENTRY_TYPE_FILE || entry->type == FS_ENTRY_TYPE_DIRECTORY);
     Object pointsTo = isRealData ? (Object)NULL : (Object)entry->pointsTo;
     entry->pointsTo = (Index64)pointsTo;
 
     Index64 mappingIndex = devfscore_allocateMappingIndex();
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     devfsDirectoryEntry_initStruct(&devfsDirectoryEntry, entry->name, entry->type, mappingIndex, pointsTo, attr);
 
     entry->size = devfsDirectoryEntry.size;
 
     vNode_rawResize(vnode, vnode->size + sizeof(DevfsDirectoryEntry));
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     vNode_rawWriteData(vnode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     DevfsVnode* devfsVnode = HOST_POINTER(vnode, DevfsVnode, vnode);
     devfscore_setStorageMapping(mappingIndex, (DevfsDirectoryEntry*)devfs_vNode_getDataPointer(devfsVnode, currentPointer));
 
     return mappingIndex;
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     return INVALID_INDEX64;
 }
 
@@ -222,7 +205,7 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
     DevfsDirectoryEntry devfsDirectoryEntry;
     while (currentPointer < vnode->size) {
         vNode_rawReadData(vnode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         if (cstring_strcmp(name, devfsDirectoryEntry.name.data) == 0 && isDirectory == (devfsDirectoryEntry.type == FS_ENTRY_TYPE_DIRECTORY)) {
             found = true;
@@ -232,9 +215,7 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    if (!found) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(!found, ERROR_NOT_FOUND, error_out);
 
     devfscore_releaseMappingIndex(devfsDirectoryEntry.mappingIndex);
 
@@ -242,18 +223,18 @@ static void __devfs_vNode_removeDirectoryEntry(vNode* vnode, ConstCstring name, 
         Size remainingDataSize = vnode->size - currentPointer - sizeof(DevfsDirectoryEntry);
         remainingData = mm_allocate(remainingDataSize);
         vNode_rawReadData(vnode, currentPointer, remainingData + sizeof(DevfsDirectoryEntry), remainingDataSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         vNode_rawWriteData(vnode, currentPointer, remainingData, remainingDataSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         mm_free(remainingData);
         remainingData = NULL;
     }
 
     vNode_rawResize(vnode, vnode->size - sizeof(DevfsDirectoryEntry));
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (remainingData != NULL) {
         mm_free(remainingData);
     }
@@ -275,7 +256,7 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
     DevfsDirectoryEntry devfsDirectoryEntry, transplantDirEntry;
     while (currentPointer < vnode->size) {
         vNode_rawReadData(vnode, currentPointer, &transplantDirEntry, sizeof(DevfsDirectoryEntry));
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         if (cstring_strcmp(entry->entry.name, transplantDirEntry.name.data) == 0 && entry->entry.type == transplantDirEntry.type) {
             found = true;
@@ -285,23 +266,21 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    if (!found) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(!found, ERROR_NOT_FOUND, error_out);
 
     if (currentPointer + sizeof(DevfsDirectoryEntry) < vnode->size) {
         Size remainingDataSize = vnode->size - currentPointer - sizeof(DevfsDirectoryEntry);
         remainingData = mm_allocate(remainingDataSize);
         vNode_rawReadData(vnode, currentPointer, remainingData + sizeof(DevfsDirectoryEntry), remainingDataSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         vNode_rawWriteData(vnode, currentPointer, remainingData, remainingDataSize);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         mm_free(remainingData);
         remainingData = NULL;
     }
 
     vNode_rawResize(vnode, vnode->size - sizeof(DevfsDirectoryEntry));
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     //Write to moveTo directory
 
@@ -309,7 +288,7 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
     found = false;
     while (currentPointer < moveTo->size) {
         vNode_rawReadData(moveTo, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         if (cstring_strcmp(entry->entry.name, devfsDirectoryEntry.name.data) == 0 && entry->entry.type == transplantDirEntry.type) {
             found = true;
@@ -319,19 +298,16 @@ static void __devfs_vNode_renameDirectoryEntry(vNode* vnode, fsNode* entry, vNod
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
-    if (found) {
-        ERROR_THROW(ERROR_ID_ALREADY_EXIST, 0);
-    }
+    ERROR_THROW_NEW_IF(found, ERROR_ALREADY_EXISTS, error_out);
     
     vNode_rawResize(moveTo, moveTo->size + sizeof(DevfsDirectoryEntry));
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     vNode_rawWriteData(moveTo, currentPointer, &transplantDirEntry, sizeof(DevfsDirectoryEntry));
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     if (remainingData != NULL) {
         mm_free(remainingData);
     }
@@ -354,7 +330,7 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
     DirectoryEntry directoryEntry;
     while (currentPointer < vnode->size) {
         vNode_rawReadData(vnode, currentPointer, &devfsDirectoryEntry, sizeof(DevfsDirectoryEntry));
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         directoryEntry.name         = devfsDirectoryEntry.name.data;
         directoryEntry.type         = devfsDirectoryEntry.type;
@@ -364,11 +340,11 @@ static void __devfs_vNode_readDirectoryEntries(vNode* vnode) {
         directoryEntry.pointsTo     = (Object)devfsDirectoryEntry.mappingIndex;
 
         fsnode_create(&directoryEntry, INFINITE, &devfsDirectoryEntry.attribute, &dirNode->node);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         currentPointer += sizeof(DevfsDirectoryEntry);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }

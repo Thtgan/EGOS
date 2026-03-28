@@ -14,7 +14,7 @@
 #include<structs/refCounter.h>
 #include<structs/string.h>
 #include<system/pageTable.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 
 void fsEntry_initStruct(fsEntry* entry, vNode* vnode, fsEntryOperations* operations, FCNTLopenFlags flags) {
@@ -39,15 +39,13 @@ Index64 fsEntry_genericSeek(fsEntry* entry, Index64 seekTo) {
 void fsEntry_genericRead(fsEntry* entry, void* buffer, Size n) {
     vNode* vnode = entry->vnode;
 
-    if (entry->pointer + n > vnode->size) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(entry->pointer + n > vnode->size, ERROR_INVALID_ARGUMENT, error_out);
 
     vNode_rawReadData(vnode, entry->pointer, buffer, n);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
@@ -55,27 +53,24 @@ void fsEntry_genericWrite(fsEntry* entry, const void* buffer, Size n) {
 
     if (entry->pointer + n > vnode->size) {
         vNode_rawResize(vnode, entry->pointer + n);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     vNode_rawWriteData(vnode, entry->pointer, buffer, n);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 fsEntry* fsEntry_copy(fsEntry* entry) {
     fsEntry* ret = mm_allocate(sizeof(fsEntry));
-    if (ret == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(ret == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     memory_memcpy(ret, entry, sizeof(fsEntry));
     REF_COUNTER_REFER(ret->vnode->refCounter);
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }

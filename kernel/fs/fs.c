@@ -14,7 +14,7 @@
 #include<memory/mm.h>
 #include<structs/hashTable.h>
 #include<cstring.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 FS* fs_rootFS = NULL, * fs_devFS = NULL, * fs_ext2;
 
@@ -47,26 +47,19 @@ static __FileSystemSupport _supports[FS_TYPE_NUM] = {
 };
 
 void fs_init() {
-    if (blockDevice_bootFromDevice == NULL) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(blockDevice_bootFromDevice == NULL, ERROR_INVALID_STATE, error_out);
 
     FStype type = fs_checkType(blockDevice_bootFromDevice);
-    if (type == FS_TYPE_UNKNOWN) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(type == FS_TYPE_UNKNOWN, ERROR_INVALID_STATE, error_out);
 
     _supports[type].init();
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fs_rootFS = mm_allocate(sizeof(FS));
-    if (fs_rootFS == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(fs_rootFS == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     fs_open(fs_rootFS, blockDevice_bootFromDevice);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     //Begin of ext2 test code
     MajorDeviceID storageMajor = DEVICE_MAJOR_FROM_ID(blockDevice_bootFromDevice->device.id);
@@ -78,36 +71,28 @@ void fs_init() {
         }
         storageMinor = DEVICE_MINOR_FROM_ID(device->id);
     }
-    if (device == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(device == NULL, ERROR_NOT_FOUND, error_out);
 
     BlockDevice* ext2Device = HOST_POINTER(device, BlockDevice, device);
     _supports[FS_TYPE_EXT2].init();
     DEBUG_ASSERT_SILENT(fs_checkType(ext2Device) == FS_TYPE_EXT2);
 
     fs_ext2 = mm_allocate(sizeof(FS));
-    if (fs_ext2 == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(fs_ext2 == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     fs_open(fs_ext2, ext2Device);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     //End of ext2 test code
 
     _supports[FS_TYPE_DEVFS].init();
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fs_devFS = mm_allocate(sizeof(FS));
-    if (fs_devFS == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(fs_devFS == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     fs_open(fs_devFS, NULL);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fsIdentifier devfsMountPoint;
     fsIdentifier ext2MountPoint;
@@ -115,26 +100,26 @@ void fs_init() {
     FScore* rootFScore = fs_rootFS->fscore;
     vNode* rootFSrootVnode = fscore_getVnode(rootFScore, rootFScore->rootFSnode, false);  //Refer rootFScore->rootFSnode
     fsIdentifier_initStruct(&devfsMountPoint, rootFSrootVnode, "/dev", true);   //TODO: fails if dev not exist
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     fsIdentifier_initStruct(&ext2MountPoint, rootFSrootVnode, "/mnt", true);    //TODO: fails if mnt not exist
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     FScore* devFScore = fs_devFS->fscore;
     vNode* devFSrootVnode = fscore_getVnode(devFScore, devFScore->rootFSnode, false);
     fscore_rawMount(rootFScore, &devfsMountPoint, devFSrootVnode, EMPTY_FLAGS);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     FScore* ext2FScore = fs_ext2->fscore;
     vNode* ext2rootVnode = fscore_getVnode(ext2FScore, ext2FScore->rootFSnode, false);
     fscore_rawMount(rootFScore, &ext2MountPoint, ext2rootVnode, EMPTY_FLAGS);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fscore_releaseVnode(rootFSrootVnode);
     fscore_releaseVnode(devFSrootVnode);
     fscore_releaseVnode(ext2rootVnode);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (fs_rootFS != NULL) {
         mm_free(fs_rootFS);
     }
@@ -177,17 +162,17 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
     bool isDirectory = TEST_FLAGS(flags, FCNTL_OPEN_DIRECTORY);
 
     string_initStructStr(&absolutePathStr, absolutePath);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     string_initStruct(&dirAbsolurePath);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     path_dirname(&absolutePathStr, &dirAbsolurePath);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     string_initStruct(&basename);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     path_basename(&absolutePathStr, &basename);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     FScore* rootFScore = fs_rootFS->fscore;
     vNode* rootFSrootVnode = fscore_getVnode(rootFScore, rootFScore->rootFSnode, false);    //Refer rootFSrootVnode->fsNode once
@@ -198,10 +183,7 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
     dirFSnode = fscore_getFSnode(rootFScore, &dirIdentifier, &finalFScore, true);   //Refer dirFSnode once
 
     dirVnode = fscore_getVnode(finalFScore, dirFSnode, true);
-    if (dirVnode == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(dirVnode == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     if (dirFSnode != dirVnode->fsNode) {    //The fsNode we found is mounted, transfer pointer and refer count to actual one
         fsnode_derefer(dirFSnode);
@@ -214,16 +196,12 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
     bool needCreate = false;
     targetNode = fsnode_lookup(dirFSnode, basename.data, isDirectory, true);    //Refer targetNode once (if found)
     if (targetNode == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_CHECKPOINT({
-                ERROR_GOTO(0);
-            }, 
-            (ERROR_ID_NOT_FOUND, {
-                needCreate = true;
-                ERROR_CLEAR();
-                break;
-            })
-        );
+        ErrorCode err = error_get_code();
+        if (err == ERROR_NOT_FOUND) {
+            needCreate = true;
+        } else {
+            goto error_out;
+        }
     }
 
     if (needCreate) {
@@ -244,15 +222,12 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
         };
 
         vNode_addDirectoryEntry(dirVnode, &newEntry, &attr);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         dirVnode->fsNode->attribute.lastModifyTime = timestamp.second;  //TODO: Write this back to directory data
 
         targetNode = fsnode_lookup(dirFSnode, basename.data, isDirectory, true);    //Refer targetNode once (if found)
-        if (targetNode == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(targetNode == NULL, ERROR_NOT_FOUND, error_out);
     }
 
     DEBUG_ASSERT_SILENT(targetNode != NULL);
@@ -260,10 +235,7 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
     targetVnode = fscore_getVnode(finalFScore, targetNode, false);
     
     ret = fscore_rawOpenFSentry(finalFScore, targetVnode, flags);
-    if (ret == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(ret == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     fscore_releaseVnode(dirVnode);
     fscore_releaseFSnode(dirFSnode);
@@ -274,7 +246,7 @@ File* fs_fileOpen(ConstCstring absolutePath, FCNTLopenFlags flags) {
     string_clearStruct(&absolutePathStr);
     
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (ret != NULL) {
         fscore_rawCloseFSentry(finalFScore, ret);
     }
@@ -315,26 +287,22 @@ void fs_fileClose(File* file) {
     FScore* fscore = vnode->fscore;
 
     fscore_rawCloseFSentry(fscore, file);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     fscore_releaseVnode(vnode);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fs_fileRead(File* file, void* buffer, Size n) {
-    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->flags) == FCNTL_OPEN_WRITE_ONLY) {
-        ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->flags) == FCNTL_OPEN_WRITE_ONLY, ERROR_PERMISSION_DENIED, error_out);
 
-    if (file->pointer + n > file->vnode->size) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(file->pointer + n > file->vnode->size, ERROR_INVALID_ARGUMENT, error_out);
 
     fsEntry_rawRead(file, buffer, n);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->flags, FCNTL_OPEN_NOATIME)) {
@@ -344,20 +312,18 @@ void fs_fileRead(File* file, void* buffer, Size n) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void fs_fileWrite(File* file, const void* buffer, Size n) {
-    if (FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->flags) == FCNTL_OPEN_READ_ONLY) {
-        ERROR_THROW(ERROR_ID_PERMISSION_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(FCNTL_OPEN_EXTRACL_ACCESS_MODE(file->flags) == FCNTL_OPEN_READ_ONLY, ERROR_PERMISSION_DENIED, error_out);
 
     if (TEST_FLAGS(file->flags, FCNTL_OPEN_APPEND)) {
         fs_fileSeek(file, 0, FS_FILE_SEEK_END);
     }
 
     fsEntry_rawWrite(file, buffer, n);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     fsEntry_rawSeek(file, file->pointer + n);
 
     if (TEST_FLAGS_FAIL(file->flags, FCNTL_OPEN_NOATIME)) {
@@ -367,7 +333,7 @@ void fs_fileWrite(File* file, const void* buffer, Size n) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Index64 fs_fileSeek(File* file, Int64 offset, Uint8 begin) {
