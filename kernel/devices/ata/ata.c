@@ -11,7 +11,7 @@
 #include<real/simpleAsmLines.h>
 #include<memory/memory.h>
 #include<memory/mm.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static ATAdeviceType __ata_getDeviceType(ATAchannel* channel, int deviceSelect);
 
@@ -45,10 +45,7 @@ void ata_initDevices() {
     ATAdevice dummy2;
 
     MajorDeviceID major = device_allocMajor();
-    if (major == DEVICE_INVALID_ID) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(major == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
     for (int i = 0; i < 2; ++i) {
         Uint16 portBase = _ata_defauleChannelPortBases[i];
@@ -93,11 +90,8 @@ void ata_initDevices() {
             ataDevice->channel = channel;
             ataDevice->type = __ata_getDeviceType(channel, j);
 
-            MajorDeviceID minor = device_allocMinor(major);
-            if (minor == DEVICE_INVALID_ID) {
-                ERROR_ASSERT_ANY();
-                ERROR_GOTO(0);
-            }
+            MinorDeviceID minor = device_allocMinor(major);
+            ERROR_THROW_NEW_IF(minor == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
             BlockDeviceInitArgs args = {
                 .deviceInitArgs     = (DeviceInitArgs) {
@@ -113,36 +107,32 @@ void ata_initDevices() {
 
             BlockDevice* blockDevice = &ataDevice->blockDevice;
             blockDevice_initStruct(blockDevice, &args);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
 
             device_registerDevice(&blockDevice->device);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
 
             if (ataDevice->sectorNum == INFINITE) { //TODO: A more proper way to deal with CD-ROM
                 continue;
             }
 
             partitionBlockDevice_probePartitions(blockDevice);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
         }
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void ata_sendCommand(ATAchannel* channel, ATAcommand* command) {
     Uint16 portBase = channel->portBase;
-    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY), ERROR_IO_FAILED, error_out);
 
     outb(ATA_REGISTER_DEVICE(portBase), VAL_OR(CLEAR_VAL(command->device, ATA_DEVICE_DEVICE1), channel->deviceSelect == 0 ? ATA_DEVICE_DEVICE0 : ATA_DEVICE_DEVICE1));
     ATA_DELAY_400NS(portBase);
 
-    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY), ERROR_IO_FAILED, error_out);
 
     outb(ATA_REGISTER_FEATURE(portBase)         , command->feature      );
     outb(ATA_REGISTER_SECTOR_COUNT(portBase)    , command->sectorCount  );
@@ -153,7 +143,7 @@ void ata_sendCommand(ATAchannel* channel, ATAcommand* command) {
     outb(ATA_REGISTER_COMMAND(portBase)         , command->command      );
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 #define __ATA_WAIT_RETRY_TIME   65535
@@ -180,16 +170,12 @@ Flags8 ata_waitTillSet(Uint16 channelPortBase, Flags8 waitFlags) {
 
 void ata_waitForData(Uint16 channelPortBase) {
     Flags8 status = ata_waitTillClear(channelPortBase, ATA_STATUS_FLAG_BUSY);
-    if (TEST_FLAGS_CONTAIN(status, ATA_STATUS_FLAG_BUSY | ATA_STATUS_FLAG_ERROR)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS_CONTAIN(status, ATA_STATUS_FLAG_BUSY | ATA_STATUS_FLAG_ERROR), ERROR_IO_FAILED, error_out);
 
-    if (TEST_FLAGS_FAIL(status, ATA_STATUS_FLAG_DATA_REQUIRE_SERVICE)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS_FAIL(status, ATA_STATUS_FLAG_DATA_REQUIRE_SERVICE), ERROR_IO_FAILED, error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static ATAdeviceType __ata_getDeviceType(ATAchannel* channel, int deviceSelect) {
@@ -218,112 +204,101 @@ static ATAdeviceType __ata_getDeviceType(ATAchannel* channel, int deviceSelect) 
 
 static bool __ata_initDevice(ATAchannel* channel, Uint8 deviceSelect, ATAdevice* device) {
     Uint16 portBase = channel->portBase;
+    void* buffer = NULL;
+
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
+        goto error_out;
     }
 
     ata_channel_selectDevice(channel, deviceSelect);
 
     if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
+        goto error_out;
     }
 
-    outb(ATA_REGISTER_SECTOR_COUNT(portBase),   0x55);
-    outb(ATA_REGISTER_ADDR1(portBase),          0xAA);
-    outb(ATA_REGISTER_SECTOR_COUNT(portBase),   0xAA);
-    outb(ATA_REGISTER_ADDR1(portBase),          0x55);
-    outb(ATA_REGISTER_SECTOR_COUNT(portBase),   0x55);
-    outb(ATA_REGISTER_ADDR1(portBase),          0xAA);
+    outb(ATA_REGISTER_SECTOR_COUNT(portBase), 0x55);
+    outb(ATA_REGISTER_ADDR1(portBase), 0xAA);
+    outb(ATA_REGISTER_SECTOR_COUNT(portBase), 0xAA);
+    outb(ATA_REGISTER_ADDR1(portBase), 0x55);
+    outb(ATA_REGISTER_SECTOR_COUNT(portBase), 0x55);
+    outb(ATA_REGISTER_ADDR1(portBase), 0xAA);
 
-    if (inb(ATA_REGISTER_SECTOR_COUNT(portBase)) != 0x55 || inb(ATA_REGISTER_ADDR1(portBase)) != 0xAA && inb(ATA_REGISTER_DEVICE(portBase)) != (deviceSelect ? ATA_DEVICE_DEVICE1 : ATA_DEVICE_DEVICE0)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
+    if (inb(ATA_REGISTER_SECTOR_COUNT(portBase)) != 0x55 ||
+        inb(ATA_REGISTER_ADDR1(portBase)) != 0xAA ||
+        inb(ATA_REGISTER_DEVICE(portBase)) != (deviceSelect ? ATA_DEVICE_DEVICE1 : ATA_DEVICE_DEVICE0)) {
+        goto error_out;
     }
 
-    void* buffer = mm_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
+    buffer = mm_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
     if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
+        goto error_out;
     }
 
-    do {
-        bool skip = true;
-        __atapi_identifyDevice(channel, buffer);
-        ERROR_CHECKPOINT({
-            ERROR_CLEAR();
-            skip = false;
-        });
+    __atapi_identifyDevice(channel, buffer);
+    bool isAtapi = !error_pending();
+    error_clear();
 
-        if (skip) {
-            device->sectorNum = INFINITE;
-            break;
-        }
-        skip = true;
-        
+    if (!isAtapi) {
         __ata_identifyDevice(channel, buffer);
-        ERROR_CHECKPOINT({
-            ERROR_CLEAR();
-            skip = false;
-        });
+    }
 
-        if (skip) {
-            ATAdeviceIdentify* data = (ATAdeviceIdentify*)buffer;
-            device->sectorNum = data->commandSetSupport.lba48Supported ? data->maxUserLBAfor48bitAddress : data->addressableSectorNum;
-            break;
-        }
+    if (error_pending()) {
+        goto error_out;
+    }
 
-        ERROR_GOTO(1);
-    } while (0);
-
+    if (isAtapi) {
+        device->sectorNum = INFINITE;
+    } else {
+        device->sectorNum = ((ATAdeviceIdentify*)buffer)->commandSetSupport.lba48Supported ?
+                            ((ATAdeviceIdentify*)buffer)->maxUserLBAfor48bitAddress :
+                            ((ATAdeviceIdentify*)buffer)->addressableSectorNum;
+    }
     device->deviceNumber = deviceSelect;
 
     mm_free(buffer);
     return true;
-    ERROR_FINAL_BEGIN(0);
+error_out:
+    if (buffer != NULL) {
+        mm_free(buffer);
+    }
+    error_clear();
     return false;
-
-    ERROR_FINAL_BEGIN(1);
-    mm_free(buffer);
-    ERROR_GOTO(0);
 }
 
 static void __ata_identifyDevice(ATAchannel* channel, void* buffer) {
     Uint16 portBase = channel->portBase;
-    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY), ERROR_IO_FAILED, error_out);
 
     ATAcommand command;
     memory_memset(&command, 0, sizeof(ATAcommand));
     command.command = ATA_COMMAND_IDENTIFY_DEVICE;
 
     ata_sendCommand(channel, &command);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     ata_pio_readBlocks(portBase, 1, buffer);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __atapi_identifyDevice(ATAchannel* channel, void* buffer) {
     Uint16 portBase = channel->portBase;
-    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY), ERROR_IO_FAILED, error_out);
 
     ATAcommand command;
     memory_memset(&command, 0, sizeof(ATAcommand));
     command.command = ATA_COMMAND_IDENTIFY_PACKET_DEVICE;
 
     ata_sendCommand(channel, &command);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     ata_pio_readBlocks(portBase, 1, buffer);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __ata_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {    

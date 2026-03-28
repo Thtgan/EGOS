@@ -4,7 +4,7 @@
 #include<devices/display/vga/default.h>
 #include<devices/display/vga/vga.h>
 #include<kit/types.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 //TODO: Add support for other video adapter
 
@@ -13,13 +13,13 @@ static bool _display_modeInitialized[DISPLAY_MODE_NUM] = { false };
 
 void display_init() {
     display_initMode(DISPLAY_MODE_DEFAULT);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     display_switchMode(DISPLAY_MODE_DEFAULT);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 DisplayContext* display_getCurrentContext() {
@@ -27,9 +27,7 @@ DisplayContext* display_getCurrentContext() {
 }
 
 void display_initMode(DisplayMode mode) {
-    if (mode >= DISPLAY_MODE_NUM) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF(mode >= DISPLAY_MODE_NUM, ERROR_INVALID_ARGUMENT, error_out);
 
     if (_display_modeInitialized[mode]) {
         return;
@@ -41,24 +39,22 @@ void display_initMode(DisplayMode mode) {
         }
         case DISPLAY_MODE_VGA: {
             vga_init();
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
             break;
         }
         default: {
-            ERROR_THROW(ERROR_ID_UNKNOWN, 0);
+            ERROR_THROW_NEW(ERROR_NOT_SUPPORTED, error_out);
         }
     }
 
     _display_modeInitialized[mode] = true;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void display_switchMode(DisplayMode mode) {
-    if (!_display_modeInitialized[mode]) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(!_display_modeInitialized[mode], ERROR_INVALID_STATE, error_out);
 
     switch (mode) {
         case DISPLAY_MODE_DEFAULT: {
@@ -70,12 +66,12 @@ void display_switchMode(DisplayMode mode) {
             break;
         }
         default: {
-            ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
+            ERROR_THROW_NEW(ERROR_INVALID_ARGUMENT, error_out);
         }
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void display_drawPixel(DisplayPosition* position, RGBA color) {

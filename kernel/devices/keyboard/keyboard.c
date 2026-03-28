@@ -9,7 +9,7 @@
 #include<kit/util.h>
 #include<real/ports/keyboard.h>
 #include<real/simpleAsmLines.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 __attribute__((aligned(4)))
 static KeyboardKeyEntry _keyboard_keyEntries[128] = {
@@ -136,7 +136,7 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
         if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, ASCII)) {
             char ch = __keyboard_keyToASCII(key);
             virtualTeletype_collectData(virtualTTY, &ch, 1);
-            ERROR_CHECKPOINT();
+            CHECK_ERROR(error_out);
         } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, KEYPAD)) {
             switch (key) {
                 case KEYBOARD_KEY_KEYPAD_3: {
@@ -151,16 +151,19 @@ ISR_FUNC_HEADER(__keyboard_interruptHandler) {
                     break;
                 }
             }
-            ERROR_CHECKPOINT();
+            CHECK_ERROR(error_out);
             
             teletype_rawFlush(tty);
-            ERROR_CHECKPOINT();
+            CHECK_ERROR(error_out);
         } else if (TEST_FLAGS_CONTAIN(_keyboard_keyEntries[key].flags, FUNCTION)) {
             if (key == KEYBOARD_KEY_F12) {
                 debug_blowup("Manually triggered crash");
             }
         }
     }
+
+    return;
+error_out:
 }
 
 void keyboard_init() {

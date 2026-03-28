@@ -6,7 +6,7 @@
 #include<kit/types.h>
 #include<system/pageTable.h>
 #include<memory/memory.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<print.h>
 
 void teletype_initStruct(Teletype* tty, TeletypeOperations* operations) {
@@ -37,12 +37,12 @@ void tty_init() {
     _tty_printHandler.arg = (Object)_currentTTY;
     
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void tty_initVirtTTY() {
     virtualTeletype_initStruct(&_mainTTY, display_getCurrentContext(), 500);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     _isMainTTYinitialized = true;
     teletype_rawFlush(&_mainTTY.tty);   //Error passthrough
     _currentTTY = &_mainTTY.tty;
@@ -50,7 +50,7 @@ void tty_initVirtTTY() {
     _tty_printHandler.arg = (Object)_currentTTY;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void tty_switchDisplayMode(DisplayMode mode) {
@@ -59,7 +59,7 @@ void tty_switchDisplayMode(DisplayMode mode) {
     teletype_rawFlush(&_mainTTY.tty);   //Error passthrough
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Teletype* tty_getCurrentTTY() {

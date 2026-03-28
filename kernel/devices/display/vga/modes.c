@@ -8,7 +8,7 @@
 #include<kit/util.h>
 #include<memory/memory.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static VGAtextModeOperations _vgaMode_textOpearations = {
     .writeCell = vgaMemory_textWriteCell,
@@ -302,27 +302,22 @@ void vgaMode_init() {
         }
         
         VGApalette* palette = vgaDAC_getPalette(mode->paletteType);
-        if (palette == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(palette == NULL, ERROR_INVALID_STATE, error_out);
         vgaColorConverter_initStruct(&_vgaMode_converters[i], &mode->registers, palette);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         mode->converter = &_vgaMode_converters[i];
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 VGAmodeHeader* vgaMode_getModeHeader(VGAmodeType mode) {
-    if (mode >= VGA_MODE_TYPE_NUM) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(mode >= VGA_MODE_TYPE_NUM, ERROR_NOT_FOUND, error_out);
 
     return _vgaMode_modeHeaders[mode];
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -334,7 +329,7 @@ VGAmodeHeader* vgaMode_searchModeFromLegacy(int legacyMode) {
         }
     }
 
-    ERROR_THROW_NO_GOTO(ERROR_ID_NOT_FOUND);
+    // Not found - simply return NULL without throwing error
     return NULL;
 }
 
@@ -362,10 +357,7 @@ void vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
         vga_callRealmodeInt10(&inRegs, NULL);
     } else {
         VGApalette* palette = vgaDAC_getPalette(mode->paletteType);
-        if (palette == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(palette == NULL, ERROR_INVALID_STATE, error_out);
 
         vgaDAC_writePalette(palette);
 
@@ -379,5 +371,5 @@ void vgaMode_switch(VGAmodeHeader* mode, bool legacy) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }

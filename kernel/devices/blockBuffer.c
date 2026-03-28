@@ -1,7 +1,7 @@
 #include<devices/blockBuffer.h>
 
 #include<algorithms.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<kit/bit.h>
 #include<kit/oop.h>
 #include<kit/types.h>
@@ -18,19 +18,13 @@ static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64
 void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockNum, Size bytePerBlockShift) {
     blockBuffer->bytePerBlockShift  = bytePerBlockShift;
     void* blockData = mm_allocate(blockNum << bytePerBlockShift);
-    if (blockData == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(blockData == NULL, ERROR_OUT_OF_MEMORY, error_out);
     blockBuffer->blockData          = blockData;
 
     linkedList_initStruct(&blockBuffer->LRU);
 
     BlockBufferBlock* blocks = mm_allocate(sizeof(BlockBufferBlock) * blockNum);
-    if (blocks == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(blocks == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     for (int i = 0; i < blockNum; ++i) {
         BlockBufferBlock* block = blocks + i;
@@ -40,17 +34,13 @@ void blockBuffer_initStruct(BlockBuffer* blockBuffer, Size chainNum, Size blockN
     }
 
     SinglyLinkedList* chains = mm_allocate(sizeof(SinglyLinkedList) * chainNum);
-    if (chains == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(chains == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     hashTable_initStruct(&blockBuffer->hashTable, chainNum, chains, hashTable_defaultHashFunc);
     blockBuffer->blockNum           = blockNum;
 
     return;
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     if (blockData != NULL) {
         mm_free(blockData);
     }
@@ -81,10 +71,7 @@ void blockBuffer_clearStruct(BlockBuffer* blockBuffer) {
 
 void blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
     BlockBufferBlock* newBlocks = mm_allocate(sizeof(BlockBufferBlock) * newBlockNum);
-    if (newBlocks == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(newBlocks == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     LinkedListNode* current = linkedListNode_getNext(&blockBuffer->LRU);
     Uintptr minOldBlockPtr = -1;
@@ -119,14 +106,12 @@ void blockBuffer_resize(BlockBuffer* blockBuffer, Size newBlockNum) {
     blockBuffer->blockNum = newBlockNum;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 BlockBufferBlock* blockBuffer_search(BlockBuffer* blockBuffer, Index64 blockIndex) {
     HashChainNode* found = hashTable_find(&blockBuffer->hashTable, blockIndex);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     BlockBufferBlock* block = HOST_POINTER(found, BlockBufferBlock, hashChainNode);
     linkedListNode_delete(&block->LRUnode);
@@ -134,7 +119,7 @@ BlockBufferBlock* blockBuffer_search(BlockBuffer* blockBuffer, Index64 blockInde
     linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
 
     return block;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -150,10 +135,7 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
 
     if (block->blockIndex != INVALID_INDEX64) {
         HashChainNode* deleted = hashTable_delete(&blockBuffer->hashTable, block->blockIndex);
-        if (deleted == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(deleted == NULL, ERROR_INVALID_STATE, error_out);
     }
 
     linkedListNode_delete(&block->LRUnode);
@@ -166,7 +148,7 @@ BlockBufferBlock* blockBuffer_pop(BlockBuffer* blockBuffer, Index64 blockIndex) 
     }
 
     return block;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -174,14 +156,14 @@ void blockBuffer_push(BlockBuffer* blockBuffer, Index64 blockIndex, BlockBufferB
     block->blockIndex = blockIndex;
     if (blockIndex != INVALID_INDEX64) {
         hashTable_insert(&blockBuffer->hashTable, block->blockIndex, &block->hashChainNode);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     linkedListNode_insertBack(&blockBuffer->LRU, &block->LRUnode);
     SET_FLAG_BACK(block->flags, BLOCK_BUFFER_BLOCK_FLAGS_PRESENT);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __blockBuffer_initBlock(BlockBufferBlock* block, void* data, Index64 blockIndex) {

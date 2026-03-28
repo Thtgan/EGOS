@@ -8,7 +8,7 @@
 #include<memory/memory.h>
 #include<cstring.h>
 #include<structs/singlyLinkedList.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static void __memoryBlockDevice_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN);
 
@@ -23,21 +23,13 @@ static DeviceOperations _memoryBlockDevice_deviceOperations = (DeviceOperations)
 };
 
 void memoryBlockDevice_initStruct(MemoryBlockDevice* device, void* regionBegin, Size size, ConstCstring name) {
-    if (regionBegin == NULL) {
-        ERROR_THROW(ERROR_ID_ILLEGAL_ARGUMENTS, 0);
-    }
+    ERROR_THROW_NEW_IF(regionBegin == NULL, ERROR_INVALID_ARGUMENT, error_out);
 
     MajorDeviceID major = device_allocMajor();
-    if (major == DEVICE_INVALID_ID) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(major == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
     MinorDeviceID minor = device_allocMinor(major);
-    if (minor == DEVICE_INVALID_ID) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(minor == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
     Size blockNum = DIVIDE_ROUND_DOWN(size, BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
     memory_memset(regionBegin, 0, blockNum * BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
@@ -55,10 +47,11 @@ void memoryBlockDevice_initStruct(MemoryBlockDevice* device, void* regionBegin, 
     };
 
     blockDevice_initStruct(&device->blockDevice, &args);
+    CHECK_ERROR(error_out);
     device->regionBegin = regionBegin;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __memoryBlockDevice_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {

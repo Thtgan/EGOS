@@ -10,7 +10,7 @@
 #include<structs/vector.h>
 #include<system/pageTable.h>
 #include<algorithms.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 #define __TEXT_BUFFER_PART_POSITION_BUILD(__BEGIN_PAGE_INDEX, __BEGIN_PAGE_OFFSET)  (VAL_LEFT_SHIFT(__BEGIN_PAGE_INDEX, PAGE_SIZE_SHIFT) | TRIM_VAL_SIMPLE(__BEGIN_PAGE_OFFSET, 64, PAGE_SIZE_SHIFT))
 #define __TEXT_BUFFER_PART_POSITION_GET_BYTE_INDEX(__POSITION)                      EXTRACT_VAL(__POSITION, 64, 0, 48)
@@ -47,23 +47,23 @@ void textBuffer_initStruct(TextBuffer* textBuffer, Index32 maxPartNum, Uint16 ma
     loopArray_initStruct(&textBuffer->partEntries, maxPartNum);
 
     vector_initStruct(&textBuffer->partDataPages);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     __textBuffer_enqueueDataPage(textBuffer);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     textBuffer->totalByteNum = 0;
     
     __textBuffer_pushNewPart(textBuffer, __TEXT_BUFFER_PART_POSITION_BUILD(0, 0));  //Error passthrough
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void textBuffer_clearStruct(TextBuffer* textBuffer) {
     for (int i = 0; i < textBuffer->partDataPages.size; ++i) {
         void* dataPage = (void*)vector_get(&textBuffer->partDataPages, i);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         mm_freePages(dataPage);
     }
@@ -72,19 +72,16 @@ void textBuffer_clearStruct(TextBuffer* textBuffer) {
     loopArray_clearStruct(&textBuffer->partEntries);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 bool textBuffer_getPart(TextBuffer* textBuffer, Index32 partIndex, Cstring buffer, Uint16* partLengthRet) {
     DEBUG_ASSERT_SILENT(partLengthRet != NULL);
     
     Object partEntry = loopArray_get(&textBuffer->partEntries, partIndex);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     Uint16 partLength = textBuffer_getPartLength(textBuffer, partIndex);
-    if (partLength == (Uint16)INFINITE) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(partLength == (Uint16)INFINITE, ERROR_INVALID_STATE, error_out);
 
     DEBUG_ASSERT_SILENT(partLength <= textBuffer->maxPartLen);
 
@@ -106,32 +103,29 @@ bool textBuffer_getPart(TextBuffer* textBuffer, Index32 partIndex, Cstring buffe
     *partLengthRet = partLength;
 
     return partIndex == textBuffer_getPartNum(textBuffer) - 1 || TEST_FLAGS(partEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL);
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return false;
 }
 
 Uint16 textBuffer_getPartLength(TextBuffer* textBuffer, Index32 partIndex) {
     Size partNum = textBuffer_getPartNum(textBuffer);
-    if (partIndex >= partNum) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(partIndex >= partNum, ERROR_INVALID_ARGUMENT, error_out);
 
     if (partIndex == partNum - 1) {
         return textBuffer->lastPartLen;
     }
 
     Object partEntry = loopArray_get(&textBuffer->partEntries, partIndex);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     Object nextPartEntry = loopArray_get(&textBuffer->partEntries, partIndex + 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     Index64 beginPosition = __TEXT_BUFFER_PART_GET_POSITION(partEntry), endPosition = __TEXT_BUFFER_PART_GET_POSITION(nextPartEntry);
     DEBUG_ASSERT_SILENT(endPosition - beginPosition <= textBuffer->maxPartLen);
     
     return (Uint16)(endPosition - beginPosition);
-
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return (Uint16)INFINITE;
 }
 
@@ -145,20 +139,20 @@ Size textBuffer_pushText(TextBuffer* textBuffer, ConstCstring buffer, Size n) { 
     while (remainByteNum > 0) {
         Size currentPartNum = textBuffer_getPartNum(textBuffer);
         Uint16 currentLastPartLength = textBuffer_getPartLength(textBuffer, currentPartNum - 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         Object currentLastPartEntry = loopArray_get(&textBuffer->partEntries, currentPartNum - 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         if (TEST_FLAGS(currentLastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL) || currentLastPartLength == textBuffer->maxPartLen) {
             Index64 newPartPosition = __TEXT_BUFFER_PART_GET_POSITION(currentLastPartEntry) + currentLastPartLength;
             if (__textBuffer_pushNewPartWithPopFirst(textBuffer, newPartPosition)) {
                 ++ret;
             }
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
         }
 
         Uint16 pushedByteNum = __textBuffer_pushDataToLastPart(textBuffer, currentBuffer, remainByteNum);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         DEBUG_ASSERT_SILENT(pushedByteNum > 0);
 
         textBuffer->totalByteNum += pushedByteNum;
@@ -168,7 +162,7 @@ Size textBuffer_pushText(TextBuffer* textBuffer, ConstCstring buffer, Size n) { 
     }
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return 0;
 }
 
@@ -176,45 +170,43 @@ bool textBuffer_pushChar(TextBuffer* textBuffer, char ch) {
     Size currentPartNum = textBuffer_getPartNum(textBuffer);
     DEBUG_ASSERT_SILENT(currentPartNum > 0);
     Uint16 currentLastPartLength = textBuffer_getPartLength(textBuffer, currentPartNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     Object currentLastPartEntry = loopArray_get(&textBuffer->partEntries, currentPartNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     bool ret = false;
     if (TEST_FLAGS(currentLastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL) || currentLastPartLength == textBuffer->maxPartLen) {
         Index64 newPartPosition = __TEXT_BUFFER_PART_GET_POSITION(currentLastPartEntry) + currentLastPartLength;
         ret = __textBuffer_pushNewPartWithPopFirst(textBuffer, newPartPosition);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         currentPartNum = textBuffer_getPartNum(textBuffer);
         currentLastPartLength = textBuffer_getPartLength(textBuffer, currentPartNum - 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         currentLastPartEntry = loopArray_get(&textBuffer->partEntries, currentPartNum - 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     Index64 currentPosition = __TEXT_BUFFER_PART_GET_POSITION(currentLastPartEntry) + currentLastPartLength;
     Cstring pushBegin = (Cstring)__textBuffer_getDataPage(textBuffer, currentPosition, true) + __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_OFFSET(currentPosition);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     *pushBegin = ch;
     ++textBuffer->lastPartLen;
     ++textBuffer->totalByteNum;
     
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return false;
 }
 
 void textBuffer_popData(TextBuffer* textBuffer, Size n) {
-    if (n > textBuffer->totalByteNum) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(n > textBuffer->totalByteNum, ERROR_INVALID_ARGUMENT, error_out);
 
     Size remainByteNum = n;
     while (remainByteNum > 0) {
         Uint16 poppedByteNum = __textBuffer_popDataFromLastPart(textBuffer, remainByteNum);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         textBuffer->totalByteNum -= poppedByteNum;
         remainByteNum -= poppedByteNum;
@@ -222,17 +214,17 @@ void textBuffer_popData(TextBuffer* textBuffer, Size n) {
         Size currentPartNum = textBuffer_getPartNum(textBuffer);
         if (currentPartNum >= 2 && textBuffer_getPartLength(textBuffer, currentPartNum - 1) == 0) {
             Uint16 newLastPartLength = textBuffer_getPartLength(textBuffer, currentPartNum - 2);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
             
             loopArray_popBack(&textBuffer->partEntries);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
 
             textBuffer->lastPartLen = newLastPartLength;
         }
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 bool textBuffer_finishPart(TextBuffer* textBuffer) {
@@ -240,22 +232,22 @@ bool textBuffer_finishPart(TextBuffer* textBuffer) {
     DEBUG_ASSERT_SILENT(partNum > 0);
 
     Uint16 lastPartLength = textBuffer_getPartLength(textBuffer, partNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out_false3);
     Object lastPartEntry = loopArray_get(&textBuffer->partEntries, partNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out_false3);
 
     DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(lastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL));
     SET_FLAG_BACK(lastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL);
     
     loopArray_set(&textBuffer->partEntries, partNum - 1, lastPartEntry);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out_false3);
 
     Index64 newPartPosition = __TEXT_BUFFER_PART_GET_POSITION(lastPartEntry) + lastPartLength;
     bool ret = __textBuffer_pushNewPartWithPopFirst(textBuffer, newPartPosition);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out_false3);
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out_false3:
     return false;
 }
 
@@ -268,13 +260,13 @@ void textBuffer_dump(TextBuffer* textBuffer, void* dumpTo, Size dumpByteNum) {
 
     while (remainDumpByteNum > 0) {
         Object currentPartEntry = loopArray_get(&textBuffer->partEntries, currentPartIndex);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         if (TEST_FLAGS(currentPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL)) {
             --remainDumpByteNum;
         }
 
         Uint16 partLength = textBuffer_getPartLength(textBuffer, currentPartIndex);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         if (remainDumpByteNum < partLength) {
             currentPartOffset = partLength - remainDumpByteNum;
             remainDumpByteNum = 0;
@@ -290,14 +282,14 @@ void textBuffer_dump(TextBuffer* textBuffer, void* dumpTo, Size dumpByteNum) {
     Cstring currentBuffer = (Cstring)dumpTo;
     for (; currentPartIndex < partNum; ++currentPartIndex) {
         Object currentPartEntry = loopArray_get(&textBuffer->partEntries, currentPartIndex);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         Index64 currentPartPosition = __TEXT_BUFFER_PART_GET_POSITION(currentPartEntry);
         ConstCstring readBegin = (ConstCstring)__textBuffer_getDataPage(textBuffer, currentPartPosition, true) + __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_OFFSET(currentPartPosition);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         Uint16 partLength = textBuffer_getPartLength(textBuffer, currentPartIndex);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         if (currentPartOffset != 0) {
             Uint16 readByteNum = partLength - currentPartOffset;
@@ -322,7 +314,7 @@ void textBuffer_dump(TextBuffer* textBuffer, void* dumpTo, Size dumpByteNum) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void textBuffer_resize(TextBuffer* textBuffer, Size newMaxPartNum, Uint16 newMaxPartLen) {
@@ -333,79 +325,68 @@ void textBuffer_resize(TextBuffer* textBuffer, Size newMaxPartNum, Uint16 newMax
 static void* __textBuffer_getDataPage(TextBuffer* textBuffer, Index64 position, bool createIfNotExist) {
     Index64 realPageIndex = __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_INDEX(position) - textBuffer->releasedPageNum;
     Vector* pages = &textBuffer->partDataPages;
-    if (realPageIndex > pages->size) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    } else if (realPageIndex == pages->size) {
-        if (!createIfNotExist) {
-            ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-        }
+    ERROR_THROW_NEW_IF(realPageIndex > pages->size, ERROR_INVALID_ARGUMENT, error_out);
+    if (realPageIndex == pages->size) {
+        ERROR_THROW_NEW_IF(!createIfNotExist, ERROR_INVALID_ARGUMENT, error_out);
 
         __textBuffer_enqueueDataPage(textBuffer);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
     
     void* ret = (void*)vector_get(pages, realPageIndex);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return ret;
-
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
 static void __textBuffer_enqueueDataPage(TextBuffer* textBuffer) {
     void* newPage = mm_allocatePages(1);
-    if (newPage == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(newPage == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     memory_memset(newPage, 0, PAGE_SIZE);
 
     vector_push(&textBuffer->partDataPages, (Object)newPage);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __textBuffer_dequeueDataPageFront(TextBuffer* textBuffer, Size releasePageNum) {
-    if (releasePageNum > textBuffer->partDataPages.size - 1) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(releasePageNum > textBuffer->partDataPages.size - 1, ERROR_INVALID_ARGUMENT, error_out);
     
     for (int i = 0; i < releasePageNum; ++i) {
         void* page = (void*)vector_get(&textBuffer->partDataPages, i);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         mm_freePages(page);
     }
 
     vector_ereaseN(&textBuffer->partDataPages, 0, releasePageNum);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     textBuffer->releasedPageNum += releasePageNum;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __textBuffer_dequeueDataPageBack(TextBuffer* textBuffer, Size releasePageNum) {
-    if (releasePageNum > textBuffer->partDataPages.size - 1) {
-        ERROR_THROW(ERROR_ID_OUT_OF_BOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(releasePageNum > textBuffer->partDataPages.size - 1, ERROR_INVALID_ARGUMENT, error_out);
 
     for (int i = 0; i < releasePageNum; ++i) {
         void* page = (void*)vector_get(&textBuffer->partDataPages, textBuffer->partDataPages.size - 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         mm_freePages(page);
         vector_pop(&textBuffer->partDataPages);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     textBuffer->releasedPageNum += releasePageNum;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static Uint16 __textBuffer_pushDataToLastPart(TextBuffer* textBuffer, ConstCstring buffer, Size n) {
@@ -413,9 +394,9 @@ static Uint16 __textBuffer_pushDataToLastPart(TextBuffer* textBuffer, ConstCstri
     DEBUG_ASSERT_SILENT(partNum > 0);
     
     Uint16 lastPartLength = textBuffer_getPartLength(textBuffer, partNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     Object lastPartEntry = loopArray_get(&textBuffer->partEntries, partNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     DEBUG_ASSERT_SILENT(TEST_FLAGS_FAIL(lastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL));
 
     Index64 lastPartPosition = __TEXT_BUFFER_PART_GET_POSITION(lastPartEntry);
@@ -429,7 +410,7 @@ static Uint16 __textBuffer_pushDataToLastPart(TextBuffer* textBuffer, ConstCstri
         Uint16 pushByteNum = algorithms_umin64(remainPushByteNum, ALIGN_UP_SHIFT(currentPosition + 1, PAGE_SIZE_SHIFT) - currentPosition);
     
         Cstring pushBegin = (Cstring)__textBuffer_getDataPage(textBuffer, currentPosition, true) + __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_OFFSET(currentPosition);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     
         memory_memcpy(pushBegin, buffer, pushByteNum);
 
@@ -439,7 +420,7 @@ static Uint16 __textBuffer_pushDataToLastPart(TextBuffer* textBuffer, ConstCstri
     textBuffer->lastPartLen += realN;
 
     return realN;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return (Uint16)INFINITE;
 }
 
@@ -448,16 +429,16 @@ static Uint16 __textBuffer_popDataFromLastPart(TextBuffer* textBuffer, Size n) {
     DEBUG_ASSERT_SILENT(partNum > 0);
     
     Uint16 lastPartLength = textBuffer_getPartLength(textBuffer, partNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     Object lastPartEntry = loopArray_get(&textBuffer->partEntries, partNum - 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     Index64 beforePopEndPosition = __TEXT_BUFFER_PART_GET_POSITION(lastPartEntry) + lastPartLength;
     
     if (TEST_FLAGS(lastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL)) {
         CLEAR_FLAG_BACK(lastPartEntry, __TEXT_BUFFER_PART_ENTRY_FLAG_IS_TAIL);
         loopArray_set(&textBuffer->partEntries, partNum - 1, lastPartEntry);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
     
     Uint16 popByteNum = algorithms_umin64(lastPartLength, n);
@@ -468,45 +449,45 @@ static Uint16 __textBuffer_popDataFromLastPart(TextBuffer* textBuffer, Size n) {
     if (releasePageNum > 0) {
         DEBUG_ASSERT_SILENT(releasePageNum <= textBuffer->partDataPages.size - 1);
         __textBuffer_dequeueDataPageBack(textBuffer, releasePageNum);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     return popByteNum;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return (Uint16)INFINITE;
 }
 
 static void __textBuffer_popFirstPart(TextBuffer* textBuffer) {
     Object firstPartEntry = loopArray_get(&textBuffer->partEntries, 0);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     Index64 firstPartPosition = __TEXT_BUFFER_PART_GET_POSITION(firstPartEntry);
     Uint16 firstPartLength = textBuffer_getPartLength(textBuffer, 0);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     
     Index64 firstPartEndPosition = firstPartPosition + firstPartLength;
     Size releasePageNum = __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_INDEX(firstPartEndPosition) - __TEXT_BUFFER_PART_POSITION_GET_BEGIN_PAGE_INDEX(firstPartPosition);
     if (releasePageNum > 0) {
         DEBUG_ASSERT_SILENT(releasePageNum <= textBuffer->partDataPages.size - 1);
         __textBuffer_dequeueDataPageFront(textBuffer, releasePageNum);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static bool __textBuffer_pushNewPartWithPopFirst(TextBuffer* textBuffer, Index64 newPartPosition) {
     bool ret = false;
     if (textBuffer_getPartNum(textBuffer) == textBuffer->maxPartNum) {  //Push new part will remove current first part
         __textBuffer_popFirstPart(textBuffer);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         ret = true;
     }
     
     __textBuffer_pushNewPart(textBuffer, newPartPosition);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return false;
 }

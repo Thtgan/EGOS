@@ -3,7 +3,7 @@
 #include<devices/ata/ata.h>
 #include<kit/types.h>
 #include<real/simpleAsmLines.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 void ata_channel_reset(ATAchannel* channel) {
     Uint16 portBase = channel->portBase;
@@ -12,20 +12,16 @@ void ata_channel_reset(ATAchannel* channel) {
     outb(ATA_REGISTER_CONTROL(portBase), ATA_CONTROL_SOFTWARE_RESET);
     ATA_DELAY_400NS(portBase);
 
-    if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-        ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY), ERROR_IO_FAILED, error_out);
 
     if (channel->deviceSelect < 2) {
         ata_channel_selectDevice(channel, channel->deviceSelect);
 
-        if (TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY)) {
-            ERROR_THROW(ERROR_ID_IO_FAILED, 0);
-        }
+        ERROR_THROW_NEW_IF(TEST_FLAGS(ata_waitTillClear(portBase, ATA_STATUS_FLAG_BUSY), ATA_STATUS_FLAG_BUSY), ERROR_IO_FAILED, error_out);
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 bool ata_channel_selectDevice(ATAchannel* channel, Uint8 deviceSelect) {

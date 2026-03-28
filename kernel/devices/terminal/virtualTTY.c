@@ -10,7 +10,7 @@
 #include<multitask/locks/semaphore.h>
 #include<algorithms.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static Size __virtualTTY_read(Teletype* tty, void* buffer, Size n);
 
@@ -56,7 +56,7 @@ void virtualTeletype_initStruct(VirtualTeletype* tty, DisplayContext* displayCon
     tty->displayContext = displayContext;   //TODO: Only considering text mode now
 
     textBuffer_initStruct(&tty->textBuffer, lineCapacity, displayContext->width);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
     semaphore_initStruct(&tty->outputLock, 1);
     
     tty->cursorEnabled = false;
@@ -70,10 +70,10 @@ void virtualTeletype_initStruct(VirtualTeletype* tty, DisplayContext* displayCon
     tty->inputLength = 0;
     semaphore_initStruct(&tty->inputLock, 1);
     inputFIFO_initStruct(&tty->input);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void virtualTeletype_updateDisplayContext(VirtualTeletype* tty, DisplayContext* displayContext) {
@@ -155,14 +155,13 @@ static Size __virtualTTY_write(Teletype* tty, const void* buffer, Size n) {
     } else {
         __virtualTTY_putString(virtualTeletype, (ConstCstring)buffer, n);
     }
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     semaphore_up(&virtualTeletype->outputLock);
     semaphore_up(&virtualTeletype->inputLock);
 
     return n;
-    ERROR_FINAL_BEGIN(0);
-
+error_out:
     semaphore_up(&virtualTeletype->outputLock);
     semaphore_up(&virtualTeletype->inputLock);
     return 0;
@@ -244,7 +243,7 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
         //The character that control the the write position will work to ensure the screen will not print the sharacter should not print 
         case '\n': {
             partRemoved |= textBuffer_finishPart(&tty->textBuffer);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
             dInputLength = 0;
             __virtualTTY_calculateCursorPositionNewLine(tty, 1);
             break;
@@ -255,8 +254,8 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
         }
         case '\t': {
             Size lastLength = textBuffer_getPartLength(&tty->textBuffer, textBuffer_getPartNum(&tty->textBuffer) - 1);
-            ERROR_GOTO_IF_ERROR(0);
-            Uint8 tabLength = 
+            CHECK_ERROR(error_out);
+            Uint8 tabLength =
                 lastLength == tty->textBuffer.maxPartLen ?
                 tty->tabStride :
                 algorithms_umin16(
@@ -267,7 +266,7 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
             char ch = ' ';
             for (int i = 0; i < tabLength; ++i) {
                 partRemoved |= textBuffer_pushChar(&tty->textBuffer, ch);
-                ERROR_GOTO_IF_ERROR(0);
+                CHECK_ERROR(error_out);
             }
 
             __virtualTTY_calculateCursorPositionPrintable(tty, tabLength);
@@ -282,13 +281,13 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
             dInputLength = -1;
             __virtualTTY_calculateCursorPositionBackspace(tty, 1);
             textBuffer_popData(&tty->textBuffer, 1);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
 
             break;
         }
         default: {
             partRemoved |= textBuffer_pushChar(&tty->textBuffer, ch);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
 
             dInputLength = 1;
             __virtualTTY_calculateCursorPositionPrintable(tty, 1);
@@ -328,7 +327,7 @@ static void __virtualTTY_putCharacter(VirtualTeletype* tty, char ch) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size n) {
@@ -343,12 +342,12 @@ static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size 
         char ch = currentString[0];
         if (__virtualTTY_isCharacterPrintable(ch)) {
             removedPartNum += textBuffer_pushText(&tty->textBuffer, currentString, sameTypeLength);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
             __virtualTTY_calculateCursorPositionPrintable(tty, sameTypeLength);
         } else if (ch == '\n') {
             for (int i = 0; i < sameTypeLength; ++i) {
                 removedPartNum += textBuffer_finishPart(&tty->textBuffer) ? 1 : 0;
-                ERROR_GOTO_IF_ERROR(0);
+                CHECK_ERROR(error_out);
             }
             __virtualTTY_calculateCursorPositionNewLine(tty, sameTypeLength);
         } else if (ch == '\r') {
@@ -362,8 +361,8 @@ static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size 
             Size printCharacterSum = 0;
             for (int i = 0; i < sameTypeLength; ++i) {
                 Size lastLength = textBuffer_getPartLength(&tty->textBuffer, textBuffer_getPartNum(&tty->textBuffer) - 1);
-                ERROR_GOTO_IF_ERROR(0);
-                Uint8 tabLength = 
+                CHECK_ERROR(error_out);
+                Uint8 tabLength =
                     lastLength == tty->textBuffer.maxPartLen ?
                     tty->tabStride :
                     algorithms_umin16(
@@ -372,7 +371,7 @@ static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size 
                     ) - lastLength;
 
                 removedPartNum += textBuffer_pushText(&tty->textBuffer, tmpBuffer, tabLength);
-                ERROR_GOTO_IF_ERROR(0);
+                CHECK_ERROR(error_out);
 
                 printCharacterSum += tabLength;
                 dInputLength += tabLength;
@@ -387,7 +386,7 @@ static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size 
             dInputLength -= maxBackspaceN;
             __virtualTTY_calculateCursorPositionBackspace(tty, maxBackspaceN);
             textBuffer_popData(&tty->textBuffer, maxBackspaceN);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
         }
         
         currentString += sameTypeLength;
@@ -423,7 +422,7 @@ static void __virtualTTY_putString(VirtualTeletype* tty, ConstCstring str, Size 
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static Size __virtualTTY_countStringSameTypeCharacterLength(ConstCstring str, Size n) {
@@ -491,7 +490,7 @@ static void __virtualTTY_calculateCursorPositionBackspace(VirtualTeletype* tty, 
             if (currentCursorPosX > 0) {
                 currentCursorPosX = currentCursorPosX - 1;
                 currentCursorPosY = textBuffer_getPartLength(&tty->textBuffer, currentCursorPosX) - 1;
-                ERROR_GOTO_IF_ERROR(0);
+                CHECK_ERROR(error_out);
                 if (currentCursorPosY == tty->displayContext->width - 1) {
                     currentFullLineWaiting = true;
                 }
@@ -501,7 +500,7 @@ static void __virtualTTY_calculateCursorPositionBackspace(VirtualTeletype* tty, 
             }
         } else {
             Size partLength = textBuffer_getPartLength(&tty->textBuffer, currentCursorPosX);
-            ERROR_GOTO_IF_ERROR(0);
+            CHECK_ERROR(error_out);
             cursorMoveN = (Uint16)algorithms_umin16(partLength, remainN);
             currentCursorPosY = partLength - cursorMoveN;
         }
@@ -514,7 +513,7 @@ static void __virtualTTY_calculateCursorPositionBackspace(VirtualTeletype* tty, 
     tty->fullLineWaitting = currentFullLineWaiting;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __virtualTTY_scrollWindowToRow(VirtualTeletype* tty, Index16 row) {

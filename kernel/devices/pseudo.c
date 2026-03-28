@@ -7,7 +7,7 @@
 #include<kit/bit.h>
 #include<kit/types.h>
 #include<kit/util.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static void __pseudo_nullDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN);
 
@@ -26,16 +26,10 @@ static TeletypeDevice _pseudo_teletypeDevice;
 
 void pseudoDevice_init() {
     MajorDeviceID major = device_allocMajor();
-    if (major == DEVICE_INVALID_ID) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(major == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
     MinorDeviceID minor = device_allocMinor(major);
-    if (minor == DEVICE_INVALID_ID) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(minor == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
     CharDeviceInitArgs args = (CharDeviceInitArgs) {
         .deviceInitArgs     = (DeviceInitArgs) {
@@ -51,14 +45,14 @@ void pseudoDevice_init() {
 
     charDevice_initStruct(&_pseudo_nullDevice, &args);
     device_registerDevice(&_pseudo_nullDevice.device);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     teletypeDevice_initStruct(&_pseudo_teletypeDevice, tty_getCurrentTTY());
     device_registerDevice(&_pseudo_teletypeDevice.device.device);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 static void __pseudo_nullDevice_operations_readUnits(Device* device, Index64 unitIndex, void* buffer, Size unitN) {

@@ -5,7 +5,7 @@
 #include<kit/types.h>
 #include<real/ports/PIT.h>
 #include<real/simpleAsmLines.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 Uint64 __CPUclock_readTick(ClockSource* this);
 
@@ -15,9 +15,7 @@ Uint64 __CPUclock_readTick(ClockSource* this);
 void CPUclock_initClockSource(ClockSource* clockSource) {
     ClockSourceType calibrateClockSourceType = CLOCK_SOURCE_TYPE_I8254;
     ClockSource* calibrateClockSource = clockSource_getSource(calibrateClockSourceType);
-    if (TEST_FLAGS_FAIL(calibrateClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT)) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(TEST_FLAGS_FAIL(calibrateClockSource->flags, CLOCK_SOURCE_FLAGS_PRESENT), ERROR_INVALID_STATE, error_out);
 
     //TODO: Add support for HPET
     Uint64 hz = 0;
@@ -53,7 +51,7 @@ void CPUclock_initClockSource(ClockSource* clockSource) {
     };
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Uint64 __CPUclock_readTick(ClockSource* this) {

@@ -4,7 +4,7 @@
 #include<kit/types.h>
 #include<kit/util.h>
 #include<memory/mm.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<print.h>
 
 typedef struct __MBRpartitionEntry {
@@ -34,13 +34,10 @@ BlockDevice* blockDevice_bootFromDevice;    //TODO: Ugly, figure out a method to
 
 void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
     void* buffer = mm_allocate(BLOCK_DEVICE_DEFAULT_BLOCK_SIZE);
-    if (buffer == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(buffer == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
     blockDevice_readBlocks(parentDevice, 0, buffer, 1);
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     Device* device = &parentDevice->device;
     char nameBuffer[DEVICE_NAME_MAX_LENGTH + 1];
@@ -60,10 +57,7 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
 
         MajorDeviceID major = DEVICE_MAJOR_FROM_ID(device->id);
         MinorDeviceID minor = device_allocMinor(major);
-        if (minor == DEVICE_INVALID_ID) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(minor == DEVICE_INVALID_ID, ERROR_OUT_OF_RESOURCES, error_out);
 
         BlockDeviceInitArgs args = {
             .deviceInitArgs     = (DeviceInitArgs) {
@@ -78,17 +72,14 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
         };
 
         partitioBlockDevice = mm_allocate(sizeof(PartitionBlockDevice));
-        if (partitioBlockDevice == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(partitioBlockDevice == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
         blockDevice_initStruct(&partitioBlockDevice->blockDevice, &args);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         partitioBlockDevice->parentBegin = entry->sectorBegin;
 
         device_registerDevice(&partitioBlockDevice->blockDevice.device);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         if (blockDevice_bootFromDevice == NULL) {
             blockDevice_bootFromDevice = &partitioBlockDevice->blockDevice;
@@ -98,7 +89,7 @@ void partitionBlockDevice_probePartitions(BlockDevice* parentDevice) {
 
     mm_free(buffer);
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     if (partitioBlockDevice != NULL) {
         mm_free(partitioBlockDevice);
     }

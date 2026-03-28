@@ -11,7 +11,7 @@
 #include<structs/singlyLinkedList.h>
 #include<algorithms.h>
 #include<cstring.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 
 static RBtree _device_majorDeviceTree;
 
@@ -31,10 +31,10 @@ static int __device_deviceMinorTreeSearchFunc(RBtreeNode* node, Object key);
 void device_init() {
     RBtree_initStruct(&_device_majorDeviceTree, __device_deviceMajorTreeCmpFunc, __device_deviceMajorTreeSearchFunc);
     pseudoDevice_init();
-    ERROR_GOTO_IF_ERROR(0);
+    CHECK_ERROR(error_out);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 MajorDeviceID device_allocMajor() {
@@ -55,10 +55,7 @@ MajorDeviceID device_allocMajor() {
 
     if (ret != DEVICE_INVALID_ID) {
         __DeviceMajorTreeNode* newNode = mm_allocate(sizeof(__DeviceMajorTreeNode));
-        if (newNode == NULL) {
-            ERROR_ASSERT_ANY();
-            ERROR_GOTO(0);
-        }
+        ERROR_THROW_NEW_IF(newNode == NULL, ERROR_OUT_OF_MEMORY, error_out);
 
         newNode->major = ret;
         newNode->deviceNum = 0;
@@ -69,20 +66,16 @@ MajorDeviceID device_allocMajor() {
     }
 
     return ret;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return DEVICE_INVALID_ID;
 }
 
 void device_releaseMajor(MajorDeviceID major) {
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
-    if (node->deviceNum > 0) {
-        ERROR_THROW(ERROR_ID_STATE_ERROR, 0);
-    }
+    ERROR_THROW_NEW_IF(node->deviceNum > 0, ERROR_INVALID_STATE, error_out);
 
     RBtreeNode* deleted = RBtree_delete(&_device_majorDeviceTree, (Object)major);
     DEBUG_ASSERT_SILENT(deleted == found);
@@ -90,14 +83,12 @@ void device_releaseMajor(MajorDeviceID major) {
     mm_free(node);
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 MinorDeviceID device_allocMinor(MajorDeviceID major) {
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode* current = RBtree_getFirst(&node->minorTree);
@@ -120,8 +111,8 @@ MinorDeviceID device_allocMinor(MajorDeviceID major) {
         return i;
     }
 
-    ERROR_THROW_NO_GOTO(ERROR_ID_OUT_OF_MEMORY);
-    ERROR_FINAL_BEGIN(0);
+    ERROR_THROW_NEW(ERROR_OUT_OF_MEMORY, error_out);
+error_out:
     return DEVICE_INVALID_ID;
 }
 
@@ -149,9 +140,7 @@ void device_initStruct(Device* device, DeviceInitArgs* args) {
 void device_registerDevice(Device* device) {
     MajorDeviceID major = DEVICE_MAJOR_FROM_ID(device->id);
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode_initStruct(&node->minorTree, &device->deviceTreeNode);
@@ -161,7 +150,7 @@ void device_registerDevice(Device* device) {
     ++node->deviceNum;
     
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 void device_unregisterDevice(DeviceID id) {
@@ -169,20 +158,15 @@ void device_unregisterDevice(DeviceID id) {
     MinorDeviceID minor = DEVICE_MINOR_FROM_ID(id);
 
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     RBtreeNode* deleted = RBtree_delete(&node->minorTree, minor);
-    if (deleted == NULL) {
-        ERROR_ASSERT_ANY();
-        ERROR_GOTO(0);
-    }
+    ERROR_THROW_NEW_IF(deleted == NULL, ERROR_INVALID_STATE, error_out);
     --node->deviceNum;
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
 }
 
 Device* device_getDevice(DeviceID id) {
@@ -190,18 +174,14 @@ Device* device_getDevice(DeviceID id) {
     MinorDeviceID minor = DEVICE_MINOR_FROM_ID(id);
 
     RBtreeNode* found = RBtree_search(&_device_majorDeviceTree, (Object)major);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     __DeviceMajorTreeNode* node = HOST_POINTER(found, __DeviceMajorTreeNode, majorTreeNode);
     found = RBtree_search(&node->minorTree, (Object)minor);
-    if (found == NULL) {
-        ERROR_THROW(ERROR_ID_NOT_FOUND, 0);
-    }
+    ERROR_THROW_NEW_IF(found == NULL, ERROR_NOT_FOUND, error_out);
 
     return HOST_POINTER(found, Device, deviceTreeNode);
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return NULL;
 }
 
@@ -269,7 +249,7 @@ void device_read(Device* device, Index64 begin, void* buffer, Size n) {
     if (begin % blockSize != 0) {
         Index64 offsetInBlock = begin % blockSize;
         blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         Size byteReadN = algorithms_umin64(remaingByteNum, blockSize - offsetInBlock);
         memory_memcpy(buffer, tmpBlock + offsetInBlock, byteReadN);
@@ -282,7 +262,7 @@ void device_read(Device* device, Index64 begin, void* buffer, Size n) {
     if (remaingByteNum >= blockSize) {
         Size remainingFullBlockNum = remaingByteNum / blockSize;
         blockDevice_readBlocks(blockDevice, currentBlockIndex, currentBuffer, remainingFullBlockNum);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         currentBlockIndex += remainingFullBlockNum;
         currentBuffer += remainingFullBlockNum * blockSize;
@@ -291,7 +271,7 @@ void device_read(Device* device, Index64 begin, void* buffer, Size n) {
 
     if (remaingByteNum != 0) {
         blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         memory_memcpy(currentBuffer, tmpBlock, remaingByteNum);
         
@@ -299,7 +279,7 @@ void device_read(Device* device, Index64 begin, void* buffer, Size n) {
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return;
 }
 
@@ -321,13 +301,13 @@ void device_write(Device* device, Index64 begin, const void* buffer, Size n) {
     if (begin % blockSize != 0) {
         Index64 offsetInBlock = begin % blockSize;
         blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         Size byteWriteN = algorithms_umin64(remaingByteNum, blockSize - offsetInBlock);
         memory_memcpy(tmpBlock + offsetInBlock, buffer, byteWriteN);
 
         blockDevice_writeBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         currentBlockIndex += 1;
         currentBuffer += byteWriteN;
@@ -337,7 +317,7 @@ void device_write(Device* device, Index64 begin, const void* buffer, Size n) {
     if (remaingByteNum >= blockSize) {
         Size remainingFullBlockNum = remaingByteNum / blockSize;
         blockDevice_writeBlocks(blockDevice, currentBlockIndex, currentBuffer, remainingFullBlockNum);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
 
         currentBlockIndex += remainingFullBlockNum;
         currentBuffer += remainingFullBlockNum * blockSize;
@@ -346,18 +326,18 @@ void device_write(Device* device, Index64 begin, const void* buffer, Size n) {
 
     if (remaingByteNum != 0) {
         blockDevice_readBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         memory_memcpy(tmpBlock, currentBuffer, remaingByteNum);
 
         blockDevice_writeBlocks(blockDevice, currentBlockIndex, tmpBlock, 1);
-        ERROR_GOTO_IF_ERROR(0);
+        CHECK_ERROR(error_out);
         
         remaingByteNum = 0;
     }
 
     return;
-    ERROR_FINAL_BEGIN(0);
+error_out:
     return;
 }
 

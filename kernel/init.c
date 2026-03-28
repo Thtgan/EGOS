@@ -18,7 +18,7 @@
 #include<time/time.h>
 #include<usermode/usermode.h>
 #include<debug.h>
-#include<error.h>
+#include<lib/errorPosix.h>
 #include<test.h>
 #include<uart.h>
 
@@ -76,17 +76,12 @@ void* init_getBootStackBottom() {
 }
 
 void init_initKernelStage1() {
-    for (int i = 0; _initFuncs1[i].func != NULL; ++i) {
+    int i = 0;
+    for (i = 0; _initFuncs1[i].func != NULL; ++i) {
+        error_clear();
         _initFuncs1[i].func();
 
-        ERROR_CHECKPOINT({
-            if (_initFuncs1[i].name != NULL) {
-                debug_printf("Initialization of %s failed\n", _initFuncs1[i].name);
-            } else {
-                debug_printf("Initialization failed");
-            }
-            error_unhandledRecord(error_getCurrentRecord());
-        });
+        CHECK_ERROR(stage1_error_handler);
 
         if (_initFuncs1[i].testGroup == NULL) {
             continue;
@@ -99,20 +94,29 @@ void init_initKernelStage1() {
         }
     }
     return;
+
+stage1_error_handler:
+    ErrorCode errCode = error_get_code();
+    if (_initFuncs1[i].name != NULL) {
+        debug_printf("Initialization of %s failed with error 0x%08X\n", _initFuncs1[i].name, errCode);
+    } else {
+        debug_printf("Initialization failed with error 0x%08X\n", errCode);
+    }
+    // Print full error stack for debugging
+    ErrorFrame* frame = error_get_frame();
+    if (frame != NULL) {
+        debug_printf("Error details: code=0x%08X\n", frame->code);
+    }
+    debug_blowup("Stage 1 initialization failed\n");
 }
 
 void init_initKernelStage2() {
-    for (int i = 0; _initFuncs2[i].func != NULL; ++i) {
+    int i = 0;
+    for (i = 0; _initFuncs2[i].func != NULL; ++i) {
+        error_clear();
         _initFuncs2[i].func();
 
-        ERROR_CHECKPOINT({
-            if (_initFuncs2[i].name != NULL) {
-                debug_printf("Initialization of %s failed\n", _initFuncs2[i].name);
-            } else {
-                debug_printf("Initialization failed");
-            }
-            error_unhandledRecord(error_getCurrentRecord());
-        });
+        CHECK_ERROR(stage2_error_handler);
 
         if (_initFuncs2[i].testGroup == NULL) {
             continue;
@@ -127,6 +131,20 @@ void init_initKernelStage2() {
 
     debug_printf("All Initializations passed\n");
     return;
+
+stage2_error_handler:
+    ErrorCode errCode = error_get_code();
+    if (_initFuncs2[i].name != NULL) {
+        debug_printf("Initialization of %s failed with error 0x%08X\n", _initFuncs2[i].name, errCode);
+    } else {
+        debug_printf("Initialization failed with error 0x%08X\n", errCode);
+    }
+    // Print full error stack for debugging
+    ErrorFrame* frame = error_get_frame();
+    if (frame != NULL) {
+        debug_printf("Error details: code=0x%08X\n", frame->code);
+    }
+    debug_blowup("Stage 2 initialization failed\n");
 }
 
 static void __init_printBootSlogan() {
